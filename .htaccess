@@ -1,0 +1,17 @@
+# CodeIgniter clean-URL rewrite.
+# Folder-name agnostic: no RewriteBase is hardcoded, so this keeps
+# working no matter what the project folder is renamed to.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Send any request that is NOT an existing file or directory
+    # to index.php so CodeIgniter's router can handle it.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php/$1 [L]
+</IfModule>
+
+# Fallback when mod_rewrite is unavailable.
+<IfModule !mod_rewrite.c>
+    ErrorDocument 404 /index.php
+</IfModule>
