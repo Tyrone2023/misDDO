@@ -1,0 +1,141 @@
+*{
+    font-family: Arial, Helvetica, sans-serif;
+    margin:0; 
+    padding:0; 
+    border:0;
+}
+ul li{list-style-type: none;}
+
+.ren_r{
+    color:red;
+}
+
+table{
+    border-collapse: collapse;
+}
+
+table, td, th{
+    border:1px solid #000; 
+}
+
+.wrap{
+    width:80%;
+    margin:30px auto;
+
+}
+
+
+.inner{
+    margin: 0;
+    border: initial;
+    border-radius: initial;
+    width: initial;
+    min-height: initial;
+    box-shadow: initial;
+    background: initial;
+    page-break-after: always;
+}
+h1{
+    text-align:center;
+    margin-bottom:20px;
+    font-size:30px;
+}
+h4{
+    text-align:right;
+    margin-bottom:30px;
+}
+.info{
+    margin-bottom:30px;
+    float:left;
+
+}
+.info li{
+    padding-bottom:7px;
+}
+.info li .la{
+    padding:0 15px;
+    font-weight:bold;
+}
+.info li .n{
+    font-weight:300;
+    width:165px;
+    display:inline-block;
+}
+.app_code {
+    float:right;
+}
+.app_code li{
+    padding-bottom:7px;
+}
+.app_code li span{
+    padding:0 15px;
+    font-weight:bold;
+}
+table {
+    font-size:14px;
+    width:100%;
+    margin-bottom:30px;
+}
+table th{
+    background-color: #888585 !important;
+    color:#fff !important;
+    padding:8px 5px;
+    print-color-adjust: exact; 
+}
+.small {
+    font-weight:normal;
+    font-size:12px;
+    font-style: italic;
+}
+table td{
+    padding:3px 5px;
+}
+table .total{
+    background-color: #888585 !important;
+    text-align:center;
+    print-color-adjust: exact; 
+}
+
+p{
+    text-align:justify;
+    margin-bottom:15px;
+    line-height:1.2em;
+}
+h3 {
+    float:right;
+    font-weight:normal;
+    font-size:14px;
+    margin-top:60px;
+    text-align:center;
+}
+h3 .an{
+    border-bottom:1px solid #000;
+    font-weight:600;
+    padding:0 15px;
+}
+h3 .d{
+    padding-top:10px;
+    display:block;
+}
+h6{
+    margin-top:40px;
+    border-top:1px solid #000;
+    padding-right:70px;
+    float:left;
+    font-size:14px;
+}
+
+.txtcenter{
+    text-align: center !important;
+}
+
+h5{
+    font-weight:300;
+}
+
+
+
+
+
+
+.blocker {clear:both !important}

@@ -1,0 +1,172 @@
+
+            <!-- ============================================================== -->
+            <!-- Start Page Content here -->
+            <!-- ============================================================== -->
+
+            <div class="content-page">
+                <div class="content">
+
+                    <!-- Start Content-->
+                    <div class="container-fluid">
+
+                        <!-- start page title -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="page-title-box">
+                                    <h4 class="page-title"><?= $title; ?></h4><br />
+                                    <span class="badge badge-success"><a href="#" class="waves-effect waves-light openModalBtn text-white"data-toggle="modal" data-target="#myModal">Current Date :</a></span>
+                                    <span class="badge badge-success"><?= $this->session->cur_month; ?></span> <span class="badge badge-info"><?= $this->session->cur_fy; ?></span>
+                              
+                                    <div class="clearfix"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end page title -->
+
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title mb-4">OFFICIAL RECEIPTS</h4>
+
+                                        <div class="table-responsive">
+                                            <table class="table table-hover table-bordered mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>Date</th>
+                                                        <th>SN</th>
+                                                        <th>Payor</th>
+                                                        <th>Particular</th>
+                                                        <th>Amount</th>
+                                                        <th class="text-center">Date</th>
+                                                        <th class="text-center">Amount</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php $ivy=1; foreach($school as $row){
+                                                        $loans = $this->Common->two_cond_count_row('provident_implementing','stat',0,'school_id',$row->school_id);
+                                                        $loan_payment = $this->Common->three_cond_count_row('provident_implementing_payment','fy',$this->session->cur_fy,'school_id',$row->school_id,'month',$this->session->cur_month);
+                                                        ?>
+                                                    <tr>
+                                                        <th scope="row"><?= $ivy++; ?></th>
+                                                        <td><?= $row->school_id; ?></td>
+                                                        <td class="text-center"><span class="badge badge-success"><?= $loans->num_rows(); ?></span></td>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td></td>
+                                                    </tr>
+                                                    <?php } ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                            </div>
+                            
+                        </div>
+                        <!-- end row -->
+
+                        
+
+                        
+                    
+
+
+                    </div>
+                    <!-- end container-fluid -->
+
+                </div>
+                <!-- end content -->
+
+                <!-- sample modal content -->
+                                        <div id="myModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="display: none;" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content modal-lg">
+                                                    <div class="modal-header bg-info">
+                                                        <h5 class="modal-title" id="modalTitle">Select Date</h5>
+                                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                                                    </div>
+                                                    <div class="modal-body">
+
+                                                    <div class="row">
+                                                        <div class="col-12">
+                                                            <div class="">
+                                                                    <?= validation_errors(); ?>
+                                                                    <?php
+                                                                    $attributes = array('class' => 'parsley-examples form-horizontal');
+                                                                    echo form_open('Provident/change_fy_and_m', $attributes);
+                                                                    ?>
+
+                                                                    
+
+
+                                                                    <input type="hidden" class="form-control" value="0007" name="deduction_code">
+
+
+                                                                    <div class="form-group row">
+                                                                        <label class="col-lg-4 col-form-label">Month and Year</label>
+                                                                        <div class="col-lg-4">
+                                                                            <label class="col-lg-4 col-form-label"></label>
+                                                                            <label class="col-lg-4 col-form-label">Month</label>
+                                                                            <select name="month" class="form-control" required>
+                                                                                <?php
+                                                                                date_default_timezone_set('Asia/Manila');
+                                                                                $months = [
+                                                                                    '01' => 'January',  '02' => 'February', '03' => 'March',    '04' => 'April',
+                                                                                    '05' => 'May',      '06' => 'June',     '07' => 'July',     '08' => 'August',
+                                                                                    '09' => 'September','10' => 'October',  '11' => 'November', '12' => 'December'
+                                                                                ];
+
+                                                                                foreach ($months as $num => $name) {
+                                                                                    echo "<option ";
+                                                                                    if(date("m") == $num){echo " selected ";}
+                                                                                    echo " value=\"$num\">$name</option>";
+                                                                                }
+                                                                                ?>
+                                                                                </select>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <label class="col-lg-4 col-form-label">Year</label>
+                                                                                <?php
+                                                                                $currentYear = date("Y");
+                                                                                $fiscalStartYear = $currentYear - 10;
+                                                                                $fiscalEndYear = $currentYear + 30;
+
+                                                                                ?>
+                                                                                <select name="fy" class="form-control" required>
+                                                                                    <option value="" disabled selected>Select Fiscal Year</option>
+                                                                                    <?php for ($year = $fiscalStartYear; $year <= $fiscalEndYear; $year++) { ?>
+                                                                                    <option <?php if(date('Y') == $year){echo ' selected ';}?> value="<?= $year; ?>"><?= $year; ?></option>
+                                                                                    <?php } ?>
+                                                                                </select>
+                                                                        </div>
+                                                                    </div>
+
+
+                                                                
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+                                                    <!-- end row -->
+                                                        
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="submit" class="btn btn-info waves-effect waves-light">Submit</button>
+                                                    </div>
+                                                    </form>
+                                                </div>
+                                                <!-- /.modal-content -->
+                                            </div>
+                                            <!-- /.modal-dialog -->
+                                        </div>
+                                        <!-- /.modal -->
+
+                
+
+                

@@ -1,0 +1,1 @@
+<div class="container-fluid"><h4><?= $title; ?></h4><table class="table table-bordered"><?php foreach ($profiles as $row): ?><tr><td><?= html_escape($row['staff_idnumber']); ?></td><td><?= html_escape($row['leave_profile_code']); ?></td></tr><?php endforeach; ?></table></div>

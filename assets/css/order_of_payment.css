@@ -1,0 +1,63 @@
+*{
+    margin:0; 
+    padding:0; 
+    border:0;
+}
+body {
+  font-family: 'Times New Roman', serif;
+  font-size:14px;
+}
+.appendix{
+    padding-top:50px;
+}
+
+
+.inner, .appendix{
+    width:842px;
+    margin:auto;
+}
+.appendix h3{
+    text-align:right;
+    font-style:italic;
+    font-weight:normal;
+    margin-bottom:10px;
+}
+
+.inner{
+    border:1px solid #222;
+}
+
+table {
+    width:100%;
+  border-collapse: collapse; /* Ensures borders are joined together */
+}
+
+th, td {
+  padding: 8px;
+  text-align: center;
+}
+
+.bb{
+    border-bottom:1px solid #222;
+}
+.bold{
+    font-weight:bold;
+}
+.order{
+    font-weight: bold;
+    font-size:18px;
+}
+.text-left{
+    text-align:left !important;
+}
+.text-right{
+    text-align:right !important;
+}
+
+.dbb{
+    border-bottom: double 4px black !important; 
+    padding: 10px;
+}
+.con{
+    font-family: Arial, sans-serif !important;
+}

@@ -1,0 +1,293 @@
+*{
+    margin:0; 
+    padding:0; 
+    border:0;
+    font-size:12px;
+}
+
+
+body {
+    font: 12pt Calibri, "arial", sans-serif;
+    line-height: 1.3;
+    zoom: 90%;
+    }
+    
+
+h1{
+    text-align:center;
+    margin:20px 0;
+}
+.wrap{
+    padding:10px;
+    margin:20px;
+    border-top:1px solid #222;
+    margin-top:8px;
+    margin-bottom:0 !important;
+}
+
+
+
+table, th, td{
+    border:1px solid #000;
+    border-collapse: collapse;
+}
+table{width:100% !important}
+th, td{
+    padding:8px 10px;
+}
+th i{
+    font-style:italic;
+    font-weight:normal;
+    color:#656464;
+}
+table .perma{border:0 !important}
+.sign, .sign td{
+    border:0 !important;
+    text-align:center;
+}
+
+.sign td span:nth-child(1){
+    font-size:16px;
+}
+.prep{
+    margin-top:30px;
+    margin-bottom:50px;
+}
+
+.prep span{
+    float:right;
+    margin-right:100px;
+}
+
+
+
+.sign td span{
+    border-bottom:1px solid #000;
+    font-weight:bold;
+    padding:0 30px;
+    font-size:16px;
+}
+.down {
+    line-height: 1.5em;
+    margin-left:20px;
+    font-style: italic;
+}
+.dd{
+    margin-bottom:50px;
+}
+.aa{font-style: normal}
+
+h3{
+    font-weight:normal;
+}
+h3 .sright {
+    float:right;
+}
+.ren{
+    width: 35%;
+}
+.toptable{
+    margin-bottom:20px;
+}
+.toptable, .toptable td{
+    border: 0;
+}
+.toptable .wb{
+    border-bottom:1px solid #000;
+}
+h5{
+    text-align:right;
+}
+.data td{
+    text-align: center;
+}
+.data td.name{
+    text-align: left;
+}
+
+.fcon {
+    border:1px solid red !important;
+}
+
+.hwrap{
+    text-align:center;
+    margin-top:20px;
+  }
+  
+  .logo{
+    width:70px;
+    height:70px;
+  }
+  .textwrap{
+    margin:5px 0;
+    line-height: 1.2em;
+  }
+  .textwrap span{
+    display: block;
+    
+  }
+  
+  .rp{
+    font-family: "Old English Text MT"; 
+    font-size: 12pt;
+  }
+  .r{
+    font-family: "Trajan Pro";
+    font-size: 9pt;
+  }
+  .de{
+    font-family: "Old English Text MT"; 
+    font-size: 16pt;
+  }
+  
+  .blocker {clear:both !important}
+
+  .sign img{
+    position: relative;
+    top:50px;
+  }
+
+  /* .sign img.isig{
+    display:block;
+    right:-105px;
+    position: relative;
+    top:20px;
+  } */
+
+  .sign img.isig {
+    display: block;
+    margin: 0 auto;
+    position: relative;
+    top: 20px; /* optional if you want to nudge it down */
+}
+
+  .sign img.isig2{
+    top:40px;
+  }
+
+  .sign img.isig3{
+    top:30px;
+  }
+
+  .ol{
+    display: block;
+    position:relative;
+    top:20px;
+    font-weight: normal !important;
+    border:0 !important
+  }
+
+  .ols{
+    display: block;
+    position:relative;
+    top:20px;
+    font-weight: normal !important;
+    border:0 !important
+  }
+
+
+
+
+  @media print {
+    @page {
+        size: A4 landscape;
+        margin: 6mm 6mm 6mm 0mm;
+      }
+    html, body {
+      /* width: 297mm;
+      height: 210mm; */
+      margin: 0 6mm 0 6mm;
+      font: 18px Calibri, "arial", sans-serif;
+    }
+    h1{
+        text-align:center;
+        margin:20px 0;
+    }
+    .data td{
+        text-align: center !important;
+    }
+    .data td.name{
+        text-align: left !important;
+    }
+    .wrap{
+        margin: 0;
+        width: 100%;
+        border-top:1px solid #222;
+        margin-top:8px;
+    }
+    
+    table{width:100% !important}
+
+    table, th, td{
+        border:1px solid #000;
+        border-collapse: collapse;
+    }
+    
+    th, td{
+        padding:3px 5px;
+    }
+    th i{
+        font-style:italic;
+        font-weight:normal;
+        color:#656464;
+    }
+    table .perma{border:0 !important}
+
+    
+    
+    .sign, .sign td{
+        border:0 !important;
+        text-align:center;
+    }
+    .prep{
+        margin-top:30px;
+        margin-bottom:50px;
+    }
+    
+    .prep span{
+        float:right;
+        margin-right:90px;
+    }
+   
+    .down {
+        line-height: 1.5em;
+        margin-left:20px;
+        font-style: italic;
+    }
+    .dd{
+        margin-bottom:50px;
+    }
+    .aa{font-style: normal}
+    
+    h3{
+        font-weight:normal;
+    }
+    h3 .sright {
+        float:right;
+    }
+    .ren{
+        width: 35% !important;
+    }
+    .toptable{
+        margin-bottom:20px;
+        table-layout: fixed;
+    }
+    .toptable, .toptable td{
+        border:0;
+    }
+    .toptable .wb{
+        border-bottom:1px solid #000;
+    }
+    h5{
+        text-align:right;
+    }
+
+    .hwrap {
+        width:100%;
+    }
+
+    .no-print { display: none !important; }
+
+    
+
+}

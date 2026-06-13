@@ -1,0 +1,724 @@
+Employee No.,FROM,TO,Designation,Status, Annual Salary ,Station/Place of Assignment,L/V and ABS Without Pay,Separation Cause/d
+5372075,06/10/94,12/31/94,Teacher - I,Permanent," 46,824.00 ",TIBANBAN NHS,,NCC 74
+5372075,01/01/95,12/31/95,Teacher - I,Permanent," 58,824.00 ",TIBANBAN NHS,,
+5372075,01/01/96,12/31/96,Teacher - I,Permanent," 72,156.00 ",TIBANBAN NHS,,NBC 448
+5372075,01/01/97,10/31/97,Teacher - I,Permanent," 87,708.00 ",TIBANBAN NHS,,NBC 458 - A
+5372075,11/01/97,12/31/97,Teacher - I,Permanent," 103,260.00 ",TIBANBAN NHS,,NBC 458 - B
+5372075,01/01/98,12/31/98,Teacher - I,Permanent," 103,260.00 ",TIBANBAN NHS,,
+5372075,01/01/99,12/31/99,Teacher - I,Permanent," 103,260.00 ",TIBANBAN NHS,,
+5372075,01/01/00,10/31/00,Teacher - I,Permanent," 113,592.00 ",TIBANBAN NHS,,NBC # 468
+5372075,11/01/00,12/31/00,Teacher - I,Permanent," 116,436.00 ",SIGABOY AVHS,,STEP 2
+5372075,01/01/01,06/30/01,Teacher - I,Permanent," 116,436.00 ",SIGABOY AVHS,,
+5372075,07/01/01,12/31/01,Teacher - I,Permanent," 122,256.00 ",SIGABOY AVHS,,NBC # 474
+5372075,01/01/02,12/31/02,Teacher - I,Permanent," 125,304.00 ",SIGABOY AVHS,,
+5372075,01/01/03,12/31/03,Teacher - I,Permanent," 125,304.00 ",SIGABOY AVHS,,
+5372075,01/01/04,06/09/04,Teacher - I,Permanent," 125,304.00 ",SIGABOY AVHS,,
+5372075,06/10/04,12/31/04,Teacher - I,Permanent," 128,448.00 ",SIGABOY AVHS,,STEP 3
+5372075,01/01/05,12/31/05,Teacher - I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5372075,01/01/06,06/09/06,Teacher - I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5372075,06/10/06,12/31/06,Teacher - I,Permanent," 131,652.00 ",SIGABOY AVHS,,STEP 4
+5372075,07/01/07,12/02/07,Teacher - I,Permanent," 144,816.00 ",SIGABOY AVHS,,NBC 511
+5372075,12/03/07,12/31/07,Teacher - II,Permanent," 146,100.00 ",SIGABOY AVHS,,PROMOTION
+5372075,01/01/08,06/30/08,Teacher - II,Permanent," 146,100.00 ",SIGABOY AVHS,,
+5372075,07/01/08,12/31/08,Teacher - II,Permanent," 160,704.00 ",SIGABOY AVHS,,NBC NO. 516
+5372075,01/01/09,06/30/09,Teacher - II,Permanent," 160,704.00 ",SIGABOY AVHS,,
+5372075,07/01/09,12/31/09,Teacher - II,Permanent," 188,796.00 ",SIGABOY AVHS,,SG 11-SG12
+5372075,01/01/10,06/23/10,Teacher - II,Permanent," 188,796.00 ",SIGABOY AVHS,,
+5372075,06/24/10,12/02/10,Teacher - II,Permanent," 207,228.00 ",SIGABOY AVHS,,NBC 524
+5372075,12/03/10,12/31/10,Teacher - II,Permanent," 210,576.00 ",SIGABOY AVHS,,STEP - 4
+5372075,01/01/11,06/23/11,Teacher - II,Permanent," 210,576.00 ",SIGABOY AVHS,,
+5372075,06/24/11,12/31/11,Teacher - II,Permanent," 228,564.00 ",SIGABOY AVHS,,NBC - 530
+5372075,01/01/12,05/31/12,Teacher - II,Permanent," 228,564.00 ",SIGABOY AVHS,,
+5372075,06/01/12,12/31/12,Teacher - II,Permanent," 246,540.00 ",SIGABOY AVHS,,NBC - 540
+5372075,01/01/13,12/05/13,Teacher - II,Permanent," 246,540.00 ",SIGABOY AVHS,,
+5372075,12/06/13,12/31/13,Teacher - III,Permanent," 257,232.00 ",SIGABOY AVHS,,PROMOTION
+5372075,01/01/14,06/10/14,Teacher - III,Permanent," 257,232.00 ",SIGABOY AVHS,,
+5372075,06/11/14,12/31/14,Teacher - III,Permanent," 257,232.00 ",SIGABOY AVHS,,
+5372075,01/01/15,12/31/15,Teacher - III,Permanent," 257,232.00 ",SIGABOY AVHS,,
+5372075,01/01/16,12/05/16,Teacher - III,Permanent," 267,936.00 ",SIGABOY AVHS,,NBC 562
+5372075,12/06/16,12/31/16,Teacher - III,Permanent," 270,768.00 ",SIGABOY AVHS,,STEP 2
+5372075,12/06/17,12/31/17,Teacher - III,Permanent," 282,204.00 ",SIGABOY AVHS,,NBC 568
+5372075,01/01/18,12/31/2018,Teacher - III,Permanent," 294,120.00 ",SIGABOY AVHS,,NBC 568
+5372075,01/01/19,12/05/2019,Teacher - III,Permanent," 306,540.00 ",SIGABOY AVHS,,NBC 575
+5372075,12/06/2019,12/31/19,Teacher - III,Permanent," 310,332.00 ",SIGABOY AVHS,,STEP 3
+5372075,01/01/2020,12/31/2020,Teacher - III,Permanent," 328,596.00 ",SIGABOY AVHS,,NBC 579
+5372075,01/01/2021,12/31/21,Teacher - III,Permanent," 346,860.00 ",SIGABOY AVHS,,NBC  584
+5372075,01/01/22,10/12/22,Teacher - III,Permanent," 365,124.00 ",SIGABOY AVHS,,NBC 588
+5372075,10/13/2022,12/31/2022,Head Teacher I,Permanent," 387,852.00 ",SIGABOY AVHS,,STEP 1
+5372075,01/01/2023,PRESENT,Head Teacher I,Permanent," 406,116.00 ",SIGABOY AVHS,,NBC 591
+9130352,12/05/16,12/31/2016,TEACHER I,Provisional," 228,924.00 ",Sigaboy AVHS,,NBC 562
+9130352,01/01/17,11/4/2017,TEACHER I,Provisional," 235,440.00 ",Sigaboy AVHS,,NBC 562
+9130352,04/12/2017,12/31/2017,TEACHER I,Provisional," 235,440.00 ",Sigaboy AVHS,,NBC 566
+9130352,01/01/18,12/31/2018,TEACHER I,Provisional," 242,148.00 ",Sigaboy AVHS,,NBC 572
+9130352,01/01/2019,01/28/2019,TEACHER I,Provisional," 242,148.00 ",Sigaboy AVHS,,NBC 572
+9130352,01/29/2019,05/3/2019,TEACHER I,Permanent," 249,048.00 ",Sigaboy AVHS,,NBC 575
+9130352,05/04/2019,08/18/2019,TEACHER I,Permanent," 249,048.00 ",Sigaboy AVHS,,Maternity Leave 
+9130352,08/19/19,12/31/2019,TEACHER I,Permanent," 249,048.00 ",Sigaboy AVHS,,NBC 575
+9130352,01/01/2020,11/23/2020,TEACHER I,Permanent," 267,792.00 ",Sigaboy AVHS,,NBC 579
+9130352,11/24/2020,12/31/2020,TEACHER II,Permanent," 293,940.00 ",Sigaboy AVHS,,Promoted
+9130352,01/01/2021,12/31/2021,TEACHER II,Permanent," 312,624.00 ",Sigaboy AVHS,,NBC 584
+9130352,01/01/2022,12/31/2022,TEACHER II,Permanent," 331,296.00 ",Sigaboy AVHS,,NBC 588
+9130352,01/01/2023,02/14/23,TEACHER II,Permanent," 349,980.00 ",Sigaboy AVHS,,NBC  591
+9130352,02/15/23,05/30/23,TEACHER II,Permanent," 349,980.00 ",Sigaboy AVHS,,Maternity Leave
+9130352,05/31/23,11/23/23,TEACHER II,Permanent," 353,388.00 ",Sigaboy AVHS,,
+9130352,11/24/23,Present,TEACHER II,Permanent," 353,388.00 ",Sigaboy AVHS,,NBC 591
+8900460,06/24/13,12/31/2013,Teacher I,Permanent," 222,588.00 ",LAVIGAN NHS,,STEP1
+8900460,01/01/14,12/31/14,Teacher I,Permanent," 222,588.00 ",LAVIGAN NHS,,
+8900460,1/1/2015,12/31/15,Teacher I,Permanent," 222,588.00 ",LAVIGAN NHS,,
+8900460,1/1/2016,06/23/16,Teacher I,Permanent," 228,924.00 ",LAVIGAN NHS,,
+8900460,06/24/16,12/31/16,Teacher I,Permanent," 231,432.00 ",LAVIGAN NHS,,STEP 2
+8900460,1/1/2017,12/31/17,Teacher I,Permanent," 238,236.00 ",LAVIGAN NHS,,
+8900460,1/1/2018,12/31/18,Teacher I,Permanent," 245,244.00 ",SAVHS,,TRANSFER OF STATION
+8900460,1/1/2019,06/23/2019,Teacher I,Permanent," 252,456.00 ",SAVHS,,NBC  575
+8900460,06/24/2019,12/31/2019,Teacher I,Permanent," 255,924.00 ",SAVHS,,STEP 3
+8900460,01/01/2020,12/31/2020,Teacher I,Permanent," 274,668.00 ",SAVHS,,NBC  579
+8900460,01/01/2021,12/31/2021,Teacher I,Permanent," 293,400.00 ",SAVHS,,NBC  584
+8900460,01/01/22,06/23/22,Teacher I,Permanent," 312,144.00 ",SAVHS,,NBC 588
+8900460,06/24/22,12/31/2022,Teacher I,Permanent," 315,648.00 ",SAVHS,,STEP 4
+8900460,01/01/2023,Present,Teacher I,Permanent," 334,380.00 ",SAVHS,,NBC 591
+9130233,09/24/18,12/31/18,Teacher - II,Permanent," 265,788.00 ",Sigaboy AVHS,,STEP 1
+9130233,01/01/19,12/31/19,Teacher - II,Permanent," 275,256.00 ",Sigaboy AVHS,,
+9130233,01/01/20,12/31/2020,Teacher - II,Permanent," 293,940.00 ",Sigaboy AVHS,,NBC 568
+9130233,01/01/21,09/23/2021,Teacher - II,Permanent," 312,624.00 ",Sigaboy AVHS,,NBC 572
+9130233,9/24/2021,12/31/2021,Teacher - II,Permanent," 316,032.00 ",Sigaboy AVHS,,STEP 2/NBC 584
+9130233,01/01/2022,12/31/2022,Teacher - II,Permanent," 334,704.00 ",Sigaboy AVHS,,NBC 588
+9130233,01/01/2023,PRESENT,Teacher - II,Permanent," 353,388.00 ",Sigaboy AVHS,,NBC  591
+1120086,10/04/2022,12/31/2022,ADAS III,Permanent," 244,824.00 ",Sigaboy AVHS,,STEP 1
+1120086,01/01/2023,Present,ADAS III,Permanent," 254,532.00 ",Sigaboy AVHS,,NBC 591
+9130192,08/13/2018,12/31/2018,Teacher I,Permanent," 242,148.00 ",Sigaboy AVHS,,STEP 1
+9130192,01/01/2019,12/31/2019,Teacher I,Permanent," 249,048.00 ",Sigaboy AVHS,,NBC 575
+9130192,01/01/2020,12/31/2020,Teacher I,Permanent," 267,792.00 ",Sigaboy AVHS,,NBC 579
+9130192,01/01/2021,8/12/2021,Teacher I,Permanent," 286,524.00 ",Sigaboy AVHS,,NBC 584
+9130192,08/13/2021,12/31/2021,Teacher I,Permanent," 289,932.00 ",Sigaboy AVHS,,STEP 2
+9130192,01/01/22,12/31/2022,Teacher I,Permanent," 308,676.00 ",Sigaboy AVHS,,NBC 588
+9130192,01/01/2023,PRESENT,Teacher I,Permanent," 327,408.00 ",Sigaboy AVHS,,NBC 591
+9129764,7/13/2017,8/24/2017,Teacher I,Subtitute," 19,620.00 ",Sigaboy AVHS,,
+9129764,06/20/2018,12/31/2018,Teacher I,Permanent," 242,148.00 ",Sigaboy AVHS,,STEP 1
+9129764,01/01/2019,12/31/2019,Teacher I,Permanent," 242,148.00 ",Sigaboy AVHS,,NBC 575
+9129764,01/01/2020,12/31/2020,Teacher I,Permanent," 267,792.00 ",Sigaboy AVHS,,NBC 579
+9129764,01/01/2021,7/12/2021,Teacher I,Permanent," 286,524.00 ",Sigaboy AVHS,,NBC 584
+9129764,07/13/21,12/31/2021,Teacher I,Permanent," 289,932.00 ",Sigaboy AVHS,,STEP 2
+9129764,01/01/22,12/31/2022,Teacher I,Permanent," 308,676.00 ",Sigaboy AVHS,,NBC 588
+9129764,01/01/2023,PRESENT,Teacher I,Permanent," 327,408.00 ",Sigaboy AVHS,,NBC 591
+9129817,07/23/2018,12/31/2018,Teacher I,Permanent," 242,148.00 ",Sigaboy AVHS,,STEP1
+9129817,01/01/2019,12/31/2019,Teacher I,Permanent," 249,048.00 ",Sigaboy AVHS,,NBC 575
+9129817,01/01/2020,12/31/2020,Teacher I,Permanent," 267,792.00 ",Sigaboy AVHS,,NBC 579
+9129817,01/01/2021,7/24/2021,Teacher I,Permanent," 286,524.00 ",Sigaboy AVHS,,NBC  584
+9129817,07/23/2021,12/31/2021,Teacher I,Permanent," 289,932.00 ",Sigaboy AVHS,,STEP 2 
+9129817,01/01/2022,12/31/2022,Teacher I,Permanent," 308,676.00 ",Sigaboy AVHS,,NBC 588
+9129817,01/01/2023,Present,Teacher I,Permanent," 324,000.00 ",Sigaboy AVHS,,NBC 591
+9321969,01/03/2023,4/17/2023,Teacher I,Substitute," 324,000.00 ",Sigaboy AVHS,,NBC 591
+9321969,05/24/2023,Present,Teacher II,Permanent," 349,980.00 ",Sigaboy AVHS,,Step I
+9129791,07/05/2018,12/31/2018,Teacher I,Permanent," 242,148.00 ",Sigaboy AVHS,,STEP 1
+9129791,01/01/2019,12/31/2019,Teacher I,Permanent," 242,148.00 ",Sigaboy AVHS,,NBC 575
+9129791,01/01/2020,12/31/2020,Teacher I,Permanent," 267,792.00 ",Sigaboy AVHS,,NBC 579
+9129791,01/01/2021,7/5/2021,Teacher I,Permanent," 286,524.00 ",Sigaboy AVHS,,NBC 584
+9129791,07/05/2021,12/31/2021,Teacher I,Permanent," 289,932.00 ",Sigaboy AVHS,,STEP 2
+9129791,01/01/22,12/31/2022,Teacher I,Permanent," 308,676.00 ",Sigaboy AVHS,,NBC 588
+9129791,01/01/2023,PRESENT,Teacher I,Permanent," 327,408.00 ",Sigaboy AVHS,,NBC 591
+1900070,03/21/2016,06/21/2016,Teacher - I,Permanent," 228,924.00 ",Sigaboy AVHS,,STEP 1
+1900070,06/22/2016,12/31//2016,Teacher - II,Permanent," 247,812.00 ",Sigaboy AVHS,,STEP -1
+1900070,1/1/2017,12/31/2017,Teacher - II,Permanent," 256,644.00 ",Sigaboy AVHS,,NBC 568
+1900070,1/1/2018,12/31/2018,Teacher - II,Permanent," 265,788.00 ",Sigaboy AVHS,,NBC 572
+1900070,1/1/2019,06/21/2019,Teacher - II,Permanent," 275,256.00 ",Sigaboy AVHS,,NBC 575
+1900070,6/22/2019,12/31/2019,Teacher - II,Permanent," 278,664.00 ",Sigaboy AVHS,,STEP 2
+1900070,1/1/2020,12/31/2020,Teacher - II,Permanent," 297,348.00 ",Sigaboy AVHS,,NBC 579
+1900070,01/01/2021,12/31/2022,Teacher - II,Permanent," 316,032.00 ",Sigaboy AVHS,,NBC 584
+1900070,1/1/2022,6/21/2022,Teacher- II,Permanent," 334,704.00 ",Sigaboy AVHS,,NBC 588
+1900070,6/22/2022,12/31/2022,Teacher-II,Permanent," 338,160.00 ",Sigaboy AVHS,,STEP 3
+1900070,01/01/2023,PRESENT,Teacher II,Permanent," 356,844.00 ",Sigaboy AVHS,,NBC 591
+8903500,7/21/2016,12/31/2016,Teacher I,Permanent," 228,924.00 ",Sigaboy AVHS,,STEP 1
+8903500,1/1/2017,12/31/2017,Teacher I,Permanent," 235,440.00 ",Sigaboy AVHS,,NBC 568
+8903500,1/1/2018,12/31/2018,Teacher I,Permanent," 242,148.00 ",Sigaboy AVHS,,NBC 572
+8903500,1/1/2019,07/20/2019,Teacher I,Permanent," 249,048.00 ",Sigaboy AVHS,,NBC 575
+8903500,07/21/2019,12/31/2019,Teacher I,Permanent," 252,456.00 ",Sigaboy AVHS,,STEP2
+8903500,01/01/2020,12/31/2020,Teacher I,Permanent," 271,200.00 ",Sigaboy AVHS,,NBC 579
+8903500,01/01/2021,12/31/2021,Teacher I,Permanent," 289,932.00 ",Sigaboy AVHS,,NBC  584
+8903500,1/1/2022,07/20/22,Teacher I,Permanent," 309,876.00 ",Sigaboy AVHS,,NBC 588
+8903500,07/21/22,12/31/2022,Teacher I,Permanent," 312,144.00 ",Sigaboy AVHS,,STEP 3
+8903500,01/01/2023,Present,Teacher I,Permanent," 330,876.00 ",Sigaboy AVHS,,NBC 591
+8900410,7/2/2013,12/31/2013,Teacher I,Permanent," 222,588.00 ",Sigaboy AVHS,,STEP -1
+8900410,1/1/2014,12/31/2014,Teacher I,Permanent," 222,588.00 ",Sigaboy AVHS,,
+8900410,1/1/2015,13/31/15,Teacher I,Permanent," 222,588.00 ",Sigaboy AVHS,,
+8900410,1/1/2016,7/1/2016,Teacher I,Permanent," 228,924.00 ",Sigaboy AVHS,,NBC 562
+8900410,7/2/2016,12/31/2016,Teacher I,Permanent," 231,432.00 ",Sigaboy AVHS,,Step 2
+8900410,1/1/2017,12/31/2017,Teacher I,Permanent," 238,236.00 ",Sigaboy AVHS,,NBC 568
+8900410,1/1/2018,12/31/2018,Teacher I,Permanent," 245,244.00 ",Sigaboy AVHS,,NBC 572
+8900410,01/01/2019,07/01/2019,Teacher I,Permanent," 252,456.00 ",Sigaboy AVHS,,
+8900410,07/02/2019,12/31/2019,Teacher I,Permanent," 255,924.00 ",Sigaboy AVHS,,STEP 3
+8900410,1/1/2020,12//31/2020,Teacher I,Permanent," 274,668.00 ",Sigaboy AVHS,,NBC 579
+8900410,1/1/2021,12/31/2021,Teacher I,Permanent," 293,400.00 ",Sigaboy AVHS,,NBC 584
+8900410,1/1/2022,7/01/2022,Teacher I,Permanent," 312,144.00 ",Sigaboy AVHS,,NBC 588
+8900410,7/2/2022,12/31/2022,Teacher I,Permanent," 315,648.00 ",Sigaboy AVHS,,STEP 4
+8900410,01/01/2023,7/1/'2023,Teacher I,Permanent," 334,380.00 ",Sigaboy AVHS,,NBC 591
+8900410,7/2/2023,Present,Teacher I,Permanent," 334,380.00 ",Sigaboy AVHS,,Loyalty- 10 yrs.
+5372140,9/14/1993,9/11/1993,SST -I,Permanent," 37,224.00 ",Bangoy District,,Step 1
+5372140,11/7/1993,12/22/1993,SST -I,Permanent," 37,224.00 ",Bangoy District,,
+5372140,6/27/1994,12/31/1994,Teacher - I,Permanent," 46,824.00 ",Nangan NHS,,NCC 72
+5372140,1/1/1995,12/31/1995,Teacher - I,Permanent," 58,824.00 ",Nangan NHS,,NCC 74
+5372140,1/1/1996,12/31/1996,Teacher - I,Permanent," 72,156.00 ",Sigaboy AVHS,,NBC 448
+5372140,1/1/1997,10/31/1997,Teacher - I,Permanent," 87,708.00 ",Sigaboy AVHS,,EO NO. 389
+5372140,11/1/1997,12/31/1997,Teacher - I,Permanent," 103,260.00 ",Sigaboy AVHS,,EO NO. 389
+5372140,1/1/1998,12/31/1998,Teacher - I,Permanent," 103,260.00 ",Sigaboy AVHS,,
+5372140,1/1/1999,12/31/1999,Teacher - I,Permanent," 103,260.00 ",Sigaboy AVHS,,
+5372140,1/1/2000,12/31/2000,Teacher - I,Permanent," 105,852.00 ",Sigaboy AVHS,,NBC # 468
+5372140,1/1/2001,6/30/2001,Teacher - I,Permanent," 119,340.00 ",Sigaboy AVHS,,
+5372140,7/1/2001,12/31/2001,Teacher - I,Permanent," 125,304.00 ",Sigaboy AVHS,,NBC 474
+5372140,1/1/2002,12/31/2002,Teacher - I,Permanent," 125,304.00 ",Sigaboy AVHS,,
+5372140,1/1/2003,12/31/2003,Teacher - I,Permanent," 125,304.00 ",Sigaboy AVHS,,
+5372140,1/1/2004,6/26/2004,Teacher - I,Permanent," 125,304.00 ",Sigaboy AVHS,,
+5372140,6/27/2004,12/31/2004,Teacher - I,Permanent," 128,448.00 ",Sigaboy AVHS,,
+5372140,1/1/2005,12/31/2005,Teacher - I,Permanent," 128,448.00 ",Sigaboy AVHS,,STEP 4
+5372140,1/1/2006,6/26/2006,Teacher - I,Permanent," 128,448.00 ",Sigaboy AVHS,,
+5372140,6/27/2006,12/31/2006,Teacher - I,Permanent," 131,652.00 ",Sigaboy AVHS,,
+5372140,1/1/2007,6/30/2007,Teacher - I,Permanent," 131,653.00 ",Sigaboy AVHS,,STEP 5
+5372140,7/1/2007,12/31/2007,Teacher - I,Permanent," 144,816.00 ",Sigaboy AVHS,,NBC 511
+5372140,1/1/2008,6/30/2008,Teacher - I,Permanent," 144,816.00 ",Sigaboy AVHS,,
+5372140,7/1/2008,12/31/2008,Teacher - I,Permanent," 159,297.00 ",Sigaboy AVHS,,
+5372140,1/1/2009,6/26/2009,Teacher - I,Permanent," 159,297.00 ",Sigaboy AVHS,,
+5372140,6/27/2009,6/30/2009,Teacher - I,Permanent," 173,340.00 ",Sigaboy AVHS,,STEP 6
+5372140,7/1/2009,12/31/2009,Teacher - I,Permanent," 188,292.00 ",Sigaboy AVHS,,NBC 521 'A'
+5372140,1/1/2010,6/23/2010,Teacher - I,Permanent," 188,292.00 ",Sigaboy AVHS,,
+5372140,6/24/2010,12/31/2010,Teacher - I,Permanent," 203,508.00 ",Sigaboy AVHS,,NBC 524
+5372140,1/1/2011,5/31/2011,Teacher - I,Permanent," 203,508.00 ",Sigaboy AVHS,,
+5372140,6/1/2011,12/31/2011,Teacher - I,Permanent," 218,724.00 ",Sigaboy AVHS,,NBC 530
+5372140,1/1/2012,5/31/2012,Teacher - I,Permanent," 218,724.00 ",Sigaboy AVHS,,
+5372140,6/1/2012,6/26/2012,Teacher - I,Permanent," 233,940.00 ",Sigaboy AVHS,,NBC 540
+5372140,6/27/2012,12/31/2012,Teacher - I,Permanent," 236,280.00 ",Sigaboy AVHS,,STEP 7
+5372140,1/1/2013,12/31/2013,Teacher - I,Permanent," 236,280.00 ",Sigaboy AVHS,,
+5372140,1/1/2014,12/31/2014,Teacher - I,Permanent," 236,280.00 ",Sigaboy AVHS,,
+5372140,1/1/2015,6/26/2015,Teacher - I,Permanent," 236,280.00 ",Sigaboy AVHS,,
+5372140,6/26/2015,12/31/2015,Teacher - I,Permanent," 238,644.00 ",Sigaboy AVHS,,STEP 8
+5372140,1/1/2016,12/31/2016,Teacher - I,Permanent," 247,020.00 ",Sigaboy AVHS,,NBC 562
+5372140,1/1/2017,12/21/2017,Teacher - I,Permanent," 255,684.00 ",Sigaboy AVHS,,NBC 568
+5372140,12/22/2017,12/31/2017,Teacher - III,Permanent," 279,084.00 ",Sigaboy AVHS,,Promoted to TIII
+5372140,1/1/2018,12/31/2018,Teacher - III,Permanent," 290,688.00 ",Sigaboy AVHS,,SG-13 STEP 1
+5372140,1/1/2019,12/31/2019,Teacher - III,Permanent," 302,784.00 ",Sigaboy AVHS,,NBC 575
+5372140,1/1/2020,12/31/2020,Teacher - III,Permanent," 321,048.00 ",Sigaboy AVHS,,NBC 579
+5372140,12/22/2020,12/31/2020,Teacher - III,Permanent," 324,804.00 ",Sigaboy AVHS,,STEP 2
+5372140,1/1/2021,12/31/2021,Teacher - III,Permanent," 343,068.00 ",Sigaboy AVHS,,NBC 584
+5372140,01/01/22,12/31/2022,Teacher - III,Permanent," 361,332.00 ",Sigaboy AVHS,,NBC 588
+5372140,01/01/2023,Present,Teacher - III,Permanent," 379,596.00 ",Sigaboy AVHS,,NBC 591
+5372170,12/6/1993,12/31/1993,Teacher - I,Permanent," 37,224.00 ",LUZON NHS,,STEP 1
+5372170,1/1/1994,6/29/1994,Teacher - I,Permanent," 37,224.00 ",LUZON NHS,,NCC 72
+5372170,6/30/1994,12/31/1994,Teacher - I,Permanent," 46,824.00 ",SIGABOY AVHS,,
+5372170,1/1/1995,12/31/1995,Teacher - I,Permanent," 58,824.00 ",SIGABOY AVHS,,NCC 74
+5372170,1/1/1996,12/31/1996,Teacher - I,Permanent, 72.156.00 ,SIGABOY AVHS,,NBC 448
+5372170,1/1/1997,10/31/1997,Teacher - I,Permanent," 87,708.00 ",SIGABOY AVHS,,EO NO 389
+5372170,11/1/1997,12/31/1997,Teacher - I,Permanent," 103,260.00 ",SIGABOY AVHS,,EO NO 389
+5372170,1/1/1998,12/31/1998,Teacher - I,Permanent," 103,260.00 ",SIGABOY AVHS,,
+5372170,1/1/1999,12/31/1999,Teacher - I,Permanent," 103,260.00 ",SIGABOY AVHS,,
+5372170,1/1/2000,12/31/2000,Teacher - I,Permanent," 119,340.00 ",SIGABOY AVHS,,NBC 468
+5372170,1/1/2001,6/30/2001,Teacher - I,Permanent," 119,340.00 ",SIGABOY AVHS,,
+5372170,7/1/2001,12/31/2001,Teacher - I,Permanent," 125,304.00 ",SIGABOY AVHS,,NBC 474
+5372170,1/1/2002,12/31/2002,Teacher - I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5372170,1/1/2003,12/31/2003,Teacher - I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5372170,1/1/2004,12/31/2004,Teacher - I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5372170,1/1/2005,12/5/2005,Teacher - I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5372170,12/6/2005,12/31/2005,Teacher - I,Permanent," 131,652.00 ",SIGABOY AVHS,,STEP - 5
+5372170,1/1/2006,12/31/2006,Teacher - I,Permanent," 131,652.00 ",SIGABOY AVHS,,
+5372170,1/1/2007,6/30/2007,Teacher - I,Permanent," 131,652.00 ",SIGABOY AVHS,,
+5372170,7/1/2007,12/31/2007,Teacher - I,Permanent," 144,816.00 ",SIGABOY AVHS,,NBC 511
+5372170,1/1/2008,12/5/2008,Teacher - I,Permanent," 144,816.00 ",SIGABOY AVHS,,
+5372170,12/6/2008,12/31/2008,Teacher - I,Permanent," 159,297.00 ",SIGABOY AVHS,,STEP-6/NBC 511
+5372170,1/1/2009,6/30/2009,Teacher - I,Permanent," 159,297.00 ",SIGABOY AVHS,,
+5372170,7/1/2009,12/31/2009,Teacher - I,Permanent," 188,292.00 ",SIGABOY AVHS,,SG 11-SG12
+5372170,1/1/2010,6/23/2010,Teacher - I,Permanent," 188,292.00 ",SIGABOY AVHS,,
+5372170,6/24/2010,12/31/2010,Teacher - I,Permanent," 200,244.00 ",SIGABOY AVHS,,NBC 524
+5372170,1/1/2011,5/31/2011,Teacher - I,Permanent," 200,244.00 ",SIGABOY AVHS,,
+5372170,6/1/2011,12/5/2011,Teacher - I,Permanent," 218,724.00 ",SIGABOY AVHS,,NBC - 530
+5372170,12/6/2011,12/31/2011,Teacher - I,Permanent," 221,568.00 ",SIGABOY AVHS,,STEP - 7
+5372170,1/1/2012,5/31/2012,Teacher - I,Permanent," 221,568.00 ",SIGABOY AVHS,,
+5372170,6/1/2012,12/31/2012,Teacher - I,Permanent," 236,280.00 ",SIGABOY AVHS,,NBC - 540
+5372170,1/1/2013,12/31/2013,Teacher - I,Permanent," 236,280.00 ",SIGABOY AVHS,,
+5372170,1/1/2014,12/5/2014,Teacher - I,Permanent," 236,280.00 ",SIGABOY AVHS,,
+5372170,12/6/2014,12/31/2014,Teacher - I,Permanent," 238,644.00 ",SIGABOY AVHS,,STEP - 8
+5372170,1/1/2015,12/31/2015,Teacher - I,Permanent," 238,644.00 ",SIGABOY AVHS,,
+5372170,1/1/2016,12/31/2016,Teacher - I,Permanent," 247,020.00 ",SIGABOY AVHS,,NBC 562
+5372170,1/1/2017,1/17/2017,Teacher - I,Permanent," 255,684.00 ",SIGABOY AVHS,,NBC 568
+5372170,1/18/2017,12/31/2017,Teacher - II,Permanent," 256,644.00 ",SIGABOY AVHS,,PROMOTED TO TII
+5372170,1/1/2018,12/31/2018,Teacher - II,Permanent," 265,788.00 ",SIGABOY AVHS,,NBC 572
+5372170,12/6/2018,12/31/2018,Teacher - II,Permanent," 265,788.00 ",SIGABOY AVHS,,LOYALTY- 25 YRS.
+5372170,1/1/2019,12/31/2019,Teacher - II,Permanent," 265,788.00 ",SIGABOY AVHS,,
+5372170,1/1/2020,01/17/2020,Teacher - II,Permanent," 293,940.00 ",SIGABOY AVHS,,NBC 579
+5372170,01/18/2020,12/31/2020,Teacher - II,Permanent," 297,348.00 ",SIGABOY AVHS,,STEP 2
+5372170,01/01/2021,12/31/2021,Teacher - II,Permanent," 316,032.00 ",SIGABOY AVHS,,NBC 584
+5372170,01/01/2022,'12/31/2022,Teacher - II,Permanent," 334,704.00 ",SIGABOY AVHS,,NBC 588
+5372170,01/01/2023,01/17/2023,Teacher - II,Permanent," 353,388.00 ",SIGABOY AVHS,,NBC 591
+5372170,01/18/2023,12/05/23,Teacher - II,Permanent," 356,844.00 ",SIGABOY AVHS,,STEP 3
+5372170,12/06/2023,Present,Teacher - II,Permanent," 356,844.00 ",SIGABOY AVHS,,LOYALTY- 30 YRS
+5319055,01/31/1996,12/31/1996,SST-1,Permanent," 72,156.00 ",NANGAN NHS,,STEP -1
+5319055,01/01/1997,10/31/1997,SST-1,Permanent," 87,708.00 ",NANGAN NHS,,NBC 458-A
+5319055,11/01/1997,12/31/1997,SST-1,Permanent," 103,260.00 ",NANGAN NHS,,NBC 458-B
+5319055,01/01/1998,12/31/1998,SST-1,Permanent," 103,260.00 ",NANGAN NHS,,
+5319055,01/01/1999,01/30/1999,SST-1,Permanent," 103,260.00 ",NANGAN NHS,,
+5319055,01/31/1999,12/31/1999,SST-1,Permanent," 105,852.00 ",NANGAN NHS,,STEP - 2
+5319055,01/01/2000,12/31/2000,SST-1,Permanent," 116,436.00 ",NANGAN NHS,,NBC -468
+5319055,01/01/2001,06/30/2001,SST-1,Permanent," 116,436.00 ",NANGAN NHS,,
+5319055,07/01/2001,12/31/2001,SST-1,Permanent," 122,256.00 ",NANGAN NHS,,NBC - 474
+5319055,01/01/2002,01/30/2002,SST-1,Permanent," 122,256.00 ",NANGAN NHS,,
+5319055,01/31/2002,12/31/2002,SST-1,Permanent," 125,304.00 ",NANGAN NHS,,STEP -  3
+5319055,01/01/2003,12/31/2003,SST-1,Permanent," 125,304.00 ",NANGAN NHS,,
+5319055,01/01/2004,12/31/2004,T-1,Permanent," 125,304.00 ",NANGAN NHS,,
+5319055,01/01/2005,12/31/2005,T-1,Permanent," 125,304.00 ",NANGAN NHS,,
+5319055,01/31/2005,12/31/2005,T-1,Permanent," 128,448.00 ",NANGAN NHS,,STEP - 4
+5319055,01/01/2006,12/31/2006,T-1,Permanent," 128,448.00 ",NANGAN NHS,,
+5319055,01/01/2007,06/30/2007,T-1,Permanent," 128,448.00 ",NANGAN NHS,,
+5319055,07/01/2007,12/31/2007,T-1,Permanent," 141,288.00 ",NANGAN NHS,,NBC 511
+5319055,01/01/2008,01/30/2008,T-1,Permanent," 141,288.00 ",NANGAN NHS,,
+5319055,01/31/2008,01/31/2008,T-1,Permanent," 144,816.00 ",NANGAN NHS,,STEP - 5
+5319055,02/01/2008,06/30/2008,T-II,Permanent," 146,100.00 ",NANGAN NHS,,PROMOTED TO T-II STEP 3
+5319055,07/01/2008,12/31/2008,T-II,Permanent," 160,704.00 ",NANGAN NHS,,NBC 516
+5319055,01/01/2009,06/30/2009,T-II,Permanent," 160,704.00 ",NANGAN NHS,,
+5319055,07/01/2009,12/31/2009,T-II,Permanent," 188,796.00 ",NANGAN NHS,,NBC 521
+5319055,01/01/2010,06/23/2010,T-II,Permanent," 188,796.00 ",NANGAN NHS,,
+5319055,06/24/2010,12/31/2010,T-II,Permanent," 207,228.00 ",NANGAN NHS,,NBC 524
+5319055,01/01/2011,01/31/2011,T-II,Permanent," 207,228.00 ",NANGAN NHS,,
+5319055,02/01/2011,05/31/2011,T-II,Permanent," 210,576.00 ",NANGAN NHS,,STEP - 4
+5319055,06/01/2011,12/31/2011,T-II,Permanent," 228,564.00 ",NANGAN NHS,,NBC 530
+5319055,01/01/2011,12/31/2011,T-II,Permanent," 228,564.00 ",NANGAN NHS,,
+5319055,01/01/2012,02/07/2012,T-II,Permanent," 228,564.00 ",NANGAN NHS,,
+5319055,02/08/2012,05/31/2012,T - 1,Permanent," 205,188.00 ",SigaboyAVHS,,Transfer of station
+5319055,06/01/2012,12/31/2012,T - 1,Permanent," 222,588.00 ",SigaboyAVHS,,NBC 540
+5319055,01/01/2013,12/31/2013,T - 1,Permanent," 222,588.00 ",SigaboyAVHS,,
+5319055,01/01/2014,02/07/2014,T - 1,Permanent," 222,588.00 ",SigaboyAVHS,,
+5319055,02/08/2014,12/31/2014,T - 1,Permanent," 224,820.00 ",SigaboyAVHS,,STEP 2
+5319055,01/01/2015,12/31/2015,T - 1,Permanent," 224,820.00 ",SigaboyAVHS,,
+5319055,01/01/2016,12/31/2016,T - 1,Permanent," 231,432.00 ",SigaboyAVHS,,NBC 562
+5319055,01/01/2017,01/29/2017,T - 1,Permanent," 238,236.00 ",SigaboyAVHS,,NBC 568
+5319055,01/30/2017,12/31/2017,T - II,Permanent," 256,644.00 ",SigaboyAVHS,,
+5319055,01/01/2018,12/31/2018,T - II,Permanent," 265,788.00 ",SigaboyAVHS,,NBC 572
+5319055,01/01/2019,12/31/2019,T - II,Permanent," 265,788.00 ",SigaboyAVHS,,
+5319055,01/01/2020,01/29/2020,T - II,Permanent," 293,940.00 ",SigaboyAVHS,,NBC 579
+5319055,01/30/2020,12/31/2020,T - II,Permanent," 297,348.00 ",SigaboyAVHS,,STEP 2
+5319055,01/31/2021,10/06/2021,T - II,Permanent," 316,032.00 ",SigaboyAVHS,,Loyalty 25 years
+5319055,10/07/21,12/31/21,Head Teacher I,Permanent," 369,588.00 ",SigaboyAVHS,,PROMOTED TO HT I
+5319055,01/01/2022,12/31/2022,Head Teacher I,Permanent," 387,852.00 ",SigaboyAVHS,,NBC 588
+5319055,01/01/2023,PRESENT,Head Teacher I, Permanent," 406,116.00 ",SigaboyAVHS,,NBC 591
+8301330,3/24/2010,6/23/2010,Teacher I,Permanent," 187,788.00 ",EMNVHS,,STEP -1
+8301330,6/24/2010,12/31/2010,Teacher I,Permanent," 187,788.00 ",EMNVHS,,
+8301330,1/1/2011,6/8/2011,Teacher I,Permanent," 187,789.00 ",EMNVHS,,
+8301330,6/9/2011,12/31/2011,Teacher I,Permanent," 205,188.00 ",SAVHS,,
+8301330,1/1/2012,5/31/2012,Teacher I,Permanent," 205,188.00 ",SAVHS,,
+8301330,6/1/2012,12/31/2012,Teacher I,Permanent," 222,588.00 ",SAVHS,,
+8301330,1/1/2013,3/23/2013,Teacher I,Permanent," 222,588.00 ",SAVHS,,
+8301330,3/24/2013,12/31/2013,Teacher I,Permanent," 224,820.00 ",SAVHS,,STEP - 2
+8301330,1/1/2014,7/31/2014,Teacher I,Permanent," 224,820.00 ",SAVHS,,
+8301330,8/1/2014,12/31/2014,Teacher I,Permanent," 224,820.00 ",SAVHS,,
+8301330,1/1/2015,12/31/2015,Teacher I,Permanent," 224,820.00 ",SAVHS,,
+8301330,1/1/2016,3/23/2016,Teacher I,Permanent," 231,432.00 ",SAVHS,,NBC 562
+8301330,3/24/2016,12/31/2016,Teacher I,Permanent," 233,952.00 ",SAVHS,, STEP - 3
+8301330,1/1/2017,12/31/2017,Teacher I,Permanent," 241,056.00 ",SAVHS,,NBC 568
+8301330,1/1/2018,12/31/2018,Teacher I,Permanent," 248,376.00 ",SAVHS,,NBC 572
+8301330,1/1/2019,03/23/2019,Teacher I,Permanent," 255,924.00 ",SAVHS,,NBC 575
+8301330,03/24/2019,12/31/2019,Teacher I,Permanent," 259,428.00 ",SAVHS,,STEP 4
+8301330,1/1/2020,1/21/2020,Teacher I,Permanent," 278,172.00 ",SAVHS,,NBC 579
+8301330,1/22/2020,12/31/2020,Teacher II,Permanent," 293,940.00 ",SAVHS,,Promotion
+8301330,1/1/2021,12/31/2021,Teacher II,Permanent," 312,624.00 ",SAVHS,,NBC  584
+8301330,01/01/22,10/12/22,Teacher II,Permanent," 331,296.00 ",SAVHS,,NBC  588
+8301330,10/13/22,12/31/2022,Head Teacher 1,Permanent," 387,852.00 ",SAVHS,,NBC 588
+8301330,01/01/2023,Present,Head Teacher 1,Permanent," 406,116.00 ",SAVHS,,NBC 591
+9130202,1/8/2018,12/31/2018,Teacher I,Permanent," 242,148.00 ",Sigaboy AVHS,,STEP1
+9130202,01/01/2019,12/31/2019,Teacher I,Permanent," 249,048.00 ",Sigaboy AVHS,,NBC 575
+9130202,01/01/2020,12/31/2020,Teacher I,Permanent," 267,792.00 ",Sigaboy AVHS,,NBC 579
+9130202,01/01/2021,7/31/2021,Teacher I,Permanent," 286,524.00 ",Sigaboy AVHS,,NBC  584
+9130202,08/01/2021,12/31/2021,Teacher I,Permanent," 289,932.00 ",Sigaboy AVHS,,STEP 2 /NBC  584
+9130202,1/1/2022,08/17/2022,Teacher I,Permanent," 308,676.00 ",Sigaboy AVHS,,NBC 588
+9130202,08/18/2022,12/31/2022,Teacher III,Permanent," 357,576.00 ",Sigaboy AVHS,,Promotion
+9130202,01/01/2023,Present,Teacher III,Permanent," 375,840.00 ",Sigaboy AVHS,,NBC 591
+8303630,8/8/2012,11/2/2012,Teacher - 1,SUBSTITUTE," 222,000.00 ",Sigaboy AVHS,,
+8303630,1/3/2013,12/31/2013,Teacher - 1,Permanent," 222,588.00 ",Sigaboy AVHS,,STEP -1
+8303630,1/1/2014,12/31/2014,Teacher - I,Permanent," 222,588.00 ",Sigaboy AVHS,,
+8303630,1/1/2015,12/31/2015,Teacher - I,Permanent," 222,588.00 ",Sigaboy AVHS,,
+8303630,1/1/2016,01/02/2016,Teacher - I,Permanent," 228,924.00 ",Sigaboy AVHS,,NBC 562
+8303630,1/3/2016,12/31/2016,Teacher - I,Permanent," 231,432.00 ",Sigaboy AVHS,,STEP 2
+8303630,1/1/2017,12/31/2017,Teacher - I,Permanent," 238,236.00 ",Sigaboy AVHS,,NBC 568
+8303630,1/1/2018,02/01/2018,Teacher - I,Permanent," 245,244.00 ",Sigaboy AVHS,,NBC 572
+8303630,1/3/2018,12/31/2018,Teacher - I,Permanent," 245,244.00 ",Sigaboy AVHS,,
+8303630,1/1/2019,07/30/2019,Teacher - I,Permanent," 245,244.00 ",Sigaboy AVHS,,NBC 575
+8303630,07/31/19,12/31/2019,Teacher - II,Permanent," 275,256.00 ",Sigaboy AVHS,,
+8303630,1/1/2020,12/31/2020,Teacher - II,Permanent," 293,940.00 ",Sigaboy AVHS,,NBC 579
+8303630,1/1/2021,12/31/2021,Teacher - II,Permanent," 312,624.00 ",Sigaboy AVHS,,NBC 584
+8303630,01/01/22,07/30/2022,Teacher - II,Permanent," 331,296.00 ",Sigaboy AVHS,,NBC 588
+8303630,07/31/22,12/31/2022,Teacher - II,Permanent," 332,376.00 ",Sigaboy AVHS,,STEP 2
+8303630,01/01/2023,01/02/2023,Teacher II,Permanent," 332,376.00 ",Sigaboy AVHS,,
+8303630,01/03/2023,Present,Teacher II,Permanent," 332,376.00 ",Sigaboy AVHS,,10 yrs loyalty
+9130383,6/4/2019,12/31/2019,ADAS II,Permanent," 201,096.00 ",SIGABOY AVHS,,STEP 1/NBC 575
+9130383,1/1/2020,12/31/2020,ADAS II,Permanent," 210,060.00 ",SIGABOY AVHS,,NBC 579
+9130383,1/1/2021,12/31/2021,ADAS II,Permanent," 219,012.00 ",SIGABOY AVHS,,NBC   584
+9130383,1/1/2022,6/3/2022,ADAS II,Permanent," 227,976.00 ",SIGABOY AVHS,,NBC 588
+9130383,6/4/2022,12/31/2022,ADAS II,Permanent," 230,040.00 ",SIGABOY AVHS,,STEP 2/NBC 588
+9130383,01/01/2023,PRESENT,ADAS II,Permanent," 239,076.00 ",SIGABOY AVHS,,NBC 591
+9129974,8/8/2016,9/8/2016,Teacher I,Subs," 228,924.00 ",NANGAN NHS,,
+9129974,9/13/2018,10/16/2016,Teacher I,Subs.," 228,924.00 ",MANUEL N SR. NHS,,
+9129974,12/5/2016,12/31/2016,Teacher I,Subs.," 228,924.00 ",TIBANBAN NHS,,
+9129974,1/1/2017,3/14/2017,Teacher I,Subs.," 235,440.00 ",TIBANBAN NHS,,
+9129974,6/13/2017,12/31/2017,Teacher I,Permanent," 235,440.00 ",SIGABOY AVHS,,STEP 1
+9129974,1/1/2018,12/31/2018,Teacher I,Permanent," 242,148.00 ",SIGABOY AVHS,,NBC 572
+9129974,1/1/2019,12/31/2019,Teacher I,Permanent," 249,048.00 ",SIGABOY AVHS,,NBC 575
+9129974,01/01/2020,06/12/2020,Teacher I,Permanent," 267,792.00 ",SIGABOY AVHS,,NBC 579
+9129974,06/13/2020,12/31/2020,Teacher I,Permanent," 271,200.00 ",SIGABOY AVHS,,STEP 2
+9129974,1/1/2021,12/31/2021,Teacher I,Permanent," 286,524.00 ",SIGABOY AVHS,,NBC  584
+9129974,01/01/2022,12/31/2022,Teacher I,Permanent," 305,268.00 ",SIGABOY AVHS,,NBC 588
+9129974,01/01/2023,6/12/2023,Teacher I,Permanent," 327,408.00 ",SIGABOY AVHS,,NBC 591
+9129974,6/13/2023,Present,Teacher I,Permanent," 330,876.00 ",SIGABOY AVHS,,STEP 3
+5319060,8/29/1996,12/31/1996,Teacher I,Permanent," 72,156.00 ",TIBANBAN NHS,,STEP 1
+5319060,1/1/1997,10/31/1997,Teacher I,Permanent," 87,708.00 ",TIBANBAN NHS,,NBC 458 'A'
+5319060,11/1/1997,12/31/1997,Teacher I,Permanent," 103,260.00 ",TIBANBAN NHS,,NBC 458 'B'
+5319060,1/1/1998,12/31/1998,Teacher I,Permanent," 103,260.00 ",TIBANBAN NHS,,
+5319060,1/1/1999,12/31/1999,Teacher I,Permanent," 103,260.00 ",TIBANBAN NHS,,
+5319060,1/1/2000,12/31/2000,Teacher I,Permanent," 116,436.00 ",TIBANBAN NHS,,
+5319060,1/1/2001,6/30/2001,Teacher I,Permanent," 116,436.00 ",TIBANBAN NHS,,
+5319060,7/1/2001,12/31/2001,Teacher I,Permanent," 122,256.00 ",TIBANBAN NHS,,NBC # 474
+5319060,1/1/2002,8/28/2002,Teacher I,Permanent," 122,256.00 ",SIGABOY AVHS,,
+5319060,8/29/2002,12/31/2002,Teacher I,Permanent," 125,304.00 ",SIGABOY AVHS,,STEP 3
+5319060,1/1/2003,12/31/2003,Teacher I,Permanent," 125,304.00 ",SIGABOY AVHS,,NBC # 474
+5319060,1/1/2004,12/31/2004,Teacher I,Permanent, 125.304.00 ,SIGABOY AVHS,,
+5319060,1/1/2005,8/28/2005,Teacher I,Permanent, 125.304.00 ,SIGABOY AVHS,,
+5319060,8/29/2005,12/31/2005,Teacher I,Permanent," 128,448.00 ",SIGABOY AVHS,,STEP 4
+5319060,1/1/2006,2/15/2006,Teacher I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5319060,2/16/2006,12/31/2006,Teacher I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5319060,1/1/2007,6/30/2007,Teacher I,Permanent," 128,448.00 ",SIGABOY AVHS,,
+5319060,7/1/2007,12/31/2007,Teacher I,Permanent," 141,288.00 ",SIGABOY AVHS,,NBC 511
+5319060,1/1/2008,6/30/2008,Teacher I,Permanent," 141,288.00 ",SIGABOY AVHS,,
+5319060,7/1/2008,12/31/2008,Teacher I,Permanent," 159,300.00 ",SIGABOY AVHS,,STEP-5/EO 719 'A'
+5319060,1/1/2009,6/30/2009,Teacher I,Permanent," 159,300.00 ",SIGABOY AVHS,,
+5319060,7/1/2009,12/31/2009,Teacher I,Permanent," 184,548.00 ",SIGABOY AVHS,,SG 11-SG12
+5319060,1/1/2010,6/23/2010,Teacher I,Permanent," 184,548.00 ",SIGABOY AVHS,,
+5319060,6/24/2010,12/31/2010,Teacher I,Permanent," 200,244.00 ",SIGABOY AVHS,,NBC 524
+5319060,1/1/2011,1/2/2011,Teacher I,Permanent," 200,244.00 ",SIGABOY AVHS,,
+5319060,1/3/2011,5/31/2011,Teacher II,Permanent," 200,712.00 ",SIGABOY AVHS,,SG11-SG12
+5319060,06/31/11,12/31/2011,Teacher II,Permanent," 246,540.00 ",SIGABOY AVHS,,NBC-530
+5319060,1/1/2012,5/31/2012,Teacher II,Permanent," 246,540.00 ",SIGABOY AVHS,,
+5319060,6/1/2012,12/31/2012,Teacher II,Permanent," 246,540.00 ",SIGABOY AVHS,,NBC - 540
+5319060,1/1/2013,12/31/2013,Teacher II,Permanent," 246,540.00 ",SIGABOY AVHS,,
+5319060,1/1/2014,12/31/2014,Teacher II,Permanent," 246,540.00 ",SIGABOY AVHS,,
+5319060,1/1/2015,7/9/2015,Teacher II,Permanent," 246,540.00 ",SIGABOY AVHS,,
+5319060,7/10/2015,12/31/2015,Teacher II,Permanent," 246,540.00 ",SIGABOY AVHS,,
+5319060,1/1/2016,12/31/2016,Teacher II,Permanent," 250,440.00 ",SIGABOY AVHS,,NBC 562
+5319060,1/1/2017,1/17/2017,Teacher II,Permanent," 250,440.00 ",SIGABOY AVHS,,
+5319060,1/18/2017,12/31/2017,Teacher III,Permanent," 267,936.00 ",SIGABOY AVHS,,Promoted to T-III
+5319060,1/1/2018,12/31/2018,Teacher III,Permanent," 290,688.00 ",SIGABOY AVHS,,NBC 572
+5319060,1/1/2019,12/31/2019,Teacher III,Permanent," 302,784.00 ",SIGABOY AVHS,,NBC 575
+5319060,1/1/2020,01/17/2019,Teacher III,Permanent," 321,048.00 ",SIGABOY AVHS,,NBC 579
+5319060,01/18/2020,12/31/2020,Teacher III,Permanent," 324,804.00 ",SIGABOY AVHS,,STEP 2
+5319060,01/1/2021,12/13/2021,Teacher III,Permanent," 343,068.00 ",SIGABOY AVHS,,NBC 584
+5319060,12/14/2021,12/31/2021,Master Teacher I,Permanent," 524,172.00 ",SIGABOY AVHS,,NBC 584
+5319060,01/01/2022,01/01/2022,Master Teacher I,Permanent," 542,436.00 ",SIGABOY AVHS,,NBC 588
+5319060,01/01/2023,PRESENT,Master Teacher I,Permanent," 560,700.00 ",SIGABOY AVHS,,NBC 591
+8901220,6/16/2015,7/31/2015,Teacher - 1,SUBSTITUTE," 222,588.00 ",Sigaboy AVHS,,
+8901220,8/27/2015,12/31/2015,Teacher - 1,Permanent," 222,588.00 ",Sigaboy AVHS,,STEP 1
+8901220,1/1/2016,12/31/2016,Teacher - I,Permanent," 228,924.00 ",Sigaboy AVHS,,NBC 562
+8901220,1/1/2017,12/31/2017,Teacher - I,Permanent," 235,440.00 ",Sigaboy AVHS,,NBC 568
+8901220,1/1/2018,8/26/2018,Teacher - I,Permanent," 242,148.00 ",Sigaboy AVHS,,NBC 572
+8901220,8/27/2018,12/31/2018,Teacher - I,Permanent," 245,244.00 ",Sigaboy AVHS,,STEP 2
+8901220,1/1/2019,8/27/2019,Teacher - I,Permanent," 252,456.00 ",Sigaboy AVHS,,NBC 575
+8901220,8/28/2019,12/31/2019,Teacher - II,Permanent," 275,256.00 ",Sigaboy AVHS,,Promoted to TII
+8901220,01/01/2020,12/31/2020,Teacher - II,Permanent," 293,940.00 ",Sigaboy AVHS,,NBC 579
+8901220,01/01/2021,12/31/2021,Teacher - II,Permanent," 312,624.00 ",Sigaboy AVHS,,NBC 584
+8901220,01/01/2022,08/27/2022,Teacher - II,Permanent," 331,296.00 ",Sigaboy AVHS,,NBC 588
+8901220,08/28/2022,12/31/2022,Teacher - II,Permanent," 334,704.00 ",Sigaboy AVHS,,STEP 2
+8901220,01/01/2023,PRESENT,Teacher II,Permanent,,Sigaboy AVHS,,NBC 591
+7322340,12/14/21,12/31/21,AO II,PERM.," 286,524.00 ",Caraga South District,,STEP 1
+7322340,01/01/22,12/31/22,AO II,PERM.," 305,268.00 ",Caraga South District,,NBC 588
+7322340,01/01/23,05/21/23,AO II,PERM.," 324,000.00 ",Caraga South District,,NBC 591
+7322340,05/22/23,Present,A.O. II,PERM.," 324,000.00 ",Sigaboy AVHS,,Transfer of Station
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,

@@ -1,0 +1,27 @@
+EduVision MIS
+
+(Empowering Division Offices and Schools with Integrated Management Solutions)
+
+    Why it works:
+        "Edu" represents education and school operations.
+        "Vision" symbolizes strategic planning and a unified outlook for Division and school collaboration.
+        It's short, memorable, and conveys a forward-thinking approach.
+
+
+Description:
+Project EduVision MIS
+Project EduVision MIS is an advanced Management Information System (MIS) developed for the Department of Education (DepEd) Davao Oriental. It is designed to streamline administrative processes, enhance data accuracy, and support data-driven decision-making throughout the division.
+
+Key features of Project EduVision MIS include:
+
+    Human Resource Information System (HRIS): Comprehensive management of employee data and HR operations.
+    Payroll System: Automated and precise processing of salaries and benefits.
+    School-Based Management System (SBMS): Tools for strengthening governance and accountability in schools.
+    School Enrollment System: Efficient tracking and management of student enrollments across the division.
+    Online Recruitment System: Simplified and transparent recruitment processes for teaching and non-teaching personnel.
+    Annual Procurement Plan Management: Organized planning and monitoring of procurement activities.
+    Annual Implementation Plan Management: Tools for planning, implementing, and assessing school development initiatives.
+    School Database: Centralized records of all schools under DepEd Davao Oriental.
+
+By incorporating these features, Project EduVision MIS empowers the division to reduce administrative burdens, ensure transparency, and foster collaboration among stakeholders, ultimately advancing its mission to deliver high-quality education.
+

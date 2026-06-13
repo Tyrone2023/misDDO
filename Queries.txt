@@ -1,0 +1,5 @@
+
+Compute Height2 = update sbfp_data set height2=height*height
+
+compute BMI
+update sbfp_data set bmi=weight/(height2=height*height)

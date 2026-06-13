@@ -1,0 +1,224 @@
+*{
+    margin:0;
+    padding:0;
+    font-family: "Bookman Old Style", Georgia, serif;
+}
+
+.wrap{
+    width:80%;
+    margin:auto;
+}
+
+.heading{
+    text-align:center;
+    margin-top:50px;
+    border-bottom:3px solid #222;
+    padding-bottom:50px;
+    margin-bottom:50px;
+}
+
+.heading p span{
+    font-family: "Times New Roman", Times, serif;
+    display:block;
+}
+
+.heading p span.one,.heading p span.three{
+    font-size:14px;
+}
+.heading p span.two{
+    font-size:14px;
+    font-weight:bold;
+}
+.heading p span.four{
+    font-size:15px;
+    font-weight:bold;
+}
+
+.heading p span.five{
+    font-size:12px;
+}
+
+.heading img{
+    width:90px;
+    margin-top:5px;
+}
+
+.heading .imgLeft{
+    float:left;
+    margin-left:10px;
+}
+.heading .imgRight{
+    float:right;
+    margin-right:10px;
+}
+
+.hname span{
+    display:block;
+    font-size:14px;
+}
+
+.hname {
+    margin:30px 0;
+}
+
+.par {
+    line-height: 1.7em;
+    text-align:justify;
+    text-indent: 50px;
+}
+
+  .as, .vice {
+    font-family: "doesntMatter";
+    text-align: left;
+    position: relative;
+    margin-bottom:20px;
+  }
+
+  .as b {
+    text-align:center;
+    width:70%;
+    display:inline-block;
+  }
+
+  .as>span::after {
+    display: inline-block;
+    position: absolute;
+    border-bottom: 1px solid #222;
+    width: 100%;
+    left: 0;
+    margin-top: 0;
+    content: "X";
+    color: transparent;
+    z-index: -1;
+  }
+  
+  .as>span {
+    background: white;
+    padding-bottom: 11px;
+  }
+  .vice>span::after {
+    display: inline-block;
+    position: absolute;
+    border-bottom: 1px solid #222;
+    width: 100%;
+    left: 0;
+    margin-top: 0;
+    content: "X";
+    color: transparent;
+    z-index: -1;
+  }
+  
+  .vice>span {
+    background: white;
+    padding-bottom: 11px;
+  }
+
+  .dear{
+        margin:35px 0;
+  }
+
+  .content p{
+    margin-bottom:22px;
+  }
+
+  .vty{
+    text-align:right;
+    margin-right:25%;
+    margin-top:50px;
+  }
+  .sign{
+    float:right;
+    display:inline-block;
+    text-align:center;
+    margin:40px 0;
+  }
+
+  .sign span{
+    display:block;
+    font-weight: bold;
+  }
+  .name{
+    text-decoration: underline;
+    font-weight: bold;
+  }
+
+  .item{
+    margin-bottom:50px;
+  }
+  .date{
+    border-bottom:1px solid #222;
+    display: inline-block;
+    float:right;
+    width:30%;
+    margin:20px 0;
+  }
+
+  .title{
+    text-align:center;
+    margin:50px 0;
+    font-weight: bold;
+    font-size:20px;
+  }
+  .con{
+    display:inline-block;
+  }
+  .con .spos{
+    display:block;
+    text-align:center;
+  }
+
+  .con .sname{
+    text-decoration: underline;
+  }
+
+  .cs{
+    font-family: Arial, Helvetica, sans-serif;
+    font-size:15px;
+    font-weight:bold;
+    font-style: italic;
+  }
+
+  .cs span{
+    display:block;
+  }
+
+  .for{
+    border:1px solid red;
+  }
+
+  .wrapcs {
+    border:2px solid #222;
+    padding:30px;
+    background-color: #a3a0a0;
+  }
+
+ .inner{
+    background-color:#fff;
+    padding:20px;
+    border:2px solid #222;
+ }
+
+
+
+
+  .blocker{clear:both !important}
+
+
+  @page {
+    size: A4;
+    margin: 12mm 12mm 12mm 12mm;
+  }
+  @media print {
+    html, body {
+      width: 210mm;
+      height: 297mm;
+    }
+
+    .wrap{
+        width:90%;
+    }
+
+}
+
+
+

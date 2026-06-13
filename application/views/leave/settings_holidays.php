@@ -1,0 +1,1 @@
+<div class="container-fluid"><h4><?= $title; ?></h4><table class="table table-bordered"><?php foreach ($holidays as $row): ?><tr><td><?= html_escape($row['holiday_date']); ?></td><td><?= html_escape($row['holiday_name']); ?></td></tr><?php endforeach; ?></table></div>

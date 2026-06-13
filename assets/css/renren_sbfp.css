@@ -1,0 +1,141 @@
+*{
+    font-family:'Calibri', Arial, Helvetica, sans-serif;
+    margin:0; 
+    padding:0; 
+    border:0;
+}
+ul li{list-style-type: none;}
+
+table, td, th {
+    border: 1px solid black;
+    padding:2px 5px;
+  }
+  table, td {
+    text-align:center;
+  }
+  .de{
+    font-family: "Old English Text MT"; 
+    font-size: 18pt;
+  }
+
+  .rp{
+    font-family: "Old English Text MT"; 
+    font-size: 12pt;
+  }
+  .r{
+    font-family: "Trajan Pro";
+    font-size: 10pt;
+  }
+
+.wrap{
+    width:90%;
+    margin:auto;
+    margin-bottom:20px
+}
+
+.sbfp{
+    border-collapse: collapse;
+    width:100%;
+    margin-top:20px;
+
+}
+
+.sbfp_header{
+    width:100%;
+    text-align:center;
+    margin-top:50px;
+    font-size:12px;
+}
+
+.sbfp2nd{
+    margin:40px auto 10px auto;
+    border-collapse: collapse;
+    width:80%;
+
+}
+
+.pre{
+    text-align:left;
+}
+
+.bs{
+    margin-top:30px;
+}
+
+.text-left{
+  text-align:left !important;
+}
+.sbfpren .nb{
+  border:0;
+  text-align:left;
+  font-weight:normal;
+}
+.sbfpren {
+  border:0;
+  font-size:14px;
+}
+.sbfpf2{
+  font-size:12px;
+}
+.f2 {
+  background-color: #ff0;
+}
+
+.tr{
+  text-align:center !important;
+  border-right:1px solid #000 !important;
+  border-left:1px solid #000 !important;
+}
+.tr2{
+  border-right:1px solid #000 !important;
+  border-left:1px solid #000 !important;
+}
+
+.bt{
+  border-top:1px solid #000 !important;
+}
+
+.blocker{clear:both !important}
+
+.signtable{
+  border-collapse: collapse;
+  margin-top:20px;
+  border:0;
+  margin-bottom:20px;
+}
+
+
+.wrap .signtable .tableTextLeft{
+  text-align:left !important;
+}
+
+.signtable .tableNoBorder{
+  border:0 !important
+}
+
+.signtable .tableBorderTop{
+  border:0;
+  border-top:1px solid #000 !important
+}
+
+.signtable .nb{
+  border:0;
+}
+.signtable .noBorderBottom{
+  border-bottom:0 !important;
+  border-top:0 !important;
+  text-align:left;
+}
+.signtable .noBorderTop{
+  border-top:0 !important;
+  text-align:left;
+}
+
+.text-left{
+  text-align:left !important;
+}
+.text-center{
+  text-align:center !important;
+}
+
+

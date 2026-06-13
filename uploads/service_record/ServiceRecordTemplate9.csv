@@ -1,0 +1,410 @@
+﻿Employee No.,FROM,TO,Designation,Status,Annual Salary,Station/Place of Assignment,L/V and ABS Without Pay,Separation Cause/d
+8300200,10-03-06,12-31-06,Teacher I,Permanent ," 119,268.00 ",Buso Nat'l HS,None,Appointment
+8300200,01-01-07,06-30-07,Teacher I,Permanent ," 119,268.00 ",Buso Nat'l HS,None,
+8300200,07-01-07,12-31-07,Teacher I,Permanent ," 131,196.00 ",Buso Nat'l HS,None,NBC 511
+8300200,01-01-08,02-11-08,Teacher I,Permanent ," 131,196.00 ",Buso Nat'l HS,None,
+8300200,02-12-08,06-30-08,Teacher I,Permanent ," 131,196.00 ",Calapagan Nat'l HS,None,Transfer of station
+8300200,07-01-08,12-31-08,Teacher I,Permanent ," 144,312.00 ",Calapagan Nat'l HS,None,EO 719 Annex A
+8300200,01-01-09,06-30-09,Teacher I,Permanent ," 144,312.00 ",Calapagan Nat'l HS,None,
+8300200,07-01-09,10-02-09,Teacher I,Permanent ," 170,376.00 ",Calapagan Nat'l HS,None,NBC 521
+8300200,10-03-09,12-31-09,Teacher I,Permanent ," 173,796.00 ",Calapagan Nat'l HS,None,Step 2
+8300200,01-01-10,06-23-10,Teacher I,Permanent ," 173,796.00 ",Calapagan Nat'l HS,None,
+8300200,06-24-10,12-31-10,Teacher I,Permanent ," 190,800.00 ",Calapagan Nat'l HS,None,NBC 524
+8300200,01-01-11,05-31-11,Teacher I,Permanent ," 190,800.00 ",Calapagan Nat'l HS,None,
+8300200,06-01-11,12-31-11,Teacher I,Permanent ," 207,816.00 ",Calapagan Nat'l HS,None,NBC 530
+8300200,01-01-12,05-31-12,Teacher I,Permanent ," 207,816.00 ",Calapagan Nat'l HS,None,
+8300200,06-01-12,10-02-12,Teacher I,Permanent ," 224,820.00 ",Calapagan Nat'l HS,None,NBC 540
+8300200,10-03-12,12-31-12,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,Step 3
+8300200,01-01-13,12-31-13,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,
+8300200,01-01-14,12-31-14,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,
+8300200,01-01-15,10-02-15,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,
+8300200,10-03-15,12-31-15,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,Step 4
+8300200,01-01-16,10-02-16,Teacher I,Permanent ," 236,508.00 ",Calapagan Nat'l HS,None,NBC 562
+8300200,10-03-16,12-31-16,Teacher I,Permanent ," 236,508.00 ",Calapagan Nat'l HS,None,10 years LOYALTY
+8300200,01-01-17,12-31-17,Teacher I,Permanent ," 243,912.00 ",Calapagan Nat'l HS,None,NBC 568
+8300200,01-01-18,10-02-18,Teacher I,Permanent ," 251,556.00 ",Calapagan Nat'l HS,None,NBC 572
+8300200,10-03-18,12-31-18,Teacher I,Permanent ," 254,772.00 ",Calapagan Nat'l HS,None,Step 5
+8300200,01-01-19,12-31-19,Teacher I,Permanent ," 262,980.00 ",Calapagan Nat'l HS,None,NBC 575
+8300200,01-01-20,12-31-20,Teacher I,Permanent ," 281,724.00 ",Calapagan Nat'l HS,None,NBC 579
+8300200,01-01-21,10-02-21,Teacher I,Permanent ," 300,456.00 ",Calapagan Nat'l HS,None,NBC 584
+8300200,10-03-21,12-31-21,Teacher I,Permanent ," 304,068.00 ",Calapagan Nat'l HS,None,Step 6 (15years LOYALTY)
+8300200,01-01-22,12-31-22,Teacher I,Permanent ," 322,812.00 ",Calapagan Nat'l HS,None,NBC 588
+8300200,01-01-23,PRESENT,Teacher I,Permanent ," 341,544.00 ",Calapagan Nat'l HS,None,NBC 591
+5308055,02-05-01,06-30-01,Teacher I,Permanent ," 113,592.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+5308055,07-01-01,12-31-01,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,NBC  474
+5308055,01-01-02,12-31-02,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5308055,01-01-03,12-31-03,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5308055,01-01-04,02-04-04,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5308055,02-05-04,12-31-04,Teacher I,Permanent ," 122,256.00 ",Calapagan Nat'l HS,None,"SG 11, Step 2"
+5308055,01-01-05,12-31-05,Teacher I,Permanent ," 122,256.00 ",Calapagan Nat'l HS,None,
+5308055,01-01-06,12-31-06,Teacher I,Permanent ," 122,256.00 ",Calapagan Nat'l HS,None,
+5308055,01-01-07,02-04-07,Teacher I,Permanent ," 122,256.00 ",Calapagan Nat'l HS,None,
+5308055,02-05-07,06-30-07,Teacher I,Permanent ," 125,304.00 ",Calapagan Nat'l HS,None,"SG 11, Step 3"
+5308055,07-01-07,12-31-07,Teacher I,Permanent ," 137,832.00 ",Calapagan Nat'l HS,None,NBC 511
+5308055,01-01-08,06-30-08,Teacher I,Permanent ," 137,832.00 ",Calapagan Nat'l HS,None,
+5308055,07-01-08,12/31/808,Teacher I,Permanent ," 151,620.00 ",Calapagan Nat'l HS,None,NBC 516
+5308055,01-01-09,06-30-09,Teacher I,Permanent ," 151,620.00 ",Calapagan Nat'l HS,None,
+5308055,07-01-09,12-31-09,Teacher I,Permanent ," 177,300.00 ",Calapagan Nat'l HS,None,"NBC 521 ""A"""
+5308055,01-01-10,02-04-10,Teacher I,Permanent ," 177,300.00 ",Calapagan Nat'l HS,None,
+5308055,02-05-10,06-23-10,Teacher I,Permanent ," 180,864.00 ",Calapagan Nat'l HS,None,"SG 11, Step 4"
+5308055,06-24-10,12-31-10,Teacher I,Permanent ," 197,028.00 ",Calapagan Nat'l HS,None,NBC 524
+5308055,01-01-11,05-31-11,Teacher I,Permanent ," 197,028.00 ",Calapagan Nat'l HS,None,
+5308055,06-01-11,12-31-11,Teacher I,Permanent ," 213,180.00 ",Calapagan Nat'l HS,None,NBC 530
+5308055,01-01-12,05-31-12,Teacher I,Permanent ," 213,180.00 ",Calapagan Nat'l HS,None,
+5308055,06-01-12,12-31-12,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,NBC 540
+5308055,01-01-13,02-04-13,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,
+5308055,02-05-13,12-31-13,Teacher I,Permanent ," 231,624.00 ",Calapagan Nat'l HS,None,"SG 11, Step 5"
+5308055,01-01-14,12-31-14,Teacher I,Permanent ," 231,624.00 ",Calapagan Nat'l HS,None,
+5308055,01-01-15,12-31-15,Teacher I,Permanent ," 231,624.00 ",Calapagan Nat'l HS,None,
+5308055,01-01-16,02-04-16,Teacher I,Permanent ," 239,100.00 ",Calapagan Nat'l HS,None,NBC 562
+5308055,02-05-16,12-31-16,Teacher I,Permanent ," 241,704.00 ",Calapagan Nat'l HS,None,"SG 11, Step 6"
+5308055,01-01-17,10-03-17,Teacher I,Permanent ," 249,732.00 ",Calapagan Nat'l HS,None,NBC 568
+5308055,10-04-17,12-31-17,Teacher III,Permanent ," 279,084.00 ",Calapagan Nat'l HS,None,PROMOTION
+5308055,01-01-18,12-31-18,Teacher III,Permanent ," 290,688.00 ",Calapagan Nat'l HS,None,NBC 572
+5308055,01-01-19,12-31-19,Teacher III,Permanent ," 302,784.00 ",Calapagan Nat'l HS,None,NBC 575
+5308055,01-01-20,10-03-20,Teacher III,Permanent ," 321,048.00 ",Calapagan Nat'l HS,None,NBC 579
+5308055,10-04-20,12-31-20,Teacher III,Permanent ," 324,804.00 ",Calapagan Nat'l HS,None,"SG 13, Step 2"
+5308055,01-01-21,02-04-21,Teacher III,Permanent ," 343,068.00 ",Calapagan Nat'l HS,None,NBC 584
+5308055,02-05-21,12-31-21,Teacher III,Permanent ," 343,068.00 ",Calapagan Nat'l HS,None,20years Loyalty
+5308055,01-01-22,12-31-22,Teacher III,Permanent ," 361,332.00 ",Calapagan Nat'l HS,None,NBC 588
+5308055,01-01-23,PRESENT,Teacher III,Permanent ," 379,596.00 ",Calapagan Nat'l HS,None,NBC 591
+8324570,08-12-21,12-31-21,Teacher I,Permanent ," 286,524.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+8324570,01-01-22,12-31-22,Teacher I,Permanent ," 305,268.00 ",Calapagan Nat'l HS,None,NBC 588
+8324570,01-01-23,PRESENT,Teacher I,Permanent ," 324,000.00 ",Calapagan Nat'l HS,None,NBC 591
+8300120,02-17-06,12-31-06,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+8300120,01-01-07,06-30-07,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+8300120,07-01-07,12-31-07,Teacher I,Permanent ," 131,196.00 ",Calapagan Nat'l HS,None,NBC 511
+8300120,01-01-08,06-30-08,Teacher I,Permanent ," 131,196.00 ",Calapagan Nat'l HS,None,
+8300120,07-01-08,12-31-08,Teacher I,Permanent ," 144,312.00 ",Calapagan Nat'l HS,None,NBC 516
+8300120,01-01-09,02-16-09,Teacher I,Permanent ," 144,312.00 ",Calapagan Nat'l HS,None,
+8300120,02-17-09,06-30-09,Teacher I,Permanent ," 147,936.00 ",Calapagan Nat'l HS,None,Step 2
+8300120,07-01-09,12-31-09,Teacher I,Permanent ," 173,796.00 ",Calapagan Nat'l HS,None,NBC 521
+8300120,01-01-10,06-23-10,Teacher I,Permanent ," 173,796.00 ",Calapagan Nat'l HS,None,
+8300120,06-24-10,12-31-10,Teacher I,Permanent ," 190,800.00 ",Calapagan Nat'l HS,None,NBC 524
+8300120,01-01-11,05-31-11,Teacher I,Permanent ," 190,800.00 ",Calapagan Nat'l HS,None,
+8300120,06-01-11,12-31-11,Teacher I,Permanent ," 207,816.00 ",Calapagan Nat'l HS,None,NBC 530
+8300120,01-01-12,02-16-12,Teacher I,Permanent ," 207,816.00 ",Calapagan Nat'l HS,None,
+8300120,02-17-12,05-31-12,Teacher I,Permanent ," 210,480.00 ",Calapagan Nat'l HS,None,Step 3
+8300120,06-01-12,12-31-12,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,NBC 540
+8300120,01-01-13,12-31-13,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,
+8300120,01-01-14,12-31-14,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,
+8300120,01-01-15,02-16-15,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,
+8300120,02-17-15,12-31-15,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,Step 4
+8300120,01-01-16,12-31-16,Teacher I,Permanent ," 236,508.00 ",Calapagan Nat'l HS,None,NBC 562
+8300120,01-01-17,12-31-17,Teacher I,Permanent ," 243,912.00 ",Calapagan Nat'l HS,None,NBC 568
+8300120,01-01-18,02-16-18,Teacher I,Permanent ," 251,556.00 ",Calapagan Nat'l HS,None,NBC 572
+8300120,02-17-18,12-31-18,Teacher I,Permanent ," 254,772.00 ",Calapagan Nat'l HS,None,Step 5
+8300120,01-01-19,12-31-19,Teacher I,Permanent ," 262,980.00 ",Calapagan Nat'l HS,None,NBC 575
+8300120,01-01-20,12-31-20,Teacher I,Permanent ," 281,724.00 ",Calapagan Nat'l HS,None,NBC 579
+8300120,01-01-21,02-16-21,Teacher I,Permanent ," 300,456.00 ",Calapagan Nat'l HS,None,NBC 584
+8300120,02-17-21,12-31-21,Teacher I,Permanent ," 304,068.00 ",Calapagan Nat'l HS,None,Step 6/15YearsLoyalty
+8300120,01-01-22,12-31-22,Teacher I,Permanent ," 322,812.00 ",Calapagan Nat'l HS,None,NBC 588
+8300120,01-01-23,PRESENT,Teacher I,Permanent ," 341,544.00 ",Calapagan Nat'l HS,None,NBC 591
+8323480,08-30-19,12-31-19,Teacher I,Permanent ," 249,048.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+8323480,01-01-20,12-31-20,Teacher I,Permanent ," 267,792.00 ",Calapagan Nat'l HS,None,NBC 579
+8323480,01-01-21,12-31-21,Teacher I,Permanent ," 286,524.00 ",Calapagan Nat'l HS,None,NBC 584
+8323480,01-01-22,08-29-22,Teacher I,Permanent ," 305,268.00 ",Calapagan Nat'l HS,None,NBC 588
+8323480,08-30-22,12-31-22,Teacher I,Permanent ," 308,676.00 ",Calapagan Nat'l HS,None,Step 2
+8323480,01-01-23,PRESENT,Teacher I,Permanent ," 327,408.00 ",Calapagan Nat'l HS,None,NBC 591
+8324560,09-14-21,12-31-21,Teacher I,Permanent ," 286,524.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+8324560,01-01-22,12-31-22,Teacher I,Permanent ," 305,268.00 ",Calapagan Nat'l HS,None,NBC 588
+8324560,01-01-23,PRESENT,Teacher I,Permanent ," 324,000.00 ",Calapagan Nat'l HS,None,NBC 591
+5308020,01-25-88,12-31-88,Teacher I,Permanent ," 21,168.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+5308020,01-01-89,06-30-89,Teacher I,Permanent ," 21,168.00 ",Calapagan Nat'l HS,None,
+5308020,07-01-89,12-31-89,Teacher I,Permanent ," 37,224.00 ",Calapagan Nat'l HS,None,RA 6758
+5308020,01-01-90,12-31-90,Teacher I,Permanent ," 37,224.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-91,01-24-91,Teacher I,Permanent ," 37,224.00 ",Calapagan Nat'l HS,None,
+5308020,01-25-91,12-31-91,Teacher I,Permanent ," 37,596.00 ",Calapagan Nat'l HS,None,Step 2
+5308020,01-01-92,12-31-92,Teacher I,Permanent ," 37,596.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-93,12-31-93,Teacher I,Permanent ," 37,596.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-94,01-24-94,Teacher I,Permanent ," 47,196.00 ",Calapagan Nat'l HS,None,NCC 72
+5308020,01-25-94,12-31-94,Teacher I,Permanent ," 47,568.00 ",Calapagan Nat'l HS,None,Step 3
+5308020,01-01-95,12-31-95,Teacher I,Permanent ," 59,568.00 ",Calapagan Nat'l HS,None,NCC 74
+5308020,01-01-96,12-31-96,Teacher I,Permanent ," 72,900.00 ",Calapagan Nat'l HS,None,NBC 448
+5308020,01-01-97,01-24-97,Teacher I,Permanent ," 90,696.00 ",Calapagan Nat'l HS,None,"NBC 458 Annex ""A"""
+5308020,01-25-97,10-31-97,Teacher I,Permanent ," 92,244.00 ",Calapagan Nat'l HS,None,Step 4
+5308020,11-01-97,12-31-97,Teacher I,Permanent ," 111,204.00 ",Calapagan Nat'l HS,None,"NBC 458 Annex ""B"""
+5308020,01-01-98,12-31-98,Teacher I,Permanent ," 111,204.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-99,12-31-99,Teacher I,Permanent ," 111,204.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-00,01-24-00,Teacher I,Permanent ," 122,328.00 ",Calapagan Nat'l HS,None,NBC 468
+5308020,01-25-00,12-31-00,Teacher I,Permanent ," 125,388.00 ",Calapagan Nat'l HS,None,Step 5
+5308020,01-01-01,06-30-01,Teacher I,Permanent ," 125,388.00 ",Calapagan Nat'l HS,None,
+5308020,07-01-01,12-31-01,Teacher I,Permanent ," 131,652.00 ",Calapagan Nat'l HS,None,NBC 474
+5308020,01-01-02,12-31-02,Teacher I,Permanent ," 131,652.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-03,01-24-03,Teacher I,Permanent ," 131,652.00 ",Calapagan Nat'l HS,None,
+5308020,01-25-03,12-31-03,Teacher I,Permanent ," 134,952.00 ",Calapagan Nat'l HS,None,Step 6
+5308020,01-01-04,12-31-04,Teacher I,Permanent ," 134,952.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-05,12-31-05,Teacher I,Permanent ," 134,952.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-06,01-24-06,Teacher I,Permanent ," 134,952.00 ",Calapagan Nat'l HS,None,
+5308020,01-25-06,12-31-06,Teacher I,Permanent ," 138,324.00 ",Calapagan Nat'l HS,None,Step 7
+5308020,01-01-07,06-30-07,Teacher I,Permanent ," 138,324.00 ",Calapagan Nat'l HS,None,
+5308020,07-01-07,12-31-07,Teacher I,Permanent ," 152,160.00 ",Calapagan Nat'l HS,None,NBC 511
+5308020,01-01-08,06-30-08,Teacher I,Permanent ," 152,160.00 ",Calapagan Nat'l HS,None,
+5308020,07-01-08,12-31-08,Teacher I,Permanent ," 167,376.00 ",Calapagan Nat'l HS,None,NBC 516
+5308020,01-01-09,01-24-09,Teacher I,Permanent ," 167,376.00 ",Calapagan Nat'l HS,None,
+5308020,01-25-09,06-30-09,Teacher I,Permanent ," 171,564.00 ",Calapagan Nat'l HS,None,Step 8
+5308020,07-01-09,12-31-09,Teacher I,Permanent ," 196,020.00 ",Calapagan Nat'l HS,None,NBC 521
+5308020,01-01-10,06-23-10,Teacher I,Permanent ," 196,020.00 ",Calapagan Nat'l HS,None,
+5308020,06-24-10,12-31-10,Teacher I,Permanent ," 210,228.00 ",Calapagan Nat'l HS,None,NBC 524
+5308020,01-01-11,05-31-11,Teacher I,Permanent ," 210,228.00 ",Calapagan Nat'l HS,None,
+5308020,06-01-11,12-31-11,Teacher I,Permanent ," 224,436.00 ",Calapagan Nat'l HS,None,NBC 530
+5308020,01-01-12,05-31-12,Teacher I,Permanent ," 224,436.00 ",Calapagan Nat'l HS,None,
+5308020,06-01-12,12-31-12,Teacher I,Permanent ," 238,644.00 ",Calapagan Nat'l HS,None,NBC 540
+5308020,01-01-13,12-31-13,Teacher I,Permanent ," 238,644.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-14,06-17-14,Teacher I,Permanent ," 238,644.00 ",Calapagan Nat'l HS,None,
+5308020,06-18-14,12-31-14,Teacher II,Permanent ," 239,280.00 ",Calapagan Nat'l HS,None,PROMOTED | SST - II (Step 1)
+5308020,01-01-15,12-31-15,Teacher II,Permanent ," 239,280.00 ",Calapagan Nat'l HS,None,
+5308020,01-01-16,12-31-16,Teacher II,Permanent ," 247,812.00 ",Calapagan Nat'l HS,None,NBC 562
+5308020,01-01-17,06-17-17,Teacher II,Permanent ," 256,644.00 ",Calapagan Nat'l HS,None,NBC 568
+5308020,06-18-17,12-31-17,Teacher II,Permanent ," 259,512.00 ",Calapagan Nat'l HS,None,Step 2
+5308020,01-01-18,12-31-18,Teacher II,Permanent ," 268,920.00 ",Calapagan Nat'l HS,None,NBC 572
+5308020,01-01-19,12-31-19,Teacher II,Permanent ," 278,664.00 ",Calapagan Nat'l HS,None,NBC 575
+5308020,01-01-20,06-17-20,Teacher II,Permanent ," 297,348.00 ",Calapagan Nat'l HS,None,NBC 579
+5308020,06-18-20,12-31-20,Teacher II,Permanent ," 300,804.00 ",Calapagan Nat'l HS,None,Step 3
+5308020,01-01-21,12-31-21,Teacher II,Permanent ," 319,488.00 ",Calapagan Nat'l HS,None,NBC 584
+5308020,01-01-22,12-31-22,Teacher II,Permanent ," 338,160.00 ",Calapagan Nat'l HS,None,NBC 588
+5308020,01-01-23,01-24-23,Teacher II,Permanent ," 356,844.00 ",Calapagan Nat'l HS,None,NBC 591
+5308020,01-25-23,06-17-23,Teacher II,Permanent ," 356,844.00 ",Calapagan Nat'l HS,None,35 years Loyalty
+5308020,06-18-23,PRESENT,Teacher II,Permanent ," 360,336.00 ",Calapagan Nat'l HS,None,Step 4
+9130111,11-29-17,12-31-17,ADAS III,Permanent ," 203,832.00 ",Calapagan NHS,None,APPOINTMENT
+9130111,01-01-18,12-31-18,ADAS III,Permanent ," 209,676.00 ",Calapagan NHS,None,NBC 572
+9130111,01-01-19,12-31-19,ADAS III,Permanent ," 215,700.00 ",Calapagan NHS,None,NBC 575
+9130111,01-01-20,11-28-20,ADAS III,Permanent ," 225,408.00 ",Calapagan NHS,None,NBC 579
+9130111,11-29-20,12-31-20,ADAS III,Permanent ," 227,292.00 ",Calapagan NHS,None,Step 2
+9130111,01-01-21,12-31-21,ADAS III,Permanent ," 237,084.00 ",Calapagan NHS,None,NBC 584
+9130111,01-01-22,12-31-22,ADAS III,Permanent ," 246,864.00 ",Calapagan NHS,None,NBC 588
+9130111,01-01-23,PRESENT,ADAS III,Permanent ," 256,656.00 ",Calapagan NHS,None,NBC 591
+8900210,05-15-13,12-31-13,Teacher I,Permanent ," 222,588.00 ",Tagugpo Nat'l HS,None,APPOINTMENT
+8900210,01-01-14,12-31-14,Teacher I,Permanent ," 222,588.00 ",Tagugpo Nat'l HS,None,
+8900210,01-01-15,12-31-15,Teacher I,Permanent ," 222,588.00 ",Tagugpo Nat'l HS,None,
+8900210,01-01-16,05-14-16,Teacher I,Permanent ," 228,924.00 ",Tagugpo Nat'l HS,None,NBC 562
+8900210,05-15-16,12-31-16,Teacher I,Permanent ," 231,432.00 ",Tagugpo Nat'l HS,None,Step 2
+8900210,01-01-17,12-31-17,Teacher I,Permanent ," 238,236.00 ",Tagugpo Nat'l HS,None,NBC 568
+8900210,01-01-18,07-08-18,Teacher I,Permanent ," 245,244.00 ",Tagugpo Nat'l HS,None,NBC 572
+8900210,07-09-18,12-31-18,Teacher I,Permanent ," 245,244.00 ",Calapagan Nat'l HS,None,Change of Station
+8900210,01-01-19,05-14-19,Teacher I,Permanent ," 252,456.00 ",Calapagan Nat'l HS,None,NBC 575
+8900210,05-15-19,12-31-19,Teacher I,Permanent ," 255,924.00 ",Calapagan Nat'l HS,None,Step 3
+8900210,01-01-20,12-31-20,Teacher I,Permanent ," 274,668.00 ",Calapagan Nat'l HS,None,NBC 579
+8900210,01-01-21,12-31-21,Teacher I,Permanent ," 293,400.00 ",Calapagan Nat'l HS,None,NBC 584
+8900210,01-01-22,05-14-22,Teacher I,Permanent ," 312,144.00 ",Calapagan Nat'l HS,None,NBC 588
+8900210,05-15-22,12-31-22,Teacher I,Permanent ," 315,648.00 ",Calapagan Nat'l HS,None,Step 4
+8900210,01-01-23,05-14-23,Teacher I,Permanent ," 334,380.00 ",Calapagan Nat'l HS,None,NBC 591
+8900210,05-15-23,PRESENT,Teacher I,Permanent ," 334,380.00 ",Calapagan Nat'l HS,None,10 years LOYALTY
+8900670,07-15-14,12-31-14,Teacher I,Permanent ," 222,588.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+8900670,01-01-15,12-31-15,Teacher I,Permanent ," 222,588.00 ",Calapagan Nat'l HS,None,
+8900670,01-01-16,12-31-16,Teacher I,Permanent ," 228,924.00 ",Calapagan Nat'l HS,None,NBC 562
+8900670,01-01-17,07-14-17,Teacher I,Permanent ," 235,440.00 ",Calapagan Nat'l HS,None,NBC 568
+8900670,07-15-17,12-31-17,Teacher I,Permanent ," 238,236.00 ",Calapagan Nat'l HS,None,Step 2
+8900670,01-01-18,12-31-18,Teacher I,Permanent ," 245,244.00 ",Calapagan Nat'l HS,None,NBC 572
+8900670,01-01-19,12-31-19,Teacher I,Permanent ," 252,456.00 ",Calapagan Nat'l HS,None,NBC 575
+8900670,01-01-20,07-14-20,Teacher I,Permanent ," 271,200.00 ",Calapagan Nat'l HS,None,NBC 579
+8900670,07-15-20,12-31-20,Teacher I,Permanent ," 274,668.00 ",Calapagan Nat'l HS,None,Step 3
+8900670,01-01-21,12-31-21,Teacher I,Permanent ," 293,400.00 ",Calapagan Nat'l HS,None,NBC 584
+8900670,01-01-22,12-31-22,Teacher I,Permanent ," 312,144.00 ",Calapagan Nat'l HS,None,NBC 588
+8900670,01-01-23,01-30-23,Teacher I,Permanent ," 330,876.00 ",Calapagan Nat'l HS,None,NBC 591
+8900670,01-31-23,PRESENT,Teacher II,Permanent ," 349,980.00 ",Calapagan Nat'l HS,None,Promoted / Teacher II (Step 1)
+8324690,02-23-21,12-31-21,Teacher I,Permanent ," 286,524.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+8324690,01-01-22,12-31-22,Teacher I,Permanent ," 305,268.00 ",Calapagan Nat'l HS,None,NBC 588
+8324690,01-01-23,PRESENT,Teacher I,Permanent ," 324,000.00 ",Calapagan Nat'l HS,None,NBC 591
+5373520,12-13-04,12-31-04,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+5373520,01-01-05,12-31-05,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5373520,01-01-06,12-31-06,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5373520,01-01-07,06-30-07,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5373520,07-01-07,12-12-07,Teacher I,Permanent ," 131,196.00 ",Calapagan Nat'l HS,None,NBC 511
+5373520,12-13-07,12-31-07,Teacher I,Permanent ," 134,484.00 ",Calapagan Nat'l HS,None,Step 2
+5373520,01-01-08,06-30-08,Teacher I,Permanent ," 134,484.00 ",Calapagan Nat'l HS,None,
+5373520,07-01-08,12-31-08,Teacher I,Permanent ," 147,936.00 ",Calapagan Nat'l HS,None,NBC 516
+5373520,01-01-09,06-30-09,Teacher I,Permanent ," 147,936.00 ",Calapagan Nat'l HS,None,
+5373520,07-01-09,12-31-09,Teacher I,Permanent ," 173,796.00 ",Calapagan Nat'l HS,None,NBC 521
+5373520,01-01-10,06-23-10,Teacher I,Permanent ," 173,796.00 ",Calapagan Nat'l HS,None,
+5373520,06-24-10,12-12-10,Teacher I,Permanent ," 190,800.00 ",Calapagan Nat'l HS,None,NBC 524
+5373520,12-13-10,12-31-10,Teacher I,Permanent ," 193,884.00 ",Calapagan Nat'l HS,None,STEP 3
+5373520,01-01-11,05-31-11,Teacher I,Permanent ," 193,884.00 ",Calapagan Nat'l HS,None,
+5373520,06-01-11,12-31-11,Teacher I,Permanent ," 210,480.00 ",Calapagan Nat'l HS,None,NBC 530
+5373520,01-01-12,05-31-12,Teacher I,Permanent ," 210,480.00 ",Calapagan Nat'l HS,None,
+5373520,06-01-12,12-31-12,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,NBC 540
+5373520,01-01-13,12-12-13,Teacher I,Permanent ," 227,064.00 ",Calapagan Nat'l HS,None,
+5373520,12-13-13,12-31-13,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,STEP 4
+5373520,01-01-14,12-31-14,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,
+5373520,01-01-15,12-31-15,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,
+5373520,01-01-16,12-12-16,Teacher I,Permanent ," 236,508.00 ",Calapagan Nat'l HS,None,NBC 562
+5373520,12-13-16,12-31-16,Teacher I,Permanent ," 239,100.00 ",Calapagan Nat'l HS,None,STEP 5
+5373520,01-01-17,12-31-17,Teacher I,Permanent ," 246,804.00 ",Calapagan Nat'l HS,None,NBC 568
+5373520,01-01-18,12-31-18,Teacher I,Permanent ," 254,772.00 ",Calapagan Nat'l HS,None,NBC 572
+5373520,01-01-19,08-04-19,Teacher I,Permanent ," 262,980.00 ",Calapagan Nat'l HS,None,NBC 575
+5373520,08-05-19,12-12-19,Teacher II,Permanent ," 275,256.00 ",Calapagan Nat'l HS,None,Promoted to T-II (Step 1)
+5373520,12-13-19,12-31-19,Teacher II,Permanent ," 275,256.00 ",Calapagan Nat'l HS,None,15yrs Loyalty
+5373520,01-01-20,12-31-20,Teacher II,Permanent ," 293,940.00 ",Calapagan Nat'l HS,None,NBC 579
+5373520,01-01-21,12-31-21,Teacher II,Permanent ," 312,624.00 ",Calapagan Nat'l HS,None,NBC 584
+5373520,01-01-22,08-04-22,Teacher II,Permanent ," 331,296.00 ",Calapagan Nat'l HS,None,NBC 588
+5373520,08-05-22,12-31-22,Teacher II,Permanent ," 334,704.00 ",Calapagan Nat'l HS,None,Step 2
+5373520,01-01-23,08-28-23,Teacher II,Permanent ," 353,388.00 ",Calapagan Nat'l HS,None,NBC 591
+5373520,08-29-23,PRESENT,Master Teacher I,Permanent ," 560,700.00 ",Calapagan Nat'l HS,None,Promoted to MT-I (Step 1)
+1301220,12-17-21,12-31-21,Teacher II,Permanent ," 312,624.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+1301220,01-01-22,12-31-22,Teacher II,Permanent ," 331,296.00 ",Calapagan Nat'l HS,None,NBC 588
+1301220,01-01-23,PRESENT,Teacher II,Permanent ," 349,980.00 ",Calapagan Nat'l HS,None,NBC 591
+8321870,10-27-16,12-31-16,Teacher I,Permanent ," 228,924.00 ",San Luis NHS,None,APPOINTMENT
+8321870,01-01-17,12-31-17,Teacher I,Permanent ," 235,440.00 ",San Luis NHS,None,NBC 568
+8321870,01-01-18,12-31-18,Teacher I,Permanent ," 242,148.00 ",San Luis NHS,None,NBC 572
+8321870,01-01-19,10-26-19,Teacher I,Permanent ," 249,048.00 ",San Luis NHS,None,NBC 575
+8321870,10-27-19,12-31-19,Teacher I,Permanent ," 252,456.00 ",San Luis NHS,None,Step 2
+8321870,01-01-20,12-14-20,Teacher I,Permanent ," 271,200.00 ",San Luis NHS,None,NBC 579
+8321870,12-15-20,12-31-20,Teacher I,Permanent ," 271,200.00 ",Calapagan Nat'l HS,None,Change of Station
+8321870,01-01-21,12-31-21,Teacher I,Permanent ," 289,932.00 ",Calapagan Nat'l HS,None,NBC 584
+8321870,01-01-22,10-26-22,Teacher I,Permanent ," 308,676.00 ",Calapagan Nat'l HS,None,NBC 588
+8321870,10-27-22,12-31-22,Teacher I,Permanent ," 312,144.00 ",Calapagan Nat'l HS,None,Step 3
+8321870,01-01-23,08-28-23,Teacher I,Permanent ," 330,876.00 ",Calapagan Nat'l HS,None,NBC 591
+8321870,08-29-23,PRESENT,Teacher III,Permanent ," 375,840.00 ",Calapagan Nat'l HS,None,Promoted to Teacher III (Step 1)
+8322060,11-17-16,12-31-16,Teacher I,Permanent ," 228,924.00 ",San Luis NHS,None,APPOINTMENT
+8322060,01-01-17,12-31-17,Teacher I,Permanent ," 235,440.00 ",San Luis NHS,None,NBC 568
+8322060,01-01-18,12-31-18,Teacher I,Permanent ," 242,148.00 ",San Luis NHS,None,NBC 572
+8322060,01-01-19,11-16-19,Teacher I,Permanent ," 249,048.00 ",San Luis NHS,None,NBC 575
+8322060,11-17-19,12-31-19,Teacher I,Permanent ," 252,456.00 ",San Luis NHS,None,Step 2
+8322060,01-01-20,12-14-20,Teacher I,Permanent ," 271,200.00 ",San Luis NHS,None,NBC 579
+8322060,12-15-20,12-31-20,Teacher I,Permanent ," 271,200.00 ",Calapagan Nat'l HS,None,Change of Station
+8322060,01-01-21,12-31-21,Teacher I,Permanent ," 289,932.00 ",Calapagan Nat'l HS,None,NBC 584
+8322060,01-01-22,11-16-22,Teacher I,Permanent ," 308,676.00 ",Calapagan Nat'l HS,None,NBC 588
+8322060,11-17-22,12-31-22,Teacher I,Permanent ," 312,144.00 ",Calapagan Nat'l HS,None,Step 3
+8322060,01-01-23,PRESENT,Teacher I,Permanent ," 330,876.00 ",Calapagan Nat'l HS,None,NBC 591
+5308030,08-15-92,12-31-92,Teacher I,Permanent ," 37,224.00 ",Libudon NHS,None,APPOINTMENT
+5308030,01-01-93,01-15-93,Teacher I,Permanent ," 37,224.00 ",Libudon NHS,None,
+5308030,01-16-93,06-30-93,Teacher I,Permanent ," 37,224.00 ",Calapagan Nat'l HS,None,Transfer of station
+5308030,07-01-93,12-31-93,Teacher I,Permanent ," 37,224.00 ",Calapagan Nat'l HS,None,
+5308030,01-01-94,12-31-94,Teacher I,Permanent ," 46,824.00 ",Calapagan Nat'l HS,None,NCC 72
+5308030,01-01-95,08-14-95,Teacher I,Permanent ," 58,824.00 ",Calapagan Nat'l HS,None,NCC 74
+5308030,08-15-95,12-31-95,Teacher I,Permanent ," 59,196.00 ",Calapagan Nat'l HS,None,"TI, Step 2"
+5308030,01-01-96,12-31-96,Teacher I,Permanent ," 72,528.00 ",Calapagan Nat'l HS,None,NBC 448
+5308030,01-01-97,10-31-97,Teacher I,Permanent ," 89,196.00 ",Calapagan Nat'l HS,None,NBC458-A
+5308030,11-01-97,12-31-97,Teacher I,Permanent ," 105,852.00 ",Calapagan Nat'l HS,None,NBC458-B
+5308030,01-01-98,08-14-98,Teacher I,Permanent ," 105,852.00 ",Calapagan Nat'l HS,None,
+5308030,08-15-98,12-31-98,Teacher I,Permanent ," 108,492.00 ",Calapagan Nat'l HS,None,"TI, Step 3"
+5308030,01-01-99,12-31-99,Teacher I,Permanent ," 108,492.00 ",Calapagan Nat'l HS,None,
+5308030,01-01-00,12-31-00,Teacher I,Permanent ," 119,340.00 ",Calapagan Nat'l HS,None,NBC 468
+5308030,01-01-01,06-30-01,Teacher I,Permanent ," 119,340.00 ",Calapagan Nat'l HS,None,
+5308030,07-01-01,08-14-01,Teacher I,Permanent ," 125,304.00 ",Calapagan Nat'l HS,None,NBC 474
+5308030,08-15-01,12-31-01,Teacher I,Permanent ," 128,448.00 ",Calapagan Nat'l HS,None,"TI, Step 4"
+5308030,01-01-02,12-31-02,Teacher I,Permanent ," 128,448.00 ",Calapagan Nat'l HS,None,
+5308030,01-01-03,12-31-03,Teacher I,Permanent ," 128,448.00 ",Calapagan Nat'l HS,None,
+5308030,01-01-04,08-14-04,Teacher I,Permanent ," 128,448.00 ",Calapagan Nat'l HS,None,
+5308030,08-15-04,12-31-04,Teacher I,Permanent ," 131,652.00 ",Calapagan Nat'l HS,None,"TI, Step 5"
+5308030,01-01-05,12-31-05,Teacher I,Permanent ," 131,652.00 ",Calapagan Nat'l HS,None,
+5308030,01-01-06,12-31-06,Teacher I,Permanent ," 131,652.00 ",Calapagan Nat'l HS,None,
+5308030,01-01-07,03-15-07,Teacher I,Permanent ," 131,652.00 ",Calapagan Nat'l HS,None,
+5308030,03-16-07,06-30-07,Teacher III,Permanent ," 134,004.00 ",Calapagan Nat'l HS,None,Promoted to T-III (Step 1)
+5308030,07-01-07,12-31-07,Teacher III,Permanent ," 147,408.00 ",Calapagan Nat'l HS,None,NBC 511
+5308030,07-18-07,12-31-07,Teacher III,Permanent ," 147,408.00 ",Don Mariano Marcos NHS,None,Transfer of Station (Designated TIC)
+5308030,01-01-08,06-30-08,Teacher III,Permanent ," 147,408.00 ",Don Mariano Marcos NHS,None,
+5308030,07-01-08,12-31-08,Teacher III,Permanent ," 162,144.00 ",Don Mariano Marcos NHS,None,NBC 516
+5308030,01-01-09,06-30-09,Teacher III,Permanent ," 162,144.00 ",Don Mariano Marcos NHS,None,
+5308030,07-01-09,12-31-09,Teacher III,Permanent ," 193,212.00 ",Don Mariano Marcos NHS,None,NBC 521
+5308030,01-01-10,03-15-10,Teacher III,Permanent ," 193,212.00 ",Don Mariano Marcos NHS,None,
+5308030,03-16-10,06-20-10,Teacher III,Permanent ," 197,088.00 ",Don Mariano Marcos NHS,None,"TIII, Step 2"
+5308030,06-21-10,06-23-10,Teacher III,Permanent ," 197,088.00 ",Marayag NHS,None,Transfer of Station (Designated TIC)
+5308030,06-24-10,12-31-10,Teacher III,Permanent ," 217,992.00 ",Marayag NHS,None,NBC 524
+5308030,01-01-11,05-31-11,Teacher III,Permanent ," 217,992.00 ",Marayag NHS,None,
+5308030,06-01-11,12-31-11,Teacher III,Permanent ," 238,896.00 ",Marayag NHS,None,NBC 530
+5308030,01-01-12,05-30-12,Teacher III,Permanent ," 238,896.00 ",Marayag NHS,None,
+5308030,06-01-12,12-31-12,Teacher III,Permanent ," 259,800.00 ",Marayag NHS,None,NBC 540
+5308030,01-01-13,03-15-13,Teacher III,Permanent ," 259,800.00 ",Marayag NHS,None,
+5308030,03-16-13,12-31-13,Teacher III,Permanent ," 262,404.00 ",Marayag NHS,None,"TIII, Step 3"
+5308030,01-01-14,12-31-14,Teacher III,Permanent ," 262,404.00 ",Marayag NHS,None,
+5308030,01-01-15,12-31-15,Teacher III,Permanent ," 262,404.00 ",Marayag NHS,None,
+5308030,01-01-16,03-15-16,Teacher III,Permanent ," 273,648.00 ",Marayag NHS,None,NBC 562
+5308030,03-16-16,11-03-16,Teacher III,Permanent ," 276,540.00 ",Marayag NHS,None,Step 4
+5308030,11-04-16,12-31-16,Head Teacher I,Permanent ," 289,692.00 ",Marayag NHS,None,Promoted to HT-I
+5308030,01-01-17,08-14-17,Head Teacher I,Permanent ," 303,480.00 ",Marayag NHS,None,NBC 568
+5308030,08-15-17,12-31-17,Head Teacher I,Permanent ," 303,480.00 ",Marayag NHS,None,25 YRS. LOYALTY
+5308030,01-01-18,12-16-18,Head Teacher I,Permanent ," 317,928.00 ",Marayag NHS,None,NBC 572
+5308030,12-17-18,12-31-18,Head Teacher I,Permanent ," 317,928.00 ",Calapagan Nat'l HS,None,Transfer of Station
+5308030,01-01-19,11-03-19,Head Teacher I,Permanent ," 333,060.00 ",Calapagan Nat'l HS,None,NBC 575
+5308030,11-04-19,12-31-19,Head Teacher I,Permanent ," 337,188.00 ",Calapagan Nat'l HS,None,Step 2
+5308030,01-01-20,12-31-20,Head Teacher I,Permanent ," 355,452.00 ",Calapagan Nat'l HS,None,NBC 579
+5308030,01-01-21,07-27-21,Head Teacher I,Permanent ," 373,716.00 ",Calapagan Nat'l HS,None,NBC 584
+5308030,07-28-21,12-31-21,Head Teacher II,Permanent ," 402,900.00 ",Calapagan Nat'l HS,None,Promoted to HT-II
+5308030,01-01-22,08-14-22,Head Teacher II,Permanent ," 421,164.00 ",Calapagan Nat'l HS,None,NBC 588
+5308030,08-15-22,12-31-22,Head Teacher II,Permanent ," 421,164.00 ",Calapagan Nat'l HS,None,30 years LOYALTY
+5308030,01-01-23,07-31-23,Head Teacher II,Permanent ," 439,428.00 ",Calapagan Nat'l HS,None,RETIREMENT
+5308035,01-03-95,12-31-95,Teacher I,Permanent ," 58,824.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+5308035,01-01-96,12-31-96,Teacher I,Permanent ," 72,156.00 ",Calapagan Nat'l HS,None,NBC 448
+5308035,01-01-97,10-31-97,Teacher I,Permanent ," 87,708.00 ",Calapagan Nat'l HS,None,NBC 458 Annex A
+5308035,11-01-97,12-31-97,Teacher I,Permanent ," 103,260.00 ",Calapagan Nat'l HS,None,NBC 458 Annex B
+5308035,01-01-98,01-02-98,Teacher I,Permanent ," 103,260.00 ",Calapagan Nat'l HS,None,
+5308035,01-03-98,12-31-98,Teacher I,Permanent ," 105,852.00 ",Calapagan Nat'l HS,None,Step 2
+5308035,01-01-99,12-31-99,Teacher I,Permanent ," 105,852.00 ",Calapagan Nat'l HS,None,
+5308035,01-01-00,12-31-00,Teacher I,Permanent ," 116,436.00 ",Calapagan Nat'l HS,None,NBC 468
+5308035,01-01-01,01-02-01,Teacher I,Permanent ," 116,436.00 ",Calapagan Nat'l HS,None,
+5308035,01-03-01,06-30-01,Teacher I,Permanent ," 119,340.00 ",Calapagan Nat'l HS,None,Step 3
+5308035,07-01-01,12-31-01,Teacher I,Permanent ," 125,304.00 ",Calapagan Nat'l HS,None,NBC 474
+5308035,01-01-02,12-31-02,Teacher I,Permanent ," 125,304.00 ",Calapagan Nat'l HS,None,
+5308035,01-01-03,12-31-03,Teacher I,Permanent ," 125,304.00 ",Calapagan Nat'l HS,None,
+5308035,01-01-04,01-02-04,Teacher I,Permanent ," 125,304.00 ",Calapagan Nat'l HS,None,
+5308035,01-03-04,12-31-04,Teacher I,Permanent ," 128,448.00 ",Calapagan Nat'l HS,None,Step 4
+5308035,01-01-05,12-31-05,Teacher I,Permanent ," 128,448.00 ",Calapagan Nat'l HS,None,
+5308035,01-01-06,12-31-06,Teacher I,Permanent ," 128,448.00 ",Calapagan Nat'l HS,None,
+5308035,01-01-07,01-02-07,Teacher I,Permanent ," 128,448.00 ",Calapagan Nat'l HS,None,
+5308035,01-03-07,03-15-07,Teacher I,Permanent ," 131,652.00 ",Calapagan Nat'l HS,None,Step 5
+5308035,03-16-07,06-30-07,Teacher II,Permanent ," 132,816.00 ",Calapagan Nat'l HS,None,PROMOTED to T2(Step 3)
+5308035,07-01-07,12-31-07,Teacher II,Permanent ," 146,100.00 ",Calapagan Nat'l HS,None,NBC 511
+5308035,01-01-08,06-30-08,Teacher II,Permanent ," 146,100.00 ",Calapagan Nat'l HS,None,
+5308035,07-01-08,12-31-08,Teacher II,Permanent ," 160,704.00 ",Calapagan Nat'l HS,None,NBC 516
+5308035,01-01-09,06-30-09,Teacher II,Permanent ," 160,704.00 ",Calapagan Nat'l HS,None,
+5308035,07-01-09,12-31-09,Teacher II,Permanent ," 188,796.00 ",Calapagan Nat'l HS,None,NBC 521 A
+5308035,01-01-10,03-15-10,Teacher II,Permanent ," 188,796.00 ",Calapagan Nat'l HS,None,
+5308035,03-16-10,06-23-10,Teacher II,Permanent ," 192,600.00 ",Calapagan Nat'l HS,None,Step 4
+5308035,06-24-10,12-31-10,Teacher II,Permanent ," 210,576.00 ",Calapagan Nat'l HS,None,NBC 524 A
+5308035,01-01-11,05-31-11,Teacher II,Permanent ," 210,576.00 ",Calapagan Nat'l HS,None,
+5308035,06-01-11,12-31-11,Teacher II,Permanent ," 228,564.00 ",Calapagan Nat'l HS,None,NBC 530
+5308035,01-01-12,05-31-12,Teacher II,Permanent ," 228,564.00 ",Calapagan Nat'l HS,None,
+5308035,06-01-12,12-31-12,Teacher II,Permanent ," 246,540.00 ",Calapagan Nat'l HS,None,NBC 540
+5308035,01-01-13,03-15-13,Teacher II,Permanent ," 246,540.00 ",Calapagan Nat'l HS,None,
+5308035,03-16-13,12-31-13,Teacher II,Permanent ," 249,000.00 ",Calapagan Nat'l HS,None,Step 5
+5308035,01-01-14,12-31-14,Teacher II,Permanent ," 249,000.00 ",Calapagan Nat'l HS,None,
+5308035,01-01-15,12-31-15,Teacher II,Permanent ," 249,000.00 ",Calapagan Nat'l HS,None,
+5308035,01-01-16,03-15-16,Teacher II,Permanent ," 258,480.00 ",Calapagan Nat'l HS,None,NBC 562
+5308035,03-16-16,12-31-16,Teacher II,Permanent ," 261,228.00 ",Calapagan Nat'l HS,None,Step 6
+5308035,01-01-17,12-31-17,Teacher II,Permanent ," 271,332.00 ",Calapagan Nat'l HS,None,NBC 568
+5308035,01-01-18,12-31-18,Teacher II,Permanent ," 281,832.00 ",Calapagan Nat'l HS,None,NBC 572
+5308035,01-01-19,03-15-19,Teacher II,Permanent ," 292,740.00 ",Calapagan Nat'l HS,None,NBC 575
+5308035,03-16-19,12-31-19,Teacher II,Permanent ," 296,364.00 ",Calapagan Nat'l HS,None,Step 7
+5308035,01-01-20,01-02-20,Teacher II,Permanent ," 315,048.00 ",Calapagan Nat'l HS,None,NBC 579
+5308035,01-03-20,12-31-20,Teacher II,Permanent ," 315,048.00 ",Calapagan Nat'l HS,None,25 years Loyalty
+5308035,01-01-21,12-31-21,Teacher II,Permanent ," 333,732.00 ",Calapagan Nat'l HS,None,NBC 584
+5308035,01-01-22,03-15-22,Teacher II,Permanent ," 352,404.00 ",Calapagan Nat'l HS,None,NBC 588
+5308035,03-16-22,12-31-22,Teacher II,Permanent ," 356,076.00 ",Calapagan Nat'l HS,None,Step 8
+5308035,01-01-23,PRESENT,Teacher II,Permanent ," 374,760.00 ",Calapagan Nat'l HS,None,NBC 591
+5308060,08-26-02,12-31-02,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,APPOINTMENT
+5308060,01-01-03,12-31-03,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5308060,01-01-04,12-31-04,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5308060,01-01-05,08-25-05,Teacher I,Permanent ," 119,268.00 ",Calapagan Nat'l HS,None,
+5308060,08-26-05,12-31-05,Teacher I,Permanent ," 122,256.00 ",Calapagan Nat'l HS,None,Step 2
+5308060,01-01-06,12-31-06,Teacher I,Permanent ," 122,256.00 ",Calapagan Nat'l HS,None,
+5308060,01-01-07,06-30-07,Teacher I,Permanent ," 122,256.00 ",Calapagan Nat'l HS,None,
+5308060,07-01-07,12-31-07,Teacher I,Permanent ," 134,484.00 ",Calapagan Nat'l HS,None,NBC 511
+5308060,01-01-08,06-30-08,Teacher I,Permanent ," 134,484.00 ",Calapagan Nat'l HS,None,
+5308060,07-01-08,08-25-08,Teacher I,Permanent ," 147,936.00 ",Calapagan Nat'l HS,None,NBC 516
+5308060,08-26-08,12-31-08,Teacher I,Permanent ," 151,620.00 ",Calapagan Nat'l HS,None,Step 3
+5308060,01-01-09,06-30-09,Teacher I,Permanent ," 151,620.00 ",Calapagan Nat'l HS,None,
+5308060,07-01-09,12-31-09,Teacher I,Permanent ," 177,300.00 ",Calapagan Nat'l HS,None,NBC 521
+5308060,01-01-10,06-23-10,Teacher I,Permanent ," 177,300.00 ",Calapagan Nat'l HS,None,
+5308060,06-24-10,12-31-10,Teacher I,Permanent ," 193,884.00 ",Calapagan Nat'l HS,None,NBC 524
+5308060,01-01-11,05-31-11,Teacher I,Permanent ," 193,884.00 ",Calapagan Nat'l HS,None,
+5308060,06-01-11,08-25-11,Teacher I,Permanent ," 210,480.00 ",Calapagan Nat'l HS,None,NBC 530
+5308060,08-26-11,12-31-11,Teacher I,Permanent ," 213,180.00 ",Calapagan Nat'l HS,None,Step 4
+5308060,01-01-12,05-31-12,Teacher I,Permanent ," 213,180.00 ",Calapagan Nat'l HS,None,
+5308060,06-01-12,12-31-12,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,NBC 540 
+5308060,01-01-13,12-31-13,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,
+5308060,01-01-14,08-25-14,Teacher I,Permanent ," 229,332.00 ",Calapagan Nat'l HS,None,
+5308060,08-26-14,12-31-14,Teacher I,Permanent ," 231,624.00 ",Calapagan Nat'l HS,None,Step 5
+5308060,01-01-15,12-31-15,Teacher I,Permanent ," 231,624.00 ",Calapagan Nat'l HS,None,
+5308060,01-01-16,12-31-16,Teacher I,Permanent ," 239,100.00 ",Calapagan Nat'l HS,None,NBC 562
+5308060,01-01-17,08-25-17,Teacher I,Permanent ," 246,804.00 ",Calapagan Nat'l HS,None,NBC 568
+5308060,08-26-17,12-31-17,Teacher I,Permanent ," 249,732.00 ",Calapagan Nat'l HS,None,STEP 6/15.yrs LOYALTY
+5308060,01-01-18,12-31-18,Teacher I,Permanent ," 258,024.00 ",Calapagan Nat'l HS,None,NBC 572
+5308060,01-01-19,12-31-19,Teacher I,Permanent ," 266,592.00 ",Calapagan Nat'l HS,None,NBC 575
+5308060,01-01-20,08-25-20,Teacher I,Permanent ," 285,336.00 ",Calapagan Nat'l HS,None,NBC 579
+5308060,08-26-20,12-15-20,Teacher I,Permanent ," 288,984.00 ",Calapagan Nat'l HS,None,Step 7
+5308060,12-16-20,12-31-20,Teacher II,Permanent ," 293,940.00 ",Calapagan Nat'l HS,None,Promoted to T2 (Step1)
+5308060,01-01-21,12-31-21,Teacher II,Permanent ," 312,624.00 ",Calapagan Nat'l HS,None,NBC 584
+5308060,01-01-22,08-25-22,Teacher II,Permanent ," 331,296.00 ",Calapagan Nat'l HS,None,NBC 588
+5308060,08-26-22,12-31-22,Teacher II,Permanent ," 331,296.00 ",Calapagan Nat'l HS,None,20 yrs. LOYALTY
+5308060,01-01-23,PRESENT,Teacher II,Permanent ," 349,980.00 ",Calapagan Nat'l HS,None,NBC 591

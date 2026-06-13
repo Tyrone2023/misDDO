@@ -1,0 +1,1 @@
+$route['leave'] = 'leave/index';

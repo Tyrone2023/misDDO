@@ -1,0 +1,1 @@
+<div class="container-fluid"><h4><?= $title; ?></h4><table class="table table-bordered"><?php foreach ($leave_types as $row): ?><tr><td><?= html_escape($row['code']); ?></td><td><?= html_escape($row['name']); ?></td></tr><?php endforeach; ?></table></div>

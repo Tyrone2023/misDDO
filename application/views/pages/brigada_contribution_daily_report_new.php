@@ -1,0 +1,269 @@
+
+
+            <!-- ============================================================== -->
+            <!-- Start Page Content here -->
+            <!-- ============================================================== -->
+            <div class="content-page">
+                <div class="content">
+
+                    <!-- Start Content-->
+                    <div class="container-fluid">
+
+                        <!-- start page title -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="page-title-box">
+                                    <a href="<?= base_url(); ?>Brigada/contribution_report" class="text-success" ><span class="mdi mdi-keyboard-backspace "></span> Back To Daily Report</a>
+                                   
+                              
+                                    <div class="clearfix"></div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end page title -->
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                    <div class="row">
+                                                        <div class="col-12">
+                                                            <div class="">
+                                                                    <?= validation_errors(); ?>
+                                                                    <?php
+                                                                    $attributes = array('class' => 'parsley-examples form-horizontal');
+                                                                    echo form_open_multipart('Brigada/contribution_report_new', $attributes);
+                                                                    ?>
+
+                                                                    
+
+                                                                    <div class="row">
+                                                                        <div class="col-lg-12">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Partners <span style="color:red">*</span></label>
+                                                                                <select class="form-control" required name="partners_id" data-toggle="select2">
+                                                                                    <option></option>
+                                                                                    <?php foreach($partners as $row){?>
+                                                                                    <option value="<?= $row->id; ?>"><?= $row->name; ?></option>
+                                                                                    <?php } ?>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+                                                                    <div class="row">
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Date <span style="color:red">*</span></label>
+                                                                                <input type="date" class="form-control" name="c_date" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Contribution Type</label>
+                                                                                <select class="form-control" required name="contribution_id">
+                                                                                    <option></option>
+                                                                                    <?php foreach($contribution as $row){?>
+                                                                                    <option value="<?= $row->id; ?>"><?= str_replace('_', ' ', $row->name); ?></option>
+                                                                                    <?php } ?>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Specific Contribution</label>
+                                                                                <select class="form-control" required name="spicific_contribution">
+                                                                                    <option></option>
+                                                                                    <option value="Cash">Cash</option>
+                                                                                    <option value="Manpower">Manpower</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div class="row">
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Quantity Contributed</label>
+                                                                                <input type="text" class="form-control" name="quantity_of_conftribution" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Unit of Contribution</label>
+                                                                                <input type="text" class="form-control" name="unit_of_contribution" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Amount of Contribution</label>
+                                                                                <input type="text" class="form-control" name="amount" required>
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                    <div class="row">
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">No. of Beneficiary Learners</label>
+                                                                                <input type="text" class="form-control" name="no_beneficiary_learnes" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">No. of Beneficiary Personnel</label>
+                                                                                <input type="text" class="form-control" name="no_beneficiary_personnel" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Form of Agreement</label>
+                                                                                <select class="form-control"required name="form_of_agreement">
+                                                                                    <option></option>
+                                                                                    <option value="Memorandum of Agreement">Memorandum of Agreement</option>
+                                                                                    <option value="Memorandum of Understanding">Memorandum of Understanding</option>
+                                                                                    <option value="Deed of Donation">Deed of Donation</option>
+                                                                                    <option value="Usufruct">Usufruct</option>
+                                                                                    <option value="Acknowledgement Receipt">Acknowledgement Receipt</option>
+                                                                                    <option value="No Signed Agreement">No Signed Agreement</option>
+                                                                                    <option value="Others">Others</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                    <div class="row">
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Agreement Start Date</label>
+                                                                                <input type="date" class="form-control" name="agreement_started" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Agreement End Date</label>
+                                                                                <input type="date" class="form-control" name="agreement_end" required>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Project Category </label>
+                                                                                <select class="form-control" required name="project_category">
+                                                                                    <option></option>
+                                                                                    <option value="Brigada Eskwela">Brigada Eskwela</option>
+                                                                                    <option value="Other Category">Other Category</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                    <div class="row">
+                                                                        <div class="col-lg-12">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Project Name</label>
+                                                                                <input type="text" class="form-control" name="project_name" required>
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+                                                                    <div class="row">
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Status of Agreement / Project</label>
+                                                                                <select class="form-control" required name="status_agreement">
+                                                                                    <option></option>
+                                                                                    <option value="Completed">Completed</option> 
+                                                                                    <option value="On-going">On-going</option>
+                                                                                    <option value="For Implementation">For Implementation</option>
+                                                                                    <option value="Pending">Pending</option>
+                                                                                    <option value="Others">Others</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Initiated By </label>
+                                                                                <select class="form-control" required name="initiated_by">
+                                                                                    <option></option>
+                                                                                    <option value="Central Office">Central Office</option>
+                                                                                    <option value="Regional Office">Regional Office</option>
+                                                                                    <option value="Schools Division Office">Schools Division Office</option>
+                                                                                    <option value="School">School</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div class="col-lg-4">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">School Year </label>
+                                                                                <?php
+                                                                                date_default_timezone_set('Asia/Manila');
+                                                                                $currentYear = (int) date('Y');
+                                                                                ?>
+                                                                                <select name="sy" class="form-control">
+                                                                                    <?php
+                                                                                    for ($i = -5; $i <= 5; $i++) {
+                                                                                        $startYear = $currentYear + $i;
+                                                                                        $endYear   = $startYear + 1;
+                                                                                        $sy = $startYear . '-' . $endYear;
+                                                                                        ?>
+                                                                                        <option value="<?= $sy ?>" <?= ($i == 0 ? 'selected' : '') ?>>
+                                                                                            <?= $sy ?>
+                                                                                        </option>
+                                                                                    <?php } ?>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+
+                                                                    <div class="row">
+                                                                        <div class="col-lg-12">
+                                                                            <div class="form-group">
+                                                                                <label for="lastName">Remarks</label>
+                                                                                <textarea class="form-control" name="remarks" rows="3" id="example-textarea"></textarea>
+                                                                            </div>
+                                                                        </div>
+
+                                                                    </div>
+
+
+                                                                
+
+                                                                
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+                                                    <!-- end row -->
+                                                        
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="submit" class="btn btn-info waves-effect waves-light">Save</button>
+                                                    </div>
+                                                    </form>
+
+                                    
+                                    </div>
+                                    
+
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end row -->
+
+                    </div>
+                    <!-- end container-fluid -->
+
+                </div>
+                <!-- end content -->
+
+
+   
+
+ 

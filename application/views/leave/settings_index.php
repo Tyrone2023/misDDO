@@ -1,0 +1,1 @@
+<div class="container-fluid"><h4><?= $title; ?></h4><p>Use the submenu to manage leave types, holidays, and profiles.</p></div>
