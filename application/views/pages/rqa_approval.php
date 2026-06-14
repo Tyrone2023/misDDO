@@ -310,6 +310,45 @@ document.addEventListener('DOMContentLoaded', function () {
         return html;
     }
 
+    // Numeric RQA total for a row (rows are pre-filtered to total >= 50).
+    function rowScoreNum(r) {
+        var n = parseFloat(r.total_points);
+        return isNaN(n) ? -Infinity : n;
+    }
+
+    // Case-insensitive A-Z compare; blanks are pushed to the end.
+    function cmpText(a, b) {
+        a = (a || '').trim();
+        b = (b || '').trim();
+        if (a === b) return 0;
+        if (a === '') return 1;
+        if (b === '') return -1;
+        return a.localeCompare(b, undefined, { sensitivity: 'base' });
+    }
+
+    // Keep each position's applicants together, grouped by specialization and
+    // then ranked by score (highest first) inside each group. JHS groups by
+    // Specialization (A-Z); SHS groups by Strand then Specialization (A-Z).
+    function sortRows(rows) {
+        rows.sort(function (a, b) {
+            var c = cmpText(a.position, b.position);
+            if (c !== 0) return c;
+
+            var kind = a.specializationKind || 'none';
+            if (kind === 'jhs') {
+                c = cmpText(a.specializationGroup || a.specialization, b.specializationGroup || b.specialization);
+                if (c !== 0) return c;
+            } else if (kind === 'shs') {
+                c = cmpText(a.strand, b.strand);
+                if (c !== 0) return c;
+                c = cmpText(a.major, b.major);
+                if (c !== 0) return c;
+            }
+            return rowScoreNum(b) - rowScoreNum(a);
+        });
+        return rows;
+    }
+
     function getFilteredRows() {
         var pos = $pos.val() || '';
         var muns = $mun.val() || [];
@@ -333,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function renderTable() {
-        var rows = getFilteredRows();
+        var rows = sortRows(getFilteredRows());
         var $tbody = $('#rqa-table tbody');
 
         if (rows.length === 0) {
