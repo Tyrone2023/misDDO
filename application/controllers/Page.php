@@ -3347,6 +3347,10 @@ class Page extends CI_Controller
 
 	public function myApplications()
 	{
+		// Default so $applicantEmail is always defined even when the logged-in
+		// position matches none of the branches below. Use the ?id= applicant
+		// when supplied, otherwise the logged-in user's own account.
+		$applicantEmail = $this->input->get('id') ?: $this->session->userdata('username');
 		if ($this->session->position === 'Admin' || $this->session->position === 'Super Admin' || $this->session->position === 'Human Resource Admin' || $this->session->position === 'HR Staff' || $this->session->position === 'asds') :
 			$applicantEmail = $this->input->get('id');
 		elseif ($this->session->userdata('position') === 'reg') :

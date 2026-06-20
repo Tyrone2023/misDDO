@@ -1984,6 +1984,59 @@ public function count_for_approval_leave4($table, $approver_username)
     }
 
     /**
+     * Qualified applicants for the Corrigendum / Addendum page. Unlike
+     * rqa_ranked() this keeps applicants whose rating row is missing or below
+     * 50 (LEFT JOIN on the rating, no score gate) so their score can be added
+     * or corrected, and does not exclude already-recommended applicants. The
+     * current corrigendum/addendum type is joined in for display.
+     */
+    public function rqa_corrigendum_applicants($jobID)
+    {
+        $jobIDs = array_values(array_unique(array_filter(array_map('intval', (array) $jobID), function ($v) {
+            return $v > 0;
+        })));
+        if (empty($jobIDs)) {
+            return [];
+        }
+        $majorSelect = $this->rqa_major_select_sql();
+
+        $this->db->select("
+            a.appID, a.jobID, a.empEmail, a.dq,
+            r.education, r.training, r.experience, r.let_rating, r.demo_rating, r.tr_rating, r.total_points,
+            COALESCE(app.record_no, staff.IDNumber) AS code,
+            COALESCE(app.empEmail, staff.IDNumber) AS renren,
+            COALESCE(app.FirstName, staff.FirstName) AS FirstName,
+            COALESCE(app.MiddleName, staff.MiddleName) AS MiddleName,
+            COALESCE(app.NameExtn, staff.NameExtn) AS NameExtn,
+            COALESCE(app.LastName, staff.LastName) AS LastName,
+            COALESCE(app.specialization, staff.specialization) AS specialization,
+            COALESCE(app.jhss, staff.jhss) AS jhss,
+            COALESCE(app.shss, staff.shss) AS shss,
+            $majorSelect,
+            COALESCE(app.resCity, staff.resCity) AS resCity,
+            COALESCE(app.resBarangay, staff.resBarangay) AS brgy,
+            cor.type AS corrigendum_type
+        ");
+        $this->db->from('hris_applications a');
+        $this->db->join('hris_applicant app', 'a.empEmail = app.empEmail', 'left');
+        $this->db->join('hris_staff staff', 'app.record_no IS NULL AND a.empEmail = staff.IDNumber', 'left');
+        $this->db->join('hris_applications_rating r', 'a.appID = r.appID', 'left');
+        $this->db->join('hris_rqa_corrigendum cor', 'cor.appID = a.appID', 'left');
+        $this->db->where_in('a.jobID', $jobIDs);
+        $this->db->where('a.dq', 1);
+
+        $this->db->group_start();
+        $this->db->where('app.record_no IS NOT NULL', null, false);
+        $this->db->or_where('staff.IDNumber IS NOT NULL', null, false);
+        $this->db->group_end();
+
+        $this->db->order_by('LastName', 'ASC');
+        $this->db->order_by('FirstName', 'ASC');
+
+        return $this->db->get()->result();
+    }
+
+    /**
      * Applicants for JHS vacancies whose Learning Area (jhss) is still blank.
      * This intentionally does not enforce RQA score/DQ thresholds because the
      * report is for profile cleanup before recommendation work.

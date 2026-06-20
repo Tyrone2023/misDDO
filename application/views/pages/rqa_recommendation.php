@@ -656,6 +656,52 @@ $selectedYear = (int) ($selectedYear ?? 0);
     }
     #rqa-table td .select2-container--default .select2-selection--single .select2-selection__arrow { height: 26px; }
     #rqa-table td .select2-container--default .select2-selection--single .select2-selection__clear { font-size: .8rem; }
+
+    /* Legend */
+    .rqa-legend {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 10px;
+    }
+    .rqa-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: .72rem;
+        font-weight: 700;
+        color: var(--rqa-muted);
+    }
+    .rqa-legend-swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        display: inline-block;
+        border: 1px solid rgba(0,0,0,.08);
+    }
+    .rqa-legend-swatch.tie { background: #fff3cd; border-color: #ffe69c; }
+    .rqa-legend-swatch.corr { background: #dce9ff; border-color: #b6d0ff; }
+    .rqa-legend-hint i { font-size: 15px; vertical-align: middle; }
+
+    /* Tie + Corrigendum/Addendum row highlighting */
+    #rqa-table tbody tr.rqa-tie td { background: #fff8e6; }
+    #rqa-table tbody tr.rqa-tie:hover td { background: #fff2d0; }
+    #rqa-table tbody tr.rqa-corr td { background: #eaf1ff; }
+    #rqa-table tbody tr.rqa-corr:hover td { background: #ddeaff; }
+    #rqa-table tbody tr.rqa-drag-over td { box-shadow: inset 0 2px 0 0 var(--rqa-accent); }
+    #rqa-table tbody tr.rqa-dragging td { opacity: .5; }
+
+    /* Drag handle (only shown on tied rows) */
+    .rqa-drag-handle {
+        cursor: grab;
+        color: #b0a36a;
+        margin-right: 3px;
+        display: inline-flex;
+        align-items: center;
+        font-size: 15px;
+    }
+    .rqa-drag-handle:active { cursor: grabbing; }
 </style>
 
 <div class="content-page">
@@ -756,6 +802,12 @@ $selectedYear = (int) ($selectedYear ?? 0);
                                 Full-width compact table
                             </span> -->
                         </div>
+
+                        <div class="rqa-legend">
+                            <span class="rqa-legend-item"><span class="rqa-legend-swatch tie"></span> Tie Score</span>
+                            <span class="rqa-legend-item"><span class="rqa-legend-swatch corr"></span> Corrigendum / Addendum</span>
+                            <span class="rqa-legend-item rqa-legend-hint"><i class="mdi mdi-drag-vertical"></i> Drag tied rows to set their order</span>
+                        </div>
                     </div>
 
                     <div id="rqa-loading" class="text-center text-muted rqa-loading-box" style="display:none;">
@@ -825,6 +877,7 @@ $selectedYear = (int) ($selectedYear ?? 0);
 document.addEventListener('DOMContentLoaded', function () {
     var saveUrl = '<?= base_url('Pages/rqa_recommend_save'); ?>';
     var dataUrl = '<?= base_url('Pages/rqa_recommendation_data'); ?>';
+    var metaUrl = '<?= base_url('Pages/rqa_ranking_meta_save'); ?>';
     var schoolSearchUrl = '<?= base_url('Pages/rqa_school_search'); ?>';
     var preselectJob = '<?= $selectedJobId > 0 ? $selectedJobId : ''; ?>';
 
@@ -1035,10 +1088,20 @@ document.addEventListener('DOMContentLoaded', function () {
         return (r.specialization || '').trim();
     }
 
-    function rowHtml(r, index) {
-        var html = '<tr data-app-id="' + r.appID + '">';
+    function rowHtml(r, index, tied) {
+        var isCorr = parseInt(r.isCorrigendum, 10) === 1;
+        var trClass = isCorr ? ' rqa-corr' : (tied ? ' rqa-tie' : '');
 
-        html += '<td class="num"><span class="rqa-rank-badge">' + index + '</span></td>';
+        var html = '<tr class="rqa-row' + trClass + '" data-app-id="' + r.appID + '"'
+            + ' data-job-id="' + r.jobID + '"'
+            + ' data-tie-key="' + escAttr(tieKey(r)) + '"'
+            + (tied ? ' data-tied="1"' : '') + '>';
+
+        html += '<td class="num">';
+        if (tied) {
+            html += '<span class="rqa-drag-handle" draggable="true" title="Drag to reorder this tie"><i class="mdi mdi-drag-vertical"></i></span>';
+        }
+        html += '<span class="rqa-rank-badge">' + index + '</span></td>';
 
         html += '<td class="rqa-name-cell">';
         html += '<span class="rqa-name-main">' + escHtml(r.name) + '</span>';
@@ -1097,10 +1160,31 @@ document.addEventListener('DOMContentLoaded', function () {
         return a.localeCompare(b, undefined, { sensitivity: 'base' });
     }
 
+    // The specialization "bucket" a row sorts into. Rows that share the same
+    // bucket AND the same score are a tie that needs manual ordering.
+    function specSortKey(r) {
+        if (specializationKind === 'jhs') return (r.specializationGroup || r.specialization || '').trim().toLowerCase();
+        if (specializationKind === 'shs') return (r.strand || '').trim().toLowerCase() + ' / ' + (r.major || '').trim().toLowerCase();
+        return '';
+    }
+
+    // Identity of a tie group: same specialization bucket + same score.
+    function tieKey(r) {
+        return specSortKey(r) + '||' + String(r.total_points || '');
+    }
+
+    // Manual tie-break order (lower = higher up). Unset rows sort after ordered
+    // ones, then a stable fallback by appID keeps the order deterministic.
+    function rowTieOrder(r) {
+        var n = parseInt(r.tieOrder, 10);
+        return isNaN(n) ? 1e9 : n;
+    }
+
     // Order the rows so applicants are grouped by specialization, then ranked
     // by score (highest first) inside each group. JHS groups by Specialization
     // (A-Z); SHS groups by Strand then Specialization (A-Z). Positions without
-    // a specialization keep the plain highest-to-lowest score order.
+    // a specialization keep the plain highest-to-lowest score order. Tied
+    // applicants (same bucket + same score) follow the saved manual order.
     function sortRows(rows) {
         rows.sort(function (a, b) {
             var c;
@@ -1113,7 +1197,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 c = cmpText(a.major, b.major);
                 if (c !== 0) return c;
             }
-            return rowScoreNum(b) - rowScoreNum(a);
+            c = rowScoreNum(b) - rowScoreNum(a);
+            if (c !== 0) return c;
+            c = rowTieOrder(a) - rowTieOrder(b);
+            if (c !== 0) return c;
+            return (a.appID || 0) - (b.appID || 0);
         });
         return rows;
     }
@@ -1172,10 +1260,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 );
             }
         } else {
+            // A row is "tied" when another visible row shares its tie key
+            // (same specialization bucket + same score) within this filter.
+            var tieCount = {};
+            rows.forEach(function (r) {
+                var k = tieKey(r);
+                tieCount[k] = (tieCount[k] || 0) + 1;
+            });
+
             var html = '';
 
             rows.forEach(function (r, i) {
-                html += rowHtml(r, i + 1);
+                html += rowHtml(r, i + 1, tieCount[tieKey(r)] > 1);
             });
 
             $tbody.html(html);
@@ -1349,6 +1445,111 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $major.on('change', function () {
         renderTable();
+    });
+
+    // ----- Drag-to-reorder tied applicants -------------------------------
+    // Tied rows (same specialization bucket + same score) carry a drag handle.
+    // Dragging one above/below another tied row physically moves it, renumbers
+    // the list, and persists the new order so every user sees it.
+    var dragAppId = null;
+    var $tbody = $('#rqa-table tbody');
+
+    function clearDragState() {
+        $('#rqa-table tbody tr').removeClass('rqa-dragging rqa-drag-over');
+        dragAppId = null;
+    }
+
+    function renumberRows() {
+        $('#rqa-table tbody tr').each(function (i) {
+            $(this).find('.rqa-rank-badge').text(i + 1);
+        });
+    }
+
+    // Read the current DOM order of a tie group, update allRows, and save it.
+    function persistTieOrder(keyVal) {
+        var payload = [];
+
+        $('#rqa-table tbody tr').each(function () {
+            if (String($(this).attr('data-tie-key')) === String(keyVal)) {
+                payload.push({
+                    appID: parseInt($(this).attr('data-app-id'), 10),
+                    jobID: parseInt($(this).attr('data-job-id'), 10)
+                });
+            }
+        });
+
+        payload.forEach(function (p, idx) {
+            var row = allRows.filter(function (r) { return r.appID === p.appID; })[0];
+            if (row) row.tieOrder = idx;
+        });
+
+        $.post(metaUrl, { action: 'order', order: JSON.stringify(payload) }, null, 'json')
+            .done(function (res) {
+                if (!res || res.status !== 'success') {
+                    Swal.fire({ icon: 'error', title: 'Could not save order', text: (res && res.message) ? res.message : 'Please try again.' });
+                }
+            })
+            .fail(function () {
+                Swal.fire({ icon: 'error', title: 'Could not save order', text: 'Please check your connection and try again.' });
+            });
+    }
+
+    $tbody.on('dragstart', '.rqa-drag-handle', function (e) {
+        var $row = $(this).closest('tr');
+        dragAppId = parseInt($row.attr('data-app-id'), 10);
+        $row.addClass('rqa-dragging');
+
+        var dt = e.originalEvent.dataTransfer;
+        if (dt) {
+            dt.effectAllowed = 'move';
+            try { dt.setData('text/plain', String(dragAppId)); } catch (err) {}
+        }
+    });
+
+    $tbody.on('dragend', '.rqa-drag-handle', function () {
+        clearDragState();
+    });
+
+    $tbody.on('dragover', 'tr', function (e) {
+        if (dragAppId == null) return;
+
+        var $target = $(this);
+        var $drag = $('#rqa-table tbody tr[data-app-id="' + dragAppId + '"]');
+        if (!$drag.length || String($target.attr('data-tie-key')) !== String($drag.attr('data-tie-key'))) return;
+
+        e.preventDefault();
+        if (e.originalEvent.dataTransfer) e.originalEvent.dataTransfer.dropEffect = 'move';
+
+        $('#rqa-table tbody tr').removeClass('rqa-drag-over');
+        if ($target.attr('data-app-id') != dragAppId) $target.addClass('rqa-drag-over');
+    });
+
+    $tbody.on('drop', 'tr', function (e) {
+        if (dragAppId == null) return;
+
+        var $target = $(this);
+        var $drag = $('#rqa-table tbody tr[data-app-id="' + dragAppId + '"]');
+        var keyVal = $drag.length ? String($drag.attr('data-tie-key')) : null;
+
+        if (!$drag.length || keyVal === null || String($target.attr('data-tie-key')) !== keyVal) {
+            clearDragState();
+            return;
+        }
+
+        e.preventDefault();
+
+        if ($target.attr('data-app-id') != dragAppId) {
+            var rect = this.getBoundingClientRect();
+            var after = (e.originalEvent.clientY - rect.top) > rect.height / 2;
+
+            if (after) $drag.insertAfter($target);
+            else $drag.insertBefore($target);
+
+            renumberRows();
+            persistTieOrder(keyVal);
+        }
+
+        clearDragState();
     });
 
     $(document).on('click', '.rqa-recommend-btn', function () {

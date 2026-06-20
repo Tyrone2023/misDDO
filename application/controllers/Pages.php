@@ -3512,6 +3512,68 @@ public function car_rqa_promotion()
         $this->db->where('status', 'approved')
             ->where('date_waived IS NOT NULL', null, false)
             ->update('hris_rqa_recommendation', ['status' => 'waived']);
+
+        // Per-applicant ranking metadata for the RQA Recommendation report:
+        //   tie_order      - manual ordering set by dragging tied applicants
+        //                    (lower = higher up); only meaningful within a tie.
+        //   is_corrigendum - applicant flagged as Corrigendum / Addendum.
+        // Keyed by appID (globally unique) so the manual order/flag persists
+        // for every user who opens the report.
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `hris_rqa_ranking_meta` (
+              `id` INT(11) NOT NULL AUTO_INCREMENT,
+              `jobID` INT(11) DEFAULT NULL,
+              `appID` INT(11) NOT NULL,
+              `tie_order` INT(11) DEFAULT NULL,
+              `is_corrigendum` TINYINT(1) NOT NULL DEFAULT 0,
+              `updated_by` INT(11) DEFAULT NULL,
+              `updated_at` DATETIME DEFAULT NULL,
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `uniq_app` (`appID`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+        ");
+
+        // Identifies applicants whose RQA score was added/corrected through the
+        // Corrigendum / Addendum page after a vacancy was closed. `type` is
+        // 'corrigendum' (a correction) or 'addendum' (a late addition).
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `hris_rqa_corrigendum` (
+              `id` INT(11) NOT NULL AUTO_INCREMENT,
+              `appID` INT(11) NOT NULL,
+              `jobID` INT(11) DEFAULT NULL,
+              `type` VARCHAR(20) NOT NULL DEFAULT 'corrigendum',
+              `remarks` VARCHAR(255) DEFAULT NULL,
+              `created_by` INT(11) DEFAULT NULL,
+              `created_at` DATETIME DEFAULT NULL,
+              `updated_by` INT(11) DEFAULT NULL,
+              `updated_at` DATETIME DEFAULT NULL,
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `uniq_app_job` (`appID`, `jobID`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+        ");
+    }
+
+    /**
+     * Insert/update a row in hris_rqa_ranking_meta for an applicant (keyed by
+     * appID). Only the supplied $fields are written so a tie-order change does
+     * not clobber the corrigendum flag and vice-versa.
+     */
+    private function rqa_meta_upsert($appID, $jobID, array $fields)
+    {
+        $appID = (int) $appID;
+        if ($appID <= 0) {
+            return;
+        }
+
+        $existing = $this->db->select('id')->where('appID', $appID)->get('hris_rqa_ranking_meta')->row();
+        if (!empty($existing)) {
+            $this->db->where('appID', $appID)->update('hris_rqa_ranking_meta', $fields);
+        } else {
+            $this->db->insert('hris_rqa_ranking_meta', array_merge(
+                ['appID' => $appID, 'jobID' => $jobID > 0 ? (int) $jobID : null],
+                $fields
+            ));
+        }
     }
 
     /**
@@ -3707,6 +3769,232 @@ public function car_rqa_promotion()
                 'demo_rating' => $this->rqa_clean_score($row->demo_rating ?? null),
                 'tr_rating' => $this->rqa_clean_score($row->tr_rating ?? null),
                 'total_points' => !empty($row->total_points) ? number_format((float) $row->total_points, 2, '.', '') : '',
+                'tieOrder' => null,
+                'isCorrigendum' => 0,
+            ];
+        }
+
+        // Merge the saved manual tie-break order + corrigendum/addendum flag.
+        $appIDs = array_values(array_filter(array_map(function ($r) {
+            return (int) $r['appID'];
+        }, $rows), function ($v) {
+            return $v > 0;
+        }));
+        if (!empty($appIDs)) {
+            $meta = [];
+            foreach (
+                $this->db->select('appID, tie_order, is_corrigendum')
+                    ->where_in('appID', $appIDs)
+                    ->get('hris_rqa_ranking_meta')
+                    ->result() as $m
+            ) {
+                $meta[(int) $m->appID] = $m;
+            }
+            foreach ($rows as &$r) {
+                $m = $meta[(int) $r['appID']] ?? null;
+                if ($m) {
+                    $r['tieOrder'] = ($m->tie_order === null) ? null : (int) $m->tie_order;
+                    $r['isCorrigendum'] = ((int) $m->is_corrigendum === 1) ? 1 : 0;
+                }
+            }
+            unset($r);
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'specializationApplicable' => $specializationApplicable,
+            'specializationKind' => $specializationKind,
+            'jobTitle' => $jobTitle,
+            'rows' => $rows,
+        ]);
+    }
+
+    /**
+     * Persist ranking metadata for the RQA Recommendation report (AJAX, JSON).
+     *   action=order       -> save the manual tie-break order; expects `order`,
+     *                         a JSON array of {appID, jobID} in the new order.
+     *   action=corrigendum -> toggle the Corrigendum/Addendum flag for one
+     *                         applicant; expects appID, jobID, value (0|1).
+     */
+    public function rqa_ranking_meta_save()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'Your session has expired. Please log in again.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $action = trim((string) $this->input->post('action'));
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $userId = $userId ? (int) $userId : null;
+        $now = date('Y-m-d H:i:s');
+
+        if ($action === 'corrigendum') {
+            $appID = (int) $this->input->post('appID');
+            $jobID = (int) $this->input->post('jobID');
+            $value = (int) $this->input->post('value') === 1 ? 1 : 0;
+            if ($appID <= 0) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid applicant.']);
+                return;
+            }
+            $this->rqa_meta_upsert($appID, $jobID, [
+                'is_corrigendum' => $value,
+                'updated_by' => $userId,
+                'updated_at' => $now,
+            ]);
+            echo json_encode(['status' => 'success', 'isCorrigendum' => $value]);
+            return;
+        }
+
+        if ($action === 'order') {
+            $payload = json_decode((string) $this->input->post('order'), true);
+            if (!is_array($payload) || empty($payload)) {
+                echo json_encode(['status' => 'error', 'message' => 'Nothing to reorder.']);
+                return;
+            }
+            $i = 0;
+            foreach ($payload as $entry) {
+                $appID = (int) ($entry['appID'] ?? 0);
+                $jobID = (int) ($entry['jobID'] ?? 0);
+                if ($appID <= 0) {
+                    continue;
+                }
+                $this->rqa_meta_upsert($appID, $jobID, [
+                    'tie_order' => $i,
+                    'updated_by' => $userId,
+                    'updated_at' => $now,
+                ]);
+                $i++;
+            }
+            echo json_encode(['status' => 'success']);
+            return;
+        }
+
+        echo json_encode(['status' => 'error', 'message' => 'Unknown action.']);
+    }
+
+    /**
+     * Corrigendum / Addendum report (shell only). Mirrors the RQA Recommendation
+     * position picker but lets the user add/correct an applicant's RQA score
+     * after a vacancy has been closed. Data loads via rqa_corrigendum_data().
+     */
+    public function rqa_corrigendum()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        $page = "rqa_corrigendum";
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $years = $this->Page_model->rqa_available_years();
+
+        $requestedYear = (int) $this->input->get('year', true);
+        if ($requestedYear > 0 && in_array($requestedYear, $years, true)) {
+            $selectedYear = $requestedYear;
+        } else {
+            $currentYear = (int) date('Y');
+            $selectedYear = in_array($currentYear, $years, true)
+                ? $currentYear
+                : (int) ($years[0] ?? $currentYear);
+        }
+
+        $data = [
+            'title' => 'Corrigendum / Addendum',
+            'jobOptions' => $this->Page_model->rqa_job_options(),
+            'jobTypeSuffixes' => $this->rqa_recommendation_job_suffixes(),
+            'years' => $years,
+            'selectedYear' => $selectedYear,
+            'selectedJobId' => (int) $this->input->get('job', true),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
+     * Qualified applicants for the selected position with their current RQA
+     * scores (editable on the Corrigendum / Addendum page), as JSON.
+     */
+    public function rqa_corrigendum_data()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'Your session has expired. Please log in again.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $jobIDs = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', (string) $this->input->get('job', true))),
+            function ($v) {
+                return $v > 0;
+            }
+        )));
+        if (empty($jobIDs)) {
+            echo json_encode(['status' => 'error', 'message' => 'No position selected.']);
+            return;
+        }
+
+        $jobs = $this->db
+            ->select('jobID, jobTitle, job_type')
+            ->where_in('jobID', $jobIDs)
+            ->get('hris_jobvacancy')
+            ->result();
+        if (empty($jobs)) {
+            echo json_encode(['status' => 'error', 'message' => 'Position not found.']);
+            return;
+        }
+
+        $jobType = (int) $jobs[0]->job_type;
+        $jobTitle = $jobs[0]->jobTitle;
+        $specializationKind = $this->rqa_specialization_kind($jobType);
+        $specializationApplicable = $specializationKind !== 'none';
+
+        $rows = [];
+        foreach ($this->Page_model->rqa_corrigendum_applicants($jobIDs) as $row) {
+            $rawSpecialization = trim((string) $this->rqa_row_specialization($row, $jobType));
+            $strand = $specializationKind === 'shs' ? trim((string) ($row->shss ?? '')) : '';
+            $major = $specializationKind === 'shs' ? trim((string) ($row->Major ?? '')) : '';
+            $jhsGroup = $specializationKind === 'jhs' ? $this->rqa_jhs_specialization_group($rawSpecialization) : '';
+            $displaySpecialization = $specializationKind === 'jhs' ? $jhsGroup : ($specializationKind === 'shs' ? $major : $rawSpecialization);
+
+            $rows[] = [
+                'appID' => (int) ($row->appID ?? 0),
+                'jobID' => (int) ($row->jobID ?? $jobIDs[0]),
+                'jobType' => $jobType,
+                'specializationKind' => $specializationKind,
+                'code' => (string) ($row->code ?? ''),
+                'empEmail' => (string) ($row->empEmail ?? $row->renren ?? ''),
+                'name' => rqa_applicant_name($row),
+                'municipality' => trim((string) ($row->resCity ?? '')),
+                'brgy' => trim((string) ($row->brgy ?? '')),
+                'specialization' => $displaySpecialization,
+                'specializationGroup' => $jhsGroup,
+                'strand' => $strand,
+                'major' => $major,
+                'education' => $this->rqa_clean_score($row->education ?? null),
+                'training' => $this->rqa_clean_score($row->training ?? null),
+                'experience' => $this->rqa_clean_score($row->experience ?? null),
+                'let_rating' => $this->rqa_clean_score($row->let_rating ?? null),
+                'demo_rating' => $this->rqa_clean_score($row->demo_rating ?? null),
+                'tr_rating' => $this->rqa_clean_score($row->tr_rating ?? null),
+                'total_points' => ($row->total_points === null || (float) $row->total_points == 0)
+                    ? ''
+                    : number_format((float) $row->total_points, 2, '.', ''),
+                'corrigendumType' => trim((string) ($row->corrigendum_type ?? '')),
             ];
         }
 
@@ -3716,6 +4004,104 @@ public function car_rqa_promotion()
             'specializationKind' => $specializationKind,
             'jobTitle' => $jobTitle,
             'rows' => $rows,
+        ]);
+    }
+
+    /**
+     * Save a single Corrigendum / Addendum score (AJAX, JSON). Writes the RQA
+     * score components to hris_applications_rating (insert if the applicant has
+     * no rating row yet), records the applicant in hris_rqa_corrigendum with the
+     * chosen type, and flags them in hris_rqa_ranking_meta so they show as
+     * Corrigendum/Addendum (blue) on the RQA Recommendation report.
+     */
+    public function rqa_corrigendum_save()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'Your session has expired. Please log in again.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $appID = (int) $this->input->post('appID');
+        $jobID = (int) $this->input->post('jobID');
+        $recordNo = trim((string) $this->input->post('record_no'));
+        $type = strtolower(trim((string) $this->input->post('type')));
+        if (!in_array($type, ['corrigendum', 'addendum'], true)) {
+            $type = 'corrigendum';
+        }
+
+        if ($appID <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid applicant.']);
+            return;
+        }
+
+        // Sanitise the six score components, then always derive the total from
+        // those values instead of trusting a client-supplied total.
+        $scoreFields = ['education', 'training', 'experience', 'let_rating', 'demo_rating', 'tr_rating'];
+        $scores = [];
+        foreach ($scoreFields as $f) {
+            $raw = $this->input->post($f);
+            $scores[$f] = ($raw === null || $raw === '') ? 0 : (float) $raw;
+        }
+        $scores['total_points'] = array_sum($scores);
+
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $userId = $userId ? (int) $userId : 0;
+        $now = date('Y-m-d H:i:s');
+
+        // hris_applications_rating: update the existing row, else insert one.
+        $existing = $this->db->select('id')->where('appID', $appID)->get('hris_applications_rating')->row();
+        if (!empty($existing)) {
+            $update = $scores;
+            $update['eval_id1'] = (string) $userId;
+            $this->db->where('appID', $appID)->update('hris_applications_rating', $update);
+        } else {
+            $job = $this->db->select('job_type, sy')->where('jobID', $jobID)->get('hris_jobvacancy')->row();
+            $insert = array_merge($scores, [
+                'appID' => $appID,
+                'record_no' => $recordNo !== '' ? $recordNo : null,
+                'eval_id1' => (string) $userId,
+                'eval_id2' => $userId,
+                'eval_id3' => $userId,
+                'job_type' => $job ? (int) $job->job_type : 0,
+                'fy' => $job ? (string) $job->sy : (string) date('Y'),
+            ]);
+            $this->db->insert('hris_applications_rating', $insert);
+        }
+
+        // hris_rqa_corrigendum: identify the applicant + chosen type.
+        $corExisting = $this->db->select('id')->where('appID', $appID)->where('jobID', $jobID)->get('hris_rqa_corrigendum')->row();
+        if (!empty($corExisting)) {
+            $this->db->where('id', (int) $corExisting->id)->update('hris_rqa_corrigendum', [
+                'type' => $type,
+                'updated_by' => $userId ?: null,
+                'updated_at' => $now,
+            ]);
+        } else {
+            $this->db->insert('hris_rqa_corrigendum', [
+                'appID' => $appID,
+                'jobID' => $jobID > 0 ? $jobID : null,
+                'type' => $type,
+                'created_by' => $userId ?: null,
+                'created_at' => $now,
+            ]);
+        }
+
+        // Flag for the RQA Recommendation blue highlight.
+        $this->rqa_meta_upsert($appID, $jobID, [
+            'is_corrigendum' => 1,
+            'updated_by' => $userId ?: null,
+            'updated_at' => $now,
+        ]);
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Score saved and applicant marked as ' . ucfirst($type) . '.',
+            'corrigendumType' => $type,
+            'total_points' => $scores['total_points'] > 0 ? number_format($scores['total_points'], 2, '.', '') : '',
         ]);
     }
 
@@ -6253,9 +6639,17 @@ public function rqa_municipality_print_shsv2()
         }
 
 
+        // A Closed vacancy can no longer be scored from the rating page (any
+        // role). The lock partial disables the form controls and points the
+        // user to the Corrigendum / Addendum page for post-close corrections.
+        $ratingLocked = isset($jobvacancy->jvStatus) && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Closed') === 0;
+
         $this->load->view('templates/head');
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
+        if ($ratingLocked) {
+            $this->load->view('pages/_rating_locked');
+        }
         $this->load->view('templates/footer');
     }
 
@@ -6289,10 +6683,14 @@ public function rqa_municipality_print_shsv2()
 
         $data['user'] = $this->Common->one_cond_row('users', 'user_id', $param);
 
+        $ratingLocked = isset($jobvacancy->jvStatus) && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Closed') === 0;
 
         $this->load->view('templates/head');
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
+        if ($ratingLocked) {
+            $this->load->view('pages/_rating_locked');
+        }
         $this->load->view('templates/footer');
     }
 

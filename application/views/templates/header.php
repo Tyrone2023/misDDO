@@ -402,6 +402,13 @@
                                 </li>
                                 
                                    <li>
+    <a href="<?= base_url(); ?>Pages/rqa_corrigendum">
+        <i class="mdi mdi-file-document-edit-outline"></i>
+        <span> Corrigendum / Addendum  </span>
+    </a>
+</li>
+
+                                   <li>
     <a href="<?= base_url(); ?>Pages/rqa_recommendation">
         <i class="mdi mdi-account-check-outline"></i>
         <span> RQA Recommendation  </span>
@@ -810,7 +817,14 @@
 
                                     </ul>
                                 </li>
-                                
+
+                                <li>
+    <a href="<?= base_url(); ?>Pages/rqa_corrigendum">
+        <i class="mdi mdi-file-document-edit-outline"></i>
+        <span> Corrigendum / Addendum  </span>
+    </a>
+</li>
+
                                 <li>
     <a href="<?= base_url(); ?>Pages/rqa_recommendation">
         <i class="mdi mdi-account-check-outline"></i>
@@ -961,6 +975,13 @@
                                 </li>
                                 
                                 
+                                   <li>
+    <a href="<?= base_url(); ?>Pages/rqa_corrigendum">
+        <i class="mdi mdi-file-document-edit-outline"></i>
+        <span> Corrigendum / Addendum  </span>
+    </a>
+</li>
+
                                    <li>
     <a href="<?= base_url(); ?>Pages/rqa_recommendation">
         <i class="mdi mdi-account-check-outline"></i>
