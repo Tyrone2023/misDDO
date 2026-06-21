@@ -78,6 +78,9 @@ $selectedYear = (int) ($selectedYear ?? 0);
     .rqa-score-input.total { font-weight: 800; background: #f3fff9; color: #157347; cursor: default; }
     .rqa-score-input:focus { border-color: var(--rqa-accent); box-shadow: 0 0 0 .12rem rgba(43,108,212,.13); }
     .rqa-type-select { width: 100%; border-radius: 7px; border-color: #dfe7f1; font-size: .66rem; height: 30px; padding: 2px 4px; }
+    .rqa-position-select { width: 100%; border-radius: 7px; border-color: #dfe7f1; font-size: .66rem; height: 30px; padding: 2px 4px; }
+    .rqa-position-select.rqa-transfer { border-color: #2b6cd4; background: #f3f8ff; font-weight: 700; color: #1f3a5f; }
+    .rqa-transfer-pill { display: inline-block; margin-top: 4px; font-size: .56rem; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: #b7791f; }
 
     .rqa-save-btn { width: 100%; border-radius: 999px; padding: .34rem .35rem; font-weight: 800; font-size: .62rem; background: var(--rqa-accent); border-color: var(--rqa-accent); box-shadow: 0 5px 12px rgba(43,108,212,.16); white-space: normal; line-height: 1.1; }
     .rqa-save-btn:hover { background: #245cb6; border-color: #245cb6; }
@@ -105,7 +108,7 @@ $selectedYear = (int) ($selectedYear ?? 0);
                 <div class="rqa-hero-content">
                     <div class="rqa-title-block">
                         <h4><?= h($title ?? 'Corrigendum / Addendum'); ?></h4>
-                        <p>Add or correct an applicant's RQA score after a vacancy has been closed. Pick a position, edit the score, choose Corrigendum or Addendum, then Save. Saved applicants are flagged on the RQA Recommendation report.</p>
+                        <p>Add or correct an applicant's RQA score after a vacancy has been closed. Pick a position, edit the score, transfer the applicant to another position if needed, choose Corrigendum or Addendum, then Save. Saved applicants are flagged on the RQA Recommendation report.</p>
                     </div>
                     <div class="d-flex align-items-center" style="gap:12px;">
                         <span id="rqa-count-badge"></span>
@@ -165,8 +168,8 @@ $selectedYear = (int) ($selectedYear ?? 0);
                         <table class="table table-hover table-bordered w-100" id="rqa-table">
                             <colgroup>
                                 <col style="width:4%;">
+                                <col style="width:13%;">
                                 <col style="width:15%;">
-                                <col style="width:11%;">
                                 <col class="rqa-col-spec" style="width:8%; display:none;">
                                 <col style="width:6%;">
                                 <col style="width:6%;">
@@ -182,7 +185,7 @@ $selectedYear = (int) ($selectedYear ?? 0);
                                 <tr>
                                     <th class="num">No.</th>
                                     <th>Applicant</th>
-                                    <th>Municipality - Brgy</th>
+                                    <th>Position</th>
                                     <th class="rqa-col-spec" style="display:none;">Spec.</th>
                                     <th class="num">Educ</th>
                                     <th class="num">Train</th>
@@ -234,16 +237,67 @@ document.addEventListener('DOMContentLoaded', function () {
     $year.select2({ width: '100%', minimumResultsForSearch: Infinity });
     $job.select2({ width: '100%', placeholder: 'Select a position…', allowClear: true });
 
-    function buildJobOptions(year) {
+    // Group the vacancies of a year by display label (several jobIDs can share
+    // the same title/type/year). Returns { order:[labels], groups:{label:[ids]} }.
+    function groupsForYear(year) {
         year = parseInt(year, 10) || 0;
         var groups = {}, order = [];
         allJobs.filter(function (j) { return j.sy === year; }).forEach(function (j) {
             if (!groups[j.label]) { groups[j.label] = []; order.push(j.label); }
             groups[j.label].push(j.id);
         });
-        var html = '<option value="">Select a position…</option>';
-        order.forEach(function (label) { html += '<option value="' + groups[label].join(',') + '">' + escHtml(label) + '</option>'; });
+        return { groups: groups, order: order };
+    }
+
+    // <option> markup for every position in a year, marking selectedVal selected.
+    function positionOptionsHtml(year, selectedVal) {
+        var g = groupsForYear(year);
+        var html = '';
+        g.order.forEach(function (label) {
+            var val = g.groups[label].join(',');
+            html += '<option value="' + escAttr(val) + '"' + (val === selectedVal ? ' selected' : '') + '>' + escHtml(label) + '</option>';
+        });
+        return html;
+    }
+
+    function jobById(jobId) {
+        jobId = parseInt(jobId, 10);
+        return allJobs.filter(function (j) { return j.id === jobId; })[0] || null;
+    }
+
+    // The grouped <option> value (comma-joined jobIDs) that contains a jobID.
+    function groupValueForJob(jobId, year) {
+        jobId = parseInt(jobId, 10);
+        var g = groupsForYear(year);
+        for (var i = 0; i < g.order.length; i++) {
+            var ids = g.groups[g.order[i]];
+            if (ids.indexOf(jobId) !== -1) return ids.join(',');
+        }
+        return '';
+    }
+
+    function buildJobOptions(year) {
+        var html = '<option value="">Select a position…</option>' + positionOptionsHtml(year, '');
         $job.html(html).val('').trigger('change.select2');
+    }
+
+    // Per-row position dropdown. Defaults to the applicant's current position;
+    // picking another marks a transfer. data-orig keeps the original value.
+    function positionSelectHtml(r) {
+        var job = jobById(r.jobID);
+        var rowYear = job ? job.sy : (parseInt($year.val(), 10) || 0);
+        var origVal = groupValueForJob(r.jobID, rowYear);
+        var extraOption = '';
+        if (!origVal) {
+            // Current position isn't among the year's options; show it explicitly
+            // so it stays selected and isn't mistaken for a transfer.
+            origVal = String(r.jobID);
+            var lbl = job ? job.label : ('Job #' + r.jobID);
+            extraOption = '<option value="' + escAttr(origVal) + '" selected>' + escHtml(lbl) + '</option>';
+        }
+        return '<select class="form-control form-control-sm rqa-position-select" data-orig="' + escAttr(origVal) + '">'
+            + extraOption + positionOptionsHtml(rowYear, origVal) + '</select>'
+            + '<span class="rqa-transfer-pill" style="display:none;"></span>';
     }
 
     function findJobGroupValue(jobId) {
@@ -288,12 +342,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (a === '') return 1;
         if (b === '') return -1;
         return a.localeCompare(b, undefined, { sensitivity: 'base' });
-    }
-
-    function locationText(r) {
-        var m = (r.municipality || '').trim(), b = (r.brgy || '').trim();
-        if (m && b) return m + ' - ' + b;
-        return m || b || '';
     }
 
     function specializationText(r) {
@@ -362,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td><span class="rqa-name-main">' + escHtml(r.name) + '</span>'
             + '<span class="rqa-name-sub">Code: <span class="rqa-code-inline">' + escHtml(r.code) + '</span></span></td>';
 
-        html += '<td><span class="rqa-location-tag">' + escHtml(locationText(r)) + '</span></td>';
+        html += '<td>' + positionSelectHtml(r) + '</td>';
 
         if (specializationApplicable) {
             html += '<td class="rqa-col-spec">' + escHtml(specializationText(r)) + '</td>';
@@ -487,6 +535,20 @@ document.addEventListener('DOMContentLoaded', function () {
         $row.find('.rqa-score-input[data-field="total_points"]').val(total.toFixed(2));
     });
 
+    // Highlight the position select and show a "Transfer" pill when the user
+    // picks a position other than the applicant's current one.
+    $(document).on('change', '.rqa-position-select', function () {
+        var $sel = $(this);
+        var changed = ($sel.val() || '') !== ($sel.attr('data-orig') || '');
+        $sel.toggleClass('rqa-transfer', changed);
+        var $pill = $sel.siblings('.rqa-transfer-pill');
+        if (changed) {
+            $pill.text('Transfer → ' + $sel.find('option:selected').text()).show();
+        } else {
+            $pill.hide().text('');
+        }
+    });
+
     $(document).on('click', '.rqa-save-btn', function () {
         var $btn = $(this);
         var $row = $btn.closest('tr');
@@ -495,14 +557,21 @@ document.addEventListener('DOMContentLoaded', function () {
         var code = $row.attr('data-code') || '';
         var type = $row.find('.rqa-type-select').val() || 'corrigendum';
 
-        var payload = { appID: appID, jobID: jobID, record_no: code, type: type };
+        var $posSelect = $row.find('.rqa-position-select');
+        var targetGroup = $posSelect.val() || '';
+        var targetJobID = parseInt((targetGroup.split(',')[0]) || jobID, 10) || jobID;
+        var isTransfer = targetGroup !== ($posSelect.attr('data-orig') || '');
+        var targetLabel = $posSelect.find('option:selected').text();
+
+        var payload = { appID: appID, jobID: jobID, target_jobID: targetJobID, record_no: code, type: type };
         $row.find('.rqa-score-input').each(function () {
             payload[$(this).attr('data-field')] = $.trim($(this).val());
         });
 
         Swal.fire({
             title: 'Save this score?',
-            html: 'Applicant: <strong>' + escHtml($row.find('.rqa-name-main').text()) + '</strong><br>Mark as: <strong>' + escHtml(type.charAt(0).toUpperCase() + type.slice(1)) + '</strong>',
+            html: 'Applicant: <strong>' + escHtml($row.find('.rqa-name-main').text()) + '</strong><br>Mark as: <strong>' + escHtml(type.charAt(0).toUpperCase() + type.slice(1)) + '</strong>'
+                + (isTransfer ? '<br>Transfer to: <strong>' + escHtml(targetLabel) + '</strong>' : ''),
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Yes, save',
@@ -526,6 +595,15 @@ document.addEventListener('DOMContentLoaded', function () {
                         row.demo_rating = payload.demo_rating;
                         row.tr_rating = payload.tr_rating;
                         row.total_points = res.total_points || payload.total_points;
+                        if (res.transferred) { row.jobID = res.targetJobID || targetJobID; }
+                    }
+
+                    // Reflect a completed transfer: the position is now the new
+                    // current one, so clear the "Transfer" highlight/pill.
+                    if (res.transferred) {
+                        $row.attr('data-job-id', res.targetJobID || targetJobID);
+                        $posSelect.attr('data-orig', targetGroup).removeClass('rqa-transfer');
+                        $row.find('.rqa-transfer-pill').hide().text('');
                     }
 
                     $row.addClass('rqa-marked');

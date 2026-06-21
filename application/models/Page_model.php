@@ -1505,10 +1505,11 @@ public function count_for_approval_leave4($table, $approver_username)
             'pgu' => $this->input->post('pgu'),
             'jhss' => $this->input->post('jhss'),
             'shss' => $this->input->post('shss'),
+            'Major' => $this->input->post('Major'),
             'religion' => $this->input->post('religion'),
             'disability' => $this->input->post('disability'),
             'ethnicity' => $this->input->post('ethnicity')
-            
+
         );
 
         $this->db->where('id', $id);

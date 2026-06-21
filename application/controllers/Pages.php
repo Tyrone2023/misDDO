@@ -3536,11 +3536,17 @@ public function car_rqa_promotion()
         // Identifies applicants whose RQA score was added/corrected through the
         // Corrigendum / Addendum page after a vacancy was closed. `type` is
         // 'corrigendum' (a correction) or 'addendum' (a late addition).
+        // from_jobID / to_jobID record a position transfer made on that page:
+        // the applicant was moved from one vacancy to another (hris_applications
+        // is updated to to_jobID). When no transfer happens both stay equal to
+        // the applicant's jobID.
         $this->db->query("
             CREATE TABLE IF NOT EXISTS `hris_rqa_corrigendum` (
               `id` INT(11) NOT NULL AUTO_INCREMENT,
               `appID` INT(11) NOT NULL,
               `jobID` INT(11) DEFAULT NULL,
+              `from_jobID` INT(11) DEFAULT NULL,
+              `to_jobID` INT(11) DEFAULT NULL,
               `type` VARCHAR(20) NOT NULL DEFAULT 'corrigendum',
               `remarks` VARCHAR(255) DEFAULT NULL,
               `created_by` INT(11) DEFAULT NULL,
@@ -3551,6 +3557,15 @@ public function car_rqa_promotion()
               UNIQUE KEY `uniq_app_job` (`appID`, `jobID`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8
         ");
+
+        // Older installs created hris_rqa_corrigendum without the transfer
+        // columns; add them so the position transfer can be recorded.
+        if (empty($this->db->query("SHOW COLUMNS FROM `hris_rqa_corrigendum` LIKE 'from_jobID'")->row())) {
+            $this->db->query("ALTER TABLE `hris_rqa_corrigendum` ADD `from_jobID` INT(11) DEFAULT NULL AFTER `jobID`");
+        }
+        if (empty($this->db->query("SHOW COLUMNS FROM `hris_rqa_corrigendum` LIKE 'to_jobID'")->row())) {
+            $this->db->query("ALTER TABLE `hris_rqa_corrigendum` ADD `to_jobID` INT(11) DEFAULT NULL AFTER `from_jobID`");
+        }
     }
 
     /**
@@ -4010,9 +4025,11 @@ public function car_rqa_promotion()
     /**
      * Save a single Corrigendum / Addendum score (AJAX, JSON). Writes the RQA
      * score components to hris_applications_rating (insert if the applicant has
-     * no rating row yet), records the applicant in hris_rqa_corrigendum with the
-     * chosen type, and flags them in hris_rqa_ranking_meta so they show as
-     * Corrigendum/Addendum (blue) on the RQA Recommendation report.
+     * no rating row yet), optionally transfers the applicant to another position
+     * (updating hris_applications.jobID), records the applicant in
+     * hris_rqa_corrigendum with the chosen type and from/to position, and flags
+     * them in hris_rqa_ranking_meta so they show as Corrigendum/Addendum (blue)
+     * on the RQA Recommendation report.
      */
     public function rqa_corrigendum_save()
     {
@@ -4027,6 +4044,12 @@ public function car_rqa_promotion()
 
         $appID = (int) $this->input->post('appID');
         $jobID = (int) $this->input->post('jobID');
+        // Position the applicant should end up in. Defaults to the current
+        // position when not supplied (i.e. no transfer requested).
+        $targetJobID = (int) $this->input->post('target_jobID');
+        if ($targetJobID <= 0) {
+            $targetJobID = $jobID;
+        }
         $recordNo = trim((string) $this->input->post('record_no'));
         $type = strtolower(trim((string) $this->input->post('type')));
         if (!in_array($type, ['corrigendum', 'addendum'], true)) {
@@ -4036,6 +4059,17 @@ public function car_rqa_promotion()
         if ($appID <= 0) {
             echo json_encode(['status' => 'error', 'message' => 'Invalid applicant.']);
             return;
+        }
+
+        // When a transfer is requested, the target must be a real vacancy.
+        $isTransfer = ($targetJobID > 0 && $targetJobID !== $jobID);
+        $targetJob = null;
+        if ($targetJobID > 0) {
+            $targetJob = $this->db->select('jobID, jobTitle, job_type, sy')->where('jobID', $targetJobID)->get('hris_jobvacancy')->row();
+            if ($isTransfer && empty($targetJob)) {
+                echo json_encode(['status' => 'error', 'message' => 'The selected position could not be found.']);
+                return;
+            }
         }
 
         // Sanitise the six score components, then always derive the total from
@@ -4052,55 +4086,79 @@ public function car_rqa_promotion()
         $userId = $userId ? (int) $userId : 0;
         $now = date('Y-m-d H:i:s');
 
+        // Transfer: move the applicant to the target position in hris_applications.
+        if ($isTransfer) {
+            $this->db->where('appID', $appID)->update('hris_applications', ['jobID' => $targetJobID]);
+        }
+
         // hris_applications_rating: update the existing row, else insert one.
+        // The job_type / fy follow the target position so a transferred
+        // applicant's rating reflects where they now sit.
+        $ratingJob = $targetJob ?: $this->db->select('job_type, sy')->where('jobID', $jobID)->get('hris_jobvacancy')->row();
         $existing = $this->db->select('id')->where('appID', $appID)->get('hris_applications_rating')->row();
         if (!empty($existing)) {
             $update = $scores;
             $update['eval_id1'] = (string) $userId;
+            if ($ratingJob) {
+                $update['job_type'] = (int) $ratingJob->job_type;
+                $update['fy'] = (string) $ratingJob->sy;
+            }
             $this->db->where('appID', $appID)->update('hris_applications_rating', $update);
         } else {
-            $job = $this->db->select('job_type, sy')->where('jobID', $jobID)->get('hris_jobvacancy')->row();
             $insert = array_merge($scores, [
                 'appID' => $appID,
                 'record_no' => $recordNo !== '' ? $recordNo : null,
                 'eval_id1' => (string) $userId,
                 'eval_id2' => $userId,
                 'eval_id3' => $userId,
-                'job_type' => $job ? (int) $job->job_type : 0,
-                'fy' => $job ? (string) $job->sy : (string) date('Y'),
+                'job_type' => $ratingJob ? (int) $ratingJob->job_type : 0,
+                'fy' => $ratingJob ? (string) $ratingJob->sy : (string) date('Y'),
             ]);
             $this->db->insert('hris_applications_rating', $insert);
         }
 
-        // hris_rqa_corrigendum: identify the applicant + chosen type.
-        $corExisting = $this->db->select('id')->where('appID', $appID)->where('jobID', $jobID)->get('hris_rqa_corrigendum')->row();
+        // hris_rqa_corrigendum: identify the applicant + chosen type + transfer.
+        // Look up by appID so a row created before a transfer is reused and its
+        // jobID follows the applicant to the target position.
+        $corValues = [
+            'jobID' => $targetJobID > 0 ? $targetJobID : null,
+            'from_jobID' => $jobID > 0 ? $jobID : null,
+            'to_jobID' => $targetJobID > 0 ? $targetJobID : null,
+            'type' => $type,
+        ];
+        $corExisting = $this->db->select('id')->where('appID', $appID)->order_by('id', 'DESC')->limit(1)->get('hris_rqa_corrigendum')->row();
         if (!empty($corExisting)) {
-            $this->db->where('id', (int) $corExisting->id)->update('hris_rqa_corrigendum', [
-                'type' => $type,
+            $this->db->where('id', (int) $corExisting->id)->update('hris_rqa_corrigendum', array_merge($corValues, [
                 'updated_by' => $userId ?: null,
                 'updated_at' => $now,
-            ]);
+            ]));
         } else {
-            $this->db->insert('hris_rqa_corrigendum', [
+            $this->db->insert('hris_rqa_corrigendum', array_merge($corValues, [
                 'appID' => $appID,
-                'jobID' => $jobID > 0 ? $jobID : null,
-                'type' => $type,
                 'created_by' => $userId ?: null,
                 'created_at' => $now,
-            ]);
+            ]));
         }
 
-        // Flag for the RQA Recommendation blue highlight.
-        $this->rqa_meta_upsert($appID, $jobID, [
+        // Flag for the RQA Recommendation blue highlight (keyed by appID, so it
+        // follows the applicant to the target position).
+        $this->rqa_meta_upsert($appID, $targetJobID, [
             'is_corrigendum' => 1,
             'updated_by' => $userId ?: null,
             'updated_at' => $now,
         ]);
 
+        $message = 'Score saved and applicant marked as ' . ucfirst($type) . '.';
+        if ($isTransfer && $targetJob) {
+            $message = 'Score saved, applicant transferred to "' . trim((string) $targetJob->jobTitle) . '" and marked as ' . ucfirst($type) . '.';
+        }
+
         echo json_encode([
             'status' => 'success',
-            'message' => 'Score saved and applicant marked as ' . ucfirst($type) . '.',
+            'message' => $message,
             'corrigendumType' => $type,
+            'transferred' => $isTransfer,
+            'targetJobID' => $targetJobID,
             'total_points' => $scores['total_points'] > 0 ? number_format($scores['total_points'], 2, '.', '') : '',
         ]);
     }

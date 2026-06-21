@@ -429,8 +429,13 @@
                                                                                     
                                                                                 </select>
 
-                                                                                
-                                                                        </div>	
+
+                                                                        </div>
+
+                                                                        <div class="col-lg-3">
+                                                                            <label class="col-form-label">Specialized Area (SHS)</label>
+                                                                            <input type="text" class="form-control" name="Major" value="<?= $app->Major; ?>">
+                                                                        </div>
 									</div>
 
 
