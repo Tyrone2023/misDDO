@@ -326,6 +326,25 @@ $selectedYear = (int) ($selectedYear ?? 0);
         overflow-wrap: break-word;
     }
 
+    .rqa-contact-line {
+        display: block;
+        margin-top: 3px;
+        font-size: .62rem;
+        color: #4a5a6c;
+        line-height: 1.25;
+        overflow-wrap: break-word;
+    }
+
+    .rqa-contact-line i {
+        color: var(--rqa-muted);
+        font-size: 12px;
+        width: 12px;
+    }
+
+    .rqa-contact-line.muted {
+        color: var(--rqa-muted);
+    }
+
     .rqa-rank-badge {
         display: inline-flex;
         align-items: center;
@@ -366,7 +385,8 @@ $selectedYear = (int) ($selectedYear ?? 0);
     }
 
     .rqa-item-number,
-    .rqa-remarks {
+    .rqa-remarks,
+    .rqa-tribe {
         width: 100%;
         min-width: 0;
         border-radius: 7px;
@@ -376,8 +396,13 @@ $selectedYear = (int) ($selectedYear ?? 0);
         padding: 4px 6px;
     }
 
+    .rqa-tribe {
+        text-transform: uppercase;
+    }
+
     .rqa-item-number:focus,
-    .rqa-remarks:focus {
+    .rqa-remarks:focus,
+    .rqa-tribe:focus {
         border-color: var(--rqa-accent);
         box-shadow: 0 0 0 .12rem rgba(26,188,156,.13);
     }
@@ -558,7 +583,8 @@ $selectedYear = (int) ($selectedYear ?? 0);
         }
 
         .rqa-item-number,
-        .rqa-remarks {
+        .rqa-remarks,
+        .rqa-tribe {
             font-size: .62rem;
             height: 28px;
         }
@@ -649,7 +675,8 @@ $selectedYear = (int) ($selectedYear ?? 0);
         }
 
         .rqa-item-number,
-        .rqa-remarks {
+        .rqa-remarks,
+        .rqa-tribe {
             height: 24px;
             font-size: .52rem;
             padding: 2px 4px;
@@ -859,6 +886,7 @@ $selectedYear = (int) ($selectedYear ?? 0);
                                 <col style="width:5%;">
                                 <col style="width:13%;">
                                 <col style="width:8%;">
+                                <col class="rqa-col-tribe" style="width:8%; display:none;">
                                 <col style="width:9%;">
                                 <col style="width:7%;">
                             </colgroup>
@@ -878,6 +906,7 @@ $selectedYear = (int) ($selectedYear ?? 0);
                                     <th class="num">Total</th>
                                     <th>School</th>
                                     <th>Item No.</th>
+                                    <th class="rqa-col-tribe" style="display:none;">Tribe</th>
                                     <th>Remarks</th>
                                     <th>Action</th>
                                 </tr>
@@ -899,6 +928,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var saveUrl = '<?= base_url('Pages/rqa_recommend_save'); ?>';
     var dataUrl = '<?= base_url('Pages/rqa_recommendation_data'); ?>';
     var metaUrl = '<?= base_url('Pages/rqa_ranking_meta_save'); ?>';
+    var tribeUrl = '<?= base_url('Pages/rqa_tribe_save'); ?>';
     var schoolSearchUrl = '<?= base_url('Pages/rqa_school_search'); ?>';
     var preselectJob = '<?= $selectedJobId > 0 ? $selectedJobId : ''; ?>';
 
@@ -917,6 +947,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var allRows = [];
     var specializationApplicable = false;
     var specializationKind = 'none';
+    var tribeApplicable = false;
 
     var $year = $('#year-filter');
     var $job = $('#job-filter');
@@ -1158,6 +1189,8 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td class="rqa-name-cell">';
         html += '<span class="rqa-name-main">' + escHtml(r.name) + '</span>';
         html += '<span class="rqa-name-sub">Code: <span class="rqa-code-inline">' + escHtml(r.code) + '</span></span>';
+        html += '<span class="rqa-contact-line' + (r.contact ? '' : ' muted') + '"><i class="mdi mdi-phone"></i> ' + (r.contact ? escHtml(r.contact) : 'N/A') + '</span>';
+        html += '<span class="rqa-contact-line' + (r.empEmail ? '' : ' muted') + '"><i class="mdi mdi-email-outline"></i> ' + (r.empEmail ? escHtml(r.empEmail) : 'N/A') + '</span>';
         html += '</td>';
 
         html += '<td><span class="rqa-location-tag">' + escHtml(locationText(r)) + '</span></td>';
@@ -1177,6 +1210,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         html += '<td><select class="form-control form-control-sm rqa-school"></select></td>';
         html += '<td><input type="text" class="form-control form-control-sm rqa-item-number" placeholder="Item"></td>';
+        if (tribeApplicable) {
+            html += '<td class="rqa-col-tribe"><input type="text" class="form-control form-control-sm rqa-tribe" placeholder="Tribe" value="' + escAttr(r.tribe || '') + '"></td>';
+        }
         html += '<td><input type="text" class="form-control form-control-sm rqa-remarks" placeholder="Remarks" value="' + escAttr(r.remarks || '') + '"></td>';
 
         html += '<td>';
@@ -1293,6 +1329,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var $tbody = $('#rqa-table tbody');
 
         $('.rqa-col-spec').toggle(specializationApplicable);
+        $('.rqa-col-tribe').toggle(tribeApplicable);
         $('#rqa-table thead th.rqa-col-spec').text(specializationKind === 'shs' ? 'Strand / Spec.' : 'Spec. Group');
 
         if (rows.length === 0) {
@@ -1408,6 +1445,7 @@ document.addEventListener('DOMContentLoaded', function () {
         allRows = [];
         specializationKind = 'none';
         specializationApplicable = false;
+        tribeApplicable = false;
 
         $('.rqa-kind-filter').hide();
         $mun.prop('disabled', true);
@@ -1453,6 +1491,7 @@ document.addEventListener('DOMContentLoaded', function () {
             allRows = res.rows || [];
             specializationApplicable = !!res.specializationApplicable;
             specializationKind = res.specializationKind || 'none';
+            tribeApplicable = !!res.tribeApplicable;
 
             rebuildMunicipalities();
             rebuildSpecializations();
@@ -1514,6 +1553,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $tbody.on('change', '.rqa-school', function () {
         applyRowActionState($(this).closest('tr'));
+    });
+
+    // Tribe (IPED Elementary / Secondary): force upper-case as typed, then
+    // auto-save it to the applicant record when the field loses focus.
+    $tbody.on('input', '.rqa-tribe', function () {
+        var el = this;
+        var start = el.selectionStart, end = el.selectionEnd;
+        var up = el.value.toUpperCase();
+        if (up !== el.value) {
+            el.value = up;
+            try { el.setSelectionRange(start, end); } catch (e) {}
+        }
+    });
+
+    $tbody.on('change', '.rqa-tribe', function () {
+        var $input = $(this);
+        var $row = $input.closest('tr');
+        var appID = parseInt($row.attr('data-app-id'), 10);
+        var empEmail = $row.find('.rqa-recommend-btn').attr('data-email') || '';
+        var tribe = $.trim($input.val()).toUpperCase();
+
+        // Keep the in-memory row in sync so re-renders preserve the value.
+        var row = allRows.filter(function (r) { return r.appID === appID; })[0];
+        if (row) row.tribe = tribe;
+
+        if (empEmail === '') return; // no applicant key to save against
+
+        $.post(tribeUrl, { empEmail: empEmail, tribe: tribe }, null, 'json')
+            .done(function (res) {
+                if (!res || res.status !== 'success') {
+                    Swal.fire({ icon: 'error', title: 'Could not save Tribe', text: (res && res.message) ? res.message : 'Please try again.' });
+                } else {
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Tribe saved', timer: 1100, showConfirmButton: false });
+                }
+            })
+            .fail(function () {
+                Swal.fire({ icon: 'error', title: 'Could not save Tribe', text: 'Please check your connection and try again.' });
+            });
     });
 
     function clearDragState() {
@@ -1702,7 +1779,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 item_number: itemNumber,
                 remarks: remarks,
                 school_id: schoolId,
-                school_name: schoolName
+                school_name: schoolName,
+                tribe: $.trim($row.find('.rqa-tribe').val())
             }, null, 'json').done(function (res) {
                 if (res && res.status === 'success') {
                     Swal.fire({

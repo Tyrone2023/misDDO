@@ -1961,7 +1961,8 @@ public function count_for_approval_leave4($table, $approver_username)
         COALESCE(app.shss, staff.shss) AS shss,
         $majorSelect,
         COALESCE(app.resCity, staff.resCity) AS resCity,
-        COALESCE(app.resBarangay, staff.resBarangay) AS brgy
+        COALESCE(app.resBarangay, staff.resBarangay) AS brgy,
+        COALESCE(app.tribe, '') AS tribe
     ");
         $this->db->from('hris_applications a');
         $this->db->join('hris_applicant app', 'a.empEmail = app.empEmail', 'left');
@@ -2170,7 +2171,8 @@ public function count_for_approval_leave4($table, $approver_username)
             COALESCE(app.shss, staff.shss) AS shss,
             $majorSelect,
             COALESCE(app.resCity, staff.resCity) AS resCity,
-            COALESCE(app.resBarangay, staff.resBarangay) AS brgy
+            COALESCE(app.resBarangay, staff.resBarangay) AS brgy,
+            COALESCE(app.tribe, '') AS tribe
         ");
         $this->db->from('hris_rqa_recommendation rec');
         $this->db->join('hris_applications a', 'a.appID = rec.appID', 'left');

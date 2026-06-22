@@ -158,6 +158,7 @@ if (!function_exists('h')) {
                                     <th class="num">No.</th>
                                     <th>Applicant</th>
                                     <th>Municipality - Brgy</th>
+                                    <th class="rqa-col-tribe" style="display:none;">Tribe</th>
                                     <th>Contact Info</th>
                                     <th>Position</th>
                                     <th>Item No.</th>
@@ -260,6 +261,7 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td class="num"><span class="rqa-rank-badge">' + index + '</span></td>';
         html += '<td><span class="rqa-name-main">' + escHtml(r.name) + '</span><span class="rqa-name-sub">Code: <span class="rqa-code-inline">' + escHtml(r.code) + '</span></span></td>';
         html += '<td><span class="rqa-location-tag">' + escHtml(locationText(r)) + '</span></td>';
+        html += '<td class="rqa-col-tribe">' + (r.tribe ? escHtml(r.tribe) : '<span class="text-muted">—</span>') + '</td>';
         html += '<td>' + contactHtml(r) + '</td>';
         html += '<td><span class="rqa-pos-tag">' + escHtml(r.position) + '</span></td>';
         html += '<td><span class="rqa-item-pill">' + escHtml(r.itemNumber) + '</span></td>';
@@ -303,6 +305,10 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#rqa-issuance-empty').hide();
             $('#rqa-issuance-results').show();
         }
+
+        // Tribe applies only to IPED Elementary / Secondary; show the column
+        // when at least one approved applicant belongs to such a position.
+        $('#rqa-issuance-table .rqa-col-tribe').toggle(issuanceRows.some(function (r) { return r.tribeApplicable; }));
 
         var badge = $('#rqa-count-badge');
         if (issuanceRows.length > 0) {

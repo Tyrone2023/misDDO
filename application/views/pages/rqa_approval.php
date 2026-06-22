@@ -73,6 +73,9 @@ if (!function_exists('h')) {
 
     .rqa-pos-tag { display: inline-block; font-weight: 700; color: #34465c; font-size: .7rem; }
     .rqa-school-tag { display: inline-block; font-weight: 700; color: #1f5f8b; font-size: .68rem; }
+    .rqa-contact-line { display: block; font-size: .68rem; color: var(--rqa-text); line-height: 1.3; overflow-wrap: break-word; }
+    .rqa-contact-line i { color: var(--rqa-muted); width: 13px; }
+    .rqa-contact-line.muted { color: var(--rqa-muted); }
 
     .rqa-action-group { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
     .rqa-approve-btn, .rqa-decline-btn { font-size: .64rem; font-weight: 700; padding: .3rem .55rem; border-radius: 8px; white-space: nowrap; }
@@ -175,6 +178,8 @@ if (!function_exists('h')) {
                                     <th class="num">No.</th>
                                     <th>Applicant</th>
                                     <th>Municipality - Brgy</th>
+                                    <th class="rqa-col-tribe" style="display:none;">Tribe</th>
+                                    <th>Contact Info</th>
                                     <th>Position</th>
                                     <th>School</th>
                                     <th>Item No.</th>
@@ -271,6 +276,13 @@ document.addEventListener('DOMContentLoaded', function () {
         return municipality || brgy || '';
     }
 
+    function contactHtml(r) {
+        var html = '';
+        html += '<span class="rqa-contact-line' + (r.contact ? '' : ' muted') + '"><i class="mdi mdi-phone"></i> ' + (r.contact ? escHtml(r.contact) : 'N/A') + '</span>';
+        html += '<span class="rqa-contact-line' + (r.email ? '' : ' muted') + '"><i class="mdi mdi-email-outline"></i> ' + (r.email ? escHtml(r.email) : 'N/A') + '</span>';
+        return html;
+    }
+
     function rowSpecializationText(r) {
         if (r.specializationKind === 'jhs') return (r.specializationGroup || r.specialization || '').trim();
         if (r.specializationKind === 'shs') {
@@ -291,6 +303,8 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td class="num"><span class="rqa-rank-badge">' + index + '</span></td>';
         html += '<td><span class="rqa-name-main">' + escHtml(r.name) + '</span><span class="rqa-name-sub">' + sub + '</span></td>';
         html += '<td><span class="rqa-location-tag">' + escHtml(locationText(r)) + '</span></td>';
+        html += '<td class="rqa-col-tribe">' + (r.tribe ? escHtml(r.tribe) : '<span class="text-muted">—</span>') + '</td>';
+        html += '<td>' + contactHtml(r) + '</td>';
         html += '<td><span class="rqa-pos-tag">' + escHtml(r.position) + '</span></td>';
         html += '<td>' + (r.school ? '<span class="rqa-school-tag">' + escHtml(r.school) + '</span>' : '<span class="text-muted">—</span>') + '</td>';
         html += '<td><span class="rqa-item-pill">' + escHtml(r.itemNumber) + '</span></td>';
@@ -389,6 +403,10 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#rqa-empty').hide();
             $('#rqa-results').show();
         }
+
+        // The Tribe column only applies to IPED Elementary / Secondary; show it
+        // when at least one recommended applicant belongs to such a position.
+        $('#rqa-table .rqa-col-tribe').toggle(allRows.some(function (r) { return r.tribeApplicable; }));
 
         var badge = $('#rqa-count-badge');
         if (allRows.length > 0) {

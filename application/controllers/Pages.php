@@ -3574,6 +3574,39 @@ public function car_rqa_promotion()
         if (empty($this->db->query("SHOW COLUMNS FROM `hris_rqa_corrigendum` LIKE 'to_jobID'")->row())) {
             $this->db->query("ALTER TABLE `hris_rqa_corrigendum` ADD `to_jobID` INT(11) DEFAULT NULL AFTER `from_jobID`");
         }
+
+        // Tribe is captured on the RQA Recommendation page for IPED Elementary /
+        // Secondary positions and stored on the applicant record. Add the column
+        // when missing so the SELECTs that read app.tribe never error.
+        if (!$this->db->field_exists('tribe', 'hris_applicant')) {
+            $this->db->query("ALTER TABLE `hris_applicant` ADD COLUMN `tribe` VARCHAR(150) DEFAULT NULL");
+        }
+    }
+
+    /**
+     * Whether the Tribe field applies to a job type. Only IPED Elementary (6)
+     * and IPED Secondary (7) capture/display Tribe.
+     */
+    private function rqa_tribe_applicable($jobType)
+    {
+        return in_array((int) $jobType, [6, 7], true);
+    }
+
+    /**
+     * Persist an applicant's Tribe on hris_applicant (keyed by empEmail).
+     * Values are upper-cased so they stay uniform. An empty value clears it.
+     * Returns the normalised tribe, or null when nothing could be saved.
+     */
+    private function rqa_store_tribe($empEmail, $tribe)
+    {
+        $empEmail = trim((string) $empEmail);
+        if ($empEmail === '') {
+            return null;
+        }
+        $tribe = strtoupper(trim((string) $tribe));
+        $this->db->where('empEmail', $empEmail)
+            ->update('hris_applicant', ['tribe' => $tribe !== '' ? $tribe : null]);
+        return $tribe;
     }
 
     /**
@@ -3778,6 +3811,7 @@ public function car_rqa_promotion()
                 'code' => (string) ($row->code ?? ''),
                 'empEmail' => (string) ($row->empEmail ?? $row->renren ?? ''),
                 'name' => rqa_applicant_name($row),
+                'contact' => trim((string) ($row->contactNo ?? '')),
                 'brgy' => trim((string) ($row->brgy ?? '')),
                 'municipality' => trim((string) ($row->resCity ?? '')),
                 'specialization' => $displaySpecialization,
@@ -3795,6 +3829,7 @@ public function car_rqa_promotion()
                 'tieOrder' => null,
                 'isCorrigendum' => 0,
                 'remarks' => '',
+                'tribe' => trim((string) ($row->tribe ?? '')),
             ];
         }
 
@@ -3829,6 +3864,7 @@ public function car_rqa_promotion()
             'status' => 'success',
             'specializationApplicable' => $specializationApplicable,
             'specializationKind' => $specializationKind,
+            'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
             'jobTitle' => $jobTitle,
             'rows' => $rows,
         ]);
@@ -4362,6 +4398,7 @@ public function car_rqa_promotion()
         $total_points = $this->input->post('total_points');
         $school_id = (int) $this->input->post('school_id');
         $school_name = trim((string) $this->input->post('school_name'));
+        $tribe = trim((string) $this->input->post('tribe'));
 
         if ($item_number === '') {
             echo json_encode(['status' => 'error', 'message' => 'Item Number is required.']);
@@ -4404,6 +4441,11 @@ public function car_rqa_promotion()
         ]);
 
         if ($insert) {
+            // Persist Tribe on the applicant record (IPED Elementary / Secondary).
+            // Guarded to a non-empty value so a non-IPED save never wipes it.
+            if ($tribe !== '' && $empEmail !== '') {
+                $this->rqa_store_tribe($empEmail, $tribe);
+            }
             echo json_encode(['status' => 'success', 'message' => 'Applicant recommended successfully.']);
             return;
         }
@@ -4416,6 +4458,33 @@ public function car_rqa_promotion()
         }
 
         echo json_encode(['status' => 'error', 'message' => 'Failed to save recommendation: ' . ($error['message'] ?? 'Unknown error')]);
+    }
+
+    /**
+     * Auto-save an applicant's Tribe from the RQA Recommendation page (AJAX).
+     * Used for IPED Elementary / Secondary positions; the value is stored on
+     * hris_applicant (upper-cased, keyed by empEmail) as soon as it is edited.
+     */
+    public function rqa_tribe_save()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'Your session has expired. Please log in again.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $empEmail = trim((string) $this->input->post('empEmail'));
+        if ($empEmail === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Missing applicant reference.']);
+            return;
+        }
+
+        $tribe = $this->rqa_store_tribe($empEmail, $this->input->post('tribe'));
+
+        echo json_encode(['status' => 'success', 'tribe' => $tribe, 'message' => 'Tribe saved.']);
     }
 
     /**
@@ -5270,9 +5339,13 @@ public function car_rqa_promotion()
                 'jobID' => (int) ($row->jobID ?? 0),
                 'jobType' => $jobType,
                 'specializationKind' => $specializationKind,
+                'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
+                'tribe' => trim((string) ($row->tribe ?? '')),
                 'position' => trim(($row->jobTitle ?? '') . ' ' . $suffix),
                 'code' => (string) ($row->code ?? ''),
                 'name' => $name,
+                'contact' => (string) ($row->contactNo ?? ''),
+                'email' => (string) ($row->empEmail ?? ''),
                 'itemNumber' => (string) ($row->item_number ?? ''),
                 'remarks' => (string) ($row->remarks ?? ''),
                 'school' => (string) ($row->school_name ?? ''),
@@ -5427,6 +5500,9 @@ public function car_rqa_promotion()
 
             $rows[] = [
                 'recId' => (int) ($row->rec_id ?? 0),
+                'jobType' => $jobType,
+                'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
+                'tribe' => trim((string) ($row->tribe ?? '')),
                 'position' => trim(($row->jobTitle ?? '') . ' ' . $suffix),
                 'code' => (string) ($row->code ?? ''),
                 'name' => $name,
