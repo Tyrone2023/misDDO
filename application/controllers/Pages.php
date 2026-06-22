@@ -3642,7 +3642,7 @@ public function car_rqa_promotion()
     {
         $jobType = (int) $jobType;
         $specialization = $row->specialization ?? '';
-        if (in_array($jobType, [3, 8, 16], true) && !empty($row->jhss)) {
+        if (in_array($jobType, [3, 7, 8, 16], true) && !empty($row->jhss)) {
             $specialization = $row->jhss;
         } elseif (in_array($jobType, [4, 9, 11, 12, 13, 14], true) && !empty($row->shss)) {
             $specialization = $row->shss;
@@ -3653,7 +3653,9 @@ public function car_rqa_promotion()
     private function rqa_specialization_kind($jobType)
     {
         $jobType = (int) $jobType;
-        if (in_array($jobType, [3, 8, 16], true)) {
+        // IPED Secondary (7) groups by Specialization the same way Junior High
+        // School does, so it is treated as a JHS-style specialization type.
+        if (in_array($jobType, [3, 7, 8, 16], true)) {
             return 'jhs';
         }
         if (in_array($jobType, [4, 9, 11, 12, 13, 14], true)) {

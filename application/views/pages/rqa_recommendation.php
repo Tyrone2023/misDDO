@@ -688,8 +688,13 @@ $selectedYear = (int) ($selectedYear ?? 0);
         }
     }
 
+    /* Keep each cell's content inside its column (fixed table layout) so wide
+       controls like the School picker never spill into the next column. The
+       numeric cells are excluded so the drag handle / rank badge never clip. */
+    #rqa-table td:not(.num) { overflow: hidden; }
+
     /* Per-row School picker (Select2) sizing */
-    #rqa-table td .select2-container { width: 100% !important; min-width: 150px; }
+    #rqa-table td .select2-container { width: 100% !important; min-width: 0; max-width: 100%; }
     #rqa-table td .select2-container--default .select2-selection--single {
         height: 28px; border-color: #ced4da;
     }
@@ -875,18 +880,18 @@ $selectedYear = (int) ($selectedYear ?? 0);
                             <colgroup>
                                 <col style="width:4%;">
                                 <col style="width:13%;">
-                                <col style="width:10%;">
+                                <col style="width:9%;">
                                 <col class="rqa-col-spec" style="width:7%; display:none;">
+                                <col style="width:3.5%;">
+                                <col style="width:3.5%;">
+                                <col style="width:3.5%;">
+                                <col style="width:3.5%;">
+                                <col style="width:3.5%;">
+                                <col style="width:3.5%;">
                                 <col style="width:4%;">
-                                <col style="width:4%;">
-                                <col style="width:4%;">
-                                <col style="width:4%;">
-                                <col style="width:4%;">
-                                <col style="width:4%;">
-                                <col style="width:5%;">
-                                <col style="width:13%;">
-                                <col style="width:8%;">
-                                <col class="rqa-col-tribe" style="width:8%; display:none;">
+                                <col style="width:12%;">
+                                <col style="width:7%;">
+                                <col class="rqa-col-tribe" style="width:7%; display:none;">
                                 <col style="width:9%;">
                                 <col style="width:7%;">
                             </colgroup>
