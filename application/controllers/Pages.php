@@ -3526,12 +3526,20 @@ public function car_rqa_promotion()
               `appID` INT(11) NOT NULL,
               `tie_order` INT(11) DEFAULT NULL,
               `is_corrigendum` TINYINT(1) NOT NULL DEFAULT 0,
+              `remarks` TEXT DEFAULT NULL,
               `updated_by` INT(11) DEFAULT NULL,
               `updated_at` DATETIME DEFAULT NULL,
               PRIMARY KEY (`id`),
               UNIQUE KEY `uniq_app` (`appID`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8
         ");
+
+        // Backfill the remarks column for installs created before it existed.
+        // Remarks saved here (without a School + Item Number) keep the applicant
+        // visible in the ranked list, unlike a full recommendation.
+        if (!$this->db->field_exists('remarks', 'hris_rqa_ranking_meta')) {
+            $this->db->query("ALTER TABLE `hris_rqa_ranking_meta` ADD COLUMN `remarks` TEXT DEFAULT NULL AFTER `is_corrigendum`");
+        }
 
         // Identifies applicants whose RQA score was added/corrected through the
         // Corrigendum / Addendum page after a vacancy was closed. `type` is
@@ -3786,6 +3794,7 @@ public function car_rqa_promotion()
                 'total_points' => !empty($row->total_points) ? number_format((float) $row->total_points, 2, '.', '') : '',
                 'tieOrder' => null,
                 'isCorrigendum' => 0,
+                'remarks' => '',
             ];
         }
 
@@ -3798,7 +3807,7 @@ public function car_rqa_promotion()
         if (!empty($appIDs)) {
             $meta = [];
             foreach (
-                $this->db->select('appID, tie_order, is_corrigendum')
+                $this->db->select('appID, tie_order, is_corrigendum, remarks')
                     ->where_in('appID', $appIDs)
                     ->get('hris_rqa_ranking_meta')
                     ->result() as $m
@@ -3810,6 +3819,7 @@ public function car_rqa_promotion()
                 if ($m) {
                     $r['tieOrder'] = ($m->tie_order === null) ? null : (int) $m->tie_order;
                     $r['isCorrigendum'] = ((int) $m->is_corrigendum === 1) ? 1 : 0;
+                    $r['remarks'] = (string) ($m->remarks ?? '');
                 }
             }
             unset($r);
@@ -3861,6 +3871,23 @@ public function car_rqa_promotion()
                 'updated_at' => $now,
             ]);
             echo json_encode(['status' => 'success', 'isCorrigendum' => $value]);
+            return;
+        }
+
+        if ($action === 'remarks') {
+            $appID = (int) $this->input->post('appID');
+            $jobID = (int) $this->input->post('jobID');
+            $remarks = trim((string) $this->input->post('remarks'));
+            if ($appID <= 0) {
+                echo json_encode(['status' => 'error', 'message' => 'Invalid applicant.']);
+                return;
+            }
+            $this->rqa_meta_upsert($appID, $jobID, [
+                'remarks' => $remarks !== '' ? $remarks : null,
+                'updated_by' => $userId,
+                'updated_at' => $now,
+            ]);
+            echo json_encode(['status' => 'success', 'remarks' => $remarks]);
             return;
         }
 

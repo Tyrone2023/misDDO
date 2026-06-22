@@ -400,6 +400,21 @@ $selectedYear = (int) ($selectedYear ?? 0);
         border-color: #16a98b;
     }
 
+    /* "Save Remarks" mode: shown when School + Item Number are not both set.
+       Saving here keeps the applicant in the ranked list (no hide). */
+    .rqa-recommend-btn.is-remarks {
+        background: #fff;
+        border: 1px solid #cbd8e7;
+        color: #46566a;
+        box-shadow: none;
+    }
+
+    .rqa-recommend-btn.is-remarks:hover {
+        background: #f2f6fb;
+        border-color: #b6c6da;
+        color: #2b3a4d;
+    }
+
     .rqa-empty-state {
         margin: 18px;
         border: 1px dashed #cbd8e7;
@@ -682,6 +697,7 @@ $selectedYear = (int) ($selectedYear ?? 0);
     }
     .rqa-legend-swatch.tie { background: #fff3cd; border-color: #ffe69c; }
     .rqa-legend-swatch.corr { background: #dce9ff; border-color: #b6d0ff; }
+    .rqa-legend-swatch.remarks { background: #d6f5da; border-color: #a9e6b5; }
     .rqa-legend-hint i { font-size: 15px; vertical-align: middle; }
 
     /* Tie + Corrigendum/Addendum row highlighting */
@@ -689,6 +705,10 @@ $selectedYear = (int) ($selectedYear ?? 0);
     #rqa-table tbody tr.rqa-tie:hover td { background: #fff2d0; }
     #rqa-table tbody tr.rqa-corr td { background: #eaf1ff; }
     #rqa-table tbody tr.rqa-corr:hover td { background: #ddeaff; }
+
+    /* Rows with a saved remark (declared last so it wins over tie/corr) */
+    #rqa-table tbody tr.rqa-has-remarks td { background: #e8fbea; }
+    #rqa-table tbody tr.rqa-has-remarks:hover td { background: #d8f6dc; }
     #rqa-table tbody tr.rqa-drag-over td { box-shadow: inset 0 2px 0 0 var(--rqa-accent); }
     #rqa-table tbody tr.rqa-dragging td { opacity: .5; }
 
@@ -806,6 +826,7 @@ $selectedYear = (int) ($selectedYear ?? 0);
                         <div class="rqa-legend">
                             <span class="rqa-legend-item"><span class="rqa-legend-swatch tie"></span> Tie Score</span>
                             <span class="rqa-legend-item"><span class="rqa-legend-swatch corr"></span> Corrigendum / Addendum</span>
+                            <span class="rqa-legend-item"><span class="rqa-legend-swatch remarks"></span> Has Remarks</span>
                             <span class="rqa-legend-item rqa-legend-hint"><i class="mdi mdi-drag-vertical"></i> Drag tied rows to set their order</span>
                         </div>
                     </div>
@@ -1024,6 +1045,35 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // A row is "recommend-ready" only when BOTH a School and an Item Number are
+    // set. The action button reflects this: recommend-ready -> "Recommend"
+    // (saving hides the applicant); otherwise -> "Save Remarks" (saving keeps
+    // the applicant in the ranked list).
+    function rowIsRecommendReady($row) {
+        var schoolId = ($row.find('.rqa-school').val() || '');
+        var itemNumber = $.trim($row.find('.rqa-item-number').val());
+        return schoolId !== '' && itemNumber !== '';
+    }
+
+    function applyRowActionState($row) {
+        var $btn = $row.find('.rqa-recommend-btn');
+        if ($btn.prop('disabled')) return; // mid-save: leave the spinner alone
+
+        if (rowIsRecommendReady($row)) {
+            $btn.removeClass('is-remarks')
+                .html('<i class="mdi mdi-check-circle-outline mr-1"></i>Recommend');
+        } else {
+            $btn.addClass('is-remarks')
+                .html('<i class="mdi mdi-content-save-outline mr-1"></i>Save Remarks');
+        }
+    }
+
+    function refreshAllRowActionStates() {
+        $('#rqa-table tbody tr').each(function () {
+            applyRowActionState($(this));
+        });
+    }
+
     function setSelectOptions($el, values) {
         var html = '';
 
@@ -1090,7 +1140,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function rowHtml(r, index, tied) {
         var isCorr = parseInt(r.isCorrigendum, 10) === 1;
+        var hasRemarks = (r.remarks || '').trim() !== '';
         var trClass = isCorr ? ' rqa-corr' : (tied ? ' rqa-tie' : '');
+        if (hasRemarks) trClass += ' rqa-has-remarks';
 
         var html = '<tr class="rqa-row' + trClass + '" data-app-id="' + r.appID + '"'
             + ' data-job-id="' + r.jobID + '"'
@@ -1125,7 +1177,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         html += '<td><select class="form-control form-control-sm rqa-school"></select></td>';
         html += '<td><input type="text" class="form-control form-control-sm rqa-item-number" placeholder="Item"></td>';
-        html += '<td><input type="text" class="form-control form-control-sm rqa-remarks" placeholder="Remarks"></td>';
+        html += '<td><input type="text" class="form-control form-control-sm rqa-remarks" placeholder="Remarks" value="' + escAttr(r.remarks || '') + '"></td>';
 
         html += '<td>';
         html += '<button type="button" class="btn btn-sm btn-success rqa-recommend-btn"'
@@ -1276,6 +1328,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             $tbody.html(html);
             initSchoolSelects();
+            refreshAllRowActionStates();
             $('#rqa-empty').hide();
             $('#rqa-results').show();
         }
@@ -1454,6 +1507,15 @@ document.addEventListener('DOMContentLoaded', function () {
     var dragAppId = null;
     var $tbody = $('#rqa-table tbody');
 
+    // Keep each row's action button in sync with its School / Item Number inputs.
+    $tbody.on('input', '.rqa-item-number', function () {
+        applyRowActionState($(this).closest('tr'));
+    });
+
+    $tbody.on('change', '.rqa-school', function () {
+        applyRowActionState($(this).closest('tr'));
+    });
+
     function clearDragState() {
         $('#rqa-table tbody tr').removeClass('rqa-dragging rqa-drag-over');
         dragAppId = null;
@@ -1564,24 +1626,57 @@ document.addEventListener('DOMContentLoaded', function () {
         var schoolData = $school.select2('data');
         var schoolName = (schoolData && schoolData[0]) ? (schoolData[0].name || schoolData[0].text || '') : '';
 
-        if (schoolId === '') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'School required',
-                text: 'Please select the School where the applicant will be assigned.'
-            });
-            $school.select2('open');
-            return;
-        }
+        // Remarks-only save: a School and an Item Number are NOT both set, so
+        // this is just a note. The applicant stays in the ranked list.
+        if (schoolId === '' || itemNumber === '') {
+            if (remarks === '') {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Nothing to save',
+                    text: 'Enter Remarks, or select a School and Item Number to recommend this applicant.'
+                });
+                $row.find('.rqa-remarks').focus();
+                return;
+            }
 
-        if (itemNumber === '') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Item Number required',
-                text: 'Please enter an Item Number before recommending.'
+            var saveBtnHtml = '<i class="mdi mdi-content-save-outline mr-1"></i>Save Remarks';
+            $btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin mr-1"></i>Saving…');
+
+            $.post(metaUrl, {
+                action: 'remarks',
+                appID: appID,
+                jobID: $btn.data('jobid'),
+                remarks: remarks
+            }, null, 'json').done(function (res) {
+                if (res && res.status === 'success') {
+                    var row = allRows.filter(function (r) { return r.appID === appID; })[0];
+                    if (row) row.remarks = remarks;
+                    $row.toggleClass('rqa-has-remarks', remarks !== '');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Remarks saved',
+                        text: 'Remarks saved. This applicant stays in the list until a School and Item Number are set.',
+                        timer: 1600,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: (res && res.message) ? res.message : 'Could not save the remarks.'
+                    });
+                }
+                $btn.prop('disabled', false).html(saveBtnHtml);
+            }).fail(function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Unable to save the remarks. Please try again.'
+                });
+                $btn.prop('disabled', false).html(saveBtnHtml);
             });
 
-            $row.find('.rqa-item-number').focus();
             return;
         }
 
