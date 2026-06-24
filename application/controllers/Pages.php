@@ -253,6 +253,21 @@ class Pages extends CI_Controller
             $this->load->view('pages/' . $page, $result);
             $this->load->view('templates/modal');
             $this->load->view('templates/footer');
+        } elseif ($this->session->position == 'observer') {
+
+            // Read-only RQA Observer: count dashboard. The figures load (and
+            // refresh) via AJAX from observer_counts() so they stay realtime.
+            $page = "observer_dashboard";
+            if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+                show_404();
+            }
+
+            $data = ['title' => 'RQA Observer Dashboard'];
+
+            $this->load->view('templates/head');
+            $this->load->view('templates/header');
+            $this->load->view('pages/' . $page, $data);
+            $this->load->view('templates/footer');
         } elseif ($this->session->position == 'Accountant') {
 
 
@@ -3642,7 +3657,7 @@ public function car_rqa_promotion()
     {
         $jobType = (int) $jobType;
         $specialization = $row->specialization ?? '';
-        if (in_array($jobType, [3, 7, 8, 16], true) && !empty($row->jhss)) {
+        if (in_array($jobType, [3, 8, 16], true) && !empty($row->jhss)) {
             $specialization = $row->jhss;
         } elseif (in_array($jobType, [4, 9, 11, 12, 13, 14], true) && !empty($row->shss)) {
             $specialization = $row->shss;
@@ -3653,9 +3668,7 @@ public function car_rqa_promotion()
     private function rqa_specialization_kind($jobType)
     {
         $jobType = (int) $jobType;
-        // IPED Secondary (7) groups by Specialization the same way Junior High
-        // School does, so it is treated as a JHS-style specialization type.
-        if (in_array($jobType, [3, 7, 8, 16], true)) {
+        if (in_array($jobType, [3, 8, 16], true)) {
             return 'jhs';
         }
         if (in_array($jobType, [4, 9, 11, 12, 13, 14], true)) {
@@ -5760,6 +5773,222 @@ public function car_rqa_promotion()
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
         $this->load->view('templates/footer');
+    }
+
+    /* ====================================================================
+     * RQA OBSERVER (read-only)
+     * A position that can VIEW the Recommendation / Approval / Issuance lists
+     * but never edit them. The pages poll the JSON endpoints every few seconds
+     * so another user's recommend/approve/issue (or a remarks/tribe/school/date
+     * edit) is reflected automatically, without a manual page refresh.
+     * ==================================================================== */
+
+    /**
+     * Live counts for the Observer dashboard (AJAX, JSON), polled every 5s.
+     * "Pending at each stage" of the RQA pipeline:
+     *   recommended -> awaiting approval
+     *   approved    -> approved but not yet issued (no Date Hired)
+     *   issued      -> approved with a Date Hired
+     *   waived      -> applicant waived the post
+     */
+    public function observer_counts()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'Your session has expired. Please log in again.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $recommended = (int) $this->db->where('status', 'recommended')
+            ->count_all_results('hris_rqa_recommendation');
+
+        // Approved + no usable Date Hired yet = still awaiting issuance.
+        $approved = (int) $this->db->where('status', 'approved')
+            ->group_start()
+            ->where('date_hired IS NULL', null, false)
+            ->or_where('date_hired', '0000-00-00')
+            ->or_where('date_hired', '')
+            ->group_end()
+            ->count_all_results('hris_rqa_recommendation');
+
+        // Approved with a usable Date Hired = issued / hired.
+        $issued = (int) $this->db->where('status', 'approved')
+            ->where('date_hired IS NOT NULL', null, false)
+            ->where('date_hired !=', '0000-00-00')
+            ->where('date_hired !=', '')
+            ->count_all_results('hris_rqa_recommendation');
+
+        $waived = (int) $this->db->where('status', 'waived')
+            ->count_all_results('hris_rqa_recommendation');
+
+        echo json_encode([
+            'status' => 'success',
+            'counts' => [
+                'recommended' => $recommended,
+                'approved' => $approved,
+                'issued' => $issued,
+                'waived' => $waived,
+            ],
+        ]);
+    }
+
+    /**
+     * Observer view of the RQA Recommendation report (shell only). Mirrors
+     * rqa_recommendation() but the view is read-only and self-refreshing; it
+     * reuses rqa_recommendation_data() for the per-position ranked applicants.
+     */
+    public function observer_recommendation()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        $page = "observer_recommendation";
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $years = $this->Page_model->rqa_available_years();
+
+        $requestedYear = (int) $this->input->get('year', true);
+        if ($requestedYear > 0 && in_array($requestedYear, $years, true)) {
+            $selectedYear = $requestedYear;
+        } else {
+            $currentYear = (int) date('Y');
+            $selectedYear = in_array($currentYear, $years, true)
+                ? $currentYear
+                : (int) ($years[0] ?? $currentYear);
+        }
+
+        $data = [
+            'title' => 'RQA Recommendation (Observer)',
+            'jobOptions' => $this->Page_model->rqa_job_options(),
+            'jobTypeSuffixes' => $this->rqa_recommendation_job_suffixes(),
+            'years' => $years,
+            'selectedYear' => $selectedYear,
+            'selectedJobId' => (int) $this->input->get('job', true),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
+     * Observer view of the RQA Approval list (shell only). Reuses
+     * rqa_approval_data() for the recommended-applicant rows; the view shows
+     * them read-only (no Approve / Decline) and refreshes on a timer.
+     */
+    public function observer_approval()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        $page = "observer_approval";
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $data = [
+            'title' => 'RQA Approval (Observer)',
+            'jobTypeSuffixes' => $this->rqa_recommendation_job_suffixes(),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
+     * Observer view of the List of Issuance (shell only). Uses
+     * observer_issuance_data() for the rows; the view is display-only.
+     */
+    public function observer_issuance()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        $page = "observer_issuance";
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $data = ['title' => 'List of Issuance (Observer)'];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
+     * Issued (approved + waived) applicants for the Observer issuance list,
+     * JSON. A display-only mirror of rqa_issuance_data() WITHOUT the sds-only
+     * guard and without any action flags - the Observer cannot waive/unwaive
+     * or edit dates, it only watches them change.
+     */
+    public function observer_issuance_data()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to view this list.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $suffixes = $this->rqa_recommendation_job_suffixes();
+        $rows = [];
+
+        foreach ($this->Page_model->recommended_for_approval(['approved', 'waived']) as $row) {
+            $jobType = (int) ($row->job_type ?? 0);
+            $suffix = $suffixes[$jobType] ?? '';
+            $name = trim((string) ($row->rec_name ?? ''));
+            if ($name === '') {
+                $name = rqa_applicant_name($row);
+            }
+
+            $dateHired = (!empty($row->date_hired) && $row->date_hired !== '0000-00-00') ? $row->date_hired : '';
+            $dateWaived = (!empty($row->date_waived) && $row->date_waived !== '0000-00-00') ? $row->date_waived : '';
+
+            $rows[] = [
+                'recId' => (int) ($row->rec_id ?? 0),
+                'jobType' => $jobType,
+                'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
+                'tribe' => trim((string) ($row->tribe ?? '')),
+                'position' => trim(($row->jobTitle ?? '') . ' ' . $suffix),
+                'code' => (string) ($row->code ?? ''),
+                'name' => $name,
+                'contact' => (string) ($row->contactNo ?? ''),
+                'email' => (string) ($row->empEmail ?? ''),
+                'municipality' => trim((string) ($row->resCity ?? '')),
+                'brgy' => trim((string) ($row->brgy ?? '')),
+                'itemNumber' => (string) ($row->item_number ?? ''),
+                'school' => (string) ($row->school_name ?? ''),
+                'dateHired' => (string) $dateHired,
+                'dateWaived' => (string) $dateWaived,
+                'status' => (string) ($row->status ?? ''),
+            ];
+        }
+
+        echo json_encode(['status' => 'success', 'rows' => $rows]);
     }
 
     public function car_rqa_non()

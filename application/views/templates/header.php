@@ -1008,6 +1008,33 @@
                                 <!--<li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>-->
 
 
+                            <?php elseif ($this->session->position === 'observer') : ?>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/observer_recommendation" class="waves-effect">
+                                        <i class="mdi mdi-account-check-outline"></i>
+                                        <span> RQA Recommendation </span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/observer_approval" class="waves-effect">
+                                        <i class="mdi mdi-check-decagram"></i>
+                                        <span> RQA Approval </span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/observer_issuance" class="waves-effect">
+                                        <i class="mdi mdi-file-document-outline"></i>
+                                        <span> RQA Issuance </span>
+                                    </a>
+                                </li>
+
+                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
+                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
+
                             <?php elseif ($this->session->userdata('position') === 'SHNS') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
                                 <li>
