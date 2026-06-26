@@ -3715,6 +3715,19 @@ public function car_rqa_promotion()
         return $v;
     }
 
+    private function rqa_complete_address($row)
+    {
+        $parts = [];
+        foreach (['resHouseNo', 'resStreet', 'resVillage', 'brgy', 'resCity', 'resProvince', 'resZipCode'] as $field) {
+            $value = preg_replace('/\s+/', ' ', trim((string) ($row->{$field} ?? '')));
+            if ($value !== '') {
+                $parts[] = $value;
+            }
+        }
+
+        return implode(', ', $parts);
+    }
+
     /**
      * RQA Recommendation report (shell only).
      * The Position drives everything: choosing a position loads the ranked
@@ -3763,6 +3776,112 @@ public function car_rqa_promotion()
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
         $this->load->view('templates/footer');
+    }
+
+    /**
+     * Informational "Recommended List" screen (read-only), reached from the two
+     * buttons on the RQA Recommendation hero. scope=mine shows only the current
+     * user's recommendations; scope=all shows every recommendation. Data comes
+     * from rqa_recommended_list_data().
+     */
+    public function rqa_recommended_list()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        $page = "rqa_recommended_list";
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $scope = trim((string) $this->input->get('scope'));
+        $scope = ($scope === 'all') ? 'all' : 'mine';
+
+        $data = [
+            'title' => 'RQA Recommended List',
+            'scope' => $scope,
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
+     * JSON feed for the Recommended List screen. Returns the recommendation
+     * records (applicant, position, school, item number, remarks, recommender
+     * and the time it was recommended). scope=mine limits it to the logged-in
+     * user; scope=all returns every recommendation.
+     */
+    public function rqa_recommended_list_data()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to view this list.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $scope = trim((string) $this->input->get('scope'));
+        $scope = ($scope === 'all') ? 'all' : 'mine';
+
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $userId = $userId ? (int) $userId : 0;
+
+        // "My" list is scoped to the current user's own recommendations.
+        $recommendedBy = ($scope === 'mine') ? $userId : null;
+
+        $suffixes = $this->rqa_recommendation_job_suffixes();
+        $rows = [];
+
+        foreach ($this->Page_model->rqa_recommended_list($recommendedBy) as $row) {
+            $jobType = (int) ($row->job_type ?? 0);
+            $suffix = $suffixes[$jobType] ?? '';
+            $name = trim((string) ($row->rec_name ?? ''));
+            if ($name === '') {
+                $name = rqa_applicant_name($row);
+            }
+
+            // Recommender display name (users -> hris_staff), with the username
+            // as a fallback when no staff record is linked.
+            $recBy = trim(implode(' ', array_filter([
+                trim((string) ($row->rec_by_firstname ?? '')),
+                trim((string) ($row->rec_by_middlename ?? '')),
+                trim((string) ($row->rec_by_lastname ?? '')),
+            ])));
+            if ($recBy === '') {
+                $recBy = trim((string) ($row->rec_by_username ?? ''));
+            }
+
+            $rows[] = [
+                'recId' => (int) ($row->rec_id ?? 0),
+                'position' => trim(($row->jobTitle ?? '') . ' ' . $suffix),
+                'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
+                'tribe' => trim((string) ($row->tribe ?? '')),
+                'code' => (string) ($row->code ?? ''),
+                'name' => $name,
+                'contact' => (string) ($row->contactNo ?? ''),
+                'email' => (string) ($row->empEmail ?? ''),
+                'municipality' => trim((string) ($row->resCity ?? '')),
+                'brgy' => trim((string) ($row->brgy ?? '')),
+                'itemNumber' => (string) ($row->item_number ?? ''),
+                'school' => (string) ($row->school_name ?? ''),
+                'remarks' => (string) ($row->remarks ?? ''),
+                'status' => (string) ($row->status ?? ''),
+                'recommendedBy' => $recBy,
+                'recommendedByPosition' => trim((string) ($row->rec_by_position ?? '')),
+                'recommendedAt' => trim((string) ($row->created_at ?? '')),
+            ];
+        }
+
+        echo json_encode(['status' => 'success', 'rows' => $rows, 'scope' => $scope]);
     }
 
     /**
@@ -5333,7 +5452,10 @@ public function car_rqa_promotion()
         $suffixes = $this->rqa_recommendation_job_suffixes();
         $rows = [];
 
-        foreach ($this->Page_model->recommended_for_approval('recommended') as $row) {
+        // Show both still-pending (recommended) and already-approved applicants
+        // so the approver can see the full picture and decline an approval that
+        // has not yet been hired or waived.
+        foreach ($this->Page_model->recommended_for_approval(['recommended', 'approved']) as $row) {
             $jobType = (int) ($row->job_type ?? 0);
             $specializationKind = $this->rqa_specialization_kind($jobType);
             $suffix = $suffixes[$jobType] ?? '';
@@ -5348,10 +5470,22 @@ public function car_rqa_promotion()
             $jhsGroup = $specializationKind === 'jhs' ? $this->rqa_jhs_specialization_group($rawSpecialization) : '';
             $displaySpecialization = $specializationKind === 'jhs' ? $jhsGroup : ($specializationKind === 'shs' ? $major : $rawSpecialization);
 
+            $dateHired = trim((string) ($row->date_hired ?? ''));
+            $dateWaived = trim((string) ($row->date_waived ?? ''));
+            if ($dateHired === '0000-00-00') {
+                $dateHired = '';
+            }
+            if ($dateWaived === '0000-00-00') {
+                $dateWaived = '';
+            }
+
             $rows[] = [
                 'recId' => (int) ($row->rec_id ?? 0),
                 'appID' => (int) ($row->appID ?? 0),
                 'jobID' => (int) ($row->jobID ?? 0),
+                'status' => trim((string) ($row->status ?? '')),
+                'dateHired' => $dateHired,
+                'dateWaived' => $dateWaived,
                 'jobType' => $jobType,
                 'specializationKind' => $specializationKind,
                 'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
@@ -5364,6 +5498,7 @@ public function car_rqa_promotion()
                 'itemNumber' => (string) ($row->item_number ?? ''),
                 'remarks' => (string) ($row->remarks ?? ''),
                 'school' => (string) ($row->school_name ?? ''),
+                'schoolId' => (int) ($row->school_id ?? 0),
                 'municipality' => trim((string) ($row->resCity ?? '')),
                 'brgy' => trim((string) ($row->brgy ?? '')),
                 'specialization' => $displaySpecialization,
@@ -5416,26 +5551,188 @@ public function car_rqa_promotion()
             echo json_encode(['status' => 'error', 'message' => 'This recommendation no longer exists.']);
             return;
         }
-        if (isset($rec->status) && $rec->status !== 'recommended') {
-            echo json_encode(['status' => 'error', 'message' => 'This applicant has already been processed.']);
-            return;
-        }
+
+        $status = isset($rec->status) ? trim((string) $rec->status) : 'recommended';
+        $dateHired = trim((string) ($rec->date_hired ?? ''));
+        $dateWaived = trim((string) ($rec->date_waived ?? ''));
+        $hasHired = $dateHired !== '' && $dateHired !== '0000-00-00';
+        $hasWaived = $dateWaived !== '' && $dateWaived !== '0000-00-00';
 
         $userId = $this->session->id ?? $this->session->userdata('id');
 
         if ($action === 'approve') {
+            // Approving only applies to a still-pending recommendation.
+            if ($status !== 'recommended') {
+                echo json_encode(['status' => 'error', 'message' => 'This applicant has already been approved.']);
+                return;
+            }
             $this->db->where('id', $recId)->update('hris_rqa_recommendation', [
                 'status' => 'approved',
                 'approved_by' => $userId ? (int) $userId : null,
                 'approved_at' => date('Y-m-d H:i:s'),
             ]);
-            echo json_encode(['status' => 'success', 'message' => 'Applicant approved.']);
+            echo json_encode(['status' => 'success', 'message' => 'Applicant approved.', 'newStatus' => 'approved']);
             return;
         }
 
-        // Decline -> remove so the Item Number is freed and the applicant returns to the pool
+        // Decline -> allowed for a recommended OR approved record, but only while
+        // the applicant has not yet been hired (Date Hired) or waived (Date
+        // Waived). Once either date is set the record is locked.
+        if (!in_array($status, ['recommended', 'approved'], true)) {
+            echo json_encode(['status' => 'error', 'message' => 'This applicant can no longer be declined.']);
+            return;
+        }
+        if ($hasHired || $hasWaived) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'This applicant already has a ' . ($hasHired ? 'Date Hired' : 'Date Waived') . ' and can no longer be declined.',
+            ]);
+            return;
+        }
+
+        // Remove so the Item Number is freed and the applicant returns to the pool
         $this->db->where('id', $recId)->delete('hris_rqa_recommendation');
         echo json_encode(['status' => 'success', 'message' => 'Applicant declined.']);
+    }
+
+    /**
+     * Edit the Item Number of a recommended/approved applicant from the
+     * approval screen (AJAX, JSON). Allowed only while the record has not been
+     * hired (Date Hired) or waived (Date Waived). The Item Number must remain
+     * unique among ACTIVE (non-waived) recommendation records.
+     */
+    public function rqa_approval_item_save()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false || $this->session->position !== 'sds') {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to perform this action.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $recId = (int) $this->input->post('rec_id');
+        $itemNumber = trim((string) $this->input->post('item_number'));
+
+        if ($recId <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
+            return;
+        }
+        if ($itemNumber === '') {
+            echo json_encode(['status' => 'error', 'message' => 'Item Number is required.']);
+            return;
+        }
+
+        $rec = $this->Common->one_cond_row('hris_rqa_recommendation', 'id', $recId);
+        if (empty($rec)) {
+            echo json_encode(['status' => 'error', 'message' => 'This recommendation no longer exists.']);
+            return;
+        }
+
+        $status = isset($rec->status) ? trim((string) $rec->status) : 'recommended';
+        $dateHired = trim((string) ($rec->date_hired ?? ''));
+        $dateWaived = trim((string) ($rec->date_waived ?? ''));
+        $hasHired = $dateHired !== '' && $dateHired !== '0000-00-00';
+        $hasWaived = $dateWaived !== '' && $dateWaived !== '0000-00-00';
+
+        if (!in_array($status, ['recommended', 'approved'], true) || $hasHired || $hasWaived) {
+            echo json_encode(['status' => 'error', 'message' => 'This applicant is locked and the Item Number can no longer be edited.']);
+            return;
+        }
+
+        // No change -> nothing to do (also avoids matching itself as a duplicate).
+        if (trim((string) ($rec->item_number ?? '')) === $itemNumber) {
+            echo json_encode(['status' => 'success', 'message' => 'Item Number saved.', 'value' => $itemNumber]);
+            return;
+        }
+
+        // Item Number must be unique among ACTIVE applicants (a waived post frees
+        // its number), excluding this record itself.
+        $existing = $this->db->where('item_number', $itemNumber)
+            ->where('status !=', 'waived')
+            ->where('id !=', $recId)
+            ->get('hris_rqa_recommendation')->row();
+        if (!empty($existing)) {
+            echo json_encode(['status' => 'duplicate', 'message' => 'Item Number "' . $itemNumber . '" already exists. Please use a different Item Number.']);
+            return;
+        }
+
+        $this->db->where('id', $recId)->update('hris_rqa_recommendation', [
+            'item_number' => $itemNumber,
+        ]);
+
+        $error = $this->db->error();
+        // Guard against a race on the unique Item Number index
+        if (isset($error['code']) && (int) $error['code'] === 1062) {
+            echo json_encode(['status' => 'duplicate', 'message' => 'Item Number "' . $itemNumber . '" already exists. Please use a different Item Number.']);
+            return;
+        }
+
+        echo json_encode(['status' => 'success', 'message' => 'Item Number saved.', 'value' => $itemNumber]);
+    }
+
+    /**
+     * Reassign the School of a recommended/approved applicant from the approval
+     * screen (AJAX, JSON). Allowed only while the record has not been hired
+     * (Date Hired) or waived (Date Waived). The school must exist in the
+     * schools table; both school_id and school_name are stored.
+     */
+    public function rqa_approval_school_save()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false || $this->session->position !== 'sds') {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to perform this action.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $recId = (int) $this->input->post('rec_id');
+        $schoolId = (int) $this->input->post('school_id');
+
+        if ($recId <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
+            return;
+        }
+        if ($schoolId <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Please select the School where the applicant will be assigned.']);
+            return;
+        }
+
+        $rec = $this->Common->one_cond_row('hris_rqa_recommendation', 'id', $recId);
+        if (empty($rec)) {
+            echo json_encode(['status' => 'error', 'message' => 'This recommendation no longer exists.']);
+            return;
+        }
+
+        $status = isset($rec->status) ? trim((string) $rec->status) : 'recommended';
+        $dateHired = trim((string) ($rec->date_hired ?? ''));
+        $dateWaived = trim((string) ($rec->date_waived ?? ''));
+        $hasHired = $dateHired !== '' && $dateHired !== '0000-00-00';
+        $hasWaived = $dateWaived !== '' && $dateWaived !== '0000-00-00';
+
+        if (!in_array($status, ['recommended', 'approved'], true) || $hasHired || $hasWaived) {
+            echo json_encode(['status' => 'error', 'message' => 'This applicant is locked and the School can no longer be changed.']);
+            return;
+        }
+
+        // Resolve the school from the schools table so the stored name always
+        // matches a real record (the client-sent name is only a fallback).
+        $school = $this->db->where('recID', $schoolId)->get('schools')->row();
+        if (empty($school)) {
+            echo json_encode(['status' => 'error', 'message' => 'The selected school could not be found.']);
+            return;
+        }
+        $schoolName = trim((string) $school->schoolName);
+
+        $this->db->where('id', $recId)->update('hris_rqa_recommendation', [
+            'school_id' => $schoolId,
+            'school_name' => $schoolName,
+        ]);
+
+        echo json_encode(['status' => 'success', 'message' => 'School saved.', 'value' => $schoolName, 'schoolId' => $schoolId]);
     }
 
     /**
@@ -5523,6 +5820,7 @@ public function car_rqa_promotion()
                 'name' => $name,
                 'contact' => (string) ($row->contactNo ?? ''),
                 'email' => (string) ($row->empEmail ?? ''),
+                'completeAddress' => $this->rqa_complete_address($row),
                 'municipality' => trim((string) ($row->resCity ?? '')),
                 'brgy' => trim((string) ($row->brgy ?? '')),
                 'itemNumber' => $itemNumber,

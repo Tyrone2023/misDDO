@@ -2170,8 +2170,13 @@ public function count_for_approval_leave4($table, $approver_username)
             COALESCE(app.jhss, staff.jhss) AS jhss,
             COALESCE(app.shss, staff.shss) AS shss,
             $majorSelect,
+            COALESCE(app.resHouseNo, staff.resHouseNo) AS resHouseNo,
+            COALESCE(app.resStreet, staff.resStreet) AS resStreet,
+            COALESCE(app.resVillage, staff.resVillage) AS resVillage,
             COALESCE(app.resCity, staff.resCity) AS resCity,
             COALESCE(app.resBarangay, staff.resBarangay) AS brgy,
+            COALESCE(app.resProvince, staff.resProvince) AS resProvince,
+            COALESCE(app.resZipCode, staff.resZipCode) AS resZipCode,
             COALESCE(app.tribe, '') AS tribe
         ");
         $this->db->from('hris_rqa_recommendation rec');
@@ -2191,6 +2196,52 @@ public function count_for_approval_leave4($table, $approver_username)
         $this->db->where('COALESCE(r.total_points, rec.total_points) >= 50', null, false);
         $this->db->order_by('jv.jobTitle', 'ASC');
         $this->db->order_by('r.total_points', 'DESC');
+
+        return $this->db->get()->result();
+    }
+
+    /**
+     * Recommendation records for the "Recommended List" report. Returns every
+     * recommendation (any status) with the applicant, position, school, remarks
+     * and the recommender's name. Pass a user id to limit it to that
+     * recommender ("My Recommended List").
+     */
+    public function rqa_recommended_list($recommendedBy = null)
+    {
+        $this->db->select("
+            rec.id AS rec_id, rec.item_number, rec.remarks, rec.status, rec.created_at,
+            rec.applicant_name AS rec_name, rec.total_points AS rec_total,
+            rec.school_id, rec.school_name, rec.recommended_by,
+            a.appID, a.jobID, a.empEmail,
+            jv.jobTitle, jv.job_type,
+            r.total_points,
+            COALESCE(app.record_no, staff.IDNumber) AS code,
+            COALESCE(app.contactNo, staff.contactNo) AS contactNo,
+            COALESCE(app.FirstName, staff.FirstName) AS FirstName,
+            COALESCE(app.MiddleName, staff.MiddleName) AS MiddleName,
+            COALESCE(app.NameExtn, staff.NameExtn) AS NameExtn,
+            COALESCE(app.LastName, staff.LastName) AS LastName,
+            COALESCE(app.resCity, staff.resCity) AS resCity,
+            COALESCE(app.resBarangay, staff.resBarangay) AS brgy,
+            COALESCE(app.tribe, '') AS tribe,
+            recstaff.FirstName AS rec_by_firstname,
+            recstaff.MiddleName AS rec_by_middlename,
+            recstaff.LastName AS rec_by_lastname,
+            recstaff.empPosition AS rec_by_position,
+            recuser.username AS rec_by_username
+        ", false);
+        $this->db->from('hris_rqa_recommendation rec');
+        $this->db->join('hris_applications a', 'a.appID = rec.appID', 'left');
+        $this->db->join('hris_jobvacancy jv', 'jv.jobID = rec.jobID', 'left');
+        $this->db->join('hris_applicant app', 'a.empEmail = app.empEmail', 'left');
+        $this->db->join('hris_staff staff', 'app.record_no IS NULL AND a.empEmail = staff.IDNumber', 'left');
+        $this->db->join('hris_applications_rating r', 'a.appID = r.appID', 'left');
+        $this->db->join('users recuser', 'recuser.id = rec.recommended_by', 'left');
+        $this->db->join('hris_staff recstaff', 'recstaff.IDNumber = recuser.username', 'left');
+        if ($recommendedBy !== null) {
+            $this->db->where('rec.recommended_by', (int) $recommendedBy);
+        }
+        $this->db->order_by('rec.created_at', 'DESC');
 
         return $this->db->get()->result();
     }

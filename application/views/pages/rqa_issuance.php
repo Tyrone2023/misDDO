@@ -157,7 +157,7 @@ if (!function_exists('h')) {
                                 <tr>
                                     <th class="num">No.</th>
                                     <th>Applicant</th>
-                                    <th>Municipality - Brgy</th>
+                                    <th>Complete Address</th>
                                     <th class="rqa-col-tribe" style="display:none;">Tribe</th>
                                     <th>Contact Info</th>
                                     <th>Position</th>
@@ -227,6 +227,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function locationText(r) {
+        var completeAddress = (r.completeAddress || '').trim();
+        if (completeAddress) return completeAddress;
+
         var municipality = (r.municipality || '').trim();
         var brgy = (r.brgy || '').trim();
 

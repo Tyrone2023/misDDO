@@ -767,8 +767,14 @@ $selectedYear = (int) ($selectedYear ?? 0);
                         <p>Pick a position to load qualified applicants ranked from highest to lowest RQA score. Use the filters, enter the item number, then recommend the selected applicant.</p>
                     </div>
 
-                    <div class="d-flex align-items-center" style="gap:12px;">
+                    <div class="d-flex align-items-center flex-wrap justify-content-end" style="gap:10px;">
                         <span id="rqa-count-badge"></span>
+                        <a href="<?= base_url('Pages/rqa_recommended_list'); ?>?scope=mine" class="btn btn-light btn-sm font-weight-bold" style="border-radius:10px;">
+                            <i class="mdi mdi-account-check mr-1"></i>My Recommended List
+                        </a>
+                        <a href="<?= base_url('Pages/rqa_recommended_list'); ?>?scope=all" class="btn btn-light btn-sm font-weight-bold" style="border-radius:10px;">
+                            <i class="mdi mdi-format-list-bulleted mr-1"></i>All Recommended List
+                        </a>
                         <div class="rqa-hero-icon">
                             <i class="mdi mdi-account-check-outline"></i>
                         </div>
@@ -1711,7 +1717,14 @@ document.addEventListener('DOMContentLoaded', function () {
         // Remarks-only save: a School and an Item Number are NOT both set, so
         // this is just a note. The applicant stays in the ranked list.
         if (schoolId === '' || itemNumber === '') {
-            if (remarks === '') {
+            // Whether this applicant already has a saved remark. Clearing the
+            // field and saving over an existing remark is how you erase it.
+            var existingRow = allRows.filter(function (r) { return r.appID === appID; })[0];
+            var hadRemarks = !!(existingRow && (existingRow.remarks || '').trim() !== '');
+            var isErasing = remarks === '' && hadRemarks;
+
+            // Only block when there is no new text AND nothing to erase.
+            if (remarks === '' && !hadRemarks) {
                 Swal.fire({
                     icon: 'info',
                     title: 'Nothing to save',
@@ -1737,8 +1750,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     Swal.fire({
                         icon: 'success',
-                        title: 'Remarks saved',
-                        text: 'Remarks saved. This applicant stays in the list until a School and Item Number are set.',
+                        title: isErasing ? 'Remarks removed' : 'Remarks saved',
+                        text: isErasing
+                            ? 'The remarks were removed for this applicant.'
+                            : 'Remarks saved. This applicant stays in the list until a School and Item Number are set.',
                         timer: 1600,
                         showConfirmButton: false
                     });

@@ -69,16 +69,51 @@ if (!function_exists('h')) {
 
     .rqa-rank-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; border-radius: 8px; background: var(--rqa-soft); color: var(--rqa-primary); font-weight: 800; font-size: .68rem; }
     .rqa-item-pill { display: inline-flex; align-items: center; border-radius: 8px; background: #fff6e9; color: #9a6b16; font-weight: 800; font-size: .68rem; padding: .2rem .45rem; border: 1px solid #f1ddb9; }
+    .rqa-item-input { width: 100%; min-width: 70px; max-width: 110px; height: 28px; border-radius: 8px; border-color: #f1ddb9; background: #fffdf8; color: #7a5510; font-weight: 800; font-size: .68rem; text-align: center; padding: 2px 6px; }
+    .rqa-item-input:focus { border-color: var(--rqa-accent); box-shadow: 0 0 0 .12rem rgba(26,188,156,.13); background: #fff; }
+    .rqa-item-input:disabled { opacity: .6; }
     .rqa-total-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; border-radius: 999px; background: #e8fff8; color: #129777; font-weight: 800; font-size: .72rem; padding: .2rem .45rem; border: 1px solid #c5f3e6; }
 
     .rqa-pos-tag { display: inline-block; font-weight: 700; color: #34465c; font-size: .7rem; }
     .rqa-school-tag { display: inline-block; font-weight: 700; color: #1f5f8b; font-size: .68rem; }
+
+    /* Per-row School picker (Select2) sizing - mirrors the Recommendation page */
+    #rqa-table td .rqa-school-input { min-width: 150px; }
+    #rqa-table td .select2-container { width: 100% !important; min-width: 150px; max-width: 100%; }
+    #rqa-table td .select2-container--default .select2-selection--single { height: 28px; border-color: #ced4da; border-radius: 8px; }
+    #rqa-table td .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 26px; font-size: .66rem; padding-left: 8px; padding-right: 18px; color: #1f5f8b; font-weight: 700; }
+    #rqa-table td .select2-container--default .select2-selection--single .select2-selection__arrow { height: 26px; }
     .rqa-contact-line { display: block; font-size: .68rem; color: var(--rqa-text); line-height: 1.3; overflow-wrap: break-word; }
     .rqa-contact-line i { color: var(--rqa-muted); width: 13px; }
     .rqa-contact-line.muted { color: var(--rqa-muted); }
 
-    .rqa-action-group { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+    .rqa-action-group { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; align-items: center; }
     .rqa-approve-btn, .rqa-decline-btn { font-size: .64rem; font-weight: 700; padding: .3rem .55rem; border-radius: 8px; white-space: nowrap; }
+
+    /* Status badge + lock note (shown in the Action column) */
+    .rqa-status-badge { display: inline-flex; align-items: center; gap: 4px; font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; padding: .18rem .45rem; border-radius: 999px; margin-bottom: 5px; }
+    .rqa-status-approved { background: #e8fff3; color: #0f9d6b; border: 1px solid #b8f0d6; }
+    .rqa-status-hired { background: #eaf1ff; color: #2b62c4; border: 1px solid #c2d6f7; }
+    .rqa-status-waived { background: #fdecec; color: #c0392b; border: 1px solid #f5c6c2; }
+    .rqa-lock-note { display: inline-flex; align-items: center; gap: 4px; font-size: .62rem; font-weight: 700; color: var(--rqa-muted); }
+    .rqa-lock-note i { font-size: 13px; }
+
+    /* Whole-row tint by state (declared after the base td rule so they win) */
+    #rqa-table tbody tr.rqa-row-approved td { background: #effbf5; }
+    #rqa-table tbody tr.rqa-row-approved:hover td { background: #e3f7ec; }
+    #rqa-table tbody tr.rqa-row-hired td { background: #eef4ff; }
+    #rqa-table tbody tr.rqa-row-hired:hover td { background: #e1ecff; }
+    #rqa-table tbody tr.rqa-row-waived td { background: #fdf1f1; }
+    #rqa-table tbody tr.rqa-row-waived:hover td { background: #fbe6e6; }
+
+    /* Legend */
+    .rqa-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
+    .rqa-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 700; color: var(--rqa-muted); }
+    .rqa-legend-swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1px solid rgba(0,0,0,.08); }
+    .rqa-legend-swatch.pending { background: #fff; border-color: #d7e0ec; }
+    .rqa-legend-swatch.approved { background: #effbf5; border-color: #b8f0d6; }
+    .rqa-legend-swatch.hired { background: #eef4ff; border-color: #c2d6f7; }
+    .rqa-legend-swatch.waived { background: #fdf1f1; border-color: #f5c6c2; }
 
     .rqa-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 20px; color: var(--rqa-muted); }
     .rqa-empty-state i { font-size: 46px; margin-bottom: 12px; color: #c4d2e3; }
@@ -157,7 +192,13 @@ if (!function_exists('h')) {
             <div class="card rqa-card rqa-results-card">
                 <div class="card-body">
                     <div class="rqa-results-header">
-                        <h5 class="rqa-section-title"><i class="mdi mdi-account-check-outline"></i> Recommended Applicants</h5>
+                        <h5 class="rqa-section-title"><i class="mdi mdi-account-check-outline"></i> Recommended &amp; Approved Applicants</h5>
+                        <div class="rqa-legend">
+                            <span class="rqa-legend-item"><span class="rqa-legend-swatch pending"></span> Pending</span>
+                            <span class="rqa-legend-item"><span class="rqa-legend-swatch approved"></span> Approved</span>
+                            <span class="rqa-legend-item"><span class="rqa-legend-swatch hired"></span> Hired (locked)</span>
+                            <span class="rqa-legend-item"><span class="rqa-legend-swatch waived"></span> Waived (locked)</span>
+                        </div>
                     </div>
 
                     <div id="rqa-loading" class="text-center text-muted rqa-loading-box" style="display:none;">
@@ -208,6 +249,9 @@ if (!function_exists('h')) {
 document.addEventListener('DOMContentLoaded', function () {
     var dataUrl = '<?= base_url('Pages/rqa_approval_data'); ?>';
     var actionUrl = '<?= base_url('Pages/rqa_approval_action'); ?>';
+    var itemSaveUrl = '<?= base_url('Pages/rqa_approval_item_save'); ?>';
+    var schoolSaveUrl = '<?= base_url('Pages/rqa_approval_school_save'); ?>';
+    var schoolSearchUrl = '<?= base_url('Pages/rqa_school_search'); ?>';
 
     var allRows = [];
 
@@ -294,20 +338,54 @@ document.addEventListener('DOMContentLoaded', function () {
         return (r.specialization || '').trim();
     }
 
+    // Has-date check that ignores blanks and MySQL zero-dates.
+    function hasDate(v) {
+        v = (v || '').trim();
+        return v !== '' && v !== '0000-00-00';
+    }
+
     function rowHtml(r, index) {
         var sub = 'Code: <span class="rqa-code-inline">' + escHtml(r.code) + '</span>';
         var specText = rowSpecializationText(r);
         if (specText) sub += '<span class="rqa-code-inline">' + escHtml(specText) + '</span>';
 
-        var html = '<tr data-rec-id="' + r.recId + '">';
+        var isApproved = (r.status === 'approved');
+        var isHired = hasDate(r.dateHired);
+        var isWaived = hasDate(r.dateWaived);
+        // A hired or waived record is locked: it can no longer be declined.
+        var locked = isHired || isWaived;
+
+        var rowClass = '';
+        if (isWaived) rowClass = ' rqa-row-waived';
+        else if (isHired) rowClass = ' rqa-row-hired';
+        else if (isApproved) rowClass = ' rqa-row-approved';
+
+        var html = '<tr data-rec-id="' + r.recId + '" class="' + rowClass.trim() + '">';
         html += '<td class="num"><span class="rqa-rank-badge">' + index + '</span></td>';
         html += '<td><span class="rqa-name-main">' + escHtml(r.name) + '</span><span class="rqa-name-sub">' + sub + '</span></td>';
         html += '<td><span class="rqa-location-tag">' + escHtml(locationText(r)) + '</span></td>';
         html += '<td class="rqa-col-tribe">' + (r.tribe ? escHtml(r.tribe) : '<span class="text-muted">—</span>') + '</td>';
         html += '<td>' + contactHtml(r) + '</td>';
         html += '<td><span class="rqa-pos-tag">' + escHtml(r.position) + '</span></td>';
-        html += '<td>' + (r.school ? '<span class="rqa-school-tag">' + escHtml(r.school) + '</span>' : '<span class="text-muted">—</span>') + '</td>';
-        html += '<td><span class="rqa-item-pill">' + escHtml(r.itemNumber) + '</span></td>';
+        // School is reassignable while the record is not hired/waived; once
+        // locked it falls back to the read-only tag.
+        if (locked) {
+            html += '<td>' + (r.school ? '<span class="rqa-school-tag">' + escHtml(r.school) + '</span>' : '<span class="text-muted">—</span>') + '</td>';
+        } else {
+            var schoolOpt = (r.schoolId && r.school)
+                ? '<option value="' + escAttr(r.schoolId) + '" selected>' + escHtml(r.school) + '</option>'
+                : '';
+            html += '<td><select class="form-control form-control-sm rqa-school-input" title="Reassign School"'
+                + ' data-original-id="' + escAttr(r.schoolId || '') + '"'
+                + ' data-original-name="' + escAttr(r.school || '') + '">' + schoolOpt + '</select></td>';
+        }
+        // Item Number is editable while the record is not hired/waived; once
+        // locked it falls back to the read-only pill.
+        if (locked) {
+            html += '<td><span class="rqa-item-pill">' + escHtml(r.itemNumber) + '</span></td>';
+        } else {
+            html += '<td><input type="text" class="form-control form-control-sm rqa-item-input" value="' + escAttr(r.itemNumber) + '" data-original="' + escAttr(r.itemNumber) + '" placeholder="Item No." title="Edit Item Number"></td>';
+        }
         html += '<td class="num">' + escHtml(r.education) + '</td>';
         html += '<td class="num">' + escHtml(r.training) + '</td>';
         html += '<td class="num">' + escHtml(r.experience) + '</td>';
@@ -316,10 +394,26 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td class="num">' + escHtml(r.tr_rating) + '</td>';
         html += '<td class="num"><span class="rqa-total-pill">' + escHtml(r.total_points) + '</span></td>';
         html += '<td>' + escHtml(r.remarks) + '</td>';
-        html += '<td class="num"><div class="rqa-action-group">'
-            + '<button type="button" class="btn btn-success rqa-approve-btn" data-name="' + escAttr(r.name) + '" data-item="' + escAttr(r.itemNumber) + '"><i class="mdi mdi-check-bold mr-1"></i>Approve</button>'
-            + '<button type="button" class="btn btn-outline-danger rqa-decline-btn" data-name="' + escAttr(r.name) + '" data-item="' + escAttr(r.itemNumber) + '"><i class="mdi mdi-close-thick mr-1"></i>Decline</button>'
-            + '</div></td>';
+
+        // Status badge: approved records show their state; hired/waived ones say so.
+        var badge = '';
+        if (isWaived) badge = '<span class="rqa-status-badge rqa-status-waived"><i class="mdi mdi-account-cancel-outline"></i>Waived</span>';
+        else if (isHired) badge = '<span class="rqa-status-badge rqa-status-hired"><i class="mdi mdi-account-check"></i>Hired</span>';
+        else if (isApproved) badge = '<span class="rqa-status-badge rqa-status-approved"><i class="mdi mdi-check-decagram"></i>Approved</span>';
+
+        // Buttons: Approve only for a pending record; Decline stays available for
+        // pending AND approved records until they are hired or waived (locked).
+        var buttons = '';
+        if (!isApproved) {
+            buttons += '<button type="button" class="btn btn-success rqa-approve-btn" data-name="' + escAttr(r.name) + '" data-item="' + escAttr(r.itemNumber) + '"><i class="mdi mdi-check-bold mr-1"></i>Approve</button>';
+        }
+        if (!locked) {
+            buttons += '<button type="button" class="btn btn-outline-danger rqa-decline-btn" data-name="' + escAttr(r.name) + '" data-item="' + escAttr(r.itemNumber) + '"><i class="mdi mdi-close-thick mr-1"></i>Decline</button>';
+        } else {
+            buttons += '<span class="rqa-lock-note"><i class="mdi mdi-lock-outline"></i>' + (isHired ? 'Hired' : 'Waived') + '</span>';
+        }
+
+        html += '<td class="num">' + badge + '<div class="rqa-action-group">' + buttons + '</div></td>';
         html += '</tr>';
         return html;
     }
@@ -385,6 +479,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Per-row School picker (Select2 with server-side search; not restricted by
+    // municipality/barangay). Mirrors the Recommendation page.
+    function initSchoolSelects() {
+        $('#rqa-table tbody .rqa-school-input').each(function () {
+            if ($(this).hasClass('select2-hidden-accessible')) return;
+            $(this).select2({
+                width: '100%',
+                placeholder: 'Search school…',
+                ajax: {
+                    url: schoolSearchUrl,
+                    dataType: 'json',
+                    delay: 200,
+                    data: function (params) { return { q: params.term || '' }; },
+                    processResults: function (data) { return { results: (data && data.results) ? data.results : [] }; },
+                    cache: true
+                }
+            });
+        });
+    }
+
     function renderTable() {
         var rows = sortRows(getFilteredRows());
         var $tbody = $('#rqa-table tbody');
@@ -392,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (rows.length === 0) {
             $('#rqa-results').hide();
             if (allRows.length === 0) {
-                setEmptyState('mdi-account-clock-outline', 'No applicants awaiting approval.', 'Recommended applicants from the HRMPSB will appear here for your approval.');
+                setEmptyState('mdi-account-clock-outline', 'No recommended or approved applicants.', 'Recommended applicants from the HRMPSB will appear here for your approval.');
             } else {
                 setEmptyState('mdi-filter-remove-outline', 'No applicants match the selected filters.', 'Try changing the position, municipality, barangay, or specialization filter.');
             }
@@ -402,6 +516,7 @@ document.addEventListener('DOMContentLoaded', function () {
             $tbody.html(html);
             $('#rqa-empty').hide();
             $('#rqa-results').show();
+            initSchoolSelects();
         }
 
         // The Tribe column only applies to IPED Elementary / Secondary; show it
@@ -410,7 +525,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var badge = $('#rqa-count-badge');
         if (allRows.length > 0) {
-            badge.text(rows.length + ' of ' + allRows.length + ' pending').show();
+            var pendingCount = allRows.filter(function (r) { return r.status !== 'approved'; }).length;
+            var approvedCount = allRows.length - pendingCount;
+            badge.text(rows.length + ' shown · ' + pendingCount + ' pending · ' + approvedCount + ' approved').show();
         } else {
             badge.hide();
         }
@@ -539,8 +656,16 @@ document.addEventListener('DOMContentLoaded', function () {
             $.post(actionUrl, { rec_id: recId, action: action }, null, 'json').done(function (res) {
                 if (res && res.status === 'success') {
                     Swal.fire({ icon: 'success', title: isApprove ? 'Approved' : 'Declined', text: res.message, timer: 1300, showConfirmButton: false });
-                    allRows = allRows.filter(function (r) { return r.recId !== recId; });
-                    $row.fadeOut(250, function () { rebuildFilters(); renderTable(); });
+                    if (isApprove) {
+                        // Keep the applicant in the list, just mark them approved
+                        // (row turns green and the Approve button drops away).
+                        var row = allRows.filter(function (r) { return r.recId === recId; })[0];
+                        if (row) row.status = 'approved';
+                        renderTable();
+                    } else {
+                        allRows = allRows.filter(function (r) { return r.recId !== recId; });
+                        $row.fadeOut(250, function () { rebuildFilters(); renderTable(); });
+                    }
                 } else {
                     Swal.fire({ icon: 'error', title: 'Error', text: (res && res.message) ? res.message : 'Something went wrong.' });
                     $row.find('.rqa-approve-btn, .rqa-decline-btn').prop('disabled', false);
@@ -554,6 +679,109 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $(document).on('click', '.rqa-approve-btn', function () { doAction($(this), 'approve'); });
     $(document).on('click', '.rqa-decline-btn', function () { doAction($(this), 'decline'); });
+
+    // Pressing Enter in the Item Number field saves it (blur fires 'change').
+    $(document).on('keydown', '.rqa-item-input', function (e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            $(this).blur();
+        }
+    });
+
+    // Inline edit + save of the Item Number (saves when the field loses focus
+    // after a change). Reverts to the previous value on any failure.
+    $(document).on('change', '.rqa-item-input', function () {
+        var $input = $(this);
+        var $row = $input.closest('tr');
+        var recId = parseInt($row.data('rec-id'), 10);
+        var newVal = $.trim($input.val());
+        var original = String($input.data('original') == null ? '' : $input.data('original'));
+
+        if (newVal === original) { $input.val(original); return; }
+
+        if (newVal === '') {
+            Swal.fire({ icon: 'warning', title: 'Item Number required', text: 'Item Number cannot be empty.' });
+            $input.val(original).focus();
+            return;
+        }
+
+        $input.prop('disabled', true);
+
+        $.post(itemSaveUrl, { rec_id: recId, item_number: newVal }, null, 'json').done(function (res) {
+            if (res && res.status === 'success') {
+                var saved = (res.value != null) ? res.value : newVal;
+                $input.data('original', saved).val(saved);
+
+                // Keep the in-memory model and the action buttons in sync.
+                var row = allRows.filter(function (r) { return r.recId === recId; })[0];
+                if (row) row.itemNumber = saved;
+                $row.find('.rqa-approve-btn, .rqa-decline-btn').attr('data-item', saved).data('item', saved);
+
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Item Number saved', timer: 1100, showConfirmButton: false });
+            } else if (res && res.status === 'duplicate') {
+                Swal.fire({ icon: 'error', title: 'Duplicate Item Number', text: res.message });
+                $input.val(original).focus();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: (res && res.message) ? res.message : 'Could not save the Item Number.' });
+                $input.val(original).focus();
+            }
+            $input.prop('disabled', false);
+        }).fail(function () {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to save. Please try again.' });
+            $input.val(original).prop('disabled', false).focus();
+        });
+    });
+
+    // Set a School select to a given id/name, recreating the option if the
+    // AJAX search has since dropped it (used to revert on a failed save).
+    function setSchoolSelection($sel, id, name) {
+        id = String(id == null ? '' : id);
+        if (id === '') { $sel.val(null).trigger('change.select2'); return; }
+        if ($sel.find('option[value="' + id + '"]').length === 0) {
+            $sel.append(new Option(name, id, true, true));
+        }
+        $sel.val(id).trigger('change.select2');
+    }
+
+    // Reassign the School inline (saves as soon as a new school is chosen).
+    // Reverts to the previous school on any failure.
+    $(document).on('change', '.rqa-school-input', function () {
+        var $sel = $(this);
+        var $row = $sel.closest('tr');
+        var recId = parseInt($row.data('rec-id'), 10);
+
+        var newId = String($sel.val() || '');
+        var data = $sel.select2('data');
+        var newName = (data && data[0]) ? (data[0].name || data[0].text || '') : '';
+        var originalId = String($sel.data('original-id') == null ? '' : $sel.data('original-id'));
+        var originalName = String($sel.data('original-name') == null ? '' : $sel.data('original-name'));
+
+        if (newId === '' || newId === originalId) return;
+
+        $sel.prop('disabled', true).trigger('change.select2');
+
+        $.post(schoolSaveUrl, { rec_id: recId, school_id: newId, school_name: newName }, null, 'json').done(function (res) {
+            if (res && res.status === 'success') {
+                var savedName = (res.value != null) ? res.value : newName;
+                var savedId = (res.schoolId != null) ? String(res.schoolId) : newId;
+                $sel.data('original-id', savedId).data('original-name', savedName);
+
+                // Keep the in-memory model in sync.
+                var row = allRows.filter(function (r) { return r.recId === recId; })[0];
+                if (row) { row.schoolId = parseInt(savedId, 10) || 0; row.school = savedName; }
+
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'School saved', timer: 1100, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: (res && res.message) ? res.message : 'Could not save the School.' });
+                setSchoolSelection($sel, originalId, originalName);
+            }
+            $sel.prop('disabled', false).trigger('change.select2');
+        }).fail(function () {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to save. Please try again.' });
+            setSchoolSelection($sel, originalId, originalName);
+            $sel.prop('disabled', false).trigger('change.select2');
+        });
+    });
 
     loadData();
 });
