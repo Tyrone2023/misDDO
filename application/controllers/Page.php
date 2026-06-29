@@ -199,6 +199,9 @@ class Page extends CI_Controller
 
 	public function school_allocation_edit()
 	{
+		if ($this->session->position == 'School') {
+			redirect(base_url() . 'Page/school_allocations2');
+		}
 		$result['st'] = $this->SGODModel->one_cond_row('sgod_school_allocation', 'id', $this->uri->segment(3));
 		$result['last'] = $this->SGODModel->get_last_record('sgod_school_allocation');
 		$result['bs'] = $this->SGODModel->no_cond('sgod_settings_bs');
@@ -320,6 +323,10 @@ class Page extends CI_Controller
 
 	function fund_update()
 	{
+		if ($this->session->position == 'School') {
+			$this->session->set_flashdata('danger', 'You are not allowed to edit allocations.');
+			redirect(base_url() . 'Page/school_allocations2');
+		}
 		$this->SGODModel->update_fund_allocation();
 		$this->session->set_flashdata('success', 'Updated successfully.');
 		if ($this->session->position == 'School') {
@@ -331,6 +338,10 @@ class Page extends CI_Controller
 
 	function fund_add()
 	{
+		if ($this->session->position == 'School') {
+			$this->session->set_flashdata('danger', 'You are not allowed to add allocations.');
+			redirect(base_url() . 'Page/school_allocations2');
+		}
 		$this->SGODModel->insert_fund_allocation();
 		$this->session->set_flashdata('success', 'Added successfully.');
 		if ($this->session->position == 'School') {
@@ -4919,7 +4930,20 @@ class Page extends CI_Controller
 
 	function generate_rca()
 	{
-		$school_id = $this->session->username;
+		$school_id = $this->session->userdata('username');
+
+		// Require a logged-in school session before generating the report.
+		if (empty($school_id)) {
+			redirect(base_url() . 'login');
+			return;
+		}
+
+		// An AIP batch must be selected first; selecting one sets fy/aip in the session.
+		if (empty($_SESSION['fy']) || empty($_SESSION['aip'])) {
+			redirect(base_url() . 'Page/aip');
+			return;
+		}
+
 		$fy = $_SESSION['fy'];
 		$bcode = $_SESSION['aip'];
 
@@ -4933,9 +4957,11 @@ class Page extends CI_Controller
 		$data['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
 
 		$bs = $this->SGODModel->one_cond_row('sgod_school_allocation', 'alloc_batch', $bcode);
-		$data['bs'] = $this->SGODModel->one_cond_row('sgod_school_allocation', 'alloc_batch', $bcode);
+		$data['bs'] = $bs;
 
-		if ($bs->fund_type == 0) {
+		// Some allocation batches have no row/fund_type; default to the regular fund category.
+		$fund_type = isset($bs->fund_type) ? $bs->fund_type : 0;
+		if ($fund_type == 0) {
 			$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
 			$data['mb'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
 			$data['tli'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
@@ -5548,23 +5574,12 @@ class Page extends CI_Controller
 
 	function fy_setting_school()
 	{
-		$result['title'] = "FISCAL YEAR";
-
-		$result['label'] = "FISCAL YEAR";
-
-		// if ($this->input->post('submit')) {
-		// 	$this->SGODModel->insert_fy();
-		// 	$this->session->set_flashdata('success', 'Saved successfully.');
-
-		// 	redirect(base_url() . 'Page/fy_setting');
-		// }
-
-		$result['alloc_year'] = $this->Common->no_cond_group('sgod_school_allocation', 'alloc_year');
-
-
-		$this->load->view('templates/head');
-		$this->load->view('templates/header');
-		$this->load->view('setting_fy_school', $result);
+		// Fiscal year + batch selection now live together on the unified Implementation Plans view.
+		// Default the fiscal year to the current year (remembered in session) and go straight there.
+		if (empty($_SESSION['fy'])) {
+			$_SESSION['fy'] = date('Y');
+		}
+		redirect(base_url() . 'Page/implementation_plans');
 	}
 
 
@@ -6686,21 +6701,28 @@ class Page extends CI_Controller
 
 	function implementation_plans()
 	{
-		//$result['fys'] = $this->session->cur_fy;
-		//$fy = $this->session->cur_fy;
-		$fy = $this->input->post('fy');
-		$result['fys'] = $fy;
-		$result['ssa'] = $this->SGODModel->two_cond('sgod_school_allocation', 'schoolID', $this->session->username, 'alloc_year', $fy);
+		$school = $this->session->username;
 
+		// A batch was chosen -> remember it in session and stay on this page (no auto-redirect).
+		// The selected batch persists across refreshes until the user logs out or picks another batch.
 		if ($this->input->post('aip')) {
-			$code = $this->input->post('code');
-			$fy = $this->input->post('fy');
-			session_regenerate_id();
-			$_SESSION['aip'] = $code;
-			$_SESSION['fy'] = $fy;
+			$_SESSION['aip'] = $this->input->post('code');
+			$_SESSION['fy'] = $this->input->post('fy');
 			session_write_close();
-			redirect(base_url() . 'Page/aip/');
+			redirect(base_url() . 'Page/implementation_plans');
 		}
+
+		// Browse fiscal year used to filter the batch list:
+		// posted (FY switch) > active-context fiscal year > current year (auto-default).
+		// Note: we do NOT overwrite $_SESSION['fy'] here so the active context stays intact while browsing.
+		$fy = $this->input->post('fy');
+		if (empty($fy)) {
+			$fy = !empty($_SESSION['fy']) ? $_SESSION['fy'] : date('Y');
+		}
+
+		$result['fys'] = $fy;
+		$result['years'] = $this->Common->one_cond_group('sgod_school_allocation', 'schoolID', $school, 'alloc_year');
+		$result['ssa'] = $this->SGODModel->two_cond('sgod_school_allocation', 'schoolID', $school, 'alloc_year', $fy);
 
 		$this->load->view('templates/head');
 		$this->load->view('templates/header');

@@ -1699,7 +1699,7 @@ class SGODModel extends CI_Model
 
 	public function insert_fund_allocation()
 	{
-		$fund = $this->input->post('alloc_amount');
+		$fund = str_replace(',', '', $this->input->post('alloc_amount'));
 		$f = $fund / 12;
 
 		if ($this->input->post('type') == 'MOOE') {
@@ -1735,7 +1735,7 @@ class SGODModel extends CI_Model
 			'schoolID' => $this->input->post('schoolID'),
 			'alloc_year' => $this->input->post('fy'),
 			'alloc_batch' => $this->input->post('bcode'),
-			'alloc_amount' => $this->input->post('alloc_amount'),
+			'alloc_amount' => $fund,
 			'alloc_type' => $this->input->post('type'),
 			'alloc_group' => $this->input->post('group'),
 			'mo_jan' => $jan,

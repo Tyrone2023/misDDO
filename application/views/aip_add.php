@@ -105,7 +105,7 @@
                                                 <div class="col-lg-6">
                                                         <div class="form-group">
                                                             <label>Intermediate Outcome <span class="text-danger">*</span></label>
-                                                            <select class="form-control" name="io" required>
+                                                            <select class="form-control" data-toggle="select2" name="io" required>
                                                                 <option></option>
                                                                 <?php   foreach($pillar as $row){
                                                                     echo '<optgroup label="'.$row->pillar.'">';
@@ -143,7 +143,7 @@
                                                 <div class="col-lg-4">
                                                         <div class="form-group">
                                                             <label>Current Administration Agenda Outcome Indicators <span class="text-danger">*</span></label>
-                                                             <select class="form-control" name="matatag" required>
+                                                             <select class="form-control" data-toggle="select2" name="matatag" required>
                                                                 <option value=""></option>
 
                                                                 <?php
@@ -256,7 +256,7 @@
                                                 <div class="col-lg-4">
                                                         <div class="form-group">
                                                             <label >STRAND<span class="text-danger">*</span></label>
-                                                             <select class="form-control" name="strand" required>
+                                                             <select class="form-control" data-toggle="select2" name="strand" required>
                                                                 <option></option>
                                                                 <?php   foreach($domain as $row){
                                                                     echo '<optgroup label="'.$row->domain.'">';
@@ -277,7 +277,7 @@
                                                 <div class="col-lg-8">
                                                         <div class="form-group">
                                                             <label >PIAs <span class="text-danger">*</span></label>
-                                                             <select class="form-control" name="pia" required>
+                                                             <select class="form-control" data-toggle="select2" name="pia" required>
                                                                 <option></option>
                                                                 <?php   foreach($pias as $row){
                                                                     echo '<option value="'.$row->pias.'">'.$row->pias.'</option>';
@@ -381,7 +381,7 @@
                                                 <div class="col-lg-3">
                                                     <div class="form-group">
                                                         <label >BUDGET SOURCE</label>
-                                                        <select class="form-control" name="budget_source" required>
+                                                        <select class="form-control" data-toggle="select2" name="budget_source" required>
                                                                 <option></option>
                                                                 <?php   foreach($bs as $row){
                                                                     echo "<option value='".$row->description."'>".$row->description."</option>";
@@ -394,7 +394,7 @@
                                                 <div class="col-lg-2">
                                                     <div class="form-group">
                                                         <label>Mode of procurement</label>
-                                                        <select class="form-control" name="procurement" required>
+                                                        <select class="form-control" data-toggle="select2" name="procurement" required>
                                                                 <option></option>
                                                                 <?php  
                                                                 $procurement = array('Direct Purchase',
@@ -614,13 +614,21 @@
             <SCRIPT language=Javascript>
                 function isNumberKey(evt){
                     var charCode = (evt.which) ? evt.which : evt.keyCode;
-                    if (charCode != 46 && charCode > 31 
+                    if (charCode != 46 && charCode > 31
                     && (charCode < 48 || charCode > 57))
                     return false;
 
                     return true;
                 }
             </SCRIPT>
+
+            <!-- Select2 (this view does not include the shared footer, so load + init here) -->
+            <script src="<?= base_url(); ?>assets/libs/select2/select2.min.js"></script>
+            <script>
+                $(function () {
+                    $('[data-toggle="select2"]').select2();
+                });
+            </script>
 
         
 

@@ -729,7 +729,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
             <?php $_SESSION['omt'] = $omt; ?>
         </tr>
     </table>
-    <?php $aipstat = $this->Common->two_cond_row('sgod_aip_submit', 'school_id', $school->schoolID, 'b_code', $data_row->b_code); ?>
+    <?php $aipstat = (!empty($school) && !empty($data_row)) ? $this->Common->two_cond_row('sgod_aip_submit', 'school_id', $school->schoolID, 'b_code', $data_row->b_code) : null; ?>
 
     <?php if($ivy->sgod_sign_type == 1){?>
         
@@ -793,7 +793,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
     <?php }else{ ?>
         <div style="margin-top:50px"></div>
         <div class="fcon">
-                <img style="width:90px; float:left;" src="https://qrcode.tec-it.com/API/QRCode?data=<?= base_url(); ?>Page/rca_view/<?= $data_row->school_id.'/'.$data_row->fy.'/'.$data_row->b_code.'/'.$mon; ?>" title="" />
+                <img style="width:90px; float:left;" src="https://qrcode.tec-it.com/API/QRCode?data=<?= base_url(); ?>Page/rca_view/<?= !empty($data_row) ? $data_row->school_id.'/'.$data_row->fy.'/'.$data_row->b_code.'/'.$mon : ''; ?>" title="" />
                 <div class="lcon">
                     System Generated Report<br />
                     Date Generated: <?php  date_default_timezone_set('Asia/Manila'); echo date('F d, Y', time()); ?><br />

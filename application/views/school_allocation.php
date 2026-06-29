@@ -53,7 +53,7 @@
 
                                                         <div class="form-group col-md-12">
                                                             <label>Fund Allocation Amount</label>
-                                                            <input type="text" required value="<?= set_value('alloc_amount'); ?>" name="alloc_amount" class="form-control"> 
+                                                            <input type="text" required value="<?= set_value('alloc_amount'); ?>" id="alloc_amount" name="alloc_amount" class="form-control" inputmode="decimal" autocomplete="off">
                                                         </div>
 
                                                         <div class="form-group col-md-12">
@@ -89,7 +89,7 @@
                                                         
                                                         <div class="form-group col-md-12">
                                                             <label>Allocation Type</label>
-                                                            <select class="form-control" name="type" required>
+                                                            <select class="form-control" data-toggle="select2" name="type" required>
                                                                 <option></option>
                                                                 <?php 
                                                                   foreach($bs as $row){
@@ -258,6 +258,24 @@
                                                 $("#school").change();
                                             });
 
+                                            // Fund Allocation Amount: live thousand-separator formatting
+                                            $("#alloc_amount").on("input", function() {
+                                                var caretEnd = this.selectionEnd;
+                                                var oldLen = this.value.length;
+                                                var raw = this.value.replace(/[^\d.]/g, "");
+                                                var parts = raw.split(".");
+                                                var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                                                var decPart = parts.length > 1 ? "." + parts[1].slice(0, 2) : "";
+                                                this.value = intPart + decPart;
+                                                var newLen = this.value.length;
+                                                this.selectionEnd = Math.max(0, caretEnd + (newLen - oldLen));
+                                            });
+
+                                            // strip commas before submit so the server receives a plain number
+                                            $("#alloc_amount").closest("form").on("submit", function() {
+                                                var f = $("#alloc_amount");
+                                                f.val(f.val().replace(/,/g, ""));
+                                            });
 
                                             });
             </script>
