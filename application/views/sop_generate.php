@@ -66,13 +66,16 @@
     <h1>SCHOOL OPERATIONAL PLAN<br />FY <?= $fy; ?></h1>
 
 
-    <?php foreach($data as $row){ 
+    <?php $currentPillar = null; ?>
+    <?php foreach($data as $row){
          $io = $this->SGODModel->one_cond_row('sgod_setting_io', 'id', $row->io);
-        ?>
+        if($currentPillar !== $row->pillar){
+            $currentPillar = $row->pillar; ?>
+            <h2 class="pillar-sep" style="margin:22px 0 8px; font-size:13pt; font-weight:bold; border-bottom:2px solid #000; padding-bottom:4px;">PILLAR: <?= strtoupper($row->pillar); ?></h2>
+        <?php } ?>
     <ul>
-        <li>PILLAR : <?= ucfirst($row->pillar); ?></li>
         <li>INTERMEDIATE OUTCOME : <?= ucfirst($io->description); ?></li>
-        <li>DOMAIN : <?= ucfirst($row->domain); ?></li>	
+        <li>DOMAIN : <?= ucfirst($row->domain); ?></li>
         <li>STRAND : <?= ucfirst($row->strand); ?></li>
         <li>PIAs:  <?= ucfirst($row->pia); ?></li>
     </ul>

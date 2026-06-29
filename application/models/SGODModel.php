@@ -308,6 +308,9 @@ class SGODModel extends CI_Model
 		$this->db->where("fy", $fy);
 		$this->db->where("b_code", $bcode);
 		$this->db->group_by('pia');
+		// Cluster the plan by pillar so the report is separated per pillar
+		$this->db->order_by('pillar', 'ASC');
+		$this->db->order_by('io', 'ASC');
 		$result = $this->db->get('sgod_aip');
 
 		return $result->result();

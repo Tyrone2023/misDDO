@@ -6232,8 +6232,6 @@ class Page extends CI_Controller
 		$fy = $_SESSION['fy'];
 		$bcode = $_SESSION['aip'];
 
-		echo $_SESSION['fy'];
-
 		$result['fy'] = $_SESSION['fy'];
 
 		$result['data'] = $this->SGODModel->get_aip($school_id, $fy, $bcode);
