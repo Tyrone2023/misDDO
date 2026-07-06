@@ -106,9 +106,102 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
         
         <style>
             @page {
-                    size: A4;
-                    margin: 20px 0;
+                    size: A4 portrait;
+                    margin: 14mm 12mm;
                     }
+
+            /* ---- A4 sheet look on screen ---- */
+            @media screen {
+                html { background: #e4e6eb; }
+                body.aip_generate {
+                    width: 210mm;
+                    min-height: 297mm;
+                    margin: 24px auto;
+                    padding: 16mm 14mm;
+                    background: #fff;
+                    box-shadow: 0 2px 18px rgba(0,0,0,0.28);
+                    box-sizing: border-box;
+                }
+            }
+
+            /* ---- RCA signatory block ---- */
+            .signWrapper .trusting{
+                text-align: left;
+                text-indent: 50px;
+                margin: 18px 0 28px !important;
+            }
+            .rca-requester{
+                width: 74%;
+                margin: 10px 0 36px;
+            }
+            .rca-requester p{
+                margin: 0 !important;
+                text-align: left;
+                font-weight: normal;
+                line-height: 1.5;
+            }
+            .rca-requester .rca-truly{
+                margin-bottom: 55px !important;
+            }
+            .rca-requester .rca-req-name{
+                font-weight: bold;
+            }
+            .rca-requester .rca-bond{
+                margin-top: 20px !important;
+            }
+
+            .rca-signatories{
+                width: 100%;
+            }
+            .rca-sig-row{
+                width: 100%;
+                margin-bottom: 14px;
+            }
+            .rca-sig-row .rca-sig{
+                width: 48%;
+            }
+            .rca-sig-row .rca-left{
+                float: left;
+            }
+            .rca-sig-row .rca-right{
+                float: right;
+            }
+            .rca-sig.rca-center{
+                width: 62%;
+                margin: 0 auto 18px;
+            }
+            /* beat ".rca p { text-align:left; margin-bottom:30px }" */
+            .rca-sig p{
+                margin: 0 !important;
+            }
+            .rca-sig .rca-role{
+                text-align: left;
+                font-weight: normal;
+                margin-bottom: 4px !important;
+            }
+            .rca-sig.rca-center .rca-role{
+                text-align: center;
+            }
+            .rca-sig .rca-signspace{
+                position: relative;
+                height: 60px;
+            }
+            .rca-sig .rca-signspace img{
+                position: absolute;
+                left: 50%;
+                bottom: -4px;
+                transform: translateX(-50%);
+                max-height: 80px;
+                max-width: 200px;
+            }
+            .rca-sig .rca-signname{
+                text-align: center;
+                font-weight: bold;
+            }
+            .rca-sig .rca-signpos{
+                text-align: center;
+                font-weight: normal;
+            }
         </style>
     </head>
 
@@ -737,55 +830,68 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
          <p class="trusting">Trusting your preferential approval to herein request.</p>
          <?php $sh = $this->Common->one_cond_row_select('schools','','schoolID',1); ?>
 
-         <div class="signWraper">
-            
-            <div class="leftside">
-                <p>Very Truly yours,</p>
-                <p class="names" style="margin-bottom:0">
-                    <strong><?= strtoupper($school->adminFName .' '. mb_substr($school->adminMName, 0, 1, 'UTF-8') .'. '. $school->adminLName); ?></strong><br />
-                    <?= $school->adminDesignation; ?>
-                </p>
-                <p>
-                    Fidelity Bond Risk Number: ____________________<br />
-                    Date of Expiration: ___________________________<br />
-                </p>
-            </div>
-
-            
-            <div class="rightside">
-                <p>Funds Available:</p>
-                <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
-                <div class="ivykate"><img class="ic" src="<?= base_url()?>assets/images/<?= $fund->sign; ?>" alt=""></div>
-                <?php } ?>
-                <p class="names">
-                    <strong><?= $fund->fullname; ?></strong><br />
-                    <?= $fund->position; ?>
-                </p>
-            </div>
-
-            
-            <div class="blocker"></div>
+         <div class="rca-requester">
+            <p class="rca-truly">Very Truly yours,</p>
+            <p class="rca-req-name"><?= strtoupper($school->adminFName .' '. mb_substr($school->adminMName, 0, 1, 'UTF-8') .'. '. $school->adminLName); ?></p>
+            <p><?= $school->adminDesignation; ?></p>
+            <p class="rca-bond">
+                Fidelity Bond Risk Number: ____________________<br />
+                Date of Expiration: ___________________________
+            </p>
          </div>
-         
 
-            <div class="officehead">
-                <p>
-                <strong><?= $sds->fullname; ?></strong><br />
-                <?= $sds->position; ?>
-                </p>
+         <div class="rca-signatories">
+
+            <div class="rca-sig-row">
+
+                <div class="rca-sig rca-left">
+                    <p class="rca-role">Validated by</p>
+                    <div class="rca-signspace">
+                        <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
+                        <img src="<?= base_url()?>assets/images/<?= $validated->sign; ?>" alt="">
+                        <?php } ?>
+                    </div>
+                    <p class="rca-signname"><?= $validated->fullname; ?></p>
+                    <p class="rca-signpos"><?= $validated->position; ?></p>
+                </div>
+
+                <div class="rca-sig rca-right">
+                    <p class="rca-role">Funds Available:</p>
+                    <div class="rca-signspace">
+                        <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
+                        <img src="<?= base_url()?>assets/images/<?= $fund->sign; ?>" alt="">
+                        <?php } ?>
+                    </div>
+                    <p class="rca-signname"><?= $fund->fullname; ?></p>
+                    <p class="rca-signpos"><?= $fund->position; ?></p>
+                </div>
+
+                <div class="blocker"></div>
             </div>
 
-            <div class="officehead">
-                <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
-                <div class="ivykate"><img class="ic" src="<?= base_url()?>assets/images/<?= $chief->sign; ?>" alt=""></div>
-                <div class="ivykate"><img class="kyle" src="<?= base_url()?>assets/images/<?= $validated->sign; ?>" alt=""></div>
-                <?php } ?>
-                <p>
-                <strong><?= $chief->fullname; ?></strong><br />
-                <?= $chief->position; ?>
-                </p>
+            <div class="rca-sig rca-center">
+                <p class="rca-role">Recommending Approval:</p>
+                <div class="rca-signspace">
+                    <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
+                    <img src="<?= base_url()?>assets/images/<?= $chief->sign; ?>" alt="">
+                    <?php } ?>
+                </div>
+                <p class="rca-signname"><?= $chief->fullname; ?></p>
+                <p class="rca-signpos"><?= $chief->position; ?></p>
             </div>
 
+            <div class="rca-sig rca-center">
+                <p class="rca-role">Approved:</p>
+                <div class="rca-signspace">
+                    <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
+                    <img src="<?= base_url()?>assets/images/<?= $sds->sign; ?>" alt="">
+                    <?php } ?>
+                </div>
+                <p class="rca-signname"><?= $sds->fullname; ?></p>
+                <p class="rca-signpos"><?= $sds->position; ?></p>
+            </div>
+
+         </div>
 
          <div class="blocker"></div>
 
