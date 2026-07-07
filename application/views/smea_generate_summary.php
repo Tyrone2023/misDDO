@@ -26,6 +26,58 @@
                 background-color:#26f5fa !important;
             }
 
+            /* ===== Fit-to-width table (no sideways scroll) ===== */
+            .aip_generate table{
+                width:100%;
+                table-layout:fixed;          /* share width across all columns so nothing overflows */
+                border-collapse:collapse;
+                font-size:11px;
+            }
+            .aip_generate table th,
+            .aip_generate table td{
+                border:1px solid #8fa6b0;
+                padding:5px 4px;
+                word-wrap:break-word;
+                overflow-wrap:break-word;
+                hyphens:auto;
+                vertical-align:middle;
+            }
+            .aip_generate table th{
+                font-size:10px;
+                line-height:1.25;
+            }
+
+            @media (max-width:900px){
+                .aip_generate table{ font-size:9px; }
+                .aip_generate table th{ font-size:8px; }
+                .aip_generate table th,
+                .aip_generate table td{ padding:3px 2px; }
+            }
+
+            /* ===== Print: Folio (F4) landscape, fit all columns across the width ===== */
+            @page{
+                size:330mm 210mm;   /* Folio / F4 in landscape */
+                margin:8mm;
+            }
+            @media print{
+                html, body{ width:330mm; }
+                .aip_generate{ padding:0; }
+                .aip_generate table{ font-size:9px; page-break-inside:auto; }
+                .aip_generate table th{ font-size:8px; }
+                .aip_generate table th,
+                .aip_generate table td{ padding:3px 3px; }
+                .aip_generate tr{ page-break-inside:avoid; }
+                /* No background colours when printing — plain white cells, black text, borders kept */
+                .aip_generate table th,
+                .aip_generate table td,
+                .ivan, .ivy, .ivy:hover{
+                    background:transparent !important;
+                    background-color:transparent !important;
+                    color:#000 !important;
+                }
+                .back-to-top{ display:none !important; }
+            }
+
             .back-to-top {
             position: fixed;
             bottom: 20px;
