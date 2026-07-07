@@ -101,8 +101,8 @@
             <tr>
                 <th rowspan="3">PILLAR</th>
                 <th colspan="7">PHYSICAL ACCOMPLISHMENTS</th>
-                <th colspan="7">FINANCIAL ACCOMPLISHMENTS (MOOE)</th>
-                <th colspan="5">FINANCIAL ACCOMPLISHMENTS (OTHER SOURCES OF FUND)</th>
+                <th colspan="6">FINANCIAL ACCOMPLISHMENTS (MOOE)</th>
+                <th colspan="6">FINANCIAL ACCOMPLISHMENTS (OTHER SOURCES OF FUND)</th>
             </tr>
            
             <tr>
@@ -159,7 +159,11 @@
          $gapft = $this->SmeaModel->smea_gap($row->school_id,$row->fy,$row->b_code,$row->pillar,$guapoko,1);
          $gapfto = $this->SmeaModel->smea_gap($row->school_id,$row->fy,$row->b_code,$row->pillar,$guapoko,1);
 
-
+         // Funds are amounts, not counts: total the allocated (q{q}) and utilized (smea_q{q}) values per pillar.
+         $mooe_alloc = 0;  foreach ($ft->result()   as $r) { $mooe_alloc  += (float) $r->$renguapo; }
+         $mooe_util  = 0;  foreach ($sft->result()  as $r) { $mooe_util   += (float) $r->$guapoko; }
+         $other_alloc = 0; foreach ($fto->result()  as $r) { $other_alloc += (float) $r->$renguapo; }
+         $other_util  = 0; foreach ($sfto->result() as $r) { $other_util  += (float) $r->$guapoko; }
 
         ?>
             <tr>
@@ -198,17 +202,17 @@
                 </td>
                 <td><?= $gappt->num_rows(); ?></td>
                 <td></td>
-                <!-- FINANCIAL ACCOMPLISHMENTS (MOOE) -->
-                <td><?= $ft->num_rows(); ?></td>
-                <td><?= $sft->num_rows(); ?></td>
+                <!-- FINANCIAL ACCOMPLISHMENTS (MOOE) : Allocated | Utilized | %Util | Gap Amount | Gap % | Remarks -->
+                <td><?= $mooe_alloc != 0 ? number_format($mooe_alloc, 2) : ''; ?></td>
+                <td><?= $mooe_util  != 0 ? number_format($mooe_util, 2)  : ''; ?></td>
                 <td></td>
                 <td></td>
                 <td></td>
                 <td></td>
+                <!-- FINANCIAL ACCOMPLISHMENTS (OTHER SOURCES OF FUND) : Allocated | Utilized | %Util | Gap Amount | Gap % | Remarks -->
+                <td><?= $other_alloc != 0 ? number_format($other_alloc, 2) : ''; ?></td>
+                <td><?= $other_util  != 0 ? number_format($other_util, 2)  : ''; ?></td>
                 <td></td>
-                <!-- FINANCIAL ACCOMPLISHMENTS (OTHER SOURCES OF FUND) -->
-                <td><?= $fto->num_rows(); ?></td>
-                <td><?= $sfto->num_rows(); ?></td>
                 <td></td>
                 <td></td>
                 <td></td>

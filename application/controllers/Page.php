@@ -8164,6 +8164,37 @@ class Page extends CI_Controller
 		$this->load->view('smea_ad_update', $result);
 	}
 
+	// AJAX endpoint used by the modal on generate_smea. Returns just the single-quarter
+	// form partial; on submit it saves and replies with JSON so the modal can close.
+	function smea_edit_modal($param, $q)
+	{
+		if ($this->input->post('submit')) {
+			$this->SGODModel->update_smea($param);
+			header('Content-Type: application/json');
+			echo json_encode(['success' => true]);
+			return;
+		}
+
+		$result['sop'] = $this->SGODModel->one_cond_row('sgod_sop', 'id', $param);
+		$result['q'] = $q;
+		$this->load->view('smea_update_modal', $result);
+	}
+
+	// Same as smea_edit_modal but for the SOP ADJUSTMENT table.
+	function smea_ad_edit_modal($param, $q)
+	{
+		if ($this->input->post('submit')) {
+			$this->SGODModel->update_smea_ad($param);
+			header('Content-Type: application/json');
+			echo json_encode(['success' => true]);
+			return;
+		}
+
+		$result['sop'] = $this->SGODModel->one_cond_row('sgod_sop_adjustment', 'id', $param);
+		$result['q'] = $q;
+		$this->load->view('smea_update_modal', $result);
+	}
+
 	function generate_smea()
 	{
 		$result['title'] = "ANNUAL IMPLEMENTATION PLAN";
