@@ -11355,42 +11355,137 @@ public function rqa_municipality_print_shsv2()
 
     public function forgot_password()
     {
-
-        $this->form_validation->set_error_delimiters('<div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        ', '</div>');
-        $this->form_validation->set_rules('email', 'Email', 'required');
-
-        if ($this->form_validation->run() == FALSE) {
-
-            $page = "fp";
-
-            if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
-                show_404();
-            }
-
-            $this->load->view('pages/' . $page);
-        } else {
-            if ($this->input->post('at') == 1) {
-                $email_check = $this->Common->one_cond_count_row('users', 'username', $this->input->post('email'));
-            } elseif ($this->input->post('at') == 2) {
-                $email_check = $this->Common->one_cond_count_row('hris_staff', 'empEmail', $this->input->post('email'));
+        // Dual-mode self-service reset (no account type selection):
+        //   reset_mode = "manual" (default) -> user sets a new password directly
+        //   reset_mode = "email"            -> email a temporary password
+        if (strtoupper((string) $this->input->server('REQUEST_METHOD')) === 'POST') {
+            $mode = strtolower(trim((string) $this->input->post('reset_mode')));
+            if ($mode === 'email') {
+                $this->fp_send_email();
             } else {
-                $email_check = $this->Common->one_cond_count_row('schools', 'schoolEmail', $this->input->post('email'));
+                $this->fp_manual();
             }
+            return;
+        }
 
+        $page = "fp";
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+        $this->load->view('pages/' . $page);
+    }
 
+    /**
+     * Email mode: locate the account by email across applicants (users),
+     * employees (hris_staff) and schools (schools), then email a new
+     * temporary password. Reuses Reg::update_request_password() which handles
+     * the mailer + password update, keyed off the detected account type.
+     */
+    private function fp_send_email()
+    {
+        $email = trim((string) $this->input->post('email'));
 
-            if ($email_check->num_rows() == 0) {
-                $this->session->set_flashdata('failed', 'We could not find your email address.');
+        if ($email === '') {
+            $this->session->set_flashdata('failed', 'Email is required.');
+            redirect(base_url() . 'Pages/forgot_password');
+            return;
+        }
+
+        $at = $this->fp_detect_account_type($email);
+        if ($at === 0) {
+            $this->session->set_flashdata('failed', 'We could not find your email address.');
+            redirect(base_url() . 'Pages/forgot_password');
+            return;
+        }
+
+        // Reg::update_request_password() reads $_POST['at'] and $_POST['email'].
+        $_POST['at'] = $at;
+        $this->Reg->update_request_password();
+
+        $this->session->set_flashdata('success', 'The new password has been sent to your email.');
+        redirect(base_url() . 'log_in');
+    }
+
+    /**
+     * Manual mode (default): the user supplies their Username / ID and a new
+     * password. Employees and schools must also supply the email on file.
+     */
+    private function fp_manual()
+    {
+        $identifier = trim((string) $this->input->post('identifier'));
+        $email      = trim((string) $this->input->post('email'));
+        $new        = (string) $this->input->post('new_password');
+        $confirm    = (string) $this->input->post('confirm_password');
+
+        if ($identifier === '' || $new === '' || $confirm === '') {
+            $this->session->set_flashdata('failed', 'Username / ID, new password, and confirmation are required.');
+            redirect(base_url() . 'Pages/forgot_password');
+            return;
+        }
+        if (strlen($new) < 8) {
+            $this->session->set_flashdata('failed', 'Password must be at least 8 characters.');
+            redirect(base_url() . 'Pages/forgot_password');
+            return;
+        }
+        if ($new !== $confirm) {
+            $this->session->set_flashdata('failed', 'New password and confirmation do not match.');
+            redirect(base_url() . 'Pages/forgot_password');
+            return;
+        }
+
+        $user = $this->Common->one_cond_row('users', 'username', $identifier);
+        if (!$user) {
+            $this->session->set_flashdata('failed', 'We could not verify your account. Please make sure the Username / ID is correct.');
+            redirect(base_url() . 'Pages/forgot_password');
+            return;
+        }
+
+        // Optional email verification: some employees / schools no longer know
+        // the email on file, so it is not required. When the user does supply an
+        // email, it must match the one on record before we allow the reset.
+        if ($email !== '') {
+            $onFileEmail = $this->fp_email_on_file($identifier);
+            if ($onFileEmail !== '' && strtolower($onFileEmail) !== strtolower($email)) {
+                $this->session->set_flashdata('failed', 'The email you entered does not match the one on file for this account.');
                 redirect(base_url() . 'Pages/forgot_password');
-            } else {
-                $this->Reg->update_request_password();
-                $this->session->set_flashdata('success', 'The new password has been sent to your email.');
-
-                redirect(base_url() . 'log_in');
+                return;
             }
         }
+
+        $this->db->where('username', $identifier);
+        $this->db->update('users', array('Password' => password_hash($new, PASSWORD_DEFAULT)));
+
+        $this->session->set_flashdata('success', 'Password updated successfully. You can now log in with your new password.');
+        redirect(base_url() . 'log_in');
+    }
+
+    /** Detect which source table an email belongs to. 0 = not found. */
+    private function fp_detect_account_type($email)
+    {
+        if ($this->Common->one_cond_count_row('users', 'username', $email)->num_rows() > 0) {
+            return 1;
+        }
+        if ($this->Common->one_cond_count_row('hris_staff', 'empEmail', $email)->num_rows() > 0) {
+            return 2;
+        }
+        if ($this->Common->one_cond_count_row('schools', 'schoolEmail', $email)->num_rows() > 0) {
+            return 3;
+        }
+        return 0;
+    }
+
+    /** Registered email on file for a users.username (employees / schools). */
+    private function fp_email_on_file($username)
+    {
+        $emp = $this->Common->one_cond_row('hris_staff', 'IDNumber', $username);
+        if ($emp && !empty($emp->empEmail)) {
+            return trim($emp->empEmail);
+        }
+        $sch = $this->Common->one_cond_row('schools', 'schoolID', $username);
+        if ($sch && !empty($sch->schoolEmail)) {
+            return trim($sch->schoolEmail);
+        }
+        return '';
     }
 
 
