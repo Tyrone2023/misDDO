@@ -39,20 +39,26 @@
                                         </thead>
                                         <tbody>
                                                <?php
-										  $i=1;
 										  foreach($data as $row)
 										  {
-										  echo "<tr>";
-										  echo "<td>".$row->coverage ."</td>";
-										  echo "<td>".$row->fileAttachment."</td>";
-                                          ?>
-                                          <td style='text-align:center'>
-                                                        <a href="<?= base_url(); ?>uploads/sip_files/<?= $row->fileAttachment; ?>" target="_blank" class="text-success"><i class="mdi mdi-file-document-box-check-outline"></i> View File </a>&nbsp;&nbsp;&nbsp;&nbsp;
-                                                        <a href="<?= base_url(); ?>Pages/del_sip/<?= $row->id; ?>" onclick="return confirm('Are you sure?');" class="text-danger"><i class="mdi mdi-file-document-box-check-outline"></i> Delete </a>&nbsp;&nbsp;&nbsp;&nbsp;
-                                          </td>
-
-										  <?php echo "</tr>";
-									  
+										  ?>
+                                          <tr>
+                                              <td class="align-middle"><?= htmlspecialchars($row->coverage); ?></td>
+                                              <td class="align-middle">
+                                                  <a href="<?= base_url(); ?>uploads/sip_files/<?= rawurlencode($row->fileAttachment); ?>" target="_blank" class="text-danger" title="<?= htmlspecialchars($row->fileAttachment); ?>">
+                                                      <i class="mdi mdi-file-pdf-box"></i> <?= htmlspecialchars($row->fileAttachment); ?>
+                                                  </a>
+                                              </td>
+                                              <td class="text-center align-middle text-nowrap">
+                                                  <a href="<?= base_url(); ?>uploads/sip_files/<?= rawurlencode($row->fileAttachment); ?>" target="_blank" class="btn btn-sm btn-outline-success">
+                                                      <i class="mdi mdi-eye-outline"></i> View
+                                                  </a>
+                                                  <a href="<?= base_url(); ?>Pages/del_sip/<?= $row->id; ?>" onclick="return confirm('Are you sure you want to delete this file?');" class="btn btn-sm btn-outline-danger">
+                                                      <i class="mdi mdi-trash-can-outline"></i> Delete
+                                                  </a>
+                                              </td>
+                                          </tr>
+										  <?php
 															}
 										   ?>
                                         </tbody>
@@ -83,16 +89,17 @@
                             <div class="modal-body">
                                 <?= form_open_multipart('Pages/sip'); ?>
                                     <div class="form-group row">
-                                        <label for="inputEmail3" class="col-md-3 col-form-label">Year</label>
+                                        <label for="inputEmail3" class="col-md-3 col-form-label">Covered Year <span class="text-danger">*</span></label>
                                         <div class="col-md-9">
-                                            <input type="text" class="form-control" name="coverage" placeholder="2023-2025">
+                                            <input type="text" class="form-control" name="coverage" required>
                                         </div>
                                     </div>
 
                                     <div class="form-group row">
-                                        <label for="inputPassword5" class="col-md-3 col-form-label">File Attachment</label>
+                                        <label for="inputPassword5" class="col-md-3 col-form-label">File Attachment <span class="text-danger">*</span></label>
                                         <div class="col-md-9">
-                                            <input type="file" class="form-control" name="attachment">
+                                            <input type="file" class="form-control" name="attachment" accept="application/pdf,.pdf" required>
+                                            <small class="form-text text-muted">Only PDF files are allowed.</small>
                                         </div>
                                     </div>
 
