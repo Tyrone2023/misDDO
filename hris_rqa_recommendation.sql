@@ -22,13 +22,15 @@ CREATE TABLE IF NOT EXISTS `hris_rqa_recommendation` (
   `total_points` DECIMAL(10,2) DEFAULT NULL,
   `school_id` INT(11) DEFAULT NULL,            -- schools.recID
   `school_name` VARCHAR(180) DEFAULT NULL,     -- denormalised for display
-  `status` VARCHAR(20) NOT NULL DEFAULT 'recommended', -- recommended | approved | waived
+  `status` VARCHAR(20) NOT NULL DEFAULT 'recommended', -- recommended | approved | waived | appointed
   `recommended_by` INT(11) DEFAULT NULL,
   `created_at` DATETIME DEFAULT NULL,
   `approved_by` INT(11) DEFAULT NULL,
   `approved_at` DATETIME DEFAULT NULL,
   `date_hired` DATE DEFAULT NULL,              -- set on the List of Issuance
   `date_waived` DATE DEFAULT NULL,             -- set when the applicant waives the post
+  `appointment_issued_at` DATETIME DEFAULT NULL,
+  `appointment_issued_by` INT(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_item_number` (`item_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

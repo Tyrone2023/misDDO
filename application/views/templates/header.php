@@ -420,7 +420,14 @@
 <li>
     <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
         <i class="mdi mdi-file-document-outline"></i>
-        <span> RQA Issuance  </span>
+        <span> For Issuance of Appointment  </span>
+    </a>
+</li>
+
+<li>
+    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
+        <i class="mdi mdi-account-tie"></i>
+        <span> Appointed List  </span>
     </a>
 </li>
 
@@ -835,7 +842,14 @@
 <li>
     <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
         <i class="mdi mdi-file-document-outline"></i>
-        <span> RQA Issuance  </span>
+        <span> For Issuance of Appointment  </span>
+    </a>
+</li>
+
+<li>
+    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
+        <i class="mdi mdi-account-tie"></i>
+        <span> Appointed List  </span>
     </a>
 </li>
 
@@ -999,7 +1013,14 @@
 <li>
     <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
         <i class="mdi mdi-file-document-outline"></i>
-        <span> RQA Issuance  </span>
+        <span> For Issuance of Appointment  </span>
+    </a>
+</li>
+
+<li>
+    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
+        <i class="mdi mdi-account-tie"></i>
+        <span> Appointed List  </span>
     </a>
 </li>
                                  <li><a href="<?= base_url(); ?>users" class="waves-effect"><i class="ion ion-ios-person-add"></i><span> Manage Users </span></a></li> 
@@ -1028,7 +1049,14 @@
                                 <li>
                                     <a href="<?= base_url(); ?>Pages/observer_issuance" class="waves-effect">
                                         <i class="mdi mdi-file-document-outline"></i>
-                                        <span> RQA Issuance </span>
+                                        <span> For Issuance of Appointment </span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
+                                        <i class="mdi mdi-account-tie"></i>
+                                        <span> Appointed List </span>
                                     </a>
                                 </li>
 

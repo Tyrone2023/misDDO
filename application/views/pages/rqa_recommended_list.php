@@ -90,6 +90,7 @@ $scope = ($scope ?? 'mine') === 'all' ? 'all' : 'mine';
     .rqa-status-recommended { background: #fff6e9; color: #9a6b16; border: 1px solid #f1ddb9; }
     .rqa-status-approved { background: #e8fff3; color: #0f9d6b; border: 1px solid #b8f0d6; }
     .rqa-status-waived { background: #fdecec; color: #c0392b; border: 1px solid #f5c6c2; }
+    .rqa-status-appointed { background: #e8fff8; color: #0f7f6c; border: 1px solid #c5f3e6; }
 
     .rqa-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 20px; color: var(--rqa-muted); }
     .rqa-empty-state i { font-size: 46px; margin-bottom: 12px; color: #c4d2e3; }
@@ -270,6 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
         status = (status || '').trim().toLowerCase();
         if (status === 'approved') return '<span class="rqa-status-badge rqa-status-approved"><i class="mdi mdi-check-decagram"></i>Approved</span>';
         if (status === 'waived') return '<span class="rqa-status-badge rqa-status-waived"><i class="mdi mdi-account-cancel-outline"></i>Waived</span>';
+        if (status === 'appointed') return '<span class="rqa-status-badge rqa-status-appointed"><i class="mdi mdi-account-tie"></i>Appointed</span>';
         return '<span class="rqa-status-badge rqa-status-recommended"><i class="mdi mdi-account-clock-outline"></i>Recommended</span>';
     }
 

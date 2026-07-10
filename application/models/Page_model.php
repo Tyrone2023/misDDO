@@ -2157,6 +2157,7 @@ public function count_for_approval_leave4($table, $approver_username)
             rec.id AS rec_id, rec.item_number, rec.remarks, rec.status, rec.created_at,
             rec.applicant_name AS rec_name, rec.total_points AS rec_total,
             rec.school_id, rec.school_name, rec.date_hired, rec.date_waived,
+            rec.appointment_issued_at, rec.appointment_issued_by,
             a.appID, a.jobID, a.empEmail,
             jv.jobTitle, jv.job_type,
             r.education, r.training, r.experience, r.let_rating, r.demo_rating, r.tr_rating, r.total_points,

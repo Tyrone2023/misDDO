@@ -79,6 +79,7 @@ if (!function_exists('h')) {
     .rqa-waived-badge { display: inline-block; font-weight: 800; font-size: .62rem; color: #b94a48; background: #fff0f0; border: 1px solid #f4c7c3; border-radius: 999px; padding: .12rem .45rem; margin-bottom: 4px; }
     .rqa-reused-note { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: .62rem; font-weight: 700; color: var(--rqa-muted); }
     .rqa-reused-note i { font-size: 13px; }
+    .rqa-appointed-note { display: inline-flex; align-items: center; gap: 4px; font-size: .68rem; font-weight: 800; color: var(--rqa-muted); }
 
     .rqa-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 20px; color: var(--rqa-muted); }
     .rqa-empty-state i { font-size: 46px; margin-bottom: 12px; color: #c4d2e3; }
@@ -94,8 +95,8 @@ if (!function_exists('h')) {
             <div class="rqa-hero">
                 <div class="rqa-hero-content">
                     <div class="rqa-title-block">
-                        <h4><?= h($title ?? 'List of Issuance'); ?></h4>
-                        <p>Approved applicants ready for issuance. Set the Date Hired, and if an applicant waives the position, mark it Waived and record the Date Waived.</p>
+                        <h4><?= h($title ?? 'For Issuance of Appointment'); ?></h4>
+                        <p>Approved applicants ready for appointment issuance. Set the Date Hired, mark waived applicants when needed, or move issued appointments to the Appointed List.</p>
                     </div>
                     <div class="d-flex align-items-center" style="gap:12px;">
                         <span id="rqa-count-badge"></span>
@@ -137,7 +138,7 @@ if (!function_exists('h')) {
             <div class="card rqa-card rqa-results-card">
                 <div class="card-body">
                     <div class="rqa-results-header">
-                        <h5 class="rqa-section-title"><i class="mdi mdi-file-document-edit-outline"></i> List of Issuance</h5>
+                        <h5 class="rqa-section-title"><i class="mdi mdi-file-document-edit-outline"></i> For Issuance of Appointment</h5>
                     </div>
 
                     <div id="rqa-issuance-loading" class="text-center text-muted rqa-loading-box" style="display:none;">
@@ -165,6 +166,7 @@ if (!function_exists('h')) {
                                     <th>School Assigned</th>
                                     <th>Date Hired</th>
                                     <th>Waiver</th>
+                                    <th>Appointment Issued</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -183,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var issuanceUpdateUrl = '<?= base_url('Pages/rqa_issuance_update'); ?>';
     var issuanceWaiveUrl = '<?= base_url('Pages/rqa_issuance_waive'); ?>';
     var issuanceUnwaiveUrl = '<?= base_url('Pages/rqa_issuance_unwaive'); ?>';
+    var issuanceAppointUrl = '<?= base_url('Pages/rqa_issuance_appoint'); ?>';
     var reportPageUrl = '<?= base_url('Pages/rqa_issuance_report'); ?>';
 
     var issuanceRows = [];
@@ -259,6 +262,14 @@ document.addEventListener('DOMContentLoaded', function () {
         return '<button type="button" class="btn btn-sm btn-outline-danger rqa-waive-btn"><i class="mdi mdi-cancel mr-1"></i>Mark Waived</button>';
     }
 
+    function appointmentIssuedCellHtml(r) {
+        var isWaived = (r.status === 'waived') || !!r.dateWaived;
+        if (isWaived) {
+            return '<span class="rqa-appointed-note"><i class="mdi mdi-minus-circle-outline"></i>Waived</span>';
+        }
+        return '<button type="button" class="btn btn-sm btn-outline-success rqa-appoint-btn"><i class="mdi mdi-file-document-check-outline mr-1"></i>Appointment Issued</button>';
+    }
+
     function issuanceRowHtml(r, index) {
         var html = '<tr data-rec-id="' + r.recId + '">';
         html += '<td class="num"><span class="rqa-rank-badge">' + index + '</span></td>';
@@ -271,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td>' + (r.school ? '<span class="rqa-school-tag">' + escHtml(r.school) + '</span>' : '<span class="text-muted">—</span>') + '</td>';
         html += '<td><input type="date" class="form-control form-control-sm rqa-date-input rqa-date-hired" value="' + escAttr(r.dateHired) + '"></td>';
         html += '<td class="rqa-waiver-cell">' + waiverCellHtml(r) + '</td>';
+        html += '<td class="rqa-appoint-cell">' + appointmentIssuedCellHtml(r) + '</td>';
         html += '</tr>';
         return html;
     }
@@ -297,7 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (rows.length === 0) {
             $('#rqa-issuance-results').hide();
             if (issuanceRows.length === 0) {
-                setEmptyState('mdi-file-document-outline', 'No issuance records yet.', 'Approved applicants will appear here for issuance, date hired, and waiver.');
+                setEmptyState('mdi-file-document-outline', 'No applicants for issuance.', 'Approved applicants will appear here until their appointment is issued.');
             } else {
                 setEmptyState('mdi-filter-remove-outline', 'No records match the selected filters.', 'Try changing the position, school, or status filter.');
             }
@@ -315,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var badge = $('#rqa-count-badge');
         if (issuanceRows.length > 0) {
-            badge.text(rows.length + ' of ' + issuanceRows.length + ' approved').show();
+            badge.text(rows.length + ' of ' + issuanceRows.length + ' for issuance').show();
         } else {
             badge.hide();
         }
@@ -421,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         Swal.fire({
             title: 'Undo this waiver?',
-            text: 'The applicant returns to the List of Issuance and the Item Number is assigned to them again.',
+            text: 'The applicant returns to For Issuance of Appointment and the Item Number is assigned to them again.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Yes, undo waiver',
@@ -442,6 +454,38 @@ document.addEventListener('DOMContentLoaded', function () {
             }).fail(function () {
                 $btn.prop('disabled', false);
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to undo. Please try again.' });
+            });
+        });
+    });
+
+    $(document).on('click', '.rqa-appoint-btn', function () {
+        var $btn = $(this);
+        var $row = $btn.closest('tr');
+        var recId = parseInt($row.data('rec-id'), 10);
+
+        Swal.fire({
+            title: 'Mark appointment as issued?',
+            text: 'The applicant will be removed from this issuance queue and moved to the Appointed List.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, appointment issued',
+            confirmButtonColor: '#1abc9c'
+        }).then(function (result) {
+            if (!result.value) return;
+            $btn.prop('disabled', true);
+            $.post(issuanceAppointUrl, { rec_id: recId }, null, 'json').done(function (res) {
+                if (res && res.status === 'success') {
+                    issuanceRows = issuanceRows.filter(function (r) { return r.recId !== recId; });
+                    rebuildFilters();
+                    renderIssuance();
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message || 'Appointment issued.', timer: 1800, showConfirmButton: false });
+                } else {
+                    $btn.prop('disabled', false);
+                    Swal.fire({ icon: 'error', title: 'Error', text: (res && res.message) ? res.message : 'Unable to save.' });
+                }
+            }).fail(function () {
+                $btn.prop('disabled', false);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Unable to save. Please try again.' });
             });
         });
     });

@@ -3492,6 +3492,8 @@ public function car_rqa_promotion()
               `approved_at` DATETIME DEFAULT NULL,
               `date_hired` DATE DEFAULT NULL,
               `date_waived` DATE DEFAULT NULL,
+              `appointment_issued_at` DATETIME DEFAULT NULL,
+              `appointment_issued_by` INT(11) DEFAULT NULL,
               PRIMARY KEY (`id`),
               KEY `idx_item_number` (`item_number`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8
@@ -3506,6 +3508,8 @@ public function car_rqa_promotion()
             'school_name' => "ADD COLUMN `school_name` VARCHAR(180) DEFAULT NULL",
             'date_hired' => "ADD COLUMN `date_hired` DATE DEFAULT NULL",
             'date_waived' => "ADD COLUMN `date_waived` DATE DEFAULT NULL",
+            'appointment_issued_at' => "ADD COLUMN `appointment_issued_at` DATETIME DEFAULT NULL",
+            'appointment_issued_by' => "ADD COLUMN `appointment_issued_by` INT(11) DEFAULT NULL",
         ];
         foreach ($columns as $col => $ddl) {
             if (!$this->db->field_exists($col, 'hris_rqa_recommendation')) {
@@ -5736,6 +5740,14 @@ public function car_rqa_promotion()
     }
 
     /**
+     * Positions allowed to manage the appointment issuance workflow.
+     */
+    private function rqa_issuance_can_manage()
+    {
+        return in_array((string) $this->session->position, ['sds', 'Human Resource Admin', 'asds', 'Secretariat'], true);
+    }
+
+    /**
      * List of Issuance screen (SDS). Standalone page that lists the approved
      * applicants for issuance. Data comes from rqa_issuance_data().
      */
@@ -5755,7 +5767,7 @@ public function car_rqa_promotion()
         $this->ensure_rqa_recommendation_table();
 
         $data = [
-            'title' => 'List of Issuance',
+            'title' => 'For Issuance of Appointment',
             'settings' => $this->SettingsModel->get_mis_settings(),
         ];
 
@@ -5774,7 +5786,7 @@ public function car_rqa_promotion()
     {
         header('Content-Type: application/json');
 
-        if ($this->session->logged_in == false || $this->session->position !== 'sds') {
+        if ($this->session->logged_in == false || !$this->rqa_issuance_can_manage()) {
             echo json_encode(['status' => 'error', 'message' => 'You are not authorised to view this list.']);
             return;
         }
@@ -5792,8 +5804,8 @@ public function car_rqa_promotion()
             $activeItems[(string) $ai->item_number] = true;
         }
 
-        // Issued (approved) applicants plus any that have waived the post -
-        // waived rows stay on the list so the waiver can be reviewed/undone.
+        // Approved applicants still waiting for appointment issuance plus any
+        // that have waived the post. Rows marked appointed leave this queue.
         foreach ($this->Page_model->recommended_for_approval(['approved', 'waived']) as $row) {
             $jobType = (int) ($row->job_type ?? 0);
             $suffix = $suffixes[$jobType] ?? '';
@@ -5842,7 +5854,7 @@ public function car_rqa_promotion()
     {
         header('Content-Type: application/json');
 
-        if ($this->session->logged_in == false || $this->session->position !== 'sds') {
+        if ($this->session->logged_in == false || !$this->rqa_issuance_can_manage()) {
             echo json_encode(['status' => 'error', 'message' => 'You are not authorised to perform this action.']);
             return;
         }
@@ -5906,7 +5918,7 @@ public function car_rqa_promotion()
     {
         header('Content-Type: application/json');
 
-        if ($this->session->logged_in == false || $this->session->position !== 'sds') {
+        if ($this->session->logged_in == false || !$this->rqa_issuance_can_manage()) {
             echo json_encode(['status' => 'error', 'message' => 'You are not authorised to perform this action.']);
             return;
         }
@@ -5959,7 +5971,7 @@ public function car_rqa_promotion()
     {
         header('Content-Type: application/json');
 
-        if ($this->session->logged_in == false || $this->session->position !== 'sds') {
+        if ($this->session->logged_in == false || !$this->rqa_issuance_can_manage()) {
             echo json_encode(['status' => 'error', 'message' => 'You are not authorised to perform this action.']);
             return;
         }
@@ -5996,7 +6008,142 @@ public function car_rqa_promotion()
             'date_waived' => null,
         ]);
 
-        echo json_encode(['status' => 'success', 'message' => 'Waiver undone. The applicant is back on the List of Issuance.']);
+        echo json_encode(['status' => 'success', 'message' => 'Waiver undone. The applicant is back in For Issuance of Appointment.']);
+    }
+
+    /**
+     * Mark an approved applicant as appointment-issued. The row leaves the
+     * issuance queue and appears on the Appointed List.
+     */
+    public function rqa_issuance_appoint()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false || !$this->rqa_issuance_can_manage()) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to perform this action.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $recId = (int) $this->input->post('rec_id');
+        if ($recId <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
+            return;
+        }
+
+        $rec = $this->Common->one_cond_row('hris_rqa_recommendation', 'id', $recId);
+        if (empty($rec)) {
+            echo json_encode(['status' => 'error', 'message' => 'This record is no longer available.']);
+            return;
+        }
+
+        if ($rec->status !== 'approved') {
+            echo json_encode(['status' => 'error', 'message' => 'Only approved applicants can be marked as appointment issued.']);
+            return;
+        }
+
+        $dateWaived = trim((string) ($rec->date_waived ?? ''));
+        if ($dateWaived !== '' && $dateWaived !== '0000-00-00') {
+            echo json_encode(['status' => 'error', 'message' => 'A waived applicant cannot be marked as appointment issued.']);
+            return;
+        }
+
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $issuedAt = date('Y-m-d H:i:s');
+
+        $this->db->where('id', $recId)->update('hris_rqa_recommendation', [
+            'status' => 'appointed',
+            'appointment_issued_at' => $issuedAt,
+            'appointment_issued_by' => $userId ? (int) $userId : null,
+        ]);
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Appointment issued. The applicant was moved to the Appointed List.',
+            'issuedAt' => $issuedAt,
+        ]);
+    }
+
+    /**
+     * Read-only Appointed List. Shows applicants moved from the issuance queue
+     * after their appointment has been issued.
+     */
+    public function rqa_appointed_list()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        $page = "rqa_appointed_list";
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $data = [
+            'title' => 'Appointed List',
+            'settings' => $this->SettingsModel->get_mis_settings(),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
+     * Appointed List rows, JSON.
+     */
+    public function rqa_appointed_list_data()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to view this list.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $suffixes = $this->rqa_recommendation_job_suffixes();
+        $rows = [];
+
+        foreach ($this->Page_model->recommended_for_approval('appointed') as $row) {
+            $jobType = (int) ($row->job_type ?? 0);
+            $suffix = $suffixes[$jobType] ?? '';
+            $name = trim((string) ($row->rec_name ?? ''));
+            if ($name === '') {
+                $name = rqa_applicant_name($row);
+            }
+
+            $dateHired = (!empty($row->date_hired) && $row->date_hired !== '0000-00-00') ? $row->date_hired : '';
+            $issuedAt = trim((string) ($row->appointment_issued_at ?? ''));
+
+            $rows[] = [
+                'recId' => (int) ($row->rec_id ?? 0),
+                'jobType' => $jobType,
+                'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
+                'tribe' => trim((string) ($row->tribe ?? '')),
+                'position' => trim(($row->jobTitle ?? '') . ' ' . $suffix),
+                'code' => (string) ($row->code ?? ''),
+                'name' => $name,
+                'contact' => (string) ($row->contactNo ?? ''),
+                'email' => (string) ($row->empEmail ?? ''),
+                'completeAddress' => $this->rqa_complete_address($row),
+                'municipality' => trim((string) ($row->resCity ?? '')),
+                'brgy' => trim((string) ($row->brgy ?? '')),
+                'itemNumber' => (string) ($row->item_number ?? ''),
+                'school' => (string) ($row->school_name ?? ''),
+                'dateHired' => (string) $dateHired,
+                'appointmentIssuedAt' => $issuedAt,
+                'status' => (string) ($row->status ?? ''),
+            ];
+        }
+
+        echo json_encode(['status' => 'success', 'rows' => $rows]);
     }
 
     /**
@@ -6010,7 +6157,7 @@ public function car_rqa_promotion()
             redirect(base_url() . 'log_in');
             return;
         }
-        if ($this->session->position !== 'sds') {
+        if (!$this->rqa_issuance_can_manage()) {
             show_error('Forbidden', 403);
             return;
         }
@@ -6085,8 +6232,8 @@ public function car_rqa_promotion()
      * Live counts for the Observer dashboard (AJAX, JSON), polled every 5s.
      * "Pending at each stage" of the RQA pipeline:
      *   recommended -> awaiting approval
-     *   approved    -> approved but not yet issued (no Date Hired)
-     *   issued      -> approved with a Date Hired
+     *   approved    -> approved but not yet appointment-issued
+     *   issued      -> appointment issued / appointed
      *   waived      -> applicant waived the post
      */
     public function observer_counts()
@@ -6103,20 +6250,10 @@ public function car_rqa_promotion()
         $recommended = (int) $this->db->where('status', 'recommended')
             ->count_all_results('hris_rqa_recommendation');
 
-        // Approved + no usable Date Hired yet = still awaiting issuance.
         $approved = (int) $this->db->where('status', 'approved')
-            ->group_start()
-            ->where('date_hired IS NULL', null, false)
-            ->or_where('date_hired', '0000-00-00')
-            ->or_where('date_hired', '')
-            ->group_end()
             ->count_all_results('hris_rqa_recommendation');
 
-        // Approved with a usable Date Hired = issued / hired.
-        $issued = (int) $this->db->where('status', 'approved')
-            ->where('date_hired IS NOT NULL', null, false)
-            ->where('date_hired !=', '0000-00-00')
-            ->where('date_hired !=', '')
+        $issued = (int) $this->db->where('status', 'appointed')
             ->count_all_results('hris_rqa_recommendation');
 
         $waived = (int) $this->db->where('status', 'waived')
@@ -6227,7 +6364,7 @@ public function car_rqa_promotion()
 
         $this->ensure_rqa_recommendation_table();
 
-        $data = ['title' => 'List of Issuance (Observer)'];
+        $data = ['title' => 'For Issuance of Appointment (Observer)'];
 
         $this->load->view('templates/head');
         $this->load->view('templates/header');

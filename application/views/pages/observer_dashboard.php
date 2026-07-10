@@ -76,7 +76,7 @@ if (!function_exists('h')) {
                 <div class="rqa-hero-content">
                     <div class="rqa-title-block">
                         <h4><?= h($title ?? 'RQA Observer Dashboard'); ?></h4>
-                        <p>Read-only overview of the Registry of Qualified Applicants pipeline. The figures below update automatically as applicants are recommended, approved, and issued &mdash; no need to refresh.</p>
+                        <p>Read-only overview of the Registry of Qualified Applicants pipeline. The figures below update automatically as applicants are recommended, approved for issuance, and appointed &mdash; no need to refresh.</p>
                     </div>
                     <span class="obs-live"><span class="dot"></span> Live &middot; updates every 5s</span>
                 </div>
@@ -97,17 +97,17 @@ if (!function_exists('h')) {
                         <span class="obs-num" id="obs-approved">&mdash;</span>
                         <span class="obs-ico"><i class="mdi mdi-check-decagram"></i></span>
                     </div>
-                    <div class="obs-label">Approved</div>
-                    <div class="obs-sub">For issuance (no date hired)</div>
+                    <div class="obs-label">For Issuance</div>
+                    <div class="obs-sub">Awaiting appointment issuance</div>
                 </a>
 
-                <a href="<?= base_url(); ?>Pages/observer_issuance" class="obs-card obs-iss">
+                <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="obs-card obs-iss">
                     <div class="obs-top">
                         <span class="obs-num" id="obs-issued">&mdash;</span>
                         <span class="obs-ico"><i class="mdi mdi-file-document-check-outline"></i></span>
                     </div>
-                    <div class="obs-label">Issued / Hired</div>
-                    <div class="obs-sub">Date hired recorded</div>
+                    <div class="obs-label">Appointed</div>
+                    <div class="obs-sub">Appointment issued</div>
                 </a>
 
                 <a href="<?= base_url(); ?>Pages/observer_issuance" class="obs-card obs-wai">
@@ -133,7 +133,7 @@ if (!function_exists('h')) {
                     </a>
                     <a href="<?= base_url(); ?>Pages/observer_issuance" class="obs-link">
                         <i class="mdi mdi-file-document-outline"></i>
-                        <span>Issuance<small>Issued &amp; waived list</small></span>
+                        <span>Issuance<small>For appointment issuance</small></span>
                     </a>
                 </div>
             </div>

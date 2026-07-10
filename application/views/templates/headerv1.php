@@ -1136,7 +1136,8 @@
                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/request_rating">Retained Rating Request</span></a></li>
                                         <li><a href="<?= base_url(); ?>Pages/rqa_approval">RQA Recommended (Approval)</a></li>
-                                        <li><a href="<?= base_url(); ?>Pages/rqa_issuance">List of Issuance</a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/rqa_issuance">For Issuance of Appointment</a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/rqa_appointed_list">Appointed List</a></li>
                                         <!-- <li><a href="<?= base_url(); ?>Page/appRatingUploading">Upload Applicant's Rating</a></li> -->
                                     </ul>
                                 </li>
