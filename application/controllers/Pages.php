@@ -5805,8 +5805,9 @@ public function car_rqa_promotion()
         }
 
         // Approved applicants still waiting for appointment issuance plus any
-        // that have waived the post. Rows marked appointed leave this queue.
-        foreach ($this->Page_model->recommended_for_approval(['approved', 'waived']) as $row) {
+        // that have waived the post, newest approval first. Rows marked
+        // appointed leave this queue.
+        foreach ($this->Page_model->recommended_for_approval(['approved', 'waived'], null, true) as $row) {
             $jobType = (int) ($row->job_type ?? 0);
             $suffix = $suffixes[$jobType] ?? '';
             $name = trim((string) ($row->rec_name ?? ''));
@@ -5816,6 +5817,14 @@ public function car_rqa_promotion()
 
             $dateHired = (!empty($row->date_hired) && $row->date_hired !== '0000-00-00') ? $row->date_hired : '';
             $dateWaived = (!empty($row->date_waived) && $row->date_waived !== '0000-00-00') ? $row->date_waived : '';
+
+            // Date the SDS approved the recommendation; rows approved before
+            // approved_at existed fall back to the recommendation date so the
+            // displayed date always matches the newest-first sort order.
+            $approvedAt = (!empty($row->approved_at) && $row->approved_at !== '0000-00-00 00:00:00')
+                ? $row->approved_at
+                : (string) ($row->created_at ?? '');
+            $dateApproved = $approvedAt !== '' ? substr($approvedAt, 0, 10) : '';
 
             $itemNumber = (string) ($row->item_number ?? '');
             $status = (string) ($row->status ?? '');
@@ -5837,6 +5846,7 @@ public function car_rqa_promotion()
                 'brgy' => trim((string) ($row->brgy ?? '')),
                 'itemNumber' => $itemNumber,
                 'school' => (string) ($row->school_name ?? ''),
+                'dateApproved' => $dateApproved,
                 'dateHired' => (string) $dateHired,
                 'dateWaived' => (string) $dateWaived,
                 'status' => $status,
@@ -6111,7 +6121,8 @@ public function car_rqa_promotion()
         $suffixes = $this->rqa_recommendation_job_suffixes();
         $rows = [];
 
-        foreach ($this->Page_model->recommended_for_approval('appointed') as $row) {
+        // Newest appointment first (ordered by appointment_issued_at)
+        foreach ($this->Page_model->recommended_for_approval('appointed', null, true) as $row) {
             $jobType = (int) ($row->job_type ?? 0);
             $suffix = $suffixes[$jobType] ?? '';
             $name = trim((string) ($row->rec_name ?? ''));
@@ -6392,7 +6403,7 @@ public function car_rqa_promotion()
         $suffixes = $this->rqa_recommendation_job_suffixes();
         $rows = [];
 
-        foreach ($this->Page_model->recommended_for_approval(['approved', 'waived']) as $row) {
+        foreach ($this->Page_model->recommended_for_approval(['approved', 'waived'], null, true) as $row) {
             $jobType = (int) ($row->job_type ?? 0);
             $suffix = $suffixes[$jobType] ?? '';
             $name = trim((string) ($row->rec_name ?? ''));
@@ -6402,6 +6413,13 @@ public function car_rqa_promotion()
 
             $dateHired = (!empty($row->date_hired) && $row->date_hired !== '0000-00-00') ? $row->date_hired : '';
             $dateWaived = (!empty($row->date_waived) && $row->date_waived !== '0000-00-00') ? $row->date_waived : '';
+
+            // Same fallback as rqa_issuance_data(): approval date, else the
+            // recommendation date, matching the newest-first sort order.
+            $approvedAt = (!empty($row->approved_at) && $row->approved_at !== '0000-00-00 00:00:00')
+                ? $row->approved_at
+                : (string) ($row->created_at ?? '');
+            $dateApproved = $approvedAt !== '' ? substr($approvedAt, 0, 10) : '';
 
             $rows[] = [
                 'recId' => (int) ($row->rec_id ?? 0),
@@ -6417,6 +6435,7 @@ public function car_rqa_promotion()
                 'brgy' => trim((string) ($row->brgy ?? '')),
                 'itemNumber' => (string) ($row->item_number ?? ''),
                 'school' => (string) ($row->school_name ?? ''),
+                'dateApproved' => $dateApproved,
                 'dateHired' => (string) $dateHired,
                 'dateWaived' => (string) $dateWaived,
                 'status' => (string) ($row->status ?? ''),

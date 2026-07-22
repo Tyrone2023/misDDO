@@ -76,6 +76,8 @@ if (!function_exists('h')) {
     .rqa-contact-line i { color: var(--rqa-muted); width: 13px; }
     .rqa-contact-line.muted { color: var(--rqa-muted); }
     .rqa-date-input { height: 30px; font-size: .7rem; max-width: 150px; }
+    .rqa-approved-tag { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--rqa-primary); background: var(--rqa-soft); border: 1px solid #d8e6f7; border-radius: 8px; font-size: .68rem; padding: .15rem .45rem; white-space: nowrap; }
+    .rqa-approved-tag i { font-size: 13px; }
     .rqa-waived-badge { display: inline-block; font-weight: 800; font-size: .62rem; color: #b94a48; background: #fff0f0; border: 1px solid #f4c7c3; border-radius: 999px; padding: .12rem .45rem; margin-bottom: 4px; }
     .rqa-reused-note { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: .62rem; font-weight: 700; color: var(--rqa-muted); }
     .rqa-reused-note i { font-size: 13px; }
@@ -164,6 +166,7 @@ if (!function_exists('h')) {
                                     <th>Position</th>
                                     <th>Item No.</th>
                                     <th>School Assigned</th>
+                                    <th>Date Approved</th>
                                     <th>Date Hired</th>
                                     <th>Waiver</th>
                                     <th>Appointment Issued</th>
@@ -247,6 +250,20 @@ document.addEventListener('DOMContentLoaded', function () {
         return html;
     }
 
+    // "2026-07-23" -> "Jul 23, 2026" for display in the Date Approved column
+    function formatDateDisplay(s) {
+        if (!s) return '';
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+        if (!m) return s;
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[parseInt(m[2], 10) - 1] + ' ' + parseInt(m[3], 10) + ', ' + m[1];
+    }
+
+    function dateApprovedHtml(r) {
+        if (!r.dateApproved) return '<span class="text-muted">—</span>';
+        return '<span class="rqa-approved-tag"><i class="mdi mdi-calendar-check"></i> ' + escHtml(formatDateDisplay(r.dateApproved)) + '</span>';
+    }
+
     function waiverCellHtml(r) {
         var isWaived = (r.status === 'waived') || !!r.dateWaived;
         if (isWaived) {
@@ -280,6 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td><span class="rqa-pos-tag">' + escHtml(r.position) + '</span></td>';
         html += '<td><span class="rqa-item-pill">' + escHtml(r.itemNumber) + '</span></td>';
         html += '<td>' + (r.school ? '<span class="rqa-school-tag">' + escHtml(r.school) + '</span>' : '<span class="text-muted">—</span>') + '</td>';
+        html += '<td>' + dateApprovedHtml(r) + '</td>';
         html += '<td><input type="date" class="form-control form-control-sm rqa-date-input rqa-date-hired" value="' + escAttr(r.dateHired) + '"></td>';
         html += '<td class="rqa-waiver-cell">' + waiverCellHtml(r) + '</td>';
         html += '<td class="rqa-appoint-cell">' + appointmentIssuedCellHtml(r) + '</td>';

@@ -2149,12 +2149,12 @@ public function count_for_approval_leave4($table, $approver_username)
      * and joins the live rating + applicant/staff details so the approver sees
      * the full comparative assessment. Ordered by position then highest RQA.
      */
-    public function recommended_for_approval($status = 'recommended', $jobID = null)
+    public function recommended_for_approval($status = 'recommended', $jobID = null, $newestFirst = false)
     {
         $majorSelect = $this->rqa_major_select_sql();
 
         $this->db->select("
-            rec.id AS rec_id, rec.item_number, rec.remarks, rec.status, rec.created_at,
+            rec.id AS rec_id, rec.item_number, rec.remarks, rec.status, rec.created_at, rec.approved_at,
             rec.applicant_name AS rec_name, rec.total_points AS rec_total,
             rec.school_id, rec.school_name, rec.date_hired, rec.date_waived,
             rec.appointment_issued_at, rec.appointment_issued_by,
@@ -2195,6 +2195,13 @@ public function count_for_approval_leave4($table, $approver_username)
             $this->db->where('rec.jobID', (int) $jobID);
         }
         $this->db->where('COALESCE(r.total_points, rec.total_points) >= 50', null, false);
+        if ($newestFirst) {
+            // Issuance queue / Appointed List: newest activity first — the
+            // appointment issue date for appointed rows (always NULL while
+            // still in the issuance queue), else the approval date, else the
+            // recommendation date. Rows with no dates at all sort last.
+            $this->db->order_by('COALESCE(rec.appointment_issued_at, rec.approved_at, rec.created_at)', 'DESC', false);
+        }
         $this->db->order_by('jv.jobTitle', 'ASC');
         $this->db->order_by('r.total_points', 'DESC');
 

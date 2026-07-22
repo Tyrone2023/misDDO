@@ -77,6 +77,8 @@ if (!function_exists('h')) {
     .rqa-contact-line.muted { color: var(--rqa-muted); }
     .rqa-date-tag { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: #2c5d3f; background: #ecfbf2; border: 1px solid #c9eed6; border-radius: 8px; font-size: .68rem; padding: .15rem .45rem; }
     .rqa-date-tag i { font-size: 13px; }
+    .rqa-approved-tag { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: #1f3a5f; background: #eef5ff; border: 1px solid #d8e6f7; border-radius: 8px; font-size: .68rem; padding: .15rem .45rem; white-space: nowrap; }
+    .rqa-approved-tag i { font-size: 13px; }
     .rqa-waived-badge { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-size: .62rem; color: #b94a48; background: #fff0f0; border: 1px solid #f4c7c3; border-radius: 999px; padding: .12rem .45rem; }
     .rqa-status-pill { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-size: .62rem; border-radius: 999px; padding: .12rem .5rem; }
     .rqa-status-hired { color: #129777; background: #e8fff8; border: 1px solid #c5f3e6; }
@@ -168,6 +170,7 @@ if (!function_exists('h')) {
                                     <th>Position</th>
                                     <th>Item No.</th>
                                     <th>School Assigned</th>
+                                    <th>Date Approved</th>
                                     <th>Date Hired</th>
                                     <th>Status</th>
                                 </tr>
@@ -256,6 +259,20 @@ document.addEventListener('DOMContentLoaded', function () {
         return '<span class="text-muted">&mdash;</span>';
     }
 
+    // "2026-07-23" -> "Jul 23, 2026" for display in the Date Approved column
+    function formatDateDisplay(s) {
+        if (!s) return '';
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+        if (!m) return s;
+        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[parseInt(m[2], 10) - 1] + ' ' + parseInt(m[3], 10) + ', ' + m[1];
+    }
+
+    function dateApprovedHtml(r) {
+        if (!r.dateApproved) return '<span class="text-muted">&mdash;</span>';
+        return '<span class="rqa-approved-tag"><i class="mdi mdi-calendar-check"></i> ' + escHtml(formatDateDisplay(r.dateApproved)) + '</span>';
+    }
+
     function issuanceRowHtml(r, index) {
         var html = '<tr data-rec-id="' + r.recId + '">';
         html += '<td class="num"><span class="rqa-rank-badge">' + index + '</span></td>';
@@ -266,6 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td><span class="rqa-pos-tag">' + escHtml(r.position) + '</span></td>';
         html += '<td><span class="rqa-item-pill">' + escHtml(r.itemNumber) + '</span></td>';
         html += '<td>' + (r.school ? '<span class="rqa-school-tag">' + escHtml(r.school) + '</span>' : '<span class="text-muted">&mdash;</span>') + '</td>';
+        html += '<td>' + dateApprovedHtml(r) + '</td>';
         html += '<td>' + dateHiredHtml(r) + '</td>';
         html += '<td>' + statusCellHtml(r) + '</td>';
         html += '</tr>';
