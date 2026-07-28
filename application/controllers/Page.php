@@ -5415,6 +5415,113 @@ class Page extends CI_Controller
 		$this->load->view('aip_action_view_approved', $result);
 	}
 
+	/* ====================================================================
+	 * PLAN SUPERVISOR (position "plansup") - view only
+	 *
+	 * The supervisor watches the AIP pipeline but never moves a plan along it,
+	 * so every page below renders the same read-only list: no Approve / Open /
+	 * Evaluate actions, only the tracking history and the generated documents.
+	 * ==================================================================== */
+
+	// The four stages behind the dashboard cards and the sidebar links, keyed by
+	// the URL segment. 'status' is the sgod_aip_submit.status filter; null means
+	// "every plan submitted for the year", whatever stage it has reached.
+	private function plansup_stages()
+	{
+		return array(
+			'submitted' => array(
+				'status' => null,
+				'title'  => 'SUBMITTED IMPLEMENTATION PLANS',
+				'eyebrow' => 'Submitted',
+				'blurb'  => 'Every plan the schools have submitted this fiscal year',
+				'icon'   => 'mdi-send-check-outline',
+			),
+			'reviewed' => array(
+				'status' => 3,
+				'title'  => 'REVIEWED IMPLEMENTATION PLANS',
+				'eyebrow' => 'Reviewed',
+				'blurb'  => 'Plans that have passed the review stage',
+				'icon'   => 'mdi-file-find-outline',
+			),
+			'funds' => array(
+				'status' => 4,
+				'title'  => 'PLANS WITH FUNDS AVAILABLE',
+				'eyebrow' => 'Funds Available',
+				'blurb'  => 'Plans certified as having available funds',
+				'icon'   => 'mdi-cash-multiple',
+			),
+			'approved' => array(
+				'status' => 1,
+				'title'  => 'APPROVED IMPLEMENTATION PLANS',
+				'eyebrow' => 'Approved',
+				'blurb'  => 'Plans that reached final approval',
+				'icon'   => 'mdi-check-decagram',
+			),
+		);
+	}
+
+	private function plansup_list($stage)
+	{
+		$stages = $this->plansup_stages();
+		if (!isset($stages[$stage])) {
+			show_404();
+			return;
+		}
+
+		$fys = $this->session->cur_fy;
+		$meta = $stages[$stage];
+
+		$result['title']   = $meta['title'];
+		$result['eyebrow'] = $meta['eyebrow'];
+		$result['blurb']   = $meta['blurb'];
+		$result['icon']    = $meta['icon'];
+		$result['stage']   = $stage;
+		$result['fy']      = $fys;
+		$result['data']    = $this->SGODModel->aip_approved_list($fys, $meta['status']);
+
+		$this->load->view('templates/head');
+		$this->load->view('templates/header');
+		$this->load->view('aip_plansup_list', $result);
+	}
+
+	function plansup_submitted()
+	{
+		$this->plansup_list('submitted');
+	}
+
+	function plansup_reviewed()
+	{
+		$this->plansup_list('reviewed');
+	}
+
+	function plansup_funds()
+	{
+		$this->plansup_list('funds');
+	}
+
+	function plansup_approved()
+	{
+		$this->plansup_list('approved');
+	}
+
+	// Live counts for the Plan Supervisor dashboard cards (AJAX, JSON). Rendered
+	// server-side first, then refreshed on a timer, so the page still works
+	// without JavaScript.
+	function plansup_counts()
+	{
+		header('Content-Type: application/json');
+
+		if ($this->session->logged_in == false) {
+			echo json_encode(array('status' => 'error', 'message' => 'Your session has expired. Please log in again.'));
+			return;
+		}
+
+		echo json_encode(array(
+			'status' => 'success',
+			'counts' => $this->SGODModel->aip_stage_counts($this->session->cur_fy),
+		));
+	}
+
 	// Read-only HTML fragment for the "View Status" modal on the Approved Plans page.
 	// This renders without templates/head, which is where the login guard normally lives,
 	// so the session check has to be done here.

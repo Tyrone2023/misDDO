@@ -2875,7 +2875,8 @@ class SGODModel extends CI_Model
 	}
 
 	// Approved plans for a fiscal year, joined in one pass so the view does not
-	// re-query schools/allocation/app-percentage for every row.
+	// re-query schools/allocation/app-percentage for every row. Pass $status = null
+	// for every submitted plan regardless of the stage it has reached.
 	public function aip_approved_list($fy, $status = 1)
 	{
 		// The join keys do not share a collation: sgod_aip_submit is utf8mb4_general_ci while
@@ -2910,11 +2911,47 @@ class SGODModel extends CI_Model
 			false
 		);
 		$this->db->where('s.fy', $fy, false);
-		$this->db->where('s.status', $status);
+		if ($status !== null) {
+			$this->db->where('s.status', $status);
+		}
 		$this->db->group_by('s.id');
 		$this->db->order_by('sc.schoolName', 'ASC');
 
 		return $this->db->get()->result();
+	}
+
+	// Per-stage plan counts for a fiscal year in a single grouped query, for the
+	// Plan Supervisor dashboard. "submitted" is every plan the schools have sent
+	// in for the year whatever stage it sits at now; the other three are the
+	// sgod_aip_submit.status values the AIP workflow moves a plan through
+	// (3 = AIP Reviewed, 4 = Funds Available, 1 = Approved).
+	public function aip_stage_counts($fy)
+	{
+		$counts = array('submitted' => 0, 'reviewed' => 0, 'funds' => 0, 'approved' => 0);
+
+		$this->db->select('status, COUNT(*) AS total', false);
+		$this->db->from('sgod_aip_submit');
+		$this->db->where('fy', $fy);
+		$this->db->group_by('status');
+
+		foreach ($this->db->get()->result() as $row) {
+			$total = (int) $row->total;
+			$counts['submitted'] += $total;
+
+			switch ((int) $row->status) {
+				case 3:
+					$counts['reviewed'] = $total;
+					break;
+				case 4:
+					$counts['funds'] = $total;
+					break;
+				case 1:
+					$counts['approved'] = $total;
+					break;
+			}
+		}
+
+		return $counts;
 	}
 
 	// SMEA submissions rolled up per district: how many schools in the district have at least one

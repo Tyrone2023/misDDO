@@ -319,6 +319,27 @@ class Pages extends CI_Controller
             $this->load->view('pages/' . $page, $result);
             $this->load->view('templates/modal');
             $this->load->view('templates/footer');
+        }elseif ($this->session->position == 'plansup') {
+
+            // Plan Supervisor: view-only AIP pipeline dashboard. The counts are
+            // rendered here and then refreshed via AJAX from Page/plansup_counts.
+            $page = "dashboard_plansup";
+
+            if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+                show_404();
+            }
+
+            $fy = $this->session->cur_fy;
+
+            $result['title'] = "Plan Supervisor Dashboard";
+            $result['fy'] = $fy;
+            $result['counts'] = $this->SGODModel->aip_stage_counts($fy);
+
+            $this->load->view('templates/head');
+            $this->load->view('templates/header');
+            $this->load->view('pages/' . $page, $result);
+            $this->load->view('templates/modal');
+            $this->load->view('templates/footer');
         }elseif ($this->session->position == 'funds') {
 
             $page = "dashboard_smmev2";

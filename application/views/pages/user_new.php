@@ -132,7 +132,8 @@
                                             'Private School' => 'private',
                                             'SocMob' => 'socmob',
                                             'School Base Child Protection' => 'sbcp',
-                                            'Mathematics Coordinator' => 'mathcoor'
+                                            'Mathematics Coordinator' => 'mathcoor',
+                                            'Plan Supervisor' => 'plansup'
                                         );
                                         foreach ($position as $row => $key) {
                                         ?>
