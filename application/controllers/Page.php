@@ -8000,6 +8000,20 @@ class Page extends CI_Controller
 		$result['data'] = $this->SGODModel->one_cond('sgod_aip', 'b_code', $_SESSION['aip']);
 		$result['smea'] = $this->SGODModel->one_cond_count('sgod_smea', 'b_code', $_SESSION['aip']);
 
+		// Physical / financial targets for every activity, fetched in one query and
+		// indexed as [aip_id][type] so the details modal does not query per row.
+		$result['sop_map'] = array();
+		$aip_ids = array();
+		foreach ($result['data'] as $row) {
+			$aip_ids[] = $row->id;
+		}
+		if (!empty($aip_ids)) {
+			$this->db->where_in('aip_id', $aip_ids);
+			foreach ($this->db->get('sgod_sop')->result() as $sop) {
+				$result['sop_map'][(string) $sop->aip_id][(string) $sop->type] = $sop;
+			}
+		}
+
 		$this->load->view('templates/head');
 		$this->load->view('templates/header');
 		$this->load->view('smea_view', $result);
@@ -8214,6 +8228,8 @@ class Page extends CI_Controller
 
 		// $result['ft'] = $this->SGODModel->two_cond_row('sgod_school_allocation', 'schoolID', $this->session->username, 'alloc_batch', $_SESSION['aip']);
 
+		// Drives the "Finalize & Submit SMEA" action at the bottom of the report.
+		$result['smea_submitted'] = ($this->SGODModel->one_cond_count('sgod_smea', 'b_code', $bcode)->num_rows() > 0);
 
 		$this->load->view('smea_generate', $result);
 	}

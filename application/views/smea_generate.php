@@ -14,10 +14,17 @@
         <!-- Plugins css-->
          <link href="<?= base_url(); ?>assets/css/renren.css" rel="stylesheet" type="text/css" />
          <style>
+            /* =====================================================================
+               Palette: black / gray / blue
+                 #111827 near-black text      #1f3a5f deep navy (headings)
+                 #1f4e79 blue (accents)       #3f4a58 slate gray (table headers)
+                 #f2f5f8 light gray (zebra)   #cfe0f2 light blue (clickable cells)
+               ===================================================================== */
+
             /* ===== Typography & readability ===== */
             .aip_generate{
                 font-family:'Segoe UI', Calibri, 'Helvetica Neue', Arial, sans-serif;
-                color:#152731;               /* near-black slate: ~13:1 on white */
+                color:#111827;               /* near-black: ~16:1 on white */
                 -webkit-font-smoothing:antialiased;
                 text-rendering:optimizeLegibility;
             }
@@ -25,13 +32,13 @@
                 font-size:21px;
                 font-weight:800;
                 letter-spacing:.3px;
-                color:#0c4446;               /* deep teal, ~9:1 on white */
+                color:#111827;               /* black */
                 line-height:1.35;
             }
             .aip_generate h3{
                 font-size:15px;
                 font-weight:700;
-                color:#0b5b5e;               /* deep teal, ~6.7:1 on white (was #2ea6a9 ≈ 2.7:1) */
+                color:#1f4e79;               /* blue, ~8.6:1 on white */
                 margin-bottom:4px;
             }
             .aip_generate ul{
@@ -39,9 +46,9 @@
                 margin-bottom:6px;
             }
             .aip_generate ul li{
-                background:#e2f1f1;
-                border-left:4px solid #0f6d70;
-                color:#123c3d;
+                background:#eef2f7;
+                border-left:4px solid #1f4e79;
+                color:#1f3a5f;
                 font-weight:700;
                 display:inline-block;
                 padding:5px 12px;
@@ -57,7 +64,7 @@
             }
             .aip_generate table th,
             .aip_generate table td{
-                border:1px solid #8fa6b0;    /* darker grid lines for clearer cell separation */
+                border:1px solid #94a3b8;    /* gray grid lines for clearer cell separation */
                 padding:5px 4px;
                 word-wrap:break-word;
                 overflow-wrap:break-word;
@@ -66,11 +73,11 @@
             }
             .aip_generate table td{
                 background-color:#ffffff;
-                color:#152731;
+                color:#111827;
                 line-height:1.35;
             }
             .aip_generate table th{
-                background-color:#0f6d70;    /* deep teal: white text now ~6.1:1 (was #2ea6a9 ≈ 2.7:1) */
+                background-color:#3f4a58;    /* slate gray: white text ~9.3:1 */
                 color:#ffffff;
                 font-weight:700;
                 font-size:10.5px;
@@ -80,20 +87,20 @@
             }
             /* Zebra striping + hover for easier row tracking across the wide table */
             .aip_generate tbody tr:nth-child(even) td{
-                background-color:#eaf2f3;
+                background-color:#f2f5f8;
             }
             .aip_generate tbody tr:hover td{
-                background-color:#d7ebec;
+                background-color:#e4ebf3;
             }
 
             /* ===== Clickable (highlighted) cells only ===== */
             .ivan{
-                background-color:#ffe598 !important;
-                color:#000 !important;
+                background-color:#e2e8f0 !important;
+                color:#111827 !important;
             }
             .ivy{
-                background-color:#2ec4c7 !important;   /* bright teal action chip: dark text ~7:1 */
-                color:#04302e !important;
+                background-color:#cfe0f2 !important;   /* light blue action chip: dark text ~12:1 */
+                color:#10233a !important;
                 font-weight:700;
             }
             .ivy.smea-clickable{
@@ -101,12 +108,12 @@
             }
             .ivy.smea-clickable:hover,
             .aip_generate tbody tr:hover td.ivy{
-                background-color:#4ad9dc !important;    /* brighter on hover */
-                color:#04302e !important;
+                background-color:#b6d2ee !important;    /* deeper blue on hover */
+                color:#10233a !important;
             }
             .ivy a,
             .smea-clickable a{
-                color:#04302e;
+                color:#10233a;
                 text-decoration:underline;
                 font-weight:700;
             }
@@ -151,7 +158,7 @@
                     color:#000 !important;
                 }
                 .ivy a, .smea-clickable a{ color:#000 !important; }
-                .smea-legend, .smea-edit-hint, .back-to-top, .smea-modal-overlay{ display:none !important; }
+                .smea-legend, .smea-edit-hint, .back-to-top, .smea-modal-overlay, .smea-finalize-float{ display:none !important; }
             }
 
             /* --- Legend --- */
@@ -159,21 +166,21 @@
                 display:inline-flex;
                 align-items:center;
                 gap:8px;
-                border:1px solid #0f6d70;
-                background:#eef7f7;
+                border:1px solid #c3cedb;
+                background:#eef2f7;
                 border-radius:5px;
                 padding:6px 12px;
                 margin:0 auto 12px;
                 font-size:13px;
                 font-weight:600;
-                color:#123c3d;
+                color:#1f3a5f;
             }
             .smea-legend .swatch{
                 display:inline-block;
                 width:16px;
                 height:16px;
-                background:#2ec4c7;           /* matches the actual clickable cell colour */
-                border:1px solid #0f6d70;
+                background:#cfe0f2;           /* matches the actual clickable cell colour */
+                border:1px solid #1f4e79;
                 border-radius:3px;
             }
 
@@ -202,7 +209,7 @@
                 display:flex;
                 align-items:center;
                 justify-content:space-between;
-                background:#0f6d70;
+                background:#1f3a5f;
                 color:#fff;
                 padding:12px 16px;
                 font-size:16px;
@@ -217,14 +224,14 @@
                 cursor:pointer;
             }
             .smea-modal-body{ padding:18px 16px; }
-            .smea-modal-sub{ margin:0 0 14px; font-size:13px; color:#3f4c54; }
+            .smea-modal-sub{ margin:0 0 14px; font-size:13px; color:#4b5563; }
             .smea-field{ margin-bottom:12px; }
             .smea-field label{
                 display:block;
                 font-size:12px;
                 font-weight:700;
                 margin-bottom:4px;
-                color:#1e2a31;
+                color:#111827;
             }
             .smea-req{ color:#e74c3c; }
             .smea-input{
@@ -248,16 +255,77 @@
                 font-size:14px;
                 cursor:pointer;
             }
-            .smea-btn-save{ background:#0f6d70; color:#fff; font-weight:600; }
-            .smea-btn-save:hover{ background:#0b5b5e; color:#fff; }
-            .smea-btn-cancel{ background:#e0e0e0; color:#222; }
-            .smea-loading{ text-align:center; color:#777; padding:20px 0; }
+            .smea-btn-save{ background:#1f4e79; color:#fff; font-weight:600; }
+            .smea-btn-save:hover{ background:#163d61; color:#fff; }
+            .smea-btn-cancel{ background:#e2e8f0; color:#111827; }
+            .smea-loading{ text-align:center; color:#6b7280; padding:20px 0; }
+
+            /* --- Finalize / submit SMEA: floating panel, top right --- */
+            .smea-finalize-float{
+                position:fixed;
+                top:14px;
+                right:16px;
+                z-index:1040;
+                background:#ffffff;
+                border:1px solid #cbd5e1;
+                border-left:5px solid #1f4e79;
+                border-radius:7px;
+                box-shadow:0 6px 18px rgba(17,24,39,.16);
+                padding:10px 14px;
+                text-align:left;      /* the report body is centred — keep this block left aligned */
+                max-width:320px;
+            }
+            .smea-finalize-float .smea-finalize-cap{
+                display:block;
+                font-size:11px;
+                font-weight:600;
+                color:#4b5563;
+                margin-top:6px;
+                line-height:1.35;
+            }
+            .smea-finalize-btn{
+                display:inline-block;
+                background:#1f4e79;
+                color:#fff !important;
+                text-decoration:none;
+                font-weight:700;
+                font-size:13px;
+                padding:9px 18px;
+                border-radius:4px;
+                white-space:nowrap;
+                box-shadow:0 2px 5px rgba(31,78,121,.28);
+            }
+            .smea-finalize-btn:hover{ background:#163d61; }
+            .smea-finalize-btn.is-busy{ opacity:.6; pointer-events:none; }
+            .smea-finalize-float.smea-finalized{
+                border-left-color:#3f4a58;
+            }
+            .smea-finalize-done{
+                display:inline-block;
+                font-size:13px;
+                font-weight:700;
+                color:#1f3a5f;
+                white-space:nowrap;
+            }
+            .smea-finalize-icon{
+                color:#1f4e79;
+                font-weight:700;
+                margin-right:5px;
+            }
+            @media (max-width:900px){
+                .smea-finalize-float{
+                    position:static;
+                    margin:0 auto 14px;
+                    max-width:none;
+                    text-align:center;
+                }
+            }
 
             .back-to-top {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background-color: #0f6d70;
+            background-color: #3f4a58;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -286,7 +354,43 @@
 
     <body class="aip_generate sop_gen aip" id="printTable">
 
+    <!-- Finalize: same submission as the "Submit SMEA" button on Page/smeav2 -->
+    <?php $smea_submitted = isset($smea_submitted) ? $smea_submitted : false; ?>
+    <?php if ($smea_submitted) { ?>
+        <div class="smea-finalize-float smea-finalized">
+            <span class="smea-finalize-done"><span class="smea-finalize-icon">&#10003;</span>SMEA Submitted</span>
+            <span class="smea-finalize-cap">Finalized for FY <?= html_escape($fy); ?> &mdash; no further submission needed.</span>
+        </div>
+    <?php } else { ?>
+        <div class="smea-finalize-float">
+            <a id="smeaFinalizeBtn" class="smea-finalize-btn"
+                data-fy="<?= html_escape($fy); ?>"
+                href="<?= base_url(); ?>Page/submit_smea/<?= $this->session->username; ?>/<?= $_SESSION['aip']; ?>/<?= $_SESSION['fy']; ?>">
+                Finalize &amp; Submit SMEA
+            </a>
+            <span class="smea-finalize-cap">Submits your FY <?= html_escape($fy); ?> SMEA to the division office.</span>
+        </div>
 
+        <script>
+            (function () {
+                var btn = document.getElementById('smeaFinalizeBtn');
+                if (!btn) { return; }
+
+                btn.addEventListener('click', function (e) {
+                    if (btn.dataset.busy === '1') { e.preventDefault(); return; }
+
+                    var msg = 'Finalize and submit this SMEA report for FY ' + btn.dataset.fy + '?\n\n' +
+                              'It will be marked as submitted to the division office.';
+                    if (!confirm(msg)) { e.preventDefault(); return; }
+
+                    // Guard against a double click firing two inserts.
+                    btn.dataset.busy = '1';
+                    btn.classList.add('is-busy');
+                    btn.textContent = 'Submitting…';
+                });
+            })();
+        </script>
+    <?php } ?>
 
 
     <!-- <img class="logo" src="<?= base_url(); ?>assets/images/report/ke.png" alt="">

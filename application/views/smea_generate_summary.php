@@ -14,16 +14,41 @@
         <!-- Plugins css-->
          <link href="<?= base_url(); ?>assets/css/renren.css" rel="stylesheet" type="text/css" />
          <style>
+            /* =====================================================================
+               Palette: black / gray / blue
+                 #111827 near-black text      #1f3a5f deep navy (headings)
+                 #1f4e79 blue (accents)       #3f4a58 slate gray (table headers)
+                 #f2f5f8 light gray (zebra)   #cfe0f2 light blue (highlight cells)
+               ===================================================================== */
+            .aip_generate{
+                font-family:'Segoe UI', Calibri, 'Helvetica Neue', Arial, sans-serif;
+                color:#111827;
+                -webkit-font-smoothing:antialiased;
+            }
+            .aip_generate h1{
+                font-size:21px;
+                font-weight:800;
+                letter-spacing:.3px;
+                color:#111827;
+                line-height:1.35;
+            }
+            .aip_generate h3{
+                font-size:15px;
+                font-weight:700;
+                color:#1f4e79;
+                margin-bottom:4px;
+            }
+
             .ivan{
-                background-color:#ffe598 !important;
-                color:#000 !important;
+                background-color:#e2e8f0 !important;
+                color:#111827 !important;
             }
             .ivy{
-                background-color:#2ea6a9 !important;
-                color:#000 !important;
+                background-color:#cfe0f2 !important;
+                color:#10233a !important;
             }
             .ivy:hover {
-                background-color:#26f5fa !important;
+                background-color:#b6d2ee !important;
             }
 
             /* ===== Fit-to-width table (no sideways scroll) ===== */
@@ -35,7 +60,7 @@
             }
             .aip_generate table th,
             .aip_generate table td{
-                border:1px solid #8fa6b0;
+                border:1px solid #94a3b8;
                 padding:5px 4px;
                 word-wrap:break-word;
                 overflow-wrap:break-word;
@@ -43,9 +68,76 @@
                 vertical-align:middle;
             }
             .aip_generate table th{
+                background-color:#3f4a58 !important;   /* overrides the shared teal in renren.css */
+                color:#ffffff !important;
                 font-size:10px;
+                font-weight:700;
                 line-height:1.25;
+                text-transform:uppercase;
+                letter-spacing:.3px;
             }
+            .aip_generate table td{
+                background-color:#ffffff;
+                color:#111827;
+            }
+            .aip_generate tbody tr:nth-child(even) td{ background-color:#f2f5f8; }
+            .aip_generate tbody tr:hover td{ background-color:#e4ebf3; }
+
+            /* ===== Quarter filter / print controls (screen only) ===== */
+            .smea-controls{
+                display:inline-flex;
+                align-items:center;
+                flex-wrap:wrap;
+                gap:8px;
+                border:1px solid #cbd5e1;
+                background:#f6f8fb;
+                border-radius:6px;
+                padding:9px 14px;
+                margin:0 auto 14px;
+                font-size:13px;
+                color:#1f3a5f;
+            }
+            .smea-controls .smea-controls-label{
+                font-weight:700;
+                margin-right:2px;
+            }
+            .smea-qbtn{
+                border:1px solid #b8c4d2;
+                background:#ffffff;
+                color:#1f3a5f;
+                font-weight:600;
+                font-size:13px;
+                padding:6px 14px;
+                border-radius:4px;
+                cursor:pointer;
+                line-height:1.2;
+            }
+            .smea-qbtn:hover{ background:#e8eef6; }
+            .smea-qbtn.is-active{
+                background:#1f4e79;
+                border-color:#1f4e79;
+                color:#ffffff;
+            }
+            .smea-print-btn{
+                border:1px solid #3f4a58;
+                background:#3f4a58;
+                color:#ffffff;
+                font-weight:700;
+                font-size:13px;
+                padding:6px 16px;
+                border-radius:4px;
+                cursor:pointer;
+                margin-left:6px;
+            }
+            .smea-print-btn:hover{ background:#2f3845; }
+            .smea-empty{
+                color:#6b7280;
+                font-size:13px;
+                margin:24px 0;
+            }
+
+            /* DepEd letterhead: printed sheets only */
+            .print-letterhead{ display:none; }
 
             @media (max-width:900px){
                 .aip_generate table{ font-size:9px; }
@@ -70,19 +162,29 @@
                 /* No background colours when printing — plain white cells, black text, borders kept */
                 .aip_generate table th,
                 .aip_generate table td,
+                .aip_generate tbody tr:nth-child(even) td,
+                .aip_generate tbody tr:hover td,
                 .ivan, .ivy, .ivy:hover{
                     background:transparent !important;
                     background-color:transparent !important;
                     color:#000 !important;
                 }
-                .back-to-top{ display:none !important; }
+                .back-to-top, .smea-controls{ display:none !important; }
+
+                /* DepEd letterhead at the top of the printed report */
+                .print-letterhead{
+                    display:block;
+                    width:80mm;
+                    height:auto;
+                    margin:0 auto 5mm;
+                }
             }
 
             .back-to-top {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background-color: #2ea6a9;
+            background-color: #3f4a58;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -134,13 +236,29 @@
       
 
 
+    <img class="print-letterhead" src="<?= base_url(); ?>assets/images/header.png"
+        alt="Republic of the Philippines - Department of Education - Region XI - School Division of Davao Oriental" />
+
     <h1>SCHOOL MONITORING, EVALUATION AND ADJUSTMENT<br />FY <?= $fy; ?></h1>
 
+    <!-- Choose which quarter(s) are shown — the hidden ones are left out of the printout too. -->
+    <div class="smea-controls">
+        <span class="smea-controls-label">Quarter to display / print:</span>
+        <button type="button" class="smea-qbtn is-active" data-q="all">All</button>
+        <button type="button" class="smea-qbtn" data-q="1">Q1</button>
+        <button type="button" class="smea-qbtn" data-q="2">Q2</button>
+        <button type="button" class="smea-qbtn" data-q="3">Q3</button>
+        <button type="button" class="smea-qbtn" data-q="4">Q4</button>
+        <button type="button" class="smea-print-btn" id="smeaPrintBtn">Print</button>
+    </div>
+
     <?php for ($q = 1; $q <= 4; $q++) { $renguapo = 'q'.$q;  $guapoko = 'smea_q'.$q;?>
-    
+
+    <section class="smea-quarter" data-quarter="<?= $q; ?>">
+
         <h3>Quarter <?= $q; ?></h3>
 
-    
+
 
 
     
@@ -274,8 +392,10 @@
         
             
            
-        </tbody> 
+        </tbody>
     </table>
+
+    </section>
 
     <?php } ?>
 
@@ -312,6 +432,41 @@ window.onscroll = function() {
 backToTopButton.onclick = function() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
+    </script>
+
+    <script>
+    (function () {
+        var buttons  = document.querySelectorAll('.smea-qbtn');
+        var sections = document.querySelectorAll('.smea-quarter');
+        if (!buttons.length || !sections.length) { return; }
+
+        function apply(choice) {
+            var shown = 0;
+
+            sections.forEach(function (section) {
+                var visible = (choice === 'all' || section.dataset.quarter === choice);
+                section.style.display = visible ? '' : 'none';
+                // Each printed quarter starts on its own sheet; the first one must not.
+                section.style.pageBreakBefore = (visible && shown > 0) ? 'always' : 'auto';
+                if (visible) { shown++; }
+            });
+
+            buttons.forEach(function (b) {
+                b.classList.toggle('is-active', b.dataset.q === choice);
+            });
+        }
+
+        buttons.forEach(function (b) {
+            b.addEventListener('click', function () { apply(b.dataset.q); });
+        });
+
+        var printBtn = document.getElementById('smeaPrintBtn');
+        if (printBtn) {
+            printBtn.addEventListener('click', function () { window.print(); });
+        }
+
+        apply('all');
+    })();
     </script>
 
 
