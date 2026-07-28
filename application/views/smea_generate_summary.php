@@ -455,7 +455,7 @@
     <div class="smea-doc">
 
         <img class="print-letterhead" src="<?= base_url(); ?>assets/images/header.png"
-            alt="Republic of the Philippines - Department of Education - Region XI - School Division of Davao Oriental" />
+            alt="Republic of the Philippines - Department of Education - Region XI - School Division of Davao De Oro" />
 
         <header class="smea-masthead">
             <div>
