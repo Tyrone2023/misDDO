@@ -1519,6 +1519,7 @@
                             <?php elseif ($this->session->userdata('position') === 'review') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/aip_sub_review"><i class="fas fa-scroll"></i>Implementation Plans</a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i>Approved Plans</a></li>
 
 
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
@@ -1528,6 +1529,7 @@
                             <?php elseif ($this->session->userdata('position') === 'funds') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/aip_sub_funds"><i class="fas fa-scroll"></i>Implementation Plans</a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i>Approved Plans</a></li>
 
 
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
@@ -1876,6 +1878,7 @@
 
                                 <li><a href="<?= base_url(); ?>Page/deptDashboard" class="waves-effect"><i class="fas fa-user-alt"></i><span>Dashboard </span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/aip_sub_sgod_chief"><i class="fas fa-scroll"></i>Implementation Plans</a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i>Approved Plans</a></li>
 
 
                                 <li><a href="<?= base_url(); ?>Page/sections"><i class="fas fa-dice-four"></i>Sections</a></li>

@@ -5402,6 +5402,37 @@ class Page extends CI_Controller
 		$this->load->view('aip_action_view_sgod_chief', $result);
 	}
 
+	function aip_sub_approved()
+	{
+		$result['title'] = "APPROVED PLANS";
+		$fys = $this->session->cur_fy;
+
+		$result['data'] = $this->SGODModel->aip_approved_list($fys);
+		$result['fy'] = $fys;
+
+		$this->load->view('templates/head');
+		$this->load->view('templates/header');
+		$this->load->view('aip_action_view_approved', $result);
+	}
+
+	// Read-only HTML fragment for the "View Status" modal on the Approved Plans page.
+	// This renders without templates/head, which is where the login guard normally lives,
+	// so the session check has to be done here.
+	function aip_track_modal()
+	{
+		if ($this->session->logged_in == false) {
+			show_error('Not authorised.', 403);
+			return;
+		}
+
+		$id = $this->uri->segment(3);
+
+		$result['data'] = $this->SGODModel->one_cond_orderby('sgod_aip_track', 'submit_id', $id, 'id', 'desc');
+		$result['aip'] = $this->SGODModel->one_cond_row('sgod_aip_submit', 'id', $id);
+
+		$this->load->view('aip_track_modal', $result);
+	}
+
 
 	function aip_evaluate()
 	{

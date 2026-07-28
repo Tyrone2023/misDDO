@@ -122,7 +122,7 @@
                                             'SHNS' => 'SHNS',
                                             'Employee' => 'user',
                                             'Applicant' => 'Applicant',
-                                            'School Account' => 'School Account',
+                                            'School' => 'School',
                                             'District' => 'District',
                                             'Evaluator' => 'Evaluator',
                                             'Document Evaluator' => 'doceval',

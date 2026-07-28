@@ -2874,6 +2874,49 @@ class SGODModel extends CI_Model
 		return $this->db->update('semesterstude', $data);
 	}
 
+	// Approved plans for a fiscal year, joined in one pass so the view does not
+	// re-query schools/allocation/app-percentage for every row.
+	public function aip_approved_list($fy, $status = 1)
+	{
+		// The join keys do not share a collation: sgod_aip_submit is utf8mb4_general_ci while
+		// schools/sgod_school_allocation are utf8mb4_unicode_ci, so each string comparison needs an
+		// explicit COLLATE or MySQL raises error 1267. sgod_app_percentage.b_code is an INT (not a
+		// string at all) and its fy is latin1, so that join casts b_code and matches fy to the bound
+		// literal instead of to s.fy.
+		$fy = $this->db->escape($fy);
+
+		$this->db->select('s.id, s.fy, s.b_code, s.school_id, s.date, s.status, s.remarks,
+			sc.schoolName, sc.district, sc.course,
+			alloc.alloc_group, alloc.alloc_amount,
+			app.id as app_id', false);
+		$this->db->from('sgod_aip_submit s');
+		$this->db->join(
+			'schools sc',
+			'sc.schoolID = s.school_id COLLATE utf8mb4_unicode_ci',
+			'left',
+			false
+		);
+		$this->db->join(
+			'sgod_school_allocation alloc',
+			'alloc.schoolID = s.school_id COLLATE utf8mb4_unicode_ci
+				AND alloc.alloc_batch = s.b_code COLLATE utf8mb4_unicode_ci',
+			'left',
+			false
+		);
+		$this->db->join(
+			'sgod_app_percentage app',
+			'app.b_code = CAST(s.b_code AS UNSIGNED) AND app.fy = ' . $fy,
+			'left',
+			false
+		);
+		$this->db->where('s.fy', $fy, false);
+		$this->db->where('s.status', $status);
+		$this->db->group_by('s.id');
+		$this->db->order_by('sc.schoolName', 'ASC');
+
+		return $this->db->get()->result();
+	}
+
 
 
 	
