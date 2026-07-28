@@ -2917,7 +2917,65 @@ class SGODModel extends CI_Model
 		return $this->db->get()->result();
 	}
 
+	// SMEA submissions rolled up per district: how many schools in the district have at least one
+	// sgod_smea row for the fiscal year, and how many still have none. Done as a single grouped
+	// query so the district landing page does not fire one count per school.
+	//
+	// schools.schoolID is utf8mb4_unicode_ci while sgod_smea.school_id is utf8mb4_0900_ai_ci, so the
+	// join key needs an explicit COLLATE or MySQL raises error 1267. Comparing a column to a bound
+	// literal (sm.fy) is safe because literals are coercible to the column's collation.
+	public function smea_district_summary($fy)
+	{
+		$fy = $this->db->escape($fy);
 
+		$this->db->select("sc.district,
+			COUNT(DISTINCT sc.schoolID) AS total_schools,
+			COUNT(DISTINCT sm.school_id) AS submitted,
+			COUNT(DISTINCT sc.schoolID) - COUNT(DISTINCT sm.school_id) AS not_submitted,
+			MAX(sm.date_submit) AS last_submit", false);
+		$this->db->from('schools sc');
+		$this->db->join(
+			'sgod_smea sm',
+			'sm.school_id COLLATE utf8mb4_unicode_ci = sc.schoolID AND sm.fy = ' . $fy,
+			'left',
+			false
+		);
+		$this->db->where('sc.district !=', '');
+		$this->db->group_by('sc.district');
+		$this->db->order_by('sc.district', 'ASC');
 
-	
+		return $this->db->get()->result();
+	}
+
+	// Schools of one district for the SMEA drill-down. $filter is 'submitted' (schools with at least
+	// one submission for the fiscal year), 'pending' (schools with none) or 'all'. A school can submit
+	// once per budget code, so the submissions are aggregated per school.
+	public function smea_schools_by_district($district, $fy, $filter = 'submitted')
+	{
+		$fy = $this->db->escape($fy);
+
+		$this->db->select("sc.schoolID, sc.schoolName, sc.district, sc.course, sc.schoolType,
+			COUNT(sm.id) AS submissions,
+			MAX(sm.date_submit) AS last_submit,
+			GROUP_CONCAT(DISTINCT sm.b_code ORDER BY sm.b_code) AS b_codes", false);
+		$this->db->from('schools sc');
+		$this->db->join(
+			'sgod_smea sm',
+			'sm.school_id COLLATE utf8mb4_unicode_ci = sc.schoolID AND sm.fy = ' . $fy,
+			'left',
+			false
+		);
+		$this->db->where('sc.district', $district);
+		$this->db->group_by('sc.schoolID');
+
+		if ($filter === 'submitted') {
+			$this->db->having('submissions >', 0);
+		} elseif ($filter === 'pending') {
+			$this->db->having('submissions', 0);
+		}
+
+		$this->db->order_by('sc.schoolName', 'ASC');
+
+		return $this->db->get()->result();
+	}
 }

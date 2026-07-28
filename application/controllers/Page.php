@@ -8308,16 +8308,105 @@ class Page extends CI_Controller
 		redirect("Page/smeav2");
 	}
 
+	// Fiscal year the SMEA admin pages report on. fy_setting only ever writes cur_fy, so fy_admin
+	// stays undefined and is kept here just so any session that still carries it keeps working.
+	private function smea_admin_fy()
+	{
+		if (!empty($_SESSION['fy_admin'])) {
+			return $_SESSION['fy_admin'];
+		}
+
+		return $this->session->cur_fy;
+	}
+
+	// Landing page for "Submitted SMEA": districts first, with the submitted / not submitted split,
+	// then drill into a district to see the schools themselves.
 	function smea_admin()
 	{
 		$result['title'] = "School Monitoring, Evaluation and Adjustment (SMEA)";
 
-		if (!isset($_SESSION['fy_admin'])) {
+		$fy = $this->smea_admin_fy();
+		if (empty($fy)) {
 			redirect(base_url() . 'Page/fy_setting');
 		}
 
-		//$result['data'] = $this->SGODModel->one_cond('sgod_aip', 'b_code', $_SESSION['aip']);
-		$result['smea'] = $this->SGODModel->one_cond('sgod_smea', 'fy', $_SESSION['fy_admin']);
+		$result['fy'] = $fy;
+		$result['data'] = $this->SGODModel->smea_district_summary($fy);
+
+		$this->load->view('templates/head');
+		$this->load->view('templates/header');
+		$this->load->view('smea_district', $result);
+	}
+
+	// Schools of one district. Segment 4 selects which slice is listed: submitted (default),
+	// pending or all.
+	function smea_admin_schools()
+	{
+		$fy = $this->smea_admin_fy();
+		if (empty($fy)) {
+			redirect(base_url() . 'Page/fy_setting');
+		}
+
+		$district = rawurldecode((string) $this->uri->segment(3));
+		if ($district === '') {
+			redirect(base_url() . 'Page/smea_admin');
+		}
+
+		$filter = $this->uri->segment(4);
+		if (!in_array($filter, array('submitted', 'pending', 'all'), true)) {
+			$filter = 'submitted';
+		}
+
+		// One query for the whole district; the tab counts and the listed slice are both derived
+		// from it so switching tabs does not re-run the aggregate three times.
+		$schools = $this->SGODModel->smea_schools_by_district($district, $fy, 'all');
+
+		$submitted = array();
+		$pending = array();
+		foreach ($schools as $school) {
+			if ((int) $school->submissions > 0) {
+				$submitted[] = $school;
+			} else {
+				$pending[] = $school;
+			}
+		}
+
+		$result['title'] = $district;
+		$result['fy'] = $fy;
+		$result['district'] = $district;
+		$result['filter'] = $filter;
+		$result['counts'] = array(
+			'submitted' => count($submitted),
+			'pending'   => count($pending),
+			'all'       => count($schools),
+		);
+
+		if ($filter === 'submitted') {
+			$result['data'] = $submitted;
+		} elseif ($filter === 'pending') {
+			$result['data'] = $pending;
+		} else {
+			$result['data'] = $schools;
+		}
+
+		$this->load->view('templates/head');
+		$this->load->view('templates/header');
+		$this->load->view('smea_district_schools', $result);
+	}
+
+	// Flat list of every SMEA submission for the fiscal year, kept from the previous version of
+	// the page and reachable from the district list.
+	function smea_admin_list()
+	{
+		$result['title'] = "School Monitoring, Evaluation and Adjustment (SMEA)";
+
+		$fy = $this->smea_admin_fy();
+		if (empty($fy)) {
+			redirect(base_url() . 'Page/fy_setting');
+		}
+
+		$result['fy'] = $fy;
+		$result['smea'] = $this->SGODModel->one_cond('sgod_smea', 'fy', $fy);
 
 		$this->load->view('templates/head');
 		$this->load->view('templates/header');
@@ -8328,9 +8417,11 @@ class Page extends CI_Controller
 	{
 		$result['title'] = "School Monitoring, Evaluation and Adjustment (SMEA)";
 
+		$fy = $this->smea_admin_fy();
+
 		//$result['data'] = $this->SGODModel->one_cond('sgod_aip', 'b_code', $_SESSION['aip']);
-		$result['smea'] = $this->SGODModel->one_cond('sgod_smea', 'fy', $_SESSION['fy_admin']);
-		$result['fy'] = $_SESSION['fy_admin'];
+		$result['smea'] = $this->SGODModel->one_cond('sgod_smea', 'fy', $fy);
+		$result['fy'] = $fy;
 		$this->load->view('smea_generate_admin', $result);
 	}
 

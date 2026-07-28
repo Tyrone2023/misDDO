@@ -34,7 +34,8 @@
                                             '</div>'; 
                                         ?>
                                         <?php endif;  ?>
-                                    <h4 class="page-title" id="myLargeModalLabel">    
+                                    <h4 class="page-title" id="myLargeModalLabel">
+                                    <a class="btn btn-secondary" href="<?= base_url(); ?>Page/smea_admin">&larr; By District</a>
                                     <a data-toggle="modal" class="open-AddBookDialog btn btn-primary" href="#sop">SMEA Report</a>
                                     <!-- <a class="btn btn-success waves-effect waves-light"  href="<?= base_url(); ?>Page/smea_admin_generate/" >SMEA Report</a> -->
                                     </h4>
