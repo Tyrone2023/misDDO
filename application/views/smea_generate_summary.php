@@ -13,54 +13,236 @@
 
         <!-- Plugins css-->
          <link href="<?= base_url(); ?>assets/css/renren.css" rel="stylesheet" type="text/css" />
+         <!-- Same type family the SGOD/IPCRF workspace uses; falls back to Segoe UI offline -->
+         <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Montserrat:600,700,800&display=swap" rel="stylesheet" type="text/css" />
          <style>
             /* =====================================================================
-               Palette: black / gray / blue
-                 #111827 near-black text      #1f3a5f deep navy (headings)
-                 #1f4e79 blue (accents)       #3f4a58 slate gray (table headers)
-                 #f2f5f8 light gray (zebra)   #cfe0f2 light blue (highlight cells)
+               SMEA summary — same design language as the SGOD IPCRF workspace
+               (sgod/assets/css/ipcrf.css) and the quarterly SMEA report.
+
+                 navy #172554 / #273856 · blue #3157c8 · ink #24324a
+                 muted #6b7890 · hairline #dfe6f2 · page #eef1f6 · tint #d7e2f3
                ===================================================================== */
-            .aip_generate{
-                font-family:'Segoe UI', Calibri, 'Helvetica Neue', Arial, sans-serif;
-                color:#111827;
+
+            html, body{ margin:0; padding:0; }
+
+            body.aip_generate{
+                background:#eef1f6;
+                font-family:'Lato', 'Segoe UI', Calibri, Arial, sans-serif;
+                color:#24324a;
                 -webkit-font-smoothing:antialiased;
-            }
-            .aip_generate h1{
-                font-size:21px;
-                font-weight:800;
-                letter-spacing:.3px;
-                color:#111827;
-                line-height:1.35;
-            }
-            .aip_generate h3{
-                font-size:15px;
-                font-weight:700;
-                color:#1f4e79;
-                margin-bottom:4px;
+                padding:0 0 40px;
             }
 
+            /* ===== Document surface ===== */
+            .smea-doc{
+                background:#ffffff;
+                border:1px solid #d7deea;
+                border-radius:6px;
+                box-shadow:0 5px 24px rgba(30,43,69,.10);
+                margin:14px auto 0;
+                max-width:1760px;
+                padding:22px 24px 26px;
+                text-align:center;
+            }
+
+            /* ===== Masthead ===== */
+            .smea-masthead{
+                display:flex;
+                align-items:flex-end;
+                justify-content:space-between;
+                gap:16px;
+                text-align:left;
+                border-bottom:1px solid #dfe6f2;
+                padding-bottom:14px;
+                margin-bottom:16px;
+            }
+            .smea-kicker{
+                display:block;
+                color:#3157c8;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:11px;
+                font-weight:800;
+                letter-spacing:.12em;
+                text-transform:uppercase;
+                margin-bottom:5px;
+            }
+            .smea-masthead h1{
+                margin:0 0 4px;
+                color:#172554;
+                font-family:Georgia, 'Times New Roman', serif;
+                font-size:26px;
+                font-weight:800;
+                letter-spacing:-.01em;
+                line-height:1.2;
+                text-align:left;
+            }
+            .smea-masthead p{
+                margin:0;
+                color:#6b7890;
+                font-size:13px;
+                line-height:1.45;
+            }
+            .smea-status{
+                display:inline-flex;
+                align-items:center;
+                gap:7px;
+                flex:none;
+                background:#eef3ff;
+                border:1px solid #cad7ff;
+                border-radius:999px;
+                color:#3157c8;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:12px;
+                font-weight:800;
+                padding:8px 14px;
+                white-space:nowrap;
+            }
+            .smea-status:before{
+                content:'';
+                background:currentColor;
+                border-radius:50%;
+                height:7px;
+                width:7px;
+            }
+
+            /* ===== Meta strip ===== */
+            .smea-meta{
+                display:grid;
+                grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+                gap:10px;
+                text-align:left;
+                margin-bottom:16px;
+            }
+            .smea-meta-item{
+                background:#f8faff;
+                border:1px solid #e5ebf6;
+                border-radius:10px;
+                padding:9px 12px;
+            }
+            .smea-meta-item span{
+                display:block;
+                color:#6b7890;
+                font-size:10px;
+                font-weight:800;
+                letter-spacing:.06em;
+                text-transform:uppercase;
+                margin-bottom:3px;
+            }
+            .smea-meta-item strong{
+                display:block;
+                color:#24324a;
+                font-size:13px;
+                font-weight:700;
+                line-height:1.3;
+                overflow-wrap:anywhere;
+            }
+
+            /* ===== Sticky toolbar: quarter filter + print ===== */
+            .smea-toolbar{
+                display:flex;
+                align-items:center;
+                flex-wrap:wrap;
+                gap:8px;
+                background:rgba(255,255,255,.97);
+                border:1px solid #dfe6f2;
+                border-radius:11px;
+                box-shadow:0 7px 22px rgba(38,55,93,.08);
+                padding:9px 12px;
+                margin-bottom:16px;
+                position:sticky;
+                top:10px;
+                z-index:90;
+                text-align:left;
+            }
+            .smea-toolbar .toolbar-spacer{ flex:1 1 auto; }
+            .smea-toolbar-label{
+                color:#58647a;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:11px;
+                font-weight:800;
+                letter-spacing:.05em;
+                text-transform:uppercase;
+                margin-right:2px;
+            }
+            .smea-btn{
+                display:inline-flex;
+                align-items:center;
+                gap:6px;
+                border-radius:7px;
+                border:1px solid transparent;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:12px;
+                font-weight:700;
+                padding:8px 14px;
+                cursor:pointer;
+                text-decoration:none;
+                white-space:nowrap;
+            }
+            .smea-qbtn{
+                background:#ffffff;
+                border-color:#c3ceda;
+                color:#3f4a5c;
+                min-width:46px;
+                justify-content:center;
+            }
+            .smea-qbtn:hover{ background:#eef3ff; border-color:#9db0e8; color:#234aa8; }
+            .smea-qbtn.is-active{
+                background:#e8eeff;
+                border-color:#9db0e8;
+                color:#234aa8;
+                box-shadow:inset 0 0 0 1px #9db0e8;
+            }
+            .smea-print-btn{
+                background:#3157c8;
+                border-color:#3157c8;
+                color:#ffffff;
+                box-shadow:0 2px 6px rgba(49,87,200,.25);
+            }
+            .smea-print-btn:hover{ background:#234aa8; border-color:#234aa8; }
+
+            /* ===== Quarter section heads (IPCRF document section head) ===== */
+            .smea-quarter{ margin-top:22px; }
+            .aip_generate .smea-quarter h3{
+                background:#d7e2f3;
+                border:1px solid #b6c6df;
+                border-left:4px solid #273856;
+                border-radius:3px;
+                color:#16294d;
+                font-family:Georgia, 'Times New Roman', serif;
+                font-size:13px;
+                font-weight:800;
+                letter-spacing:.025em;
+                margin:0;
+                padding:8px 12px;
+                text-align:left;
+                text-transform:uppercase;
+            }
+
+            /* ===== Data table ===== */
             .ivan{
-                background-color:#e2e8f0 !important;
-                color:#111827 !important;
+                background-color:#eceef1 !important;
+                color:#24324a !important;
             }
             .ivy{
-                background-color:#cfe0f2 !important;
-                color:#10233a !important;
+                background-color:#dbe6fa !important;
+                color:#1f3d7a !important;
             }
             .ivy:hover {
-                background-color:#b6d2ee !important;
+                background-color:#c7d8f5 !important;
             }
 
-            /* ===== Fit-to-width table (no sideways scroll) ===== */
             .aip_generate table{
                 width:100%;
                 table-layout:fixed;          /* share width across all columns so nothing overflows */
                 border-collapse:collapse;
                 font-size:11px;
+                margin-top:8px;
+                margin-bottom:0;
             }
             .aip_generate table th,
             .aip_generate table td{
-                border:1px solid #94a3b8;
+                border:1px solid #9aa3b2;
                 padding:5px 4px;
                 word-wrap:break-word;
                 overflow-wrap:break-word;
@@ -68,70 +250,37 @@
                 vertical-align:middle;
             }
             .aip_generate table th{
-                background-color:#3f4a58 !important;   /* overrides the shared teal in renren.css */
+                background-color:#273856 !important;   /* overrides the shared teal in renren.css */
                 color:#ffffff !important;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
                 font-size:10px;
                 font-weight:700;
                 line-height:1.25;
                 text-transform:uppercase;
-                letter-spacing:.3px;
+                letter-spacing:.04em;
             }
             .aip_generate table td{
                 background-color:#ffffff;
-                color:#111827;
+                color:#24324a;
             }
-            .aip_generate tbody tr:nth-child(even) td{ background-color:#f2f5f8; }
-            .aip_generate tbody tr:hover td{ background-color:#e4ebf3; }
+            .aip_generate tbody tr:nth-child(even) td{ background-color:#f4f7fc; }
+            .aip_generate tbody tr:hover td{ background-color:#e8eefb; }
 
-            /* ===== Quarter filter / print controls (screen only) ===== */
-            .smea-controls{
-                display:inline-flex;
-                align-items:center;
-                flex-wrap:wrap;
-                gap:8px;
-                border:1px solid #cbd5e1;
-                background:#f6f8fb;
-                border-radius:6px;
-                padding:9px 14px;
-                margin:0 auto 14px;
-                font-size:13px;
-                color:#1f3a5f;
+            /* ===== Report footer ===== */
+            .aip_generate .fcon{
+                border-top:1px solid #dfe6f2;
+                margin-top:26px;
+                padding-top:14px;
+                text-align:left;
             }
-            .smea-controls .smea-controls-label{
-                font-weight:700;
-                margin-right:2px;
+            .aip_generate .fcon .lcon{
+                color:#6b7890;
+                font-size:11.5px;
+                line-height:1.5;
             }
-            .smea-qbtn{
-                border:1px solid #b8c4d2;
-                background:#ffffff;
-                color:#1f3a5f;
-                font-weight:600;
-                font-size:13px;
-                padding:6px 14px;
-                border-radius:4px;
-                cursor:pointer;
-                line-height:1.2;
-            }
-            .smea-qbtn:hover{ background:#e8eef6; }
-            .smea-qbtn.is-active{
-                background:#1f4e79;
-                border-color:#1f4e79;
-                color:#ffffff;
-            }
-            .smea-print-btn{
-                border:1px solid #3f4a58;
-                background:#3f4a58;
-                color:#ffffff;
-                font-weight:700;
-                font-size:13px;
-                padding:6px 16px;
-                border-radius:4px;
-                cursor:pointer;
-                margin-left:6px;
-            }
-            .smea-print-btn:hover{ background:#2f3845; }
+
             .smea-empty{
-                color:#6b7280;
+                color:#6b7890;
                 font-size:13px;
                 margin:24px 0;
             }
@@ -139,11 +288,16 @@
             /* DepEd letterhead: printed sheets only */
             .print-letterhead{ display:none; }
 
+            @media (max-width:1100px){
+                .smea-doc{ margin:0; border-radius:0; border-left:0; border-right:0; padding:16px 14px 20px; }
+                .smea-masthead{ flex-direction:column; align-items:flex-start; }
+            }
             @media (max-width:900px){
                 .aip_generate table{ font-size:9px; }
                 .aip_generate table th{ font-size:8px; }
                 .aip_generate table th,
                 .aip_generate table td{ padding:3px 2px; }
+                .smea-masthead h1{ font-size:21px; }
             }
 
             /* ===== Print: Folio (F4) landscape, fit all columns across the width ===== */
@@ -153,7 +307,62 @@
             }
             @media print{
                 html, body{ width:330mm; }
+                body.aip_generate{ background:#fff; padding:0; }
                 .aip_generate{ padding:0; }
+                .smea-doc{
+                    background:#fff;
+                    border:0;
+                    border-radius:0;
+                    box-shadow:none;
+                    margin:0;
+                    max-width:none;
+                    padding:0;
+                }
+                /* Printed sheets carry a centred masthead under the letterhead */
+                .smea-masthead{
+                    display:block;
+                    text-align:center;
+                    border-bottom:.8px solid #111;
+                    padding-bottom:2mm;
+                    margin-bottom:2mm;
+                }
+                .smea-masthead > div{ text-align:center; }
+                .smea-masthead h1{ color:#111; font-size:13pt; text-align:center; }
+                .smea-kicker{ color:#111; font-size:7pt; }
+                .smea-masthead p{ display:none; }
+                .smea-status{
+                    background:transparent !important;
+                    border:.8px solid #111;
+                    border-radius:2px;
+                    color:#111 !important;
+                    font-size:8pt;
+                    margin-top:1.5mm;
+                }
+                .smea-status:before{ display:none; }
+                .smea-meta{ gap:0; grid-template-columns:repeat(5, 1fr); margin-bottom:3mm; }
+                .smea-meta-item{
+                    background:transparent !important;
+                    border:.65px solid #111;
+                    border-radius:0;
+                    padding:1.2mm 2mm;
+                }
+                .smea-meta-item span{ color:#111; font-size:6pt; }
+                .smea-meta-item strong{ color:#111; font-size:8pt; }
+                .aip_generate .smea-quarter h3{
+                    background:transparent !important;
+                    border:.65px solid #111;
+                    border-left:1.2mm solid #111;
+                    color:#000 !important;
+                    page-break-after:avoid;   /* never strand a quarter heading at the foot of a sheet */
+                    break-after:avoid;
+                }
+                /* Quarters flow one after another to fill the sheet; a quarter is only
+                   pushed to the next page when it cannot fit whole on the current one. */
+                .smea-quarter{
+                    margin-top:4mm;
+                    page-break-inside:avoid;
+                    break-inside:avoid;
+                }
                 .aip_generate table{ font-size:9px; page-break-inside:auto; }
                 .aip_generate table th{ font-size:8px; }
                 .aip_generate table th,
@@ -169,7 +378,9 @@
                     background-color:transparent !important;
                     color:#000 !important;
                 }
-                .back-to-top, .smea-controls{ display:none !important; }
+                .aip_generate .fcon{ border-top:.65px solid #111; }
+                .aip_generate .fcon .lcon{ color:#000; }
+                .back-to-top, .smea-toolbar{ display:none !important; }
 
                 /* DepEd letterhead at the top of the printed report */
                 .print-letterhead{
@@ -184,12 +395,15 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background-color: #3f4a58;
+            background-color: #273856;
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 5px;
+            padding: 10px 18px;
+            font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+            font-size: 13px;
+            font-weight:700;
+            border-radius: 7px;
+            box-shadow:0 6px 18px rgba(23,37,84,.22);
             cursor: pointer;
             display: none; /* Initially hidden */
             }
@@ -204,7 +418,7 @@
             scroll-behavior: smooth;
             }
 
-            
+
          </style>
          
 
@@ -236,21 +450,53 @@
       
 
 
-    <img class="print-letterhead" src="<?= base_url(); ?>assets/images/header.png"
-        alt="Republic of the Philippines - Department of Education - Region XI - School Division of Davao Oriental" />
+    <?php date_default_timezone_set('Asia/Manila'); ?>
 
-    <h1>SCHOOL MONITORING, EVALUATION AND ADJUSTMENT<br />FY <?= $fy; ?></h1>
+    <div class="smea-doc">
 
-    <!-- Choose which quarter(s) are shown — the hidden ones are left out of the printout too. -->
-    <div class="smea-controls">
-        <span class="smea-controls-label">Quarter to display / print:</span>
-        <button type="button" class="smea-qbtn is-active" data-q="all">All</button>
-        <button type="button" class="smea-qbtn" data-q="1">Q1</button>
-        <button type="button" class="smea-qbtn" data-q="2">Q2</button>
-        <button type="button" class="smea-qbtn" data-q="3">Q3</button>
-        <button type="button" class="smea-qbtn" data-q="4">Q4</button>
-        <button type="button" class="smea-print-btn" id="smeaPrintBtn">Print</button>
-    </div>
+        <img class="print-letterhead" src="<?= base_url(); ?>assets/images/header.png"
+            alt="Republic of the Philippines - Department of Education - Region XI - School Division of Davao Oriental" />
+
+        <header class="smea-masthead">
+            <div>
+                <span class="smea-kicker">School Governance and Operations Division &middot; Monitoring &amp; Evaluation</span>
+                <h1>SMEA Year-End Summary</h1>
+                <p>Consolidated physical and financial accomplishment per pillar, quarter by quarter.</p>
+            </div>
+            <span class="smea-status">FY <?= html_escape($fy); ?></span>
+        </header>
+
+        <div class="smea-meta">
+            <div class="smea-meta-item">
+                <span>Fiscal Year</span><strong><?= html_escape($fy); ?></strong>
+            </div>
+            <div class="smea-meta-item">
+                <span>Coverage</span><strong id="smeaCoverage">Quarters 1 &ndash; 4</strong>
+            </div>
+            <div class="smea-meta-item">
+                <span>Batch Code</span><strong><?= html_escape($data_row->b_code); ?></strong>
+            </div>
+            <div class="smea-meta-item">
+                <span>School ID</span><strong><?= html_escape($data_row->school_id); ?></strong>
+            </div>
+            <div class="smea-meta-item">
+                <span>Date Generated</span><strong><?= date('F d, Y'); ?></strong>
+            </div>
+        </div>
+
+        <!-- Choose which quarter(s) are shown — the hidden ones are left out of the printout too. -->
+        <div class="smea-toolbar">
+            <span class="smea-toolbar-label">Quarter to display / print</span>
+            <button type="button" class="smea-btn smea-qbtn is-active" data-q="all">All</button>
+            <button type="button" class="smea-btn smea-qbtn" data-q="1">Q1</button>
+            <button type="button" class="smea-btn smea-qbtn" data-q="2">Q2</button>
+            <button type="button" class="smea-btn smea-qbtn" data-q="3">Q3</button>
+            <button type="button" class="smea-btn smea-qbtn" data-q="4">Q4</button>
+
+            <span class="toolbar-spacer"></span>
+
+            <button type="button" class="smea-btn smea-print-btn" id="smeaPrintBtn">Print Report</button>
+        </div>
 
     <?php for ($q = 1; $q <= 4; $q++) { $renguapo = 'q'.$q;  $guapoko = 'smea_q'.$q;?>
 
@@ -413,6 +659,9 @@
                 <div class="blocker"></div>
     </div>
 
+    </div>
+    <!-- /.smea-doc -->
+
     <button id="backToTopBtn" class="back-to-top">Back to Top</button>
 
     <script>
@@ -441,19 +690,19 @@ backToTopButton.onclick = function() {
         if (!buttons.length || !sections.length) { return; }
 
         function apply(choice) {
-            var shown = 0;
-
             sections.forEach(function (section) {
                 var visible = (choice === 'all' || section.dataset.quarter === choice);
                 section.style.display = visible ? '' : 'none';
-                // Each printed quarter starts on its own sheet; the first one must not.
-                section.style.pageBreakBefore = (visible && shown > 0) ? 'always' : 'auto';
-                if (visible) { shown++; }
             });
 
             buttons.forEach(function (b) {
                 b.classList.toggle('is-active', b.dataset.q === choice);
             });
+
+            var coverage = document.getElementById('smeaCoverage');
+            if (coverage) {
+                coverage.innerHTML = (choice === 'all') ? 'Quarters 1 &ndash; 4' : 'Quarter ' + choice;
+            }
         }
 
         buttons.forEach(function (b) {

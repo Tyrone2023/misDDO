@@ -13,58 +13,256 @@
 
         <!-- Plugins css-->
          <link href="<?= base_url(); ?>assets/css/renren.css" rel="stylesheet" type="text/css" />
+         <!-- Same type family the SGOD/IPCRF workspace uses; falls back to Segoe UI offline -->
+         <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Montserrat:600,700,800&display=swap" rel="stylesheet" type="text/css" />
          <style>
             /* =====================================================================
-               Palette: black / gray / blue
-                 #111827 near-black text      #1f3a5f deep navy (headings)
-                 #1f4e79 blue (accents)       #3f4a58 slate gray (table headers)
-                 #f2f5f8 light gray (zebra)   #cfe0f2 light blue (clickable cells)
+               SMEA report — design language mirrored from the SGOD IPCRF workspace
+               (sgod/assets/css/ipcrf.css):
+
+                 --ip-navy  #172554   headings          --ip-blue  #3157c8  accents
+                 --ip-ink   #24324a   body copy         --ip-muted #6b7890  labels
+                 --ip-line  #dfe6f2   hairlines         --ip-bg    #f3f6fb  page
+                 document navy #273856 · document tint #d7e2f3 · soft blue #eef3ff
+
+               Montserrat/Lato for the interface, Georgia for the document title —
+               the same split IPCRF uses between its chrome and its printable form.
                ===================================================================== */
 
-            /* ===== Typography & readability ===== */
-            .aip_generate{
-                font-family:'Segoe UI', Calibri, 'Helvetica Neue', Arial, sans-serif;
-                color:#111827;               /* near-black: ~16:1 on white */
+            html, body{ margin:0; padding:0; }
+
+            body.aip_generate{
+                background:#eef1f6;
+                font-family:'Lato', 'Segoe UI', Calibri, Arial, sans-serif;
+                color:#24324a;
                 -webkit-font-smoothing:antialiased;
                 text-rendering:optimizeLegibility;
-            }
-            .aip_generate h1{
-                font-size:21px;
-                font-weight:800;
-                letter-spacing:.3px;
-                color:#111827;               /* black */
-                line-height:1.35;
-            }
-            .aip_generate h3{
-                font-size:15px;
-                font-weight:700;
-                color:#1f4e79;               /* blue, ~8.6:1 on white */
-                margin-bottom:4px;
-            }
-            .aip_generate ul{
-                font-size:13px;
-                margin-bottom:6px;
-            }
-            .aip_generate ul li{
-                background:#eef2f7;
-                border-left:4px solid #1f4e79;
-                color:#1f3a5f;
-                font-weight:700;
-                display:inline-block;
-                padding:5px 12px;
-                border-radius:3px;
+                padding:0 0 40px;
             }
 
-            /* ===== Responsive, fit-to-width table ===== */
+            /* ===== Document surface ===== */
+            .smea-doc{
+                background:#ffffff;
+                border:1px solid #d7deea;
+                border-radius:6px;
+                box-shadow:0 5px 24px rgba(30,43,69,.10);
+                margin:14px auto 0;
+                max-width:1760px;
+                padding:22px 24px 26px;
+                text-align:center;
+            }
+
+            /* ===== Masthead ===== */
+            .smea-masthead{
+                display:flex;
+                align-items:flex-end;
+                justify-content:space-between;
+                gap:16px;
+                text-align:left;
+                border-bottom:1px solid #dfe6f2;
+                padding-bottom:14px;
+                margin-bottom:16px;
+            }
+            .smea-kicker{
+                display:block;
+                color:#3157c8;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:11px;
+                font-weight:800;
+                letter-spacing:.12em;
+                text-transform:uppercase;
+                margin-bottom:5px;
+            }
+            .smea-masthead h1{
+                margin:0 0 4px;
+                color:#172554;
+                font-family:Georgia, 'Times New Roman', serif;
+                font-size:26px;
+                font-weight:800;
+                letter-spacing:-.01em;
+                line-height:1.2;
+                text-align:left;
+            }
+            .smea-masthead p{
+                margin:0;
+                color:#6b7890;
+                font-size:13px;
+                line-height:1.45;
+            }
+            .smea-status{
+                display:inline-flex;
+                align-items:center;
+                gap:7px;
+                flex:none;
+                background:#eef3ff;
+                border:1px solid #cad7ff;
+                border-radius:999px;
+                color:#3157c8;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:12px;
+                font-weight:800;
+                letter-spacing:.02em;
+                padding:8px 14px;
+                white-space:nowrap;
+            }
+            .smea-status:before{
+                content:'';
+                background:currentColor;
+                border-radius:50%;
+                height:7px;
+                width:7px;
+            }
+            .smea-status.is-submitted{
+                background:#e7f5f1;
+                border-color:#9ed5c8;
+                color:#0f7f6c;
+            }
+
+            /* ===== Meta strip (IPCRF employee-field cards) ===== */
+            .smea-meta{
+                display:grid;
+                grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+                gap:10px;
+                text-align:left;
+                margin-bottom:16px;
+            }
+            .smea-meta-item{
+                background:#f8faff;
+                border:1px solid #e5ebf6;
+                border-radius:10px;
+                padding:9px 12px;
+            }
+            .smea-meta-item span{
+                display:block;
+                color:#6b7890;
+                font-size:10px;
+                font-weight:800;
+                letter-spacing:.06em;
+                text-transform:uppercase;
+                margin-bottom:3px;
+            }
+            .smea-meta-item strong{
+                display:block;
+                color:#24324a;
+                font-size:13px;
+                font-weight:700;
+                line-height:1.3;
+                overflow-wrap:anywhere;
+            }
+
+            /* ===== Sticky toolbar (IPCRF .ipcrf-toolbar) ===== */
+            .smea-toolbar{
+                display:flex;
+                align-items:center;
+                flex-wrap:wrap;
+                gap:8px;
+                background:rgba(255,255,255,.97);
+                border:1px solid #dfe6f2;
+                border-radius:11px;
+                box-shadow:0 7px 22px rgba(38,55,93,.08);
+                padding:9px 12px;
+                margin-bottom:16px;
+                position:sticky;
+                top:10px;
+                z-index:90;
+                text-align:left;
+            }
+            .smea-toolbar .toolbar-spacer{ flex:1 1 auto; }
+            .smea-legend{
+                display:inline-flex;
+                align-items:center;
+                gap:8px;
+                color:#4c5b72;
+                font-size:12px;
+                font-weight:600;
+                line-height:1.35;
+            }
+            .smea-legend .swatch{
+                display:inline-block;
+                flex:none;
+                width:15px;
+                height:15px;
+                background:#dbe6fa;
+                border:1px solid #7f9ed4;
+                border-radius:3px;
+            }
+            .smea-btn{
+                display:inline-flex;
+                align-items:center;
+                gap:6px;
+                border-radius:7px;
+                border:1px solid transparent;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:12px;
+                font-weight:700;
+                padding:8px 14px;
+                cursor:pointer;
+                text-decoration:none;
+                white-space:nowrap;
+            }
+            .smea-btn-soft{
+                background:#f0f2f5;
+                border-color:#b8c0cc;
+                color:#3f4a5c;
+            }
+            .smea-btn-soft:hover{ background:#e3e6eb; color:#273244; }
+            .smea-btn-primary{
+                background:#3157c8;
+                border-color:#3157c8;
+                color:#ffffff !important;
+                box-shadow:0 2px 6px rgba(49,87,200,.25);
+            }
+            .smea-btn-primary:hover{ background:#234aa8; border-color:#234aa8; }
+            .smea-btn-primary.is-busy{ opacity:.6; pointer-events:none; }
+            .smea-submitted-chip{
+                display:inline-flex;
+                align-items:center;
+                gap:6px;
+                background:#e7f5f1;
+                border:1px solid #9ed5c8;
+                border-radius:999px;
+                color:#0f7f6c;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:12px;
+                font-weight:800;
+                padding:7px 13px;
+                white-space:nowrap;
+            }
+
+            /* ===== Pillar band (IPCRF .ipcrf-document .ipcrf-section-head) ===== */
+            .aip_generate ul{
+                font-size:13px;
+                margin:22px 0 0;
+                padding:0;
+                text-align:left;
+            }
+            .aip_generate ul li{
+                display:block;
+                background:#d7e2f3;
+                border:1px solid #b6c6df;
+                border-left:4px solid #273856;
+                border-radius:3px;
+                color:#16294d;
+                font-family:Georgia, 'Times New Roman', serif;
+                font-size:13px;
+                font-weight:800;
+                letter-spacing:.025em;
+                padding:8px 12px;
+                text-transform:uppercase;
+            }
+
+            /* ===== Data table ===== */
             .aip_generate table{
                 width:100%;
                 table-layout:fixed;         /* share width across columns so it never overflows sideways */
                 border-collapse:collapse;
                 font-size:11px;
+                margin-top:8px;
+                margin-bottom:34px;
             }
             .aip_generate table th,
             .aip_generate table td{
-                border:1px solid #94a3b8;    /* gray grid lines for clearer cell separation */
+                border:1px solid #9aa3b2;
                 padding:5px 4px;
                 word-wrap:break-word;
                 overflow-wrap:break-word;
@@ -73,34 +271,35 @@
             }
             .aip_generate table td{
                 background-color:#ffffff;
-                color:#111827;
+                color:#24324a;
                 line-height:1.35;
             }
             .aip_generate table th{
-                background-color:#3f4a58;    /* slate gray: white text ~9.3:1 */
+                background-color:#273856;   /* document navy: white text ~11:1 */
                 color:#ffffff;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
                 font-weight:700;
-                font-size:10.5px;
+                font-size:10px;
                 line-height:1.3;
                 text-transform:uppercase;
-                letter-spacing:.3px;
+                letter-spacing:.04em;
             }
             /* Zebra striping + hover for easier row tracking across the wide table */
             .aip_generate tbody tr:nth-child(even) td{
-                background-color:#f2f5f8;
+                background-color:#f4f7fc;
             }
             .aip_generate tbody tr:hover td{
-                background-color:#e4ebf3;
+                background-color:#e8eefb;
             }
 
             /* ===== Clickable (highlighted) cells only ===== */
             .ivan{
-                background-color:#e2e8f0 !important;
-                color:#111827 !important;
+                background-color:#eceef1 !important;
+                color:#24324a !important;
             }
             .ivy{
-                background-color:#cfe0f2 !important;   /* light blue action chip: dark text ~12:1 */
-                color:#10233a !important;
+                background-color:#dbe6fa !important;   /* soft blue action cell: dark text ~10:1 */
+                color:#1f3d7a !important;
                 font-weight:700;
             }
             .ivy.smea-clickable{
@@ -108,12 +307,12 @@
             }
             .ivy.smea-clickable:hover,
             .aip_generate tbody tr:hover td.ivy{
-                background-color:#b6d2ee !important;    /* deeper blue on hover */
-                color:#10233a !important;
+                background-color:#c7d8f5 !important;
+                color:#16305f !important;
             }
             .ivy a,
             .smea-clickable a{
-                color:#10233a;
+                color:#1f3d7a;
                 text-decoration:underline;
                 font-weight:700;
             }
@@ -124,11 +323,29 @@
                 opacity:.85;
             }
 
+            /* ===== Report footer ===== */
+            .aip_generate .fcon{
+                border-top:1px solid #dfe6f2;
+                margin-top:8px;
+                padding-top:14px;
+                text-align:left;
+            }
+            .aip_generate .fcon .lcon{
+                color:#6b7890;
+                font-size:11.5px;
+                line-height:1.5;
+            }
+
+            @media (max-width:1100px){
+                .smea-doc{ margin:0; border-radius:0; border-left:0; border-right:0; padding:16px 14px 20px; }
+                .smea-masthead{ flex-direction:column; align-items:flex-start; }
+            }
             @media (max-width:900px){
                 .aip_generate table{ font-size:9px; }
                 .aip_generate table th{ font-size:8px; }
                 .aip_generate table th,
                 .aip_generate table td{ padding:3px 2px; }
+                .smea-masthead h1{ font-size:21px; }
             }
 
             /* ===== Print: Folio (F4) landscape, fit all columns across the width ===== */
@@ -138,12 +355,57 @@
             }
             @media print{
                 html, body{ width:330mm; }
+                body.aip_generate{ background:#fff; padding:0; }
                 .aip_generate{ padding:0; }
-                .aip_generate table{ font-size:9px; }
+                .smea-doc{
+                    background:#fff;
+                    border:0;
+                    border-radius:0;
+                    box-shadow:none;
+                    margin:0;
+                    max-width:none;
+                    padding:0;
+                }
+                /* Printed sheets carry a centred masthead */
+                .smea-masthead{
+                    display:block;
+                    text-align:center;
+                    border-bottom:.8px solid #111;
+                    padding-bottom:3mm;
+                    margin-bottom:3mm;
+                }
+                .smea-masthead > div{ text-align:center; }
+                .smea-masthead h1{ color:#111; font-size:15pt; text-align:center; }
+                .smea-kicker{ color:#111; font-size:7pt; }
+                .smea-masthead p{ display:none; }
+                .smea-status{
+                    background:transparent !important;
+                    border:.8px solid #111;
+                    border-radius:2px;
+                    color:#111 !important;
+                    font-size:8pt;
+                    margin-top:1.5mm;
+                }
+                .smea-status:before{ display:none; }
+                .smea-meta{ gap:0; grid-template-columns:repeat(5, 1fr); margin-bottom:3mm; }
+                .smea-meta-item{
+                    background:transparent !important;
+                    border:.65px solid #111;
+                    border-radius:0;
+                    padding:1.2mm 2mm;
+                }
+                .smea-meta-item span{ color:#111; font-size:6pt; }
+                .smea-meta-item strong{ color:#111; font-size:8pt; }
+                .aip_generate ul li{
+                    background:transparent !important;
+                    border:.65px solid #111;
+                    border-left:1.2mm solid #111;
+                    color:#000 !important;
+                }
+                .aip_generate table{ font-size:9px; page-break-inside:auto; }
                 .aip_generate table th{ font-size:8px; }
                 .aip_generate table th,
                 .aip_generate table td{ padding:3px 3px; }
-                .aip_generate table{ page-break-inside:auto; }
                 .aip_generate tr{ page-break-inside:avoid; }
                 /* No background colours when printing — plain white cells, black text, borders kept for structure */
                 .aip_generate table th,
@@ -158,30 +420,9 @@
                     color:#000 !important;
                 }
                 .ivy a, .smea-clickable a{ color:#000 !important; }
-                .smea-legend, .smea-edit-hint, .back-to-top, .smea-modal-overlay, .smea-finalize-float{ display:none !important; }
-            }
-
-            /* --- Legend --- */
-            .smea-legend{
-                display:inline-flex;
-                align-items:center;
-                gap:8px;
-                border:1px solid #c3cedb;
-                background:#eef2f7;
-                border-radius:5px;
-                padding:6px 12px;
-                margin:0 auto 12px;
-                font-size:13px;
-                font-weight:600;
-                color:#1f3a5f;
-            }
-            .smea-legend .swatch{
-                display:inline-block;
-                width:16px;
-                height:16px;
-                background:#cfe0f2;           /* matches the actual clickable cell colour */
-                border:1px solid #1f4e79;
-                border-radius:3px;
+                .aip_generate .fcon{ border-top:.65px solid #111; }
+                .aip_generate .fcon .lcon{ color:#000; }
+                .smea-edit-hint, .back-to-top, .smea-modal-overlay, .smea-toolbar{ display:none !important; }
             }
 
             /* --- Modal --- */
@@ -189,7 +430,7 @@
                 display:none;
                 position:fixed;
                 inset:0;
-                background:rgba(0,0,0,.5);
+                background:rgba(23,37,84,.45);
                 z-index:1050;
                 align-items:flex-start;
                 justify-content:center;
@@ -200,8 +441,8 @@
                 width:460px;
                 max-width:92%;
                 margin-top:8vh;
-                border-radius:8px;
-                box-shadow:0 10px 40px rgba(0,0,0,.3);
+                border-radius:12px;
+                box-shadow:0 14px 40px rgba(35,53,92,.28);
                 overflow:hidden;
                 font-family:inherit;
             }
@@ -209,11 +450,12 @@
                 display:flex;
                 align-items:center;
                 justify-content:space-between;
-                background:#1f3a5f;
+                background:#172554;
                 color:#fff;
                 padding:12px 16px;
-                font-size:16px;
-                font-weight:600;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:15px;
+                font-weight:700;
             }
             .smea-modal-header .smea-modal-close{
                 background:none;
@@ -223,114 +465,66 @@
                 line-height:1;
                 cursor:pointer;
             }
-            .smea-modal-body{ padding:18px 16px; }
-            .smea-modal-sub{ margin:0 0 14px; font-size:13px; color:#4b5563; }
+            .smea-modal-body{ padding:18px 16px; text-align:left; }
+            .smea-modal-sub{ margin:0 0 14px; font-size:13px; color:#6b7890; }
             .smea-field{ margin-bottom:12px; }
             .smea-field label{
                 display:block;
-                font-size:12px;
-                font-weight:700;
-                margin-bottom:4px;
-                color:#111827;
+                font-size:11px;
+                font-weight:800;
+                letter-spacing:.035em;
+                text-transform:uppercase;
+                margin-bottom:5px;
+                color:#58647a;
             }
-            .smea-req{ color:#e74c3c; }
+            .smea-req{ color:#d84a4a; }
             .smea-input{
                 width:100%;
                 padding:8px 10px;
-                border:1px solid #ccc;
-                border-radius:4px;
+                border:1px solid #d7e0ee;
+                border-radius:8px;
                 font-size:14px;
+                color:#24324a;
                 box-sizing:border-box;
             }
-            .smea-input:disabled{ background:#f1f1f1; color:#666; }
+            .smea-input:focus{
+                border-color:#7390e5;
+                box-shadow:0 0 0 3px rgba(49,87,200,.10);
+                outline:none;
+            }
+            .smea-input:disabled{ background:#f4f6fa; color:#56627a; }
             .smea-actions{
                 display:flex;
                 gap:8px;
                 margin-top:6px;
             }
             .smea-btn-save,.smea-btn-cancel{
-                border:none;
-                border-radius:4px;
+                border:1px solid transparent;
+                border-radius:7px;
                 padding:9px 16px;
-                font-size:14px;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:13px;
+                font-weight:700;
                 cursor:pointer;
             }
-            .smea-btn-save{ background:#1f4e79; color:#fff; font-weight:600; }
-            .smea-btn-save:hover{ background:#163d61; color:#fff; }
-            .smea-btn-cancel{ background:#e2e8f0; color:#111827; }
-            .smea-loading{ text-align:center; color:#6b7280; padding:20px 0; }
-
-            /* --- Finalize / submit SMEA: floating panel, top right --- */
-            .smea-finalize-float{
-                position:fixed;
-                top:14px;
-                right:16px;
-                z-index:1040;
-                background:#ffffff;
-                border:1px solid #cbd5e1;
-                border-left:5px solid #1f4e79;
-                border-radius:7px;
-                box-shadow:0 6px 18px rgba(17,24,39,.16);
-                padding:10px 14px;
-                text-align:left;      /* the report body is centred — keep this block left aligned */
-                max-width:320px;
-            }
-            .smea-finalize-float .smea-finalize-cap{
-                display:block;
-                font-size:11px;
-                font-weight:600;
-                color:#4b5563;
-                margin-top:6px;
-                line-height:1.35;
-            }
-            .smea-finalize-btn{
-                display:inline-block;
-                background:#1f4e79;
-                color:#fff !important;
-                text-decoration:none;
-                font-weight:700;
-                font-size:13px;
-                padding:9px 18px;
-                border-radius:4px;
-                white-space:nowrap;
-                box-shadow:0 2px 5px rgba(31,78,121,.28);
-            }
-            .smea-finalize-btn:hover{ background:#163d61; }
-            .smea-finalize-btn.is-busy{ opacity:.6; pointer-events:none; }
-            .smea-finalize-float.smea-finalized{
-                border-left-color:#3f4a58;
-            }
-            .smea-finalize-done{
-                display:inline-block;
-                font-size:13px;
-                font-weight:700;
-                color:#1f3a5f;
-                white-space:nowrap;
-            }
-            .smea-finalize-icon{
-                color:#1f4e79;
-                font-weight:700;
-                margin-right:5px;
-            }
-            @media (max-width:900px){
-                .smea-finalize-float{
-                    position:static;
-                    margin:0 auto 14px;
-                    max-width:none;
-                    text-align:center;
-                }
-            }
+            .smea-btn-save{ background:#3157c8; border-color:#3157c8; color:#fff; }
+            .smea-btn-save:hover{ background:#234aa8; border-color:#234aa8; color:#fff; }
+            .smea-btn-cancel{ background:#f0f2f5; border-color:#b8c0cc; color:#3f4a5c; }
+            .smea-loading{ text-align:center; color:#6b7890; padding:20px 0; }
 
             .back-to-top {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background-color: #3f4a58;
+            background-color: #273856;
             color: white;
             border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 5px;
+            padding: 10px 18px;
+            font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+            font-size: 13px;
+            font-weight:700;
+            border-radius: 7px;
+            box-shadow:0 6px 18px rgba(23,37,84,.22);
             cursor: pointer;
             display: none; /* Initially hidden */
             }
@@ -345,7 +539,7 @@
             scroll-behavior: smooth;
             }
 
-            
+
          </style>
          
 
@@ -354,25 +548,86 @@
 
     <body class="aip_generate sop_gen aip" id="printTable">
 
-    <!-- Finalize: same submission as the "Submit SMEA" button on Page/smeav2 -->
-    <?php $smea_submitted = isset($smea_submitted) ? $smea_submitted : false; ?>
-    <?php if ($smea_submitted) { ?>
-        <div class="smea-finalize-float smea-finalized">
-            <span class="smea-finalize-done"><span class="smea-finalize-icon">&#10003;</span>SMEA Submitted</span>
-            <span class="smea-finalize-cap">Finalized for FY <?= html_escape($fy); ?> &mdash; no further submission needed.</span>
+    <!-- <img class="logo" src="<?= base_url(); ?>assets/images/report/ke.png" alt="">
+    <p>
+    <span class="rp">Republic of the Philippines</span><br />
+        <span class="de">Department of Education</span><br />
+        <span class="r">Region XI</span><br />
+        <span class="r">School Division of Davao Oriental</span><br />
+        <span class="sadress"><?= strtoupper($school->district); ?><br />
+         <?= strtoupper($school->schoolName); ?><br />
+         <?= strtoupper($school->sitio); ?> <?= strtoupper($school->brgy); ?>, <?= strtoupper($school->city); ?>, <?= strtoupper($school->province); ?></span> 
+    </p>
+    <div class="hr"></div> -->
+
+    <?php if(!isset($q)){
+        $q=$_SESSION['q'];
+    }?>
+    <?php
+    $smea_submitted = isset($smea_submitted) ? $smea_submitted : false;
+    date_default_timezone_set('Asia/Manila');
+    ?>
+
+    <div class="smea-doc">
+
+        <header class="smea-masthead">
+            <div>
+                <span class="smea-kicker">School Governance and Operations Division &middot; Monitoring &amp; Evaluation</span>
+                <h1>School Monitoring, Evaluation and Adjustment</h1>
+                <p>Quarterly physical and financial accomplishment against the approved Annual Implementation Plan.</p>
+            </div>
+            <span class="smea-status<?= $smea_submitted ? ' is-submitted' : ''; ?>">
+                <?= $smea_submitted ? 'Submitted' : 'For Submission'; ?>
+            </span>
+        </header>
+
+        <div class="smea-meta">
+            <div class="smea-meta-item">
+                <span>Fiscal Year</span><strong><?= html_escape($fy); ?></strong>
+            </div>
+            <div class="smea-meta-item">
+                <span>Reporting Period</span><strong>Quarter <?= html_escape($q); ?></strong>
+            </div>
+            <div class="smea-meta-item">
+                <span>Batch Code</span><strong><?= html_escape($_SESSION['aip']); ?></strong>
+            </div>
+            <div class="smea-meta-item">
+                <span>School ID</span><strong><?= html_escape($this->session->username); ?></strong>
+            </div>
+            <div class="smea-meta-item">
+                <span>Date Generated</span><strong><?= date('F d, Y'); ?></strong>
+            </div>
         </div>
-    <?php } else { ?>
-        <div class="smea-finalize-float">
-            <a id="smeaFinalizeBtn" class="smea-finalize-btn"
-                data-fy="<?= html_escape($fy); ?>"
-                href="<?= base_url(); ?>Page/submit_smea/<?= $this->session->username; ?>/<?= $_SESSION['aip']; ?>/<?= $_SESSION['fy']; ?>">
-                Finalize &amp; Submit SMEA
-            </a>
-            <span class="smea-finalize-cap">Submits your FY <?= html_escape($fy); ?> SMEA to the division office.</span>
+
+        <!-- Finalize: same submission as the "Submit SMEA" button on Page/smeav2 -->
+        <div class="smea-toolbar">
+            <span class="smea-legend">
+                <span class="swatch"></span>
+                <span>Only the highlighted cells are clickable &mdash; click one to update its Quarter <?= html_escape($q); ?> accomplishment.</span>
+            </span>
+
+            <span class="toolbar-spacer"></span>
+
+            <!-- <button type="button" class="smea-btn smea-btn-soft" id="smeaPrintBtn">Print Report</button> -->
+
+            <?php if ($smea_submitted) { ?>
+                <span class="smea-submitted-chip">&#10003; SMEA Submitted</span>
+            <?php } else { ?>
+                <a id="smeaFinalizeBtn" class="smea-btn smea-btn-primary"
+                    data-fy="<?= html_escape($fy); ?>"
+                    href="<?= base_url(); ?>Page/submit_smea/<?= $this->session->username; ?>/<?= $_SESSION['aip']; ?>/<?= $_SESSION['fy']; ?>">
+                    Finalize &amp; Submit SMEA
+                </a>
+            <?php } ?>
         </div>
 
         <script>
             (function () {
+                var printBtn = document.getElementById('smeaPrintBtn');
+                if (printBtn) {
+                    printBtn.addEventListener('click', function () { window.print(); });
+                }
+
                 var btn = document.getElementById('smeaFinalizeBtn');
                 if (!btn) { return; }
 
@@ -390,37 +645,6 @@
                 });
             })();
         </script>
-    <?php } ?>
-
-
-    <!-- <img class="logo" src="<?= base_url(); ?>assets/images/report/ke.png" alt="">
-    <p>
-    <span class="rp">Republic of the Philippines</span><br />
-        <span class="de">Department of Education</span><br />
-        <span class="r">Region XI</span><br />
-        <span class="r">School Division of Davao Oriental</span><br />
-        <span class="sadress"><?= strtoupper($school->district); ?><br />
-         <?= strtoupper($school->schoolName); ?><br />
-         <?= strtoupper($school->sitio); ?> <?= strtoupper($school->brgy); ?>, <?= strtoupper($school->city); ?>, <?= strtoupper($school->province); ?></span> 
-    </p>
-    <div class="hr"></div> -->
-
-    <?php if(!isset($q)){
-        $q=$_SESSION['q'];
-    }?>
-
-
-    <h1>SCHOOL MONITORING, EVALUATION AND ADJUSTMENT<br />FY <?= $fy; ?></h1>
-    <h3>Quarter <?= $q; ?></h3>
-
-    <div style="text-align:center;">
-        <span class="smea-legend">
-            <span class="swatch"></span>
-            <span>Only the highlighted cells are clickable &mdash; click one to update its Quarter <?= $q; ?> accomplishment.</span>
-        </span>
-    </div>
-
-    
 
 
     <?php foreach($data as $row){ 
@@ -1003,6 +1227,9 @@
                 
                 <div class="blocker"></div>
     </div>
+
+    </div>
+    <!-- /.smea-doc -->
 
     <button id="backToTopBtn" class="back-to-top">Back to Top</button>
 
