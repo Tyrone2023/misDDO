@@ -322,8 +322,11 @@
                                     <span class="menu-arrow"></span>
                                 </a>
                                 <ul class="nav-second-level" aria-expanded="false">
-                                    
-                                    <li><a href="<?= base_url(); ?>Page/aip_sub">Submitted AIP</a></li>
+
+                                    <li><a href="<?= base_url(); ?>Page/plansup_submitted">Submitted AIP</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_reviewed">Reviewed</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_funds">Funds Available</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_approved">Approved</a></li>
                                     <li><a href="<?= base_url(); ?>Page/aip_stat">AIP Status</a></li>
                                     <li><a href="<?= base_url(); ?>Page/fy_setting">FY Settings</a></li>
                                 </ul>
@@ -471,8 +474,11 @@
                                     <span class="menu-arrow"></span>
                                 </a>
                                 <ul class="nav-second-level" aria-expanded="false">
-                                    
-                                    <li><a href="<?= base_url(); ?>Page/aip_sub">Submitted AIP</a></li>
+
+                                    <li><a href="<?= base_url(); ?>Page/plansup_submitted">Submitted AIP</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_reviewed">Reviewed</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_funds">Funds Available</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_approved">Approved</a></li>
                                     <li><a href="<?= base_url(); ?>Page/aip_stat">AIP Status</a></li>
                                     <li><a href="<?= base_url(); ?>Page/fy_setting">FY Settings</a></li>
                                 </ul>
@@ -759,8 +765,11 @@
                                     <span class="menu-arrow"></span>
                                 </a>
                                 <ul class="nav-second-level" aria-expanded="false">
-                                    
-                                    <li><a href="<?= base_url(); ?>Page/aip_sub">Submitted AIP</a></li>
+
+                                    <li><a href="<?= base_url(); ?>Page/plansup_submitted">Submitted AIP</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_reviewed">Reviewed</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_funds">Funds Available</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_approved">Approved</a></li>
                                     <li><a href="<?= base_url(); ?>Page/aip_stat">AIP Status</a></li>
                                     <li><a href="<?= base_url(); ?>Page/fy_setting">FY Settings</a></li>
                                 </ul>
@@ -870,8 +879,11 @@
                                     <span class="menu-arrow"></span>
                                 </a>
                                 <ul class="nav-second-level" aria-expanded="false">
-                                    
-                                    <li><a href="<?= base_url(); ?>Page/aip_sub">Submitted AIP</a></li>
+
+                                    <li><a href="<?= base_url(); ?>Page/plansup_submitted">Submitted AIP</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_reviewed">Reviewed</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_funds">Funds Available</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_approved">Approved</a></li>
                                     <li><a href="<?= base_url(); ?>Page/aip_stat">AIP Status</a></li>
                                 </ul>
                             </li>
@@ -879,7 +891,28 @@
                             <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
 
                             <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
-                        
+
+                        <?php elseif ($this->session->position === 'plansup') : ?>
+
+                            <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
+                            <li>
+                                <a href="javascript: void(0);" class="waves-effect">
+                                    <i class="fas fa-scroll"></i>
+                                    <spa>Implementation Plans</span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+                                <ul class="nav-second-level" aria-expanded="false">
+
+                                    <li><a href="<?= base_url(); ?>Page/plansup_submitted">Submitted AIP</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_reviewed">Reviewed</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_funds">Funds Available</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/plansup_approved">Approved</a></li>
+                                </ul>
+                            </li>
+                            <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>
+                            <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
+                            <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
+
                         <?php elseif ($this->session->position === 'District' || $this->session->position === 'Evaluator' || $this->session->position === 'doceval') : ?>
 
                             <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>

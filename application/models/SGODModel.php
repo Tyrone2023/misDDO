@@ -2877,7 +2877,8 @@ class SGODModel extends CI_Model
 	// Approved plans for a fiscal year, joined in one pass so the view does not
 	// re-query schools/allocation/app-percentage for every row. Pass $status = null
 	// for every submitted plan regardless of the stage it has reached.
-	public function aip_approved_list($fy, $status = 1)
+	// $exclude_statuses is an array of status values to exclude from results.
+	public function aip_approved_list($fy, $status = 1, $exclude_statuses = null)
 	{
 		// The join keys do not share a collation: sgod_aip_submit is utf8mb4_general_ci while
 		// schools/sgod_school_allocation are utf8mb4_unicode_ci, so each string comparison needs an
@@ -2914,6 +2915,9 @@ class SGODModel extends CI_Model
 		if ($status !== null) {
 			$this->db->where('s.status', $status);
 		}
+		if ($exclude_statuses !== null && is_array($exclude_statuses) && !empty($exclude_statuses)) {
+			$this->db->where_not_in('s.status', $exclude_statuses);
+		}
 		$this->db->group_by('s.id');
 		$this->db->order_by('sc.schoolName', 'ASC');
 
@@ -2936,7 +2940,6 @@ class SGODModel extends CI_Model
 
 		foreach ($this->db->get()->result() as $row) {
 			$total = (int) $row->total;
-			$counts['submitted'] += $total;
 
 			switch ((int) $row->status) {
 				case 3:
@@ -2947,6 +2950,9 @@ class SGODModel extends CI_Model
 					break;
 				case 1:
 					$counts['approved'] = $total;
+					break;
+				default:
+					$counts['submitted'] += $total;
 					break;
 			}
 		}

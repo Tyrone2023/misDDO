@@ -5477,7 +5477,13 @@ class Page extends CI_Controller
 		$result['icon']    = $meta['icon'];
 		$result['stage']   = $stage;
 		$result['fy']      = $fys;
-		$result['data']    = $this->SGODModel->aip_approved_list($fys, $meta['status']);
+
+		// For submitted stage, exclude plans that are already reviewed (3), funds available (4), or approved (1)
+		if ($stage === 'submitted') {
+			$result['data'] = $this->SGODModel->aip_approved_list($fys, null, [1, 3, 4]);
+		} else {
+			$result['data'] = $this->SGODModel->aip_approved_list($fys, $meta['status']);
+		}
 
 		$this->load->view('templates/head');
 		$this->load->view('templates/header');
