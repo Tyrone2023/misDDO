@@ -48,6 +48,20 @@ foreach ($data as $r) {
     $total_rows++;
 }
 $is_submitted = ($smea->num_rows() > 0);
+
+// Division-office decision on this batch, from the controller. `locked` is TRUE while
+// the school may not edit; "For Compliance" reopens the report and asks for a re-submit.
+$smea_row  = isset($smea_row) ? $smea_row : null;
+$is_locked = isset($locked) ? $locked : $is_submitted;
+$smea_status = $smea_row
+    ? (trim((string) $smea_row->status) !== '' ? $smea_row->status : 'Submitted')
+    : '';
+
+$status_badges = array(
+    'Submitted'      => array('badge-info',    'mdi-check-decagram', 'Submitted'),
+    'SDO Validated'  => array('badge-success', 'mdi-shield-check',   'SDO Validated'),
+    'For Compliance' => array('badge-warning', 'mdi-alert-outline',  'For Compliance'),
+);
 ?>
 
 <style>
@@ -182,10 +196,11 @@ $is_submitted = ($smea->num_rows() > 0);
                             <i class="mdi mdi-chart-bar mr-1"></i>SMEA Summary
                         </a>
 
-                        <?php if (!$is_submitted) { ?>
-                            <a class="btn btn-warning waves-effect waves-light" onclick="return confirm('Are you sure?')"
+                        <?php if (!$is_locked) { ?>
+                            <a class="btn btn-warning waves-effect waves-light"
+                                onclick="return confirm('<?= $is_submitted ? 'Send this SMEA back to the division office for validation?' : 'Submit this SMEA to the division office? It can no longer be edited afterwards.'; ?>')"
                                 href="<?= base_url(); ?>Page/submit_smea/<?= $this->session->username; ?>/<?= $_SESSION['aip']; ?>/<?= $_SESSION['fy']; ?>">
-                                <i class="mdi mdi-send mr-1"></i>Submit SMEA
+                                <i class="mdi mdi-send mr-1"></i><?= $is_submitted ? 'Re-submit SMEA' : 'Submit SMEA'; ?>
                             </a>
                         <?php } ?>
 
@@ -230,8 +245,9 @@ $is_submitted = ($smea->num_rows() > 0);
                                     <div class="smea-stat">
                                         <div class="smea-stat-label">Submission Status</div>
                                         <p class="smea-stat-value">
-                                            <?php if ($is_submitted) { ?>
-                                                <span class="badge badge-success">Submitted</span>
+                                            <?php if (isset($status_badges[$smea_status])) {
+                                                $badge = $status_badges[$smea_status]; ?>
+                                                <span class="badge <?= $badge[0]; ?>"><i class="mdi <?= $badge[1]; ?> mr-1"></i><?= $badge[2]; ?></span>
                                             <?php } else { ?>
                                                 <span class="badge badge-warning">Not yet submitted</span>
                                             <?php } ?>
@@ -240,6 +256,37 @@ $is_submitted = ($smea->num_rows() > 0);
                                     </div>
                                 </div>
                             </div>
+
+                            <?php if ($smea_status === 'For Compliance') { ?>
+                                <div class="alert alert-warning" role="alert">
+                                    <h5 class="alert-heading mb-1"><i class="mdi mdi-alert-outline mr-1"></i>Returned for compliance</h5>
+                                    <p class="mb-1">
+                                        The division office returned this SMEA. Update the accomplishments it flags,
+                                        then use <strong>Re-submit SMEA</strong> above.
+                                    </p>
+                                    <?php if (trim((string) $smea_row->sdo_remarks) !== '') { ?>
+                                        <hr class="my-2">
+                                        <p class="mb-0" style="white-space: pre-wrap;"><?= html_escape($smea_row->sdo_remarks); ?></p>
+                                    <?php } ?>
+                                    <?php if (!empty($smea_row->date_validated)) { ?>
+                                        <small class="text-muted d-block mt-2">
+                                            Returned by <?= html_escape(trim((string) $smea_row->validated_by) !== '' ? $smea_row->validated_by : 'the division office'); ?>
+                                            on <?= html_escape(date('F d, Y g:i A', strtotime($smea_row->date_validated))); ?>
+                                        </small>
+                                    <?php } ?>
+                                </div>
+                            <?php } elseif ($smea_status === 'SDO Validated') { ?>
+                                <div class="alert alert-success" role="alert">
+                                    <i class="mdi mdi-shield-check mr-1"></i>
+                                    This SMEA has been <strong>validated by the division office</strong> and is final. It can no longer be edited.
+                                </div>
+                            <?php } elseif ($smea_status === 'Submitted') { ?>
+                                <div class="alert alert-info" role="alert">
+                                    <i class="mdi mdi-clock-outline mr-1"></i>
+                                    Submitted and waiting for the division office to validate. It can no longer be edited
+                                    unless it is returned for compliance.
+                                </div>
+                            <?php } ?>
 
                             <h4 class="header-title mb-1">Activities for Monitoring &amp; Evaluation</h4>
                             <p class="smea-sub mb-3">

@@ -450,7 +450,15 @@
       
 
 
-    <?php date_default_timezone_set('Asia/Manila'); ?>
+    <?php
+    date_default_timezone_set('Asia/Manila');
+    // Set by the controller. $review_mode is TRUE when the division office opened the
+    // summary from the SMEA review; the school never sees the decision actions.
+    $review_mode = isset($review_mode) ? $review_mode : false;
+    $smea_row    = isset($smea_row) ? $smea_row : null;
+    $school_id   = isset($school_id) ? $school_id : $data_row->school_id;
+    $bcode       = isset($bcode) ? $bcode : $data_row->b_code;
+    ?>
 
     <div class="smea-doc">
 
@@ -474,15 +482,19 @@
                 <span>Coverage</span><strong id="smeaCoverage">Quarters 1 &ndash; 4</strong>
             </div>
             <div class="smea-meta-item">
-                <span>Batch Code</span><strong><?= html_escape($data_row->b_code); ?></strong>
+                <span>Batch Code</span><strong><?= html_escape($bcode); ?></strong>
             </div>
             <div class="smea-meta-item">
-                <span>School ID</span><strong><?= html_escape($data_row->school_id); ?></strong>
+                <span><?= $review_mode ? 'School' : 'School ID'; ?></span>
+                <strong><?= html_escape($review_mode && !empty($school) ? $school->schoolName : $school_id); ?></strong>
             </div>
             <div class="smea-meta-item">
                 <span>Date Generated</span><strong><?= date('F d, Y'); ?></strong>
             </div>
         </div>
+
+        <?php $smea_back = base_url() . 'Page/smea_review_summary/' . (!empty($smea_row) ? (int) $smea_row->id : 0); ?>
+        <?php include('includes/smea_status.php'); ?>
 
         <!-- Choose which quarter(s) are shown — the hidden ones are left out of the printout too. -->
         <div class="smea-toolbar">

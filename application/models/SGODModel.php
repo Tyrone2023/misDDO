@@ -2705,15 +2705,36 @@ class SGODModel extends CI_Model
 		return $this->db->update('sgod_sop_adjustment', $data);
 	}
 
+	// Submit — or re-submit, after the division office returned the report FOR
+	// COMPLIANCE. A school has one row per budget code, so a re-submission
+	// updates that row (and clears the SDO decision) instead of inserting a
+	// second one.
 	public function smea_submit()
 	{
+		$this->smea_ensure_schema();
+
+		$school_id = $this->uri->segment(3);
+		$b_code    = $this->uri->segment(4);
+		$fy        = $this->uri->segment(5);
+
 		$data = array(
-			'date_submit' => date("Y-m-d H:i:s"), 
-			'fy' => $this->uri->segment(5), 
-			'remarks' => "Submitted", 
-			'school_id' => $this->uri->segment(3),
-			'b_code' => $this->uri->segment(4),
+			'date_submit' => date("Y-m-d H:i:s"),
+			'fy' => $fy,
+			'remarks' => "Submitted",
+			'status' => self::SMEA_SUBMITTED,
+			'school_id' => $school_id,
+			'b_code' => $b_code,
 		);
+
+		$existing = $this->smea_status_row($school_id, $fy, $b_code);
+		if ($existing) {
+			$data['sdo_remarks']    = null;
+			$data['validated_by']   = null;
+			$data['date_validated'] = null;
+
+			$this->db->where('id', $existing->id);
+			return $this->db->update('sgod_smea', $data);
+		}
 
 		return $this->db->insert('sgod_smea', $data);
 	}
@@ -3020,5 +3041,150 @@ class SGODModel extends CI_Model
 		$this->db->order_by('sc.schoolName', 'ASC');
 
 		return $this->db->get()->result();
+	}
+
+	// ---------------------------------------------------------------------
+	// SMEA validation workflow
+	//
+	// One sgod_smea row per school + budget code. Its `status` drives both what
+	// the school may still touch and what the division office sees:
+	//
+	//   Submitted      school submitted, waiting for the SDO - school is locked
+	//   SDO Validated  accepted by the division office        - school is locked
+	//   For Compliance returned with a remark                 - school may edit again
+	// ---------------------------------------------------------------------
+
+	const SMEA_SUBMITTED  = 'Submitted';
+	const SMEA_VALIDATED  = 'SDO Validated';
+	const SMEA_COMPLIANCE = 'For Compliance';
+
+	// The workflow needs four columns on sgod_smea that older installs do not have,
+	// and a partial dump import can take them away again. Rather than assume them,
+	// repair the schema here — the same field_exists()-guarded pattern the HRIS RQA
+	// tables use in Pages.php.
+	//
+	// Every SMEA read/write below calls this first. It runs at most once per request
+	// (static guard) and, once the columns are in place, costs one cached SHOW COLUMNS
+	// lookup — CI caches list_fields() per table for the life of the request.
+	public function smea_ensure_schema()
+	{
+		static $checked = false;
+		if ($checked) {
+			return;
+		}
+		$checked = true;
+
+		// ADD COLUMN with a NOT NULL default backfills the existing rows for us, so
+		// every submission already on file comes back as plain "Submitted".
+		$columns = array(
+			'status'         => "ADD COLUMN `status` VARCHAR(30) NOT NULL DEFAULT 'Submitted' AFTER `remarks`",
+			'sdo_remarks'    => "ADD COLUMN `sdo_remarks` TEXT NULL AFTER `status`",
+			'validated_by'   => "ADD COLUMN `validated_by` VARCHAR(150) NULL AFTER `sdo_remarks`",
+			'date_validated' => "ADD COLUMN `date_validated` DATETIME NULL AFTER `validated_by`",
+		);
+
+		$altered = false;
+		foreach ($columns as $col => $ddl) {
+			if (!$this->db->field_exists($col, 'sgod_smea')) {
+				$this->db->query("ALTER TABLE `sgod_smea` $ddl");
+				$altered = true;
+			}
+		}
+
+		if (!$altered) {
+			// Steady state: one cached SHOW COLUMNS and nothing else. The indexes below
+			// are only checked when a column was missing, because the two always arrive
+			// together — a database that has the columns got them either from
+			// sgod_smea_validation.sql or from this method, and both create the indexes
+			// as well. Checking them on every request would cost three more SHOW INDEX
+			// queries to confirm something that cannot be false on any path we control.
+			return;
+		}
+
+		// list_fields() is cached per table; drop the stale copy so anything asking
+		// later in this request sees the columns we just added.
+		unset($this->db->data_cache['field_names']['sgod_smea']);
+
+		// Indexes the SMEA pages lean on. sgod_sop in particular is ~57,000 rows with
+		// nothing but a primary key, which is what made the report take 6.7s.
+		$this->smea_ensure_index('sgod_smea', 'idx_school_fy', '(`school_id`, `fy`)');
+		$this->smea_ensure_index('users', 'idx_username', '(`username`)');
+		$this->smea_ensure_index('sgod_sop', 'idx_aip_type', '(`aip_id`, `type`)');
+	}
+
+	private function smea_ensure_index($table, $name, $cols)
+	{
+		$exists = $this->db->query(
+			"SHOW INDEX FROM `" . $table . "` WHERE Key_name = " . $this->db->escape($name)
+		)->row();
+
+		if (empty($exists)) {
+			$this->db->query("ALTER TABLE `" . $table . "` ADD INDEX `" . $name . "` " . $cols);
+		}
+	}
+
+	// The submission row for one school + budget code, or NULL when the school has
+	// not submitted that budget code yet.
+	public function smea_status_row($school_id, $fy, $bcode)
+	{
+		$this->smea_ensure_schema();
+
+		$this->db->where('school_id', $school_id);
+		$this->db->where('b_code', $bcode);
+		if (!empty($fy)) {
+			$this->db->where('fy', $fy);
+		}
+		$this->db->order_by('id', 'DESC');
+		$this->db->limit(1);
+
+		return $this->db->get('sgod_smea')->row();
+	}
+
+	public function smea_row_by_id($id)
+	{
+		$this->smea_ensure_schema();
+
+		$this->db->where('id', $id);
+		return $this->db->get('sgod_smea')->row();
+	}
+
+	// Every submission of the given schools for the fiscal year, indexed as
+	// [school_id][] so the district drill-down can render per-budget-code actions
+	// without one query per row.
+	public function smea_submissions_for_schools(array $school_ids, $fy)
+	{
+		$map = array();
+		if (empty($school_ids)) {
+			return $map;
+		}
+
+		$this->smea_ensure_schema();
+
+		$this->db->where_in('school_id', $school_ids);
+		$this->db->where('fy', $fy);
+		$this->db->order_by('b_code', 'ASC');
+
+		foreach ($this->db->get('sgod_smea')->result() as $row) {
+			$map[(string) $row->school_id][] = $row;
+		}
+
+		return $map;
+	}
+
+	// Division-office decision on a submission. $status is one of the SMEA_*
+	// constants; $remarks is only meaningful for "For Compliance".
+	public function smea_set_status($id, $status, $remarks, $by)
+	{
+		$this->smea_ensure_schema();
+
+		$data = array(
+			'status'         => $status,
+			'sdo_remarks'    => $remarks,
+			'validated_by'   => $by,
+			'date_validated' => date('Y-m-d H:i:s'),
+		);
+
+		$this->db->where('id', $id);
+		return $this->db->update('sgod_smea', $data);
 	}
 }

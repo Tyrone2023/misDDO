@@ -181,8 +181,33 @@
     white-space: nowrap;
 }
 .sm-status-pill i { font-size: .9rem; }
-.sm-status-submitted { background: #e4f5ec; border: 1px solid #c6e8d5; color: #1e7d44; }
-.sm-status-pending   { background: #fdeeee; border: 1px solid #f4d2d2; color: #b03a3a; }
+.sm-status-submitted  { background: #e8effb; border: 1px solid #cfdff7; color: #2c5282; }
+.sm-status-validated  { background: #e4f5ec; border: 1px solid #c6e8d5; color: #1e7d44; }
+.sm-status-compliance { background: #fdf1e3; border: 1px solid #f6ddbd; color: #96490a; }
+.sm-status-pending    { background: #fdeeee; border: 1px solid #f4d2d2; color: #b03a3a; }
+
+.sm-status-note {
+    display: block;
+    margin-top: .25rem;
+    font-size: .72rem;
+    color: #98a6ad;
+    white-space: normal;
+}
+.sm-status-remark {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: .2rem;
+    max-width: 280px;
+    font-size: .74rem;
+    font-style: italic;
+    color: #96490a;
+    white-space: normal;
+}
+
+.sm-actions { display: flex; flex-wrap: wrap; gap: .3rem; justify-content: flex-end; }
+.sm-inline-form { display: inline; margin: 0; }
 
 .sm-btn {
     display: inline-flex; align-items: center; gap: .35rem;
@@ -198,6 +223,40 @@
 .sm-btn:hover { background: #f4f7fb; border-color: #c3cfdd; color: #2c5282; text-decoration: none; }
 .sm-btn-primary { background: #2c5282; border-color: #2c5282; color: #fff; }
 .sm-btn-primary:hover { background: #24446b; border-color: #24446b; color: #fff; }
+.sm-btn-success { background: #1e7d44; border-color: #1e7d44; color: #fff; }
+.sm-btn-success:hover { background: #196636; border-color: #196636; color: #fff; }
+.sm-btn-warning { background: #c2610f; border-color: #c2610f; color: #fff; }
+.sm-btn-warning:hover { background: #a1500b; border-color: #a1500b; color: #fff; }
+
+/* The table only exists as raw markup until DataTables initialises at the foot of
+   the page. Keep it hidden behind a skeleton until then so the unpaginated,
+   unstyled list never flashes. */
+.sm-table-wrap { position: relative; min-height: 220px; }
+.sm-table-wrap > table,
+.sm-table-wrap > .dataTables_wrapper { visibility: hidden; }
+.sm-table-wrap.is-ready { min-height: 0; }
+.sm-table-wrap.is-ready > table,
+.sm-table-wrap.is-ready > .dataTables_wrapper { visibility: visible; }
+.sm-table-wrap.is-ready > .sm-table-skeleton { display: none; }
+
+.sm-table-skeleton { padding: .5rem 0; }
+.sm-table-skeleton span {
+    display: block;
+    height: 2.6rem;
+    margin-bottom: .55rem;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #f2f5f9 25%, #e9eef5 37%, #f2f5f9 63%);
+    background-size: 400% 100%;
+    animation: sm-shimmer 1.3s ease-in-out infinite;
+}
+.sm-table-skeleton span:first-child { height: 1.6rem; width: 40%; }
+@keyframes sm-shimmer {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sm-table-skeleton span { animation: none; }
+}
 
 .sm-empty { text-align: center; padding: 3rem 1rem; color: #98a6ad; }
 .sm-empty i { font-size: 2.75rem; opacity: .5; display: block; margin-bottom: .6rem; }
@@ -214,3 +273,19 @@
     .sm-stat { flex: 1; min-width: 0; padding: .6rem .5rem; }
 }
 </style>
+
+<noscript>
+    <style>
+        .sm-table-wrap > table { visibility: visible; }
+        .sm-table-skeleton { display: none; }
+    </style>
+</noscript>
+
+<script>
+// Safety net for the skeleton above: if DataTables never initialises (script blocked,
+// slow CDN-less asset, JS error further down the page) the list still has to appear.
+setTimeout(function () {
+    var wraps = document.querySelectorAll('.sm-table-wrap');
+    for (var i = 0; i < wraps.length; i++) { wraps[i].className += ' is-ready'; }
+}, 5000);
+</script>

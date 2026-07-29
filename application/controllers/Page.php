@@ -8144,6 +8144,11 @@ class Page extends CI_Controller
 		$result['data'] = $this->SGODModel->one_cond('sgod_aip', 'b_code', $_SESSION['aip']);
 		$result['smea'] = $this->SGODModel->one_cond_count('sgod_smea', 'b_code', $_SESSION['aip']);
 
+		// Where the submission stands with the division office, and whether the
+		// school may still touch it.
+		$result['smea_row'] = $this->smea_own_row();
+		$result['locked']   = $this->smea_is_locked($result['smea_row']);
+
 		// Physical / financial targets for every activity, fetched in one query and
 		// indexed as [aip_id][type] so the details modal does not query per row.
 		$result['sop_map'] = array();
@@ -8276,11 +8281,83 @@ class Page extends CI_Controller
 		redirect(base_url() . 'Page/adjustment ');
 	}
 
+	// ---------------------------------------------------------------------
+	// SMEA validation workflow helpers
+	//
+	// A submission (one sgod_smea row per school + budget code) moves through
+	// Submitted -> SDO Validated, or Submitted -> For Compliance -> Submitted.
+	// The school may only edit while it has not submitted, or while the division
+	// office has returned the report for compliance.
+	// ---------------------------------------------------------------------
+
+	// Positions of the division-office staff who may validate or return a SMEA.
+	private function smea_can_review()
+	{
+		$position = (string) $this->session->userdata('position');
+
+		return in_array($position, array('smme', 'Super Admin', 'Admin', 'sgod', 'plansup', 'sds', 'asds'), true);
+	}
+
+	// TRUE while the school is not allowed to touch its accomplishments any more.
+	private function smea_is_locked($smea_row)
+	{
+		if (empty($smea_row)) {
+			return false;   // never submitted — still being encoded
+		}
+
+		$status = isset($smea_row->status) && $smea_row->status !== '' ? $smea_row->status : SGODModel::SMEA_SUBMITTED;
+
+		return $status !== SGODModel::SMEA_COMPLIANCE;
+	}
+
+	// Submission row of the logged-in school for the batch it is working on.
+	private function smea_own_row()
+	{
+		$fy = isset($_SESSION['fy']) ? $_SESSION['fy'] : '';
+		$bcode = isset($_SESSION['aip']) ? $_SESSION['aip'] : '';
+
+		if ($bcode === '') {
+			return null;
+		}
+
+		return $this->SGODModel->smea_status_row($this->session->username, $fy, $bcode);
+	}
+
+	// Everything smea_generate / smea_generate_summary need for one school + batch.
+	// $q is only used by the quarterly report.
+	private function smea_report_data($school_id, $fy, $bcode, $q = null)
+	{
+		$result = array();
+		$result['fy']        = $fy;
+		$result['q']         = $q;
+		$result['school_id'] = $school_id;
+		$result['bcode']     = $bcode;
+
+		$result['data']       = $this->SGODModel->get_smea($school_id, $fy, $bcode);
+		$result['adjustment'] = $this->Common->three_cond_group('sgod_smea_adjustment', 'school_id', $school_id, 'fy', $fy, 'b_code', $bcode, 'pillar');
+		$result['data_row']   = $this->SGODModel->get_aip_row($school_id, $fy, $bcode);
+		$result['smea_row']   = $this->SGODModel->smea_status_row($school_id, $fy, $bcode);
+		$result['school']     = $this->SGODModel->one_cond_row('schools', 'schoolID', $school_id);
+
+		// Drives the status chip, the "Finalize & Submit" action and the edit lock.
+		$result['smea_submitted'] = !empty($result['smea_row']);
+		$result['locked']         = $this->smea_is_locked($result['smea_row']);
+		$result['readonly']       = false;   // school view: cells stay clickable unless locked
+		$result['review_mode']    = false;   // division-office review bar hidden
+
+		return $result;
+	}
+
 	function smea_edit($param)
 	{
 		$result['title'] = "UPDATE TARGET";
 		$result['b_label'] = "+ ADD NEW";
 		$result['b_link'] = "#";
+
+		if ($this->smea_is_locked($this->smea_own_row())) {
+			$this->session->set_flashdata('danger', 'This SMEA has already been submitted and can no longer be edited.');
+			redirect(base_url() . 'Page/smeav2');
+		}
 
 		$result['sop'] = $this->SGODModel->one_cond_row('sgod_sop', 'id', $param);
 		$_SESSION['q'] = $this->input->post('q');
@@ -8305,6 +8382,11 @@ class Page extends CI_Controller
 		$result['b_label'] = "+ ADD NEW";
 		$result['b_link'] = "#";
 
+		if ($this->smea_is_locked($this->smea_own_row())) {
+			$this->session->set_flashdata('danger', 'This SMEA has already been submitted and can no longer be edited.');
+			redirect(base_url() . 'Page/smeav2');
+		}
+
 		$result['sop'] = $this->SGODModel->one_cond_row('sgod_sop_adjustment', 'id', $param);
 		$_SESSION['q'] = $this->input->post('q');
 
@@ -8326,6 +8408,12 @@ class Page extends CI_Controller
 	// form partial; on submit it saves and replies with JSON so the modal can close.
 	function smea_edit_modal($param, $q)
 	{
+		// A submitted or validated SMEA is read-only, whatever the browser sends.
+		if ($this->smea_is_locked($this->smea_own_row())) {
+			$this->smea_locked_response();
+			return;
+		}
+
 		if ($this->input->post('submit')) {
 			$this->SGODModel->update_smea($param);
 			header('Content-Type: application/json');
@@ -8341,6 +8429,11 @@ class Page extends CI_Controller
 	// Same as smea_edit_modal but for the SOP ADJUSTMENT table.
 	function smea_ad_edit_modal($param, $q)
 	{
+		if ($this->smea_is_locked($this->smea_own_row())) {
+			$this->smea_locked_response();
+			return;
+		}
+
 		if ($this->input->post('submit')) {
 			$this->SGODModel->update_smea_ad($param);
 			header('Content-Type: application/json');
@@ -8353,58 +8446,162 @@ class Page extends CI_Controller
 		$this->load->view('smea_update_modal', $result);
 	}
 
+	// Reply the SMEA modal gets when the report is locked: JSON on save, a short
+	// notice when it only asked for the form.
+	private function smea_locked_response()
+	{
+		$message = 'This SMEA has already been submitted. It can no longer be edited unless the division office returns it for compliance.';
+
+		if ($this->input->post('submit')) {
+			header('Content-Type: application/json');
+			echo json_encode(['success' => false, 'message' => $message]);
+			return;
+		}
+
+		echo '<div class="smea-loading">' . html_escape($message) . '</div>';
+	}
+
 	function generate_smea()
 	{
+		$result = $this->smea_report_data(
+			$this->session->username,
+			$_SESSION['fy'],
+			$_SESSION['aip'],
+			$this->input->post('q')
+		);
+
 		$result['title'] = "ANNUAL IMPLEMENTATION PLAN";
-
-		$school_id = $this->session->username;
-		$fy = $_SESSION['fy'];
-		$bcode = $_SESSION['aip'];
-
-		$result['fy'] = $_SESSION['fy'];
-		$result['q'] = $this->input->post('q');
-		$result['data'] = $this->SGODModel->get_smea($school_id, $fy, $bcode);
-
-		$result['adjustment'] = $this->Common->three_cond_group('sgod_smea_adjustment', 'school_id', $school_id, 'fy', $fy, 'b_code', $bcode, 'pillar');
-		$result['data_row'] = $this->SGODModel->get_aip_row($school_id, $fy, $bcode);
-		// $result['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
-		// $result['aip_submit'] = $this->SGODModel->aip_related_row('sgod_aip_submit', $school_id, $fy, $bcode);
-
-		// $result['ft'] = $this->SGODModel->two_cond_row('sgod_school_allocation', 'schoolID', $this->session->username, 'alloc_batch', $_SESSION['aip']);
-
-		// Drives the "Finalize & Submit SMEA" action at the bottom of the report.
-		$result['smea_submitted'] = ($this->SGODModel->one_cond_count('sgod_smea', 'b_code', $bcode)->num_rows() > 0);
 
 		$this->load->view('smea_generate', $result);
 	}
 
 	function smea_summary()
 	{
+		$result = $this->smea_report_data(
+			$this->session->username,
+			$_SESSION['fy'],
+			$_SESSION['aip'],
+			$this->input->post('q')
+		);
+
 		$result['title'] = "ANNUAL IMPLEMENTATION PLAN";
 		$result['b_label'] = "+ ADD NEW";
 		$result['b_link'] = "#";
 
-		$school_id = $this->session->username;
-		$fy = $_SESSION['fy'];
-		$bcode = $_SESSION['aip'];
+		$this->load->view('smea_generate_summary', $result);
+	}
 
-		$result['fy'] = $_SESSION['fy'];
+	// Division-office review of one submission, opened in a new tab from the
+	// district school list. Same report the school sees, but read-only and with
+	// the VALIDATE / FOR COMPLIANCE actions attached.
+	//   Page/smea_review/<sgod_smea.id>[/<quarter>]
+	function smea_review()
+	{
+		$smea = $this->smea_review_row($this->uri->segment(3));
 
-		$result['q'] = $this->input->post('q');
+		$q = (int) $this->uri->segment(4);
+		if ($q < 1 || $q > 4) {
+			$q = 1;
+		}
 
+		$result = $this->smea_report_data($smea->school_id, $smea->fy, $smea->b_code, $q);
+		$result['title']       = "SMEA REVIEW";
+		$result['readonly']    = true;
+		$result['review_mode'] = true;
+		$result['smea_row']    = $smea;
 
-		$result['data'] = $this->SGODModel->get_smea($school_id, $fy, $bcode);
+		$this->load->view('smea_generate', $result);
+	}
 
-		//$result['adjustment'] = $this->Common->three_cond_group('sgod_smea_adjustment', 'school_id', $school_id, 'fy', $fy, 'b_code', $bcode, 'pillar');
-		$result['data_row'] = $this->SGODModel->get_aip_row($school_id, $fy, $bcode);
-		//$result['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
-		//$result['aip_submit'] = $this->SGODModel->aip_related_row('sgod_aip_submit', $school_id, $fy, $bcode);
-		//$result['data_row'] = $this->SGODModel->get_aip_row($school_id, $fy, $bcode);
+	//   Page/smea_review_summary/<sgod_smea.id>
+	function smea_review_summary()
+	{
+		$smea = $this->smea_review_row($this->uri->segment(3));
 
-		//$result['ft'] = $this->SGODModel->two_cond_row('sgod_school_allocation', 'schoolID', $this->session->username, 'alloc_batch', $_SESSION['aip']);
-
+		$result = $this->smea_report_data($smea->school_id, $smea->fy, $smea->b_code);
+		$result['title']       = "SMEA SUMMARY REVIEW";
+		$result['readonly']    = true;
+		$result['review_mode'] = true;
+		$result['smea_row']    = $smea;
 
 		$this->load->view('smea_generate_summary', $result);
+	}
+
+	// Loads the submission a review/decision URL points at, or stops the request.
+	private function smea_review_row($id)
+	{
+		if (!$this->smea_can_review()) {
+			show_error('You are not allowed to review SMEA submissions.', 403, 'Forbidden');
+		}
+
+		$smea = $this->SGODModel->smea_row_by_id((int) $id);
+		if (empty($smea)) {
+			show_404();
+		}
+
+		return $smea;
+	}
+
+	// VALIDATE — accepts the submission. The school stays locked.
+	function smea_validate()
+	{
+		$smea = $this->smea_review_row($this->input->post('id'));
+
+		$this->SGODModel->smea_set_status(
+			$smea->id,
+			SGODModel::SMEA_VALIDATED,
+			null,
+			$this->smea_reviewer_name()
+		);
+
+		$this->session->set_flashdata('success', 'SMEA of ' . $smea->school_id . ' (batch ' . $smea->b_code . ') has been marked SDO VALIDATED.');
+		$this->smea_review_redirect();
+	}
+
+	// FOR COMPLIANCE — returns the submission with a remark. The school sees the
+	// remark and can edit and re-submit.
+	function smea_compliance()
+	{
+		$smea = $this->smea_review_row($this->input->post('id'));
+
+		$remarks = trim((string) $this->input->post('sdo_remarks'));
+		if ($remarks === '') {
+			$this->session->set_flashdata('danger', 'A remark is required when returning a SMEA for compliance.');
+			$this->smea_review_redirect();
+			return;
+		}
+
+		$this->SGODModel->smea_set_status(
+			$smea->id,
+			SGODModel::SMEA_COMPLIANCE,
+			$remarks,
+			$this->smea_reviewer_name()
+		);
+
+		$this->session->set_flashdata('success', 'SMEA of ' . $smea->school_id . ' (batch ' . $smea->b_code . ') has been returned FOR COMPLIANCE.');
+		$this->smea_review_redirect();
+	}
+
+	// Name stamped on the decision. The SGOD login stores the full name in
+	// `user`; fall back to the account name when it is not set.
+	private function smea_reviewer_name()
+	{
+		$name = trim((string) $this->session->userdata('user'));
+
+		return $name !== '' ? $name : (string) $this->session->username;
+	}
+
+	// Both decisions are posted from three different pages, so each form carries
+	// where to go back to. Only same-site paths are honoured.
+	private function smea_review_redirect()
+	{
+		$back = (string) $this->input->post('back');
+
+		if ($back !== '' && strpos($back, base_url()) === 0) {
+			redirect($back);
+		}
+
+		redirect(base_url() . 'Page/smea_admin');
 	}
 
 	function smea_qr()
@@ -8415,9 +8612,17 @@ class Page extends CI_Controller
 
 	public function submit_smea()
 	{
-		$id = $this->input->get('id');
+		// Already submitted or already validated — nothing to re-send. Only a
+		// report returned FOR COMPLIANCE can be submitted again.
+		$existing = $this->SGODModel->smea_status_row($this->uri->segment(3), $this->uri->segment(5), $this->uri->segment(4));
+		if ($this->smea_is_locked($existing)) {
+			$this->session->set_flashdata('danger', 'This SMEA has already been submitted.');
+			redirect("Page/smeav2");
+		}
+
+		$resubmit = !empty($existing);
 		$this->SGODModel->smea_submit();
-		$this->session->set_flashdata('success', 'Submitted successfully.');
+		$this->session->set_flashdata('success', $resubmit ? 'Re-submitted to the division office.' : 'Submitted successfully.');
 		redirect("Page/smeav2");
 	}
 
@@ -8501,6 +8706,16 @@ class Page extends CI_Controller
 		} else {
 			$result['data'] = $schools;
 		}
+
+		// The per-submission rows behind the "Submissions"/"Budget Codes" columns:
+		// one query for the whole listed slice, indexed by school so the view can
+		// render a review + decision block per budget code.
+		$school_ids = array();
+		foreach ($result['data'] as $school) {
+			$school_ids[] = $school->schoolID;
+		}
+		$result['submissions'] = $this->SGODModel->smea_submissions_for_schools($school_ids, $fy);
+		$result['can_review']  = $this->smea_can_review();
 
 		$this->load->view('templates/head');
 		$this->load->view('templates/header');

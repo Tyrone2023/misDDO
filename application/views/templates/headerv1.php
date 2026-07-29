@@ -12,6 +12,27 @@
             $nc = $this->SGODModel->two_cond_count_not_equal_cond('sgod_aip_track', 'notify', 1, 'res', $this->session->username);
         }
 
+        // Names of everyone who commented, in ONE query — see the same note in header.php.
+        $noti_users = array();
+        $noti_res = array();
+        foreach ($noti as $row) {
+            if (trim((string) $row->res) !== '') {
+                $noti_res[(string) $row->res] = true;
+            }
+        }
+        if (!empty($noti_res)) {
+            // `users.username` is not unique (a couple of school accounts exist twice),
+            // so keep the lowest id — the row the previous per-row lookup returned.
+            $this->db->select('username, fname, lname');
+            $this->db->where_in('username', array_keys($noti_res));
+            $this->db->order_by('id', 'ASC');
+            foreach ($this->db->get('users')->result() as $u) {
+                if (!isset($noti_users[(string) $u->username])) {
+                    $noti_users[(string) $u->username] = trim($u->fname . ' ' . $u->lname);
+                }
+            }
+        }
+
         ?>
 
 
@@ -40,14 +61,14 @@
 
                                 <?php
                                 foreach ($noti as $row) {
-                                    $user = $this->SGODModel->one_cond_row('users', 'username', $row->res);
+                                    $noti_name = isset($noti_users[(string) $row->res]) ? $noti_users[(string) $row->res] : '';
                                 ?>
                                     <!-- item-->
                                     <a href="<?= base_url(); ?>Page/aip_noti_track/<?= $row->submit_id; ?>" class="dropdown-item notify-item">
                                         <div class="notify-icon">
                                             <i class="mdi mdi-comment-account-outline text-info"></i>
                                         </div>
-                                        <p class="notify-details"> <?= $user->fname . ' ' . $user->lname; ?> commented
+                                        <p class="notify-details"> <?= html_escape($noti_name); ?> commented
                                             <small class="noti-time"></small>
                                         </p>
                                     </a>

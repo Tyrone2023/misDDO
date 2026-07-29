@@ -9,6 +9,10 @@ $total_pending = $total_schools - $total_submitted;
 $overall_rate  = $total_schools > 0 ? round(($total_submitted / $total_schools) * 100, 1) : 0;
 ?>
 
+<?php // Loaded before the content, not after it: a <style> block below the table makes
+      // the browser paint the raw markup first and restyle it a moment later. ?>
+<?php include('includes/smea_district_styles.php'); ?>
+
             <!-- ============================================================== -->
             <!-- Start Page Content here -->
             <!-- ============================================================== -->
@@ -79,7 +83,12 @@ $overall_rate  = $total_schools > 0 ? round(($total_submitted / $total_schools) 
                                             <p>No schools are assigned to a district yet.</p>
                                         </div>
                                     <?php else : ?>
-                                    <div class="table-responsive">
+                                    <div class="table-responsive sm-table-wrap">
+                                        <!-- Skeleton shown until DataTables has taken the table over, so the
+                                             raw unpaginated list never flashes on screen. -->
+                                        <div class="sm-table-skeleton">
+                                            <span></span><span></span><span></span><span></span><span></span>
+                                        </div>
                                         <table id="datatable" class="table sm-table dt-responsive nowrap" style="width:100%;">
                                             <thead>
                                                 <tr>
@@ -210,8 +219,6 @@ $overall_rate  = $total_schools > 0 ? round(($total_submitted / $total_schools) 
         </div>
         <!-- END wrapper -->
 
-        <?php include('includes/smea_district_styles.php'); ?>
-
         <!-- Vendor js -->
         <script src="<?= base_url(); ?>assets/js/vendor.min.js"></script>
 
@@ -244,6 +251,9 @@ $overall_rate  = $total_schools > 0 ? round(($total_submitted / $total_schools) 
                         }
                     });
                 }
+
+                // Table is styled and paginated — reveal it and drop the skeleton.
+                $('.sm-table-wrap').addClass('is-ready');
             });
         </script>
 

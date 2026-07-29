@@ -117,6 +117,11 @@
                 border-color:#9ed5c8;
                 color:#0f7f6c;
             }
+            .smea-status.is-compliance{
+                background:#fdf1e3;
+                border-color:#f0c48a;
+                color:#96490a;
+            }
 
             /* ===== Meta strip (IPCRF employee-field cards) ===== */
             .smea-meta{
@@ -214,6 +219,16 @@
             }
             .smea-btn-primary:hover{ background:#234aa8; border-color:#234aa8; }
             .smea-btn-primary.is-busy{ opacity:.6; pointer-events:none; }
+            /* Validated: the report is finished, so the toolbar reads as a clearance
+               rather than as the "you may not edit this" warning it carries while the
+               submission is still sitting with the division office. */
+            .smea-cleared{
+                color:#0f7f6c;
+                font-family:'Montserrat', 'Segoe UI', Arial, sans-serif;
+                font-size:12px;
+                font-weight:800;
+                letter-spacing:.02em;
+            }
             .smea-submitted-chip{
                 display:inline-flex;
                 align-items:center;
@@ -560,12 +575,52 @@
     </p>
     <div class="hr"></div> -->
 
-    <?php if(!isset($q)){
+    <?php if(!isset($q) || $q === null || $q === ''){
         $q=$_SESSION['q'];
     }?>
     <?php
     $smea_submitted = isset($smea_submitted) ? $smea_submitted : false;
+    // Set by the controller: $locked is TRUE once the report has been submitted (and
+    // stays TRUE after the division office validates it); $readonly is TRUE when the
+    // page is opened from the division-office review, which never edits.
+    $locked      = isset($locked) ? $locked : false;
+    $readonly    = isset($readonly) ? $readonly : false;
+    $review_mode = isset($review_mode) ? $review_mode : false;
+    $smea_row    = isset($smea_row) ? $smea_row : null;
+    $school_id   = isset($school_id) ? $school_id : $this->session->username;
+    $bcode       = isset($bcode) ? $bcode : $_SESSION['aip'];
+    $can_edit    = !$readonly && !$locked;
     date_default_timezone_set('Asia/Manila');
+
+    // Masthead chip. It has to agree with the status banner further down, so it shows
+    // the actual status rather than just submitted / not submitted.
+    $smea_chip = 'For Submission';
+    $smea_chip_class = '';
+    if (!empty($smea_row)) {
+        $status_now = trim((string) $smea_row->status);
+        $smea_chip = $status_now !== '' ? $status_now : 'Submitted';
+        $smea_chip_class = ($smea_chip === 'For Compliance') ? ' is-compliance' : ' is-submitted';
+    }
+
+    // Validated is the end of the line, not just another locked state: the school is
+    // not waiting on anybody, so the toolbar drops the "closed for editing" warning and
+    // the "SMEA Submitted" chip and tells them the report is ready to go up.
+    $is_validated = (!empty($smea_row) && trim((string) $smea_row->status) === SGODModel::SMEA_VALIDATED);
+
+    // One highlighted target cell. It is only interactive while the school may still
+    // edit — once the SMEA is submitted (or validated) it renders as a plain cell,
+    // with no modal hook, no link and no pencil.
+    $smea_cell = function ($modal_url, $edit_url, $value) use ($can_edit, $q) {
+        if (!$can_edit) {
+            return '<td class="ivy">' . $value . '</td>';
+        }
+
+        return '<td class="ivy smea-clickable"'
+            . ' data-url="' . $modal_url . '" data-q="' . html_escape($q) . '"'
+            . ' title="Click to update Quarter ' . html_escape($q) . ' accomplishment">'
+            . '<a href="' . $edit_url . '">' . $value . '</a>'
+            . '<span class="smea-edit-hint">&#9998;</span></td>';
+    };
     ?>
 
     <div class="smea-doc">
@@ -576,8 +631,8 @@
                 <h1>School Monitoring, Evaluation and Adjustment</h1>
                 <p>Quarterly physical and financial accomplishment against the approved Annual Implementation Plan.</p>
             </div>
-            <span class="smea-status<?= $smea_submitted ? ' is-submitted' : ''; ?>">
-                <?= $smea_submitted ? 'Submitted' : 'For Submission'; ?>
+            <span class="smea-status<?= $smea_chip_class; ?>">
+                <?= html_escape($smea_chip); ?>
             </span>
         </header>
 
@@ -589,37 +644,53 @@
                 <span>Reporting Period</span><strong>Quarter <?= html_escape($q); ?></strong>
             </div>
             <div class="smea-meta-item">
-                <span>Batch Code</span><strong><?= html_escape($_SESSION['aip']); ?></strong>
+                <span>Batch Code</span><strong><?= html_escape($bcode); ?></strong>
             </div>
             <div class="smea-meta-item">
-                <span>School ID</span><strong><?= html_escape($this->session->username); ?></strong>
+                <span><?= $review_mode ? 'School' : 'School ID'; ?></span>
+                <strong><?= html_escape($review_mode && !empty($school) ? $school->schoolName : $school_id); ?></strong>
             </div>
             <div class="smea-meta-item">
                 <span>Date Generated</span><strong><?= date('F d, Y'); ?></strong>
             </div>
         </div>
 
+        <?php
+        $smea_review_q = (int) $q;
+        $smea_back = base_url() . 'Page/smea_review/' . (!empty($smea_row) ? (int) $smea_row->id : 0) . '/' . (int) $q;
+        include('includes/smea_status.php');
+        ?>
+
         <!-- Finalize: same submission as the "Submit SMEA" button on Page/smeav2 -->
+        <?php if (!$readonly) { ?>
         <div class="smea-toolbar">
             <span class="smea-legend">
-                <span class="swatch"></span>
-                <span>Only the highlighted cells are clickable &mdash; click one to update its Quarter <?= html_escape($q); ?> accomplishment.</span>
+                <?php if ($can_edit) { ?>
+                    <span class="swatch"></span>
+                    <span>Only the highlighted cells are clickable &mdash; click one to update its Quarter <?= html_escape($q); ?> accomplishment.</span>
+                <?php } elseif ($is_validated) { ?>
+                    <span class="smea-cleared">&#10003; SDO VALIDATED &mdash; Ready for Printing and Posting in the Transparency Board.</span>
+                <?php } else { ?>
+                    <span>&#128274; This SMEA is closed for editing. The division office has to return it for compliance before it can be changed.</span>
+                <?php } ?>
             </span>
 
             <span class="toolbar-spacer"></span>
 
             <!-- <button type="button" class="smea-btn smea-btn-soft" id="smeaPrintBtn">Print Report</button> -->
 
-            <?php if ($smea_submitted) { ?>
+            <?php if ($locked && !$is_validated) { ?>
                 <span class="smea-submitted-chip">&#10003; SMEA Submitted</span>
-            <?php } else { ?>
+            <?php } elseif (!$locked) { ?>
                 <a id="smeaFinalizeBtn" class="smea-btn smea-btn-primary"
                     data-fy="<?= html_escape($fy); ?>"
-                    href="<?= base_url(); ?>Page/submit_smea/<?= $this->session->username; ?>/<?= $_SESSION['aip']; ?>/<?= $_SESSION['fy']; ?>">
-                    Finalize &amp; Submit SMEA
+                    data-resubmit="<?= $smea_submitted ? '1' : '0'; ?>"
+                    href="<?= base_url(); ?>Page/submit_smea/<?= $school_id; ?>/<?= $bcode; ?>/<?= $fy; ?>">
+                    <?= $smea_submitted ? 'Re-submit SMEA' : 'Finalize &amp; Submit SMEA'; ?>
                 </a>
             <?php } ?>
         </div>
+        <?php } ?>
 
         <script>
             (function () {
@@ -634,8 +705,11 @@
                 btn.addEventListener('click', function (e) {
                     if (btn.dataset.busy === '1') { e.preventDefault(); return; }
 
-                    var msg = 'Finalize and submit this SMEA report for FY ' + btn.dataset.fy + '?\n\n' +
-                              'It will be marked as submitted to the division office.';
+                    var msg = (btn.dataset.resubmit === '1')
+                        ? 'Submit this SMEA report for FY ' + btn.dataset.fy + ' again?\n\n' +
+                          'It goes back to the division office for validation and can no longer be edited.'
+                        : 'Finalize and submit this SMEA report for FY ' + btn.dataset.fy + '?\n\n' +
+                          'It will be marked as submitted to the division office and can no longer be edited.';
                     if (!confirm(msg)) { e.preventDefault(); return; }
 
                     // Guard against a double click firing two inserts.
@@ -751,7 +825,7 @@
                         
                     $gain = (int)$smea-(int)$ptt;
                 ?>
-                <td class="ivy smea-clickable" data-url="<?= base_url(); ?>Page/smea_edit_modal/<?= $pt->id; ?>/<?= $q; ?>" data-q="<?= $q; ?>" data-span="7" title="Click to update Quarter <?= $q; ?> accomplishment"><a href="<?= base_url(); ?>Page/smea_edit/<?= $pt->id; ?>/<?= $q; ?>"><?= $pt->$pt_sop; ?></a><span class="smea-edit-hint">&#9998;</span></td>
+                <?= $smea_cell(base_url().'Page/smea_edit_modal/'.$pt->id.'/'.$q, base_url().'Page/smea_edit/'.$pt->id.'/'.$q, $pt->$pt_sop); ?>
                 <td><?php
 
                     if (strpos($pt->$pt_sop, '%') !== false) {
@@ -844,7 +918,7 @@
                     //$fgain = ((int)$fsmea/(int)$fptt)*100;
 
                 ?>
-                <td class="ivy smea-clickable" data-url="<?= base_url(); ?>Page/smea_edit_modal/<?= $ft->id; ?>/<?= $q; ?>" data-q="<?= $q; ?>" data-span="6" title="Click to update Quarter <?= $q; ?> accomplishment"><a href="<?= base_url(); ?>Page/smea_edit/<?= $ft->id; ?>/<?= $q; ?>"><?php echo $ft->$ft_sop;  ?></a><span class="smea-edit-hint">&#9998;</span></td>
+                <?= $smea_cell(base_url().'Page/smea_edit_modal/'.$ft->id.'/'.$q, base_url().'Page/smea_edit/'.$ft->id.'/'.$q, $ft->$ft_sop); ?>
                 <td><?php if($ft->$ft_smea != 0){echo number_format($ft->$ft_smea, 2);}  ?></td>
                 <td>
                     <?php
@@ -891,7 +965,7 @@
                     //$fgain = ((int)$fsmea/(int)$fptt)*100;
 
                 ?>
-                <td class="ivy smea-clickable" data-url="<?= base_url(); ?>Page/smea_edit_modal/<?= $fto->id; ?>/<?= $q; ?>" data-q="<?= $q; ?>" data-span="6" title="Click to update Quarter <?= $q; ?> accomplishment"><a href="<?= base_url(); ?>Page/smea_edit/<?= $fto->id; ?>/<?= $q; ?>"><?php if($fto->$fto_sop){echo number_format($fto->$fto_sop);}  ?></a><span class="smea-edit-hint">&#9998;</span></td>
+                <?= $smea_cell(base_url().'Page/smea_edit_modal/'.$fto->id.'/'.$q, base_url().'Page/smea_edit/'.$fto->id.'/'.$q, $fto->$fto_sop ? number_format($fto->$fto_sop) : ''); ?>
                 <td><?php if($fto->$fto_smea != 0){echo number_format($fto->$fto_smea, 2);}  ?></td>
                 <td>
                     <?php 
@@ -1031,7 +1105,7 @@
                         
                     $gain = (int)$smea-(int)$ptt;
                 ?>
-                <td class="ivy smea-clickable" data-url="<?= base_url(); ?>Page/smea_ad_edit_modal/<?= $pt->id; ?>/<?= $q; ?>" data-q="<?= $q; ?>" data-span="7" title="Click to update Quarter <?= $q; ?> accomplishment"><a href="<?= base_url(); ?>Page/smea_ad_edit/<?= $pt->id; ?>/<?= $q; ?>"><?= $pt->$pt_sop; ?></a><span class="smea-edit-hint">&#9998;</span></td>
+                <?= $smea_cell(base_url().'Page/smea_ad_edit_modal/'.$pt->id.'/'.$q, base_url().'Page/smea_ad_edit/'.$pt->id.'/'.$q, $pt->$pt_sop); ?>
                 <td><?php 
 
                     if (strpos($pt->$pt_sop, '%') !== false) {
@@ -1124,7 +1198,7 @@
                     //$fgain = ((int)$fsmea/(int)$fptt)*100;
 
                 ?>
-                <td class="ivy smea-clickable" data-url="<?= base_url(); ?>Page/smea_ad_edit_modal/<?= $ft->id; ?>/<?= $q; ?>" data-q="<?= $q; ?>" data-span="6" title="Click to update Quarter <?= $q; ?> accomplishment"><a href="<?= base_url(); ?>Page/smea_ad_edit/<?= $ft->id; ?>/<?= $q; ?>"><?php if($ft->$ft_sop){echo number_format($ft->$ft_sop);}  ?></a><span class="smea-edit-hint">&#9998;</span></td>
+                <?= $smea_cell(base_url().'Page/smea_ad_edit_modal/'.$ft->id.'/'.$q, base_url().'Page/smea_ad_edit/'.$ft->id.'/'.$q, $ft->$ft_sop ? number_format($ft->$ft_sop) : ''); ?>
                 <td><?php if($ft->$ft_smea != 0){echo number_format($ft->$ft_smea, 2);}  ?></td>
                 <td>
                     <?php 
@@ -1171,7 +1245,7 @@
                     //$fgain = ((int)$fsmea/(int)$fptt)*100;
 
                 ?>
-                <td class="ivy smea-clickable" data-url="<?= base_url(); ?>Page/smea_ad_edit_modal/<?= $fto->id; ?>/<?= $q; ?>" data-q="<?= $q; ?>" data-span="6" title="Click to update Quarter <?= $q; ?> accomplishment"><a href="<?= base_url(); ?>Page/smea_ad_edit/<?= $fto->id; ?>/<?= $q; ?>"><?php if($fto->$fto_sop){echo number_format($fto->$fto_sop);}  ?></a><span class="smea-edit-hint">&#9998;</span></td>
+                <?= $smea_cell(base_url().'Page/smea_ad_edit_modal/'.$fto->id.'/'.$q, base_url().'Page/smea_ad_edit/'.$fto->id.'/'.$q, $fto->$fto_sop ? number_format($fto->$fto_sop) : ''); ?>
                 <td><?php if($ft->$ft_smea != 0){echo number_format($ft->$ft_smea, 2);}  ?></td>
                 <td>
                     <?php 
@@ -1316,12 +1390,15 @@ backToTopButton.onclick = function() {
                 })
                     .then(function (r) { return r.json(); })
                     .then(function (res) {
-                        if (res && res.success) { window.location.reload(); }
-                        else { throw new Error('save failed'); }
+                        if (res && res.success) { window.location.reload(); return; }
+                        // The server refuses a locked SMEA even if the page is stale.
+                        var err = new Error('save failed');
+                        err.reason = res && res.message;
+                        throw err;
                     })
-                    .catch(function () {
+                    .catch(function (err) {
                         if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
-                        alert('Unable to save. Please try again.');
+                        alert((err && err.reason) || 'Unable to save. Please try again.');
                     });
             });
         }
