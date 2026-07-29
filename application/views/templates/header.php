@@ -421,6 +421,7 @@
                                         <li><a href="<?= base_url(); ?>Page/jobArchieved">Archived Vacancies</a></li>
                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/request_rating">Retained Rating Request</span></a></li>
+                                        <li><a href="<?= base_url(); ?>Page/positionSettings">Positions Settings</a></li>
                                         <!-- <li><a href="<?= base_url(); ?>Page/appRatingUploading">Upload Applicant's Rating</a></li> -->
                                     </ul>
                                 </li>
@@ -642,6 +643,7 @@
                                       
                                         <li><a href="<?= base_url(); ?>Pages/rqa_jhs_upload">RQA JHS Upload</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/rqa_shs_upload">RQA SHS Upload</a></li>
+                                        <li><a href="<?= base_url(); ?>Page/positionSettings">Positions Settings</a></li>
 
                                         <!-- <li><a href="<?= base_url(); ?>Page/appRatingUploading">Upload Applicant's Rating</a></li> -->
                                     </ul>
@@ -796,6 +798,7 @@
                                         <li><a href="<?= base_url(); ?>Page/jobArchieved">Archived Vacancies</a></li>
                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Page/appRatingUploading">Upload Applicant's Rating</a></li>
+                                        <li><a href="<?= base_url(); ?>Page/positionSettings">Positions Settings</a></li>
 
                                     </ul>
                                 </li>

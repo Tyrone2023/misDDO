@@ -3661,12 +3661,14 @@ class Page extends CI_Controller
 
 	public function jobVacancy()
 	{
+		$this->ensure_position_id_width();
 
 		$result['data'] = $this->PersonnelModel->JobVancancies();
 		$result['teaching'] = $this->Hiring_model->JobVancancies();
 		$result['ren'] = $this->Common->two_cond('hris_jobvacancy', 'promotion', 1, 'jvStatus', 'Open');
 		$result['lock'] = $this->Common->one_cond_count_row('hris_applicant', 'stat', 0);
 		$result['pos_title'] = $this->Common->no_cond_order_by('hris_positions', 'title', 'ASC');
+		$result['groups'] = $this->position_groups();
 
 
 		$this->load->view('list_jobvacancy', $result);
@@ -3716,6 +3718,152 @@ class Page extends CI_Controller
 		$this->Page_model->insert_at('Archieved Job Vacancy.', $id);
 		$this->session->set_flashdata('success', 'Archieved successfully!');
 		redirect('Page/jobVacancy');
+	}
+
+	/* ==================================================================
+	 * Positions Settings - maintains hris_positions, the source of the
+	 * Position Title dropdown used when posting a job vacancy.
+	 * ================================================================== */
+
+	private function position_groups()
+	{
+		return array(
+			1 => 'Teaching',
+			2 => 'School Administration',
+			3 => 'Related Teaching',
+			4 => 'Non-Teaching'
+		);
+	}
+
+	/**
+	 * hris_jobvacancy.position_id shipped as TINYINT while hris_positions.id is
+	 * well past 127, so posting a vacancy for a newer position title failed
+	 * outright under STRICT_TRANS_TABLES. Widen it in place the first time a
+	 * recruitment screen is opened so titles created here always post cleanly.
+	 */
+	private function ensure_position_id_width()
+	{
+		$debug = $this->db->db_debug;
+		$this->db->db_debug = false;
+
+		$col = $this->db->query(
+			"select DATA_TYPE from information_schema.COLUMNS
+			 where TABLE_SCHEMA = database()
+			   and TABLE_NAME = 'hris_jobvacancy'
+			   and COLUMN_NAME = 'position_id'"
+		);
+
+		if ($col && ($row = $col->row()) && strtolower($row->DATA_TYPE) === 'tinyint') {
+			$this->db->query("alter table `hris_jobvacancy` modify column `position_id` int not null default 0");
+		}
+
+		$this->db->db_debug = $debug;
+	}
+
+	private function position_settings_access()
+	{
+		$allowed = array('Human Resource Admin', 'HR Staff', 'Super Admin', 'asds');
+
+		if (!in_array($this->session->userdata('position'), $allowed, true)) {
+			$this->session->set_flashdata('danger', 'You are not allowed to access Positions Settings.');
+			redirect(base_url());
+		}
+	}
+
+	public function positionSettings()
+	{
+		$this->position_settings_access();
+		$this->ensure_position_id_width();
+
+		$usage = array();
+		$q = $this->db->query("select position_id, count(*) as total from hris_jobvacancy where position_id is not null and position_id != 0 group by position_id");
+		foreach ($q->result() as $row) {
+			$usage[(int) $row->position_id] = (int) $row->total;
+		}
+
+		$result['groups']   = $this->position_groups();
+		$result['brackets'] = $this->Common->no_cond('hris_position_points');
+		$result['data']     = $this->Common->no_cond_order_by('hris_positions', 'title', 'ASC');
+		$result['usage']    = $usage;
+
+		$this->load->view('hr_positions_settings', $result);
+	}
+
+	public function positionSettings_save()
+	{
+		$this->position_settings_access();
+
+		$id      = (int) $this->input->post('id');
+		$title   = trim((string) $this->input->post('title'));
+		$pos_id  = (int) $this->input->post('pos_id');
+		$sg      = $this->input->post('sg');
+		$bracket = (int) $this->input->post('bracket');
+
+		$groups = $this->position_groups();
+
+		if ($title === '' || !isset($groups[$pos_id])) {
+			$this->session->set_flashdata('danger', 'Position title and position group are required.');
+			redirect(base_url() . 'Page/positionSettings');
+		}
+
+		// keep titles unique inside a position group so the dropdown stays clean
+		$this->db->where('title', $title);
+		$this->db->where('pos_id', $pos_id);
+		if ($id) {
+			$this->db->where('id !=', $id);
+		}
+		if ($this->db->count_all_results('hris_positions') > 0) {
+			$this->session->set_flashdata('danger', '"' . $title . '" already exists under ' . $groups[$pos_id] . '.');
+			redirect(base_url() . 'Page/positionSettings');
+		}
+
+		$data = array(
+			'title'   => $title,
+			'pos_id'  => $pos_id,
+			'sg'      => ($sg === '' || $sg === null) ? null : (int) $sg,
+			'bracket' => $bracket
+		);
+
+		if ($id) {
+			// g_score is left untouched on edit - it is maintained elsewhere
+			$this->db->where('id', $id);
+			$this->db->update('hris_positions', $data);
+			$this->Page_model->insert_at('Updated position title: ' . $title, $id);
+			$this->session->set_flashdata('success', 'Position updated successfully.');
+		} else {
+			$data['g_score'] = 0; // column is NOT NULL without a default
+			$this->db->insert('hris_positions', $data);
+			$this->Page_model->insert_at('Added position title: ' . $title, $this->db->insert_id());
+			$this->session->set_flashdata('success', 'Position added successfully.');
+		}
+
+		redirect(base_url() . 'Page/positionSettings');
+	}
+
+	public function positionSettings_delete($id = 0)
+	{
+		$this->position_settings_access();
+
+		$id  = (int) $id;
+		$pos = $this->Common->one_cond_row('hris_positions', 'id', $id);
+
+		if (!$pos) {
+			$this->session->set_flashdata('danger', 'Position not found.');
+			redirect(base_url() . 'Page/positionSettings');
+		}
+
+		$this->db->where('position_id', $id);
+		$inuse = $this->db->count_all_results('hris_jobvacancy');
+
+		if ($inuse > 0) {
+			$this->session->set_flashdata('danger', 'Cannot delete "' . $pos->title . '" - it is already used by ' . $inuse . ' job vacancy posting(s).');
+			redirect(base_url() . 'Page/positionSettings');
+		}
+
+		$this->Common->del('hris_positions', 'id', $id);
+		$this->Page_model->insert_at('Deleted position title: ' . $pos->title, $id);
+		$this->session->set_flashdata('success', 'Position deleted successfully.');
+		redirect(base_url() . 'Page/positionSettings');
 	}
 
 	public function rqa()
