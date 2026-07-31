@@ -1243,6 +1243,8 @@
                             <?php elseif ($this->session->userdata('position') === 'reg') : ?>
 
                                 <li><a href="<?= base_url(); ?>Pages/view_user" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+                                                                <li><a href="http://localhost/misDDO/registered_profile/14930" class="waves-effect"><i class="fas fa-id-card"></i><span> My Profile </span></a></li>
+
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-chalkboard-teacher"></i>

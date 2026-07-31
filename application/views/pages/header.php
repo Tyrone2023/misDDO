@@ -658,6 +658,7 @@
                         <?php elseif ($this->session->userdata('position') === 'reg') : ?>
 
                             <li><a href="<?= base_url(); ?>Pages/view_user" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+                            <li><a href="<?= base_url(); ?>registered_profile/<?= $this->session->c_id; ?>" class="waves-effect"><i class="fas fa-user"></i><span> My Profile </span></a></li>
                             <li><a href="<?= base_url(); ?>Pages/ja/<?= $this->session->c_id; ?>"><i class="fas fa-clipboard-list"></i>My Application</a></li>
                             <li>
                                 <a href="javascript: void(0);" class="waves-effect">
