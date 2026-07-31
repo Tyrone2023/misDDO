@@ -2952,6 +2952,25 @@ class Pages extends CI_Controller
 
             $data['mis_settings'] = $this->Common->one_cond_row('mis_settings','settingsID',1);
 
+            // Credentials produced by a successful registration are handed back
+            // through flashdata so the view can pop them up in a modal. The
+            // userdata copy is a fallback for when an intermediate request
+            // (favicon, asset 404, AJAX) consumes the flashdata first.
+            $successCredentials = $this->session->flashdata('registration_success_credentials');
+            if (!is_array($successCredentials) || empty($successCredentials)) {
+                $successCredentials = $this->session->userdata('registration_success_credentials');
+            }
+            if (!is_array($successCredentials)) {
+                $successCredentials = array();
+            } elseif (!empty($successCredentials)) {
+                $this->session->unset_userdata('registration_success_credentials');
+            }
+            $data['registration_success_credentials'] = $successCredentials;
+
+            // Duplicate-record checks redirect instead of re-rendering, so keep
+            // what the applicant typed and echo it back into the form.
+            $oldInput = $this->session->flashdata('registration_old_input');
+            $data['old_input'] = is_array($oldInput) ? $oldInput : array();
 
             $this->load->view('templates/header_public');
             $this->load->view('pages/' . $page, $data);
@@ -2967,8 +2986,9 @@ class Pages extends CI_Controller
             $responseKeys = json_decode($response, true);
 
             if (!$responseKeys["success"]) {
+                $this->stash_applicant_input();
                 $this->session->set_flashdata('danger', 'reCAPTCHA verification failed. Please try again.');
-                redirect('Pages/new_applicant'); 
+                redirect('Pages/new_applicant');
             }
 
             $r_no = $this->input->post('record_no');
@@ -2976,7 +2996,7 @@ class Pages extends CI_Controller
             $lname = $this->input->post('lname');
             $mname = $this->input->post('mname');
             $email = $this->input->post('email');
-            $bd = $this->input->post('bd');
+            $bd = $this->input->post('BirthDate');
             $contact = $this->input->post('contact');
             $record_no_check = $this->Page_model->check_single_row_exist('hris_applicant', 'record_no', $r_no);
             $check = $this->Page_model->check_exist('hris_applicant', $fname, $lname,$mname);
@@ -2994,15 +3014,18 @@ class Pages extends CI_Controller
             }
 
             if ($num_check->num_rows() >= 1) {
+                $this->stash_applicant_input();
                 $this->session->set_flashdata('danger', 'A Duplicate Contact Number was found.');
                 redirect(base_url() . 'new_applicant');
             }
 
             if ($email_check->num_rows() >= 1) {
+                $this->stash_applicant_input();
                 $this->session->set_flashdata('danger', 'Duplicate Email found.');
                 redirect(base_url() . 'new_applicant');
             } else {
                 if ($check->num_rows() >= 1) {
+                    $this->stash_applicant_input();
                     $this->session->set_flashdata('danger', 'Duplicate records found.');
                     redirect(base_url() . 'new_applicant');
                 } else {
@@ -3011,27 +3034,89 @@ class Pages extends CI_Controller
                     $this->Page_model->update_app_count();
                     $this->Page_model->insert_reg_user($id);
 
+                    $division = 'DepEd';
+                    $settings1 = $this->PersonnelModel->mis_settings();
+                    if (!empty($settings1[0]->division)) {
+                        $division = 'DepEd ' . $settings1[0]->division;
+                    }
+
+                    $fullName = trim(preg_replace('/\s+/', ' ', $fname . ' ' . $mname . ' ' . $lname));
+
                     //Email Notification
                     $this->load->config('email');
                     $this->load->library('email');
-                    $mail_message = 'Dear ' . $fname . ',' . "\r\n";
-                    $mail_message .= '<br><br>Thank you for signing up!' . "\r\n";
-                    $mail_message .= '<br><br>You may now login to the system using <span style="color:red; font-weight:bold;">' . $email . '</span> as your username and <span style="color:red; font-weight:bold;">' . $bd . ' </span> as your password.' . "\r\n";
-                    $mail_message .= '<br><br>Thanks & Regards,';
-                    $mail_message .= '<br>HRIS - Online';
+                    $this->email->set_mailtype('html');
+
+                    $mail_message = '
+<div style="font-family: Arial, Helvetica, sans-serif; padding:20px; color:#333;">
+    <h2 style="color:#1a56db; margin:0 0 16px;">Welcome to ' . html_escape($division) . '</h2>
+    <p>Dear <strong>' . html_escape($fname) . '</strong>,</p>
+    <p>Thank you for signing up! Your applicant account has been created successfully.</p>
+    <table style="width:100%; max-width:420px; margin:20px 0; border-collapse:collapse;">
+        <tr>
+            <td style="padding:10px; background:#f0f0f0; border:1px solid #ddd;"><strong>Username:</strong></td>
+            <td style="padding:10px; border:1px solid #ddd;">' . html_escape($email) . '</td>
+        </tr>
+        <tr>
+            <td style="padding:10px; background:#f0f0f0; border:1px solid #ddd;"><strong>Password:</strong></td>
+            <td style="padding:10px; border:1px solid #ddd;">' . html_escape($bd) . '</td>
+        </tr>
+    </table>
+    <p>Your password is your birth date in <strong>YYYY-MM-DD</strong> format. Please change it after your first login.</p>
+    <p style="margin-top:28px;">Thanks &amp; Regards,<br><strong>HRIS - Online</strong></p>
+    <hr style="margin-top:32px; border:none; border-top:1px solid #eee;">
+    <p style="font-size:12px; color:#888;">This is an automated message. Please do not reply to this email.</p>
+</div>';
 
                     $this->email->from('no-reply@depeddavor.com', 'Human Resource Information System')
                         ->to($email)
                         ->subject('Account Created')
                         ->message($mail_message);
-                    $this->email->send();
 
+                    // Suppress SMTP connection warnings: they render as a 500 page
+                    // mid-request and would kill the redirect below. send() still
+                    // returns FALSE so the notice can reflect the failure.
+                    $emailSent = @$this->email->send();
 
-                    $this->session->set_flashdata('success', 'Your registration has been processed successfully.  Please check your email for the login credentials.');
-                    redirect(base_url() . 'log_in');
+                    if ($emailSent) {
+                        $notice = 'Your registration has been processed successfully. These credentials were also sent to your email address.';
+                    } else {
+                        log_message('error', 'Applicant registration email failed for ' . $email);
+                        $notice = 'Your registration has been processed successfully, but the confirmation email could not be sent. Please download and keep the credentials below.';
+                    }
+
+                    $credentialsPayload = array(
+                        'name'      => $fullName,
+                        'username'  => $email,
+                        'password'  => $bd,
+                        'email'     => $email,
+                        'notice'    => $notice,
+                        'login_url' => base_url() . 'log_in',
+                    );
+
+                    $this->session->set_flashdata('registration_success_credentials', $credentialsPayload);
+                    $this->session->set_userdata('registration_success_credentials', $credentialsPayload);
+                    $this->session->set_flashdata('success', $notice);
+                    redirect(base_url() . 'new_applicant');
                 }
             }
         }
+    }
+
+    /**
+     * Keeps the submitted applicant registration form so an error redirect can
+     * repopulate it instead of making the applicant retype every field.
+     */
+    private function stash_applicant_input()
+    {
+        $post = $this->input->post(NULL, TRUE);
+
+        if (!is_array($post)) {
+            return;
+        }
+
+        unset($post['g-recaptcha-response'], $post['confirm']);
+        $this->session->set_flashdata('registration_old_input', $post);
     }
 
 

@@ -1,42 +1,146 @@
-<?php
-// ── View helpers ──────────────────────────────────────────────────────────────
-// Values come from two places: set_value() when the form validation library
-// re-renders this view in the same request, and the "old input" flashdata that
-// the duplicate-record checks stash before redirecting back here.
-// CI includes views from inside CI_Loader::_ci_load(), so variables declared
-// here are method-locals — the helpers below reach them via $GLOBALS, not a
-// plain `global` on an undeclared name.
-$GLOBALS['regFormValues'] = (isset($old_input) && is_array($old_input)) ? $old_input : array();
-$successCredentials = (isset($registration_success_credentials) && is_array($registration_success_credentials))
-    ? $registration_success_credentials
-    : array();
-$divisionName = isset($data1[0]->division) ? $data1[0]->division : '';
+<!DOCTYPE html>
+<html lang="en">
 
-if (!function_exists('reg_raw')) {
-    function reg_raw($key, $default = '')
-    {
-        global $regFormValues;
-        $val = set_value($key);
-        if ($val === '' || $val === null) {
-            $val = isset($regFormValues[$key]) ? $regFormValues[$key] : $default;
+<head>
+    <meta charset="utf-8" />
+    <title>EduVision MIS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Online recruitment and human resource information system &mdash; create an account, apply for vacant positions and track your application." />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="theme-color" content="#0f2557" />
+    <link rel="shortcut icon" href="http://localhost/misDDO/assets/images/hris.ico">
+    <link href="http://localhost/misDDO/assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" id="bootstrap-stylesheet" />
+    <link href="http://localhost/misDDO/assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+    <link href="http://localhost/misDDO/assets/css/app.min.css" rel="stylesheet" type="text/css" id="app-stylesheet" />
+    <link href="http://localhost/misDDO/assets/libs/custombox/custombox.min.css" rel="stylesheet" type="text/css">
+
+    <style>
+        /* Public topbar. .navbar-custom is position:fixed and 70px tall in the
+           theme, and .content-page offsets itself by exactly that much — so the
+           height stays 70px here and only the styling changes. */
+        .public-topbar {
+            background: linear-gradient(135deg, #0f2557 0%, #16336f 55%, #1b3d85 100%) !important;
+            padding: 0 !important;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, .18) !important;
         }
-        return (string) $val;
-    }
-}
-if (!function_exists('reg_fv')) {
-    function reg_fv($key, $default = '')
-    {
-        return html_escape(reg_raw($key, $default));
-    }
-}
-if (!function_exists('reg_sel')) {
-    function reg_sel($key, $optionValue)
-    {
-        $val = reg_raw($key);
-        return ($val !== '' && $val === (string) $optionValue) ? ' selected' : '';
-    }
-}
-?>
+
+        .public-topbar-inner {
+            max-width: 1120px;
+            height: 70px;
+            margin: 0 auto;
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .public-brand {
+            display: inline-flex;
+            align-items: center;
+            line-height: 0;
+        }
+
+        .public-brand img {
+            height: 44px;
+            width: auto;
+            display: block;
+        }
+
+        .public-nav {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .public-nav a {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            text-decoration: none !important;
+            white-space: nowrap;
+            transition: background .15s, color .15s;
+        }
+
+        .public-nav-link {
+            color: rgba(255, 255, 255, .85);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: .3px;
+            padding: 8px 14px;
+            border-radius: 999px;
+        }
+
+        .public-nav-link:hover,
+        .public-nav-link:focus {
+            color: #fff;
+            background: rgba(255, 255, 255, .12);
+        }
+
+        .public-nav-btn {
+            color: #0f2557;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .6px;
+            text-transform: uppercase;
+            padding: 9px 20px;
+            border-radius: 999px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, .2);
+        }
+
+        .public-nav-btn:hover,
+        .public-nav-btn:focus {
+            background: #dbe6ff;
+            color: #0f2557;
+        }
+
+        @media (max-width: 575px) {
+            .public-topbar-inner {
+                padding: 0 12px;
+            }
+
+            .public-brand img {
+                height: 30px;
+            }
+
+            .public-nav-link {
+                display: none;
+            }
+
+            .public-nav-btn {
+                padding: 8px 15px;
+                font-size: 11px;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Begin page -->
+    <div id="wrapper">
+
+
+        <!-- Topbar Start -->
+        <div class="navbar-custom public-topbar">
+            <div class="public-topbar-inner">
+
+                <a class="public-brand" href="http://localhost/misDDO/">
+                    <img src="http://localhost/misDDO/assets/images/logo.png"
+                        alt="DOORS &mdash; Davao De Oro Online Recruitment System">
+                </a>
+
+                <nav class="public-nav">
+                    <!-- base_url() redirects to log_in, so a "Home" link here would
+                         just duplicate Sign In — the logo already covers it. -->
+                    <a class="public-nav-link" href="http://localhost/misDDO/new_applicant">Register</a>
+                    <a class="public-nav-btn" href="http://localhost/misDDO/log_in">Sign In</a>
+                </nav>
+
+            </div>
+        </div>
+        <!-- end Topbar --> <!-- ========== Left Sidebar Start ========== -->
 
 <!-- ============================================================== -->
 <!-- Start Page Content here -->
@@ -45,9 +149,9 @@ if (!function_exists('reg_sel')) {
 <!-- Custom date picker (replaces the browser's native date control, which makes
      picking a birth year painful). `defer` guarantees it runs after the footer
      has loaded jQuery, but before DOMContentLoaded where it gets initialised. -->
-<link href="<?= base_url(); ?>assets/libs/bootstrap-datepicker/bootstrap-datepicker.css" rel="stylesheet"
+<link href="http://localhost/misDDO/assets/libs/bootstrap-datepicker/bootstrap-datepicker.css" rel="stylesheet"
     type="text/css" />
-<script defer src="<?= base_url(); ?>assets/libs/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
+<script defer src="http://localhost/misDDO/assets/libs/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
 
 <style>
     /* This view is the only consumer of header_public/footer_public on the
@@ -604,33 +708,17 @@ if (!function_exists('reg_sel')) {
 
     <div class="reg-hero">
         <div class="reg-eyebrow">Human Resource Information System</div>
-        <h1>Applicant Registration<?= $divisionName ? ' &mdash; DepEd ' . html_escape($divisionName) : ''; ?></h1>
+        <h1>Applicant Registration &mdash; DepEd Davao De Oro</h1>
         <p>Create your applicant account to apply for vacant positions. Fill out the form below as accurately as
             possible &mdash; your login credentials will be shown once your registration is submitted.</p>
     </div>
 
     <div class="reg-wrap">
 
-        <?php if ($this->session->flashdata('success')) : ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
-                        aria-hidden="true">&times;</span></button>
-                <?= $this->session->flashdata('success'); ?>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($this->session->flashdata('danger')) : ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
-                        aria-hidden="true">&times;</span></button>
-                <?= $this->session->flashdata('danger'); ?>
-            </div>
-        <?php endif; ?>
-
-        <?= validation_errors(); ?>
-
-        <?php $att = array('class' => 'parsley-examples', 'id' => 'applicantRegForm'); ?>
-        <?= form_open('Pages/new_applicant', array_merge($att, ['onsubmit' => 'return validateCaptcha(event)'])); ?>
+        
+        
+        
+                <form action="http://localhost/misDDO/Pages/new_applicant" class="parsley-examples" id="applicantRegForm" onsubmit="return validateCaptcha(event)" method="post" accept-charset="utf-8">
 
         <!-- Honeypot fields: bots fill them in, humans never see them. -->
         <input type="hidden" value="" name="renren">
@@ -638,8 +726,8 @@ if (!function_exists('reg_sel')) {
         <input type="hidden" value="" name="ivankyle">
         <input type="hidden" value="" name="ic">
 
-        <input type="hidden" value="<?= date('Y'); ?>00<?= $count->number + 1; ?>" name="record_no">
-        <input type="hidden" value="<?= $count->number + 1; ?>" name="number">
+        <input type="hidden" value="20260015997" name="record_no">
+        <input type="hidden" value="15997" name="number">
 
         <!-- ── 1. Data privacy ── -->
         <div class="reg-card">
@@ -652,11 +740,11 @@ if (!function_exists('reg_sel')) {
             </div>
             <div class="reg-card-body">
                 <p class="reg-privacy">
-                    DepEd <?= html_escape($divisionName); ?> abides and strictly enforces the provisions of RA 10173 or
+                    DepEd Davao De Oro abides and strictly enforces the provisions of RA 10173 or
                     the Data Privacy Act of 2012. By selecting the checkbox below and clicking &ldquo;submit&rdquo; you
-                    give your consent to the following: 1. Allow DepEd <?= html_escape($divisionName); ?> to collect,
+                    give your consent to the following: 1. Allow DepEd Davao De Oro to collect,
                     process and keep your personal information for lawful purposes; 2. DepEd
-                    <?= html_escape($divisionName); ?> cannot disclose your personal information to any third party. It
+                    Davao De Oro cannot disclose your personal information to any third party. It
                     can, however, share said information with its functional divisions, sections, units, and schools for
                     employment purposes. You confirm that you are well-informed of the purposes of this effort and have
                     agreed to the above-cited information.
@@ -686,26 +774,26 @@ if (!function_exists('reg_sel')) {
                         <label>Prefix <span class="reg-req">*</span></label>
                         <select name="prefix" required class="form-control">
                             <option value=""></option>
-                            <?php foreach (array('Mr.', 'Ms.', 'Mrs.') as $ar) : ?>
-                                <option value="<?= $ar; ?>" <?= reg_sel('prefix', $ar); ?>><?= $ar; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="Mr." >Mr.</option>
+                                                            <option value="Ms." >Ms.</option>
+                                                            <option value="Mrs." >Mrs.</option>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-4">
                         <label>First Name <span class="reg-req">*</span></label>
-                        <input type="text" required value="<?= reg_fv('fname'); ?>" name="fname" class="form-control">
+                        <input type="text" required value="" name="fname" class="form-control">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Middle Name</label>
-                        <input type="text" value="<?= reg_fv('mname'); ?>" name="mname" class="form-control">
+                        <input type="text" value="" name="mname" class="form-control">
                     </div>
                     <div class="form-group col-md-2">
                         <label>Last Name <span class="reg-req">*</span></label>
-                        <input type="text" required value="<?= reg_fv('lname'); ?>" name="lname" class="form-control">
+                        <input type="text" required value="" name="lname" class="form-control">
                     </div>
                     <div class="form-group col-md-1">
                         <label>Extn.</label>
-                        <input type="text" value="<?= reg_fv('ext'); ?>" name="ext" class="form-control"
+                        <input type="text" value="" name="ext" class="form-control"
                             placeholder="Jr.">
                     </div>
                 </div>
@@ -715,14 +803,13 @@ if (!function_exists('reg_sel')) {
                         <label>Sex <span class="reg-req">*</span></label>
                         <select name="Sex" required class="form-control">
                             <option value=""></option>
-                            <?php foreach (array('Male' => 'M', 'Female' => 'F') as $ar => $key) : ?>
-                                <option value="<?= $key; ?>" <?= reg_sel('Sex', $key); ?>><?= $ar; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="M" >Male</option>
+                                                            <option value="F" >Female</option>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-3">
                         <label>Birth Date <span class="reg-req">*</span></label>
-                        <input type="text" required id="bday" value="<?= reg_fv('BirthDate'); ?>" name="BirthDate"
+                        <input type="text" required id="bday" value="" name="BirthDate"
                             class="form-control reg-datepicker" placeholder="YYYY-MM-DD"
                             pattern="\d{4}-\d{2}-\d{2}" autocomplete="off"
                             title="Pick a date, or type it as YYYY-MM-DD">
@@ -731,58 +818,68 @@ if (!function_exists('reg_sel')) {
                     </div>
                     <div class="form-group col-md-1">
                         <label>Age</label>
-                        <input type="text" readonly id="resultBday" value="<?= reg_fv('age'); ?>" name="age"
+                        <input type="text" readonly id="resultBday" value="" name="age"
                             class="form-control">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Birth Place</label>
-                        <input type="text" value="<?= reg_fv('BirthPlace'); ?>" name="BirthPlace" class="form-control"
+                        <input type="text" value="" name="BirthPlace" class="form-control"
                             placeholder="City / Municipality, Province">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Civil Status <span class="reg-req">*</span></label>
                         <select name="MaritalStatus" required class="form-control">
                             <option value=""></option>
-                            <?php foreach (array('Single', 'Married', 'Divorced', 'Separated', 'Widowed') as $ar) : ?>
-                                <option value="<?= $ar; ?>" <?= reg_sel('MaritalStatus', $ar); ?>><?= $ar; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="Single" >Single</option>
+                                                            <option value="Married" >Married</option>
+                                                            <option value="Divorced" >Divorced</option>
+                                                            <option value="Separated" >Separated</option>
+                                                            <option value="Widowed" >Widowed</option>
+                                                    </select>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group col-md-3">
                         <label>Height (in meters)</label>
-                        <input type="text" value="<?= reg_fv('height'); ?>" name="height" class="form-control"
+                        <input type="text" value="" name="height" class="form-control"
                             placeholder="e.g. 1.65">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Weight (in kg)</label>
-                        <input type="text" value="<?= reg_fv('weight'); ?>" name="weight" class="form-control"
+                        <input type="text" value="" name="weight" class="form-control"
                             placeholder="e.g. 58">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Blood Type</label>
                         <select name="bloodType" class="form-control">
                             <option value=""></option>
-                            <?php foreach (array('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-') as $ar) : ?>
-                                <option value="<?= $ar; ?>" <?= reg_sel('bloodType', $ar); ?>><?= $ar; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="A+" >A+</option>
+                                                            <option value="A-" >A-</option>
+                                                            <option value="B+" >B+</option>
+                                                            <option value="B-" >B-</option>
+                                                            <option value="AB+" >AB+</option>
+                                                            <option value="AB-" >AB-</option>
+                                                            <option value="O+" >O+</option>
+                                                            <option value="O-" >O-</option>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-3">
                         <label>Civil Service Eligibility</label>
                         <select class="form-control" name="csEligibility">
                             <option value=""></option>
-                            <?php
-                            $eligibilities = array(
-                                'No Eligibility', 'PBET', 'RA 4670', 'RA 6850', 'RA 1080', 'LET', 'PD 907', 'PD 997',
-                                'Civil Service Professional', 'Civil Service Sub-Professional', 'Barangay Officials'
-                            );
-                            foreach ($eligibilities as $ar) : ?>
-                                <option value="<?= $ar; ?>" <?= reg_sel('csEligibility', $ar); ?>><?= $ar; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="No Eligibility" >No Eligibility</option>
+                                                            <option value="PBET" >PBET</option>
+                                                            <option value="RA 4670" >RA 4670</option>
+                                                            <option value="RA 6850" >RA 6850</option>
+                                                            <option value="RA 1080" >RA 1080</option>
+                                                            <option value="LET" >LET</option>
+                                                            <option value="PD 907" >PD 907</option>
+                                                            <option value="PD 997" >PD 997</option>
+                                                            <option value="Civil Service Professional" >Civil Service Professional</option>
+                                                            <option value="Civil Service Sub-Professional" >Civil Service Sub-Professional</option>
+                                                            <option value="Barangay Officials" >Barangay Officials</option>
+                                                    </select>
                     </div>
                 </div>
 
@@ -802,17 +899,17 @@ if (!function_exists('reg_sel')) {
                 <div class="form-row">
                     <div class="form-group col-md-5">
                         <label>Email Address <span class="reg-req">*</span></label>
-                        <input type="email" required value="<?= reg_fv('email'); ?>" name="email" class="form-control">
+                        <input type="email" required value="" name="email" class="form-control">
                         <span class="reg-hint">Use an active email &mdash; your credentials will be sent here.</span>
                     </div>
                     <div class="form-group col-md-4">
                         <label>Mobile Number <span class="reg-req">*</span></label>
-                        <input type="text" required value="<?= reg_fv('contact'); ?>" name="contact"
+                        <input type="text" required value="" name="contact"
                             class="form-control" placeholder="09XXXXXXXXX">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Telephone No.</label>
-                        <input type="text" value="<?= reg_fv('empTelNo'); ?>" name="empTelNo" class="form-control">
+                        <input type="text" value="" name="empTelNo" class="form-control">
                     </div>
                 </div>
             </div>
@@ -833,10 +930,90 @@ if (!function_exists('reg_sel')) {
                         <label>Province <span class="reg-req">*</span></label>
                         <select id="Province" name="province" class="form-control" required>
                             <option value="">Select Province</option>
-                            <?php foreach ($provinces as $row) : ?>
-                                <option value="<?= html_escape($row->Province); ?>" <?= reg_sel('province', $row->Province); ?>><?= html_escape($row->Province); ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="ABRA" >ABRA</option>
+                                                            <option value="AGUSAN DEL NORTE" >AGUSAN DEL NORTE</option>
+                                                            <option value="AGUSAN DEL SUR" >AGUSAN DEL SUR</option>
+                                                            <option value="AKLAN" >AKLAN</option>
+                                                            <option value="ALBAY" >ALBAY</option>
+                                                            <option value="ANTIQUE" >ANTIQUE</option>
+                                                            <option value="APAYAO" >APAYAO</option>
+                                                            <option value="AURORA" >AURORA</option>
+                                                            <option value="BASILAN" >BASILAN</option>
+                                                            <option value="BATAAN" >BATAAN</option>
+                                                            <option value="BATANES" >BATANES</option>
+                                                            <option value="BATANGAS" >BATANGAS</option>
+                                                            <option value="BENGUET" >BENGUET</option>
+                                                            <option value="BILIRAN" >BILIRAN</option>
+                                                            <option value="BOHOL" >BOHOL</option>
+                                                            <option value="BUKIDNON" >BUKIDNON</option>
+                                                            <option value="BULACAN" >BULACAN</option>
+                                                            <option value="CAGAYAN" >CAGAYAN</option>
+                                                            <option value="CAMARINES NORTE" >CAMARINES NORTE</option>
+                                                            <option value="CAMARINES SUR" >CAMARINES SUR</option>
+                                                            <option value="CAMIGUIN" >CAMIGUIN</option>
+                                                            <option value="CAPIZ" >CAPIZ</option>
+                                                            <option value="CATANDUANES" >CATANDUANES</option>
+                                                            <option value="CAVITE" >CAVITE</option>
+                                                            <option value="CEBU" >CEBU</option>
+                                                            <option value="CITY OF ISABELA (Not a Province)" >CITY OF ISABELA (Not a Province)</option>
+                                                            <option value="COTABATO (NORTH COTABATO)" >COTABATO (NORTH COTABATO)</option>
+                                                            <option value="COTABATO CITY (Not a Province)" >COTABATO CITY (Not a Province)</option>
+                                                            <option value="DAVAO DE ORO" >DAVAO DE ORO</option>
+                                                            <option value="DAVAO DEL NORTE" >DAVAO DEL NORTE</option>
+                                                            <option value="DAVAO DEL SUR" >DAVAO DEL SUR</option>
+                                                            <option value="DAVAO ORIENTAL" >DAVAO ORIENTAL</option>
+                                                            <option value="DINAGAT ISLANDS" >DINAGAT ISLANDS</option>
+                                                            <option value="EASTERN SAMAR" >EASTERN SAMAR</option>
+                                                            <option value="GUIMARAS" >GUIMARAS</option>
+                                                            <option value="IFUGAO" >IFUGAO</option>
+                                                            <option value="ILOCOS NORTE" >ILOCOS NORTE</option>
+                                                            <option value="ILOCOS SUR" >ILOCOS SUR</option>
+                                                            <option value="ILOILO" >ILOILO</option>
+                                                            <option value="ISABELA" >ISABELA</option>
+                                                            <option value="KALINGA" >KALINGA</option>
+                                                            <option value="LA UNION" >LA UNION</option>
+                                                            <option value="LAGUNA" >LAGUNA</option>
+                                                            <option value="LANAO DEL NORTE" >LANAO DEL NORTE</option>
+                                                            <option value="LANAO DEL SUR" >LANAO DEL SUR</option>
+                                                            <option value="LEYTE" >LEYTE</option>
+                                                            <option value="MAGUINDANAO" >MAGUINDANAO</option>
+                                                            <option value="MARINDUQUE" >MARINDUQUE</option>
+                                                            <option value="MASBATE" >MASBATE</option>
+                                                            <option value="METRO MANILA" >METRO MANILA</option>
+                                                            <option value="MISAMIS OCCIDENTAL" >MISAMIS OCCIDENTAL</option>
+                                                            <option value="MISAMIS ORIENTAL" >MISAMIS ORIENTAL</option>
+                                                            <option value="MOUNTAIN PROVINCE" >MOUNTAIN PROVINCE</option>
+                                                            <option value="NEGROS OCCIDENTAL" >NEGROS OCCIDENTAL</option>
+                                                            <option value="NEGROS ORIENTAL" >NEGROS ORIENTAL</option>
+                                                            <option value="NORTHERN SAMAR" >NORTHERN SAMAR</option>
+                                                            <option value="NUEVA ECIJA" >NUEVA ECIJA</option>
+                                                            <option value="NUEVA VIZCAYA" >NUEVA VIZCAYA</option>
+                                                            <option value="OCCIDENTAL MINDORO" >OCCIDENTAL MINDORO</option>
+                                                            <option value="ORIENTAL MINDORO" >ORIENTAL MINDORO</option>
+                                                            <option value="PALAWAN" >PALAWAN</option>
+                                                            <option value="PAMPANGA" >PAMPANGA</option>
+                                                            <option value="PANGASINAN" >PANGASINAN</option>
+                                                            <option value="QUEZON" >QUEZON</option>
+                                                            <option value="QUIRINO" >QUIRINO</option>
+                                                            <option value="RIZAL" >RIZAL</option>
+                                                            <option value="ROMBLON" >ROMBLON</option>
+                                                            <option value="SAMAR (WESTERN SAMAR)" >SAMAR (WESTERN SAMAR)</option>
+                                                            <option value="SARANGANI" >SARANGANI</option>
+                                                            <option value="SIQUIJOR" >SIQUIJOR</option>
+                                                            <option value="SORSOGON" >SORSOGON</option>
+                                                            <option value="SOUTH COTABATO" >SOUTH COTABATO</option>
+                                                            <option value="SOUTHERN LEYTE" >SOUTHERN LEYTE</option>
+                                                            <option value="SULTAN KUDARAT" >SULTAN KUDARAT</option>
+                                                            <option value="SULU" >SULU</option>
+                                                            <option value="SURIGAO DEL NORTE" >SURIGAO DEL NORTE</option>
+                                                            <option value="SURIGAO DEL SUR" >SURIGAO DEL SUR</option>
+                                                            <option value="TARLAC" >TARLAC</option>
+                                                            <option value="TAWI-TAWI" >TAWI-TAWI</option>
+                                                            <option value="ZAMBALES" >ZAMBALES</option>
+                                                            <option value="ZAMBOANGA DEL NORTE" >ZAMBOANGA DEL NORTE</option>
+                                                            <option value="ZAMBOANGA DEL SUR" >ZAMBOANGA DEL SUR</option>
+                                                            <option value="ZAMBOANGA SIBUGAY" >ZAMBOANGA SIBUGAY</option>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-3">
                         <label>City / Municipality <span class="reg-req">*</span></label>
@@ -853,22 +1030,22 @@ if (!function_exists('reg_sel')) {
                     <div class="form-group col-md-3">
                         <label>Purok / Village</label>
                         <input type="text" id="sitio" class="form-control" name="purok" placeholder="Purok"
-                            value="<?= reg_fv('purok'); ?>">
+                            value="">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group col-md-3">
                         <label>House / Lot / Block No.</label>
-                        <input type="text" class="form-control" name="resHouseNo" value="<?= reg_fv('resHouseNo'); ?>">
+                        <input type="text" class="form-control" name="resHouseNo" value="">
                     </div>
                     <div class="form-group col-md-6">
                         <label>Street</label>
-                        <input type="text" class="form-control" name="resStreet" value="<?= reg_fv('resStreet'); ?>">
+                        <input type="text" class="form-control" name="resStreet" value="">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Zip Code</label>
-                        <input type="text" class="form-control" name="resZipCode" value="<?= reg_fv('resZipCode'); ?>">
+                        <input type="text" class="form-control" name="resZipCode" value="">
                     </div>
                 </div>
             </div>
@@ -888,31 +1065,25 @@ if (!function_exists('reg_sel')) {
                     <div class="form-group col-md-4">
                         <label>Religion <span class="reg-req">*</span></label>
                         <input list="religion" name="religion" class="form-control" required
-                            value="<?= reg_fv('religion'); ?>" placeholder="Select or type your religion">
+                            value="" placeholder="Select or type your religion">
                         <datalist id="religion">
-                            <?php foreach ($re as $row) : ?>
-                                <option value="<?= html_escape($row->religion); ?>">
-                            <?php endforeach; ?>
-                        </datalist>
+                                                    </datalist>
                     </div>
                     <div class="form-group col-md-4">
                         <label>Ethnic Group <span class="reg-req">*</span></label>
                         <input list="ethnicity" name="ethnicity" class="form-control" required
-                            value="<?= reg_fv('ethnicity'); ?>" placeholder="Select or type your ethnic group">
+                            value="" placeholder="Select or type your ethnic group">
                         <datalist id="ethnicity">
-                            <?php foreach ($et as $row) : ?>
-                                <option value="<?= html_escape($row->ethnicity); ?>">
-                            <?php endforeach; ?>
-                        </datalist>
+                                                    </datalist>
                     </div>
                     <div class="form-group col-md-4">
                         <label>Person with Disability? <span class="reg-req">*</span></label>
                         <select class="form-control" name="disability" required>
                             <option value="">Select</option>
-                            <?php foreach (array('No Data' => 0, 'No' => 1, 'Yes' => 2) as $ar => $key) : ?>
-                                <option value="<?= $key; ?>" <?= reg_sel('disability', $key); ?>><?= $ar; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="0" >No Data</option>
+                                                            <option value="1" >No</option>
+                                                            <option value="2" >Yes</option>
+                                                    </select>
                     </div>
                 </div>
 
@@ -920,30 +1091,29 @@ if (!function_exists('reg_sel')) {
                     <div class="form-group col-md-3">
                         <label>Citizenship</label>
                         <input type="text" class="form-control" name="citizenship"
-                            value="<?= reg_fv('citizenship', 'Filipino'); ?>">
+                            value="Filipino">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Dual Citizen?</label>
                         <select class="form-control" name="dualCitizenship">
                             <option value="">Select</option>
-                            <?php foreach (array('No Data', 'No', 'Yes') as $ar) : ?>
-                                <option value="<?= $ar; ?>" <?= reg_sel('dualCitizenship', $ar); ?>><?= $ar; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="No Data" >No Data</option>
+                                                            <option value="No" >No</option>
+                                                            <option value="Yes" >Yes</option>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-3">
                         <label>Citizenship Type</label>
                         <select class="form-control" name="citizenshipType">
                             <option value=""></option>
-                            <?php foreach (array('By Birth', 'By Naturalization') as $ar) : ?>
-                                <option value="<?= $ar; ?>" <?= reg_sel('citizenshipType', $ar); ?>><?= $ar; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="By Birth" >By Birth</option>
+                                                            <option value="By Naturalization" >By Naturalization</option>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-3">
                         <label>Country</label>
                         <input type="text" class="form-control" name="citizenshipCountry"
-                            value="<?= reg_fv('citizenshipCountry'); ?>" placeholder="If dual citizen">
+                            value="" placeholder="If dual citizen">
                     </div>
                 </div>
             </div>
@@ -965,12 +1135,12 @@ if (!function_exists('reg_sel')) {
                 <div class="form-row">
                     <div class="form-group col-md-8">
                         <label>Bachelor's Degree</label>
-                        <input type="text" class="form-control" name="bd" value="<?= reg_fv('bd'); ?>"
+                        <input type="text" class="form-control" name="bd" value=""
                             placeholder="e.g. Bachelor of Secondary Education">
                     </div>
                     <div class="form-group col-md-4">
                         <label>Date Graduated</label>
-                        <input type="text" class="form-control reg-datepicker" name="dg" value="<?= reg_fv('dg'); ?>"
+                        <input type="text" class="form-control reg-datepicker" name="dg" value=""
                             placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}"
                             autocomplete="off" title="Pick a date, or type it as YYYY-MM-DD">
                     </div>
@@ -981,67 +1151,79 @@ if (!function_exists('reg_sel')) {
                         <label>Learning Area <span class="reg-hint" style="display:inline">(Junior High)</span></label>
                         <select class="form-control" name="learn">
                             <option value=""></option>
-                            <?php
-                            $la = array(
-                                'Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan',
-                                'Edukasyon sa Pagpapakatao', 'Music and Arts', 'Physical Education and Health',
-                                'SPED', 'TLE'
-                            );
-                            foreach ($la as $row) : ?>
-                                <option value="<?= $row; ?>" <?= reg_sel('learn', $row); ?>><?= $row; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="Filipino" >Filipino</option>
+                                                            <option value="English" >English</option>
+                                                            <option value="Mathematics" >Mathematics</option>
+                                                            <option value="Science" >Science</option>
+                                                            <option value="Araling Panlipunan" >Araling Panlipunan</option>
+                                                            <option value="Edukasyon sa Pagpapakatao" >Edukasyon sa Pagpapakatao</option>
+                                                            <option value="Music and Arts" >Music and Arts</option>
+                                                            <option value="Physical Education and Health" >Physical Education and Health</option>
+                                                            <option value="SPED" >SPED</option>
+                                                            <option value="TLE" >TLE</option>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-3">
                         <label>Specialized Area</label>
                         <select class="form-control" name="special">
                             <option value=""></option>
-                            <?php
-                            $specialGroups = array(
-                                'Mathematics' => 'Algebra, Trigonometry, Geometry, Statistics',
-                                'Science' => 'General Science, Biology, Chemistry, Physics',
-                                'TLE' => 'Agri - Fishery Arts, Home Economics, Information and Communications Technology, Industrial Arts'
-                            );
-                            foreach ($specialGroups as $groupLabel => $items) : ?>
-                                <optgroup label="<?= $groupLabel; ?>">
-                                    <?php foreach (explode(', ', $items) as $val) : ?>
-                                        <option value="<?= $val; ?>" <?= reg_sel('special', $val); ?>><?= $val; ?></option>
-                                    <?php endforeach; ?>
-                                </optgroup>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <optgroup label="Mathematics">
+                                                                            <option value="Algebra" >Algebra</option>
+                                                                            <option value="Trigonometry" >Trigonometry</option>
+                                                                            <option value="Geometry" >Geometry</option>
+                                                                            <option value="Statistics" >Statistics</option>
+                                                                    </optgroup>
+                                                            <optgroup label="Science">
+                                                                            <option value="General Science" >General Science</option>
+                                                                            <option value="Biology" >Biology</option>
+                                                                            <option value="Chemistry" >Chemistry</option>
+                                                                            <option value="Physics" >Physics</option>
+                                                                    </optgroup>
+                                                            <optgroup label="TLE">
+                                                                            <option value="Agri - Fishery Arts" >Agri - Fishery Arts</option>
+                                                                            <option value="Home Economics" >Home Economics</option>
+                                                                            <option value="Information and Communications Technology" >Information and Communications Technology</option>
+                                                                            <option value="Industrial Arts" >Industrial Arts</option>
+                                                                    </optgroup>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-2">
                         <label>Group <span class="reg-hint" style="display:inline">(Senior High)</span></label>
                         <select class="form-control" name="group">
                             <option value=""></option>
-                            <?php foreach (array('HUMSS', 'ABM', 'STEM', 'TVL', 'Sports', 'Arts and Design') as $row) : ?>
-                                <option value="<?= $row; ?>" <?= reg_sel('group', $row); ?>><?= $row; ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <option value="HUMSS" >HUMSS</option>
+                                                            <option value="ABM" >ABM</option>
+                                                            <option value="STEM" >STEM</option>
+                                                            <option value="TVL" >TVL</option>
+                                                            <option value="Sports" >Sports</option>
+                                                            <option value="Arts and Design" >Arts and Design</option>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-2">
                         <label>Strand</label>
                         <select class="form-control" name="strand">
                             <option value=""></option>
-                            <?php
-                            $strandGroups = array(
-                                'HUMMS' => 'I-A, I-B, I-C, I-D',
-                                'STEM' => 'III-A, III-B',
-                                'TVL' => 'I-VA, I-VB, I-VC, I-VD'
-                            );
-                            foreach ($strandGroups as $groupLabel => $items) : ?>
-                                <optgroup label="<?= $groupLabel; ?>">
-                                    <?php foreach (explode(', ', $items) as $val) : ?>
-                                        <option value="<?= $val; ?>" <?= reg_sel('strand', $val); ?>><?= $val; ?></option>
-                                    <?php endforeach; ?>
-                                </optgroup>
-                            <?php endforeach; ?>
-                        </select>
+                                                            <optgroup label="HUMMS">
+                                                                            <option value="I-A" >I-A</option>
+                                                                            <option value="I-B" >I-B</option>
+                                                                            <option value="I-C" >I-C</option>
+                                                                            <option value="I-D" >I-D</option>
+                                                                    </optgroup>
+                                                            <optgroup label="STEM">
+                                                                            <option value="III-A" >III-A</option>
+                                                                            <option value="III-B" >III-B</option>
+                                                                    </optgroup>
+                                                            <optgroup label="TVL">
+                                                                            <option value="I-VA" >I-VA</option>
+                                                                            <option value="I-VB" >I-VB</option>
+                                                                            <option value="I-VC" >I-VC</option>
+                                                                            <option value="I-VD" >I-VD</option>
+                                                                    </optgroup>
+                                                    </select>
                     </div>
                     <div class="form-group col-md-2">
                         <label>Major (SHS)</label>
-                        <input type="text" class="form-control" name="Major" value="<?= reg_fv('Major'); ?>">
+                        <input type="text" class="form-control" name="Major" value="">
                     </div>
                 </div>
             </div>
@@ -1060,27 +1242,27 @@ if (!function_exists('reg_sel')) {
                 <div class="form-row">
                     <div class="form-group col-md-2">
                         <label>UMID</label>
-                        <input type="text" class="form-control" name="umid" value="<?= reg_fv('umid'); ?>">
+                        <input type="text" class="form-control" name="umid" value="">
                     </div>
                     <div class="form-group col-md-2">
                         <label>PhilHealth No.</label>
-                        <input type="text" class="form-control" name="philHealth" value="<?= reg_fv('philHealth'); ?>">
+                        <input type="text" class="form-control" name="philHealth" value="">
                     </div>
                     <div class="form-group col-md-2">
                         <label>GSIS</label>
-                        <input type="text" class="form-control" name="gsis" value="<?= reg_fv('gsis'); ?>">
+                        <input type="text" class="form-control" name="gsis" value="">
                     </div>
                     <div class="form-group col-md-2">
                         <label>Pag-IBIG</label>
-                        <input type="text" class="form-control" name="pagibig" value="<?= reg_fv('pagibig'); ?>">
+                        <input type="text" class="form-control" name="pagibig" value="">
                     </div>
                     <div class="form-group col-md-2">
                         <label>SSS No.</label>
-                        <input type="text" class="form-control" name="sssNo" value="<?= reg_fv('sssNo'); ?>">
+                        <input type="text" class="form-control" name="sssNo" value="">
                     </div>
                     <div class="form-group col-md-2">
                         <label>TIN</label>
-                        <input type="text" class="form-control" name="tinNo" value="<?= reg_fv('tinNo'); ?>">
+                        <input type="text" class="form-control" name="tinNo" value="">
                     </div>
                 </div>
             </div>
@@ -1100,28 +1282,28 @@ if (!function_exists('reg_sel')) {
                     <div class="form-group col-md-4">
                         <label>Contact Name</label>
                         <input type="text" class="form-control" name="contactName"
-                            value="<?= reg_fv('contactName'); ?>">
+                            value="">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Relationship</label>
-                        <input type="text" class="form-control" name="contactRel" value="<?= reg_fv('contactRel'); ?>"
+                        <input type="text" class="form-control" name="contactRel" value=""
                             placeholder="e.g. Spouse, Parent">
                     </div>
                     <div class="form-group col-md-2">
                         <label>Contact No.</label>
-                        <input type="text" class="form-control" name="empMobile" value="<?= reg_fv('empMobile'); ?>">
+                        <input type="text" class="form-control" name="empMobile" value="">
                     </div>
                     <div class="form-group col-md-3">
                         <label>Email</label>
                         <input type="email" class="form-control" name="contactEmail"
-                            value="<?= reg_fv('contactEmail'); ?>">
+                            value="">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-12">
                         <label>Address</label>
                         <input type="text" class="form-control" name="contactAddress"
-                            value="<?= reg_fv('contactAddress'); ?>">
+                            value="">
                     </div>
                 </div>
             </div>
@@ -1138,103 +1320,25 @@ if (!function_exists('reg_sel')) {
             </div>
             <div class="reg-card-body">
                 <div class="form-group">
-                    <div class="g-recaptcha" data-sitekey="<?= trim($mis_settings->site_key); ?>"></div>
+                    <div class="g-recaptcha" data-sitekey="6LdE0m0tAAAAAKT94Nt4NCGs9Om-1cKPZYIBXgl-"></div>
                 </div>
             </div>
             <div class="reg-submit-bar">
                 <div class="reg-legend"><span class="reg-req">*</span> Required fields. Please review your entries
                     before submitting.</div>
-                <button type="submit" value="submit" id="regSubmitBtn" class="reg-btn"><?= $title; ?></button>
+                <button type="submit" value="submit" id="regSubmitBtn" class="reg-btn">Register</button>
             </div>
         </div>
 
         </form>
 
-        <div class="reg-login-link">Already registered? <a href="<?= base_url(); ?>log_in">Sign in to your account</a>
+        <div class="reg-login-link">Already registered? <a href="http://localhost/misDDO/log_in">Sign in to your account</a>
         </div>
 
     </div><!-- /reg-wrap -->
     <!-- .content-page stays open: templates/footer_public closes it -->
 
     <!-- ── Account credentials modal ── -->
-<?php if (!empty($successCredentials['username']) && !empty($successCredentials['password'])) : ?>
-    <div class="modal fade credentials-modal" id="registrationCredentialsModal" tabindex="-1" role="dialog"
-        aria-labelledby="registrationCredentialsTitle" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-body">
-                    <div class="credentials-card">
-                        <div class="credentials-badge">&#127881;</div>
-                        <div class="credentials-title">Registration Successful</div>
-                        <div class="credentials-name" id="registrationCredentialsTitle">
-                            <?= html_escape($successCredentials['name']); ?></div>
-
-                        <div class="credentials-row"><span>Username:</span>
-                            <strong><?= html_escape($successCredentials['username']); ?></strong>
-                        </div>
-                        <?php if (!empty($successCredentials['email'])) : ?>
-                            <div class="credentials-row"><span>Email:</span>
-                                <strong><?= html_escape($successCredentials['email']); ?></strong>
-                            </div>
-                        <?php endif; ?>
-                        <div class="credentials-row">
-                            <span>Password:</span>
-                            <span class="credentials-password-wrap">
-                                <!-- Shown in the clear by default so the applicant can write it
-                                     down straight away; the eye button hides it if someone is
-                                     looking over their shoulder. -->
-                                <strong id="credentialPasswordMask"
-                                    style="display:none;"><?= str_repeat('&bull;', max(strlen((string) $successCredentials['password']), 8)); ?></strong>
-                                <strong
-                                    id="credentialPasswordPlain"><?= html_escape($successCredentials['password']); ?></strong>
-                                <button type="button" class="credentials-toggle" id="toggleCredentialPassword"
-                                    aria-label="Hide password">&#128065;</button>
-                            </span>
-                        </div>
-
-                        <div class="credentials-warn">
-                            <strong>Please save your password.</strong> Write it down or download a copy &mdash; you
-                            will need it to log in, and it will not be shown on this page again.
-                        </div>
-
-                        <?php if (!empty($successCredentials['notice'])) : ?>
-                            <div class="credentials-note"><?= html_escape($successCredentials['notice']); ?>
-                                Your password is your birth date in <strong>YYYY-MM-DD</strong> format &mdash; please change
-                                it after your first login.</div>
-                        <?php endif; ?>
-
-                        <div class="credentials-actions" id="credentialsMainActions">
-                            <button type="button" class="credentials-action" id="copyCredentialPassword"
-                                data-password="<?= html_escape($successCredentials['password']); ?>">Copy
-                                Password</button>
-                            <button type="button" class="credentials-action" id="downloadCredentialFile"
-                                data-name="<?= html_escape($successCredentials['name']); ?>"
-                                data-username="<?= html_escape($successCredentials['username']); ?>"
-                                data-password="<?= html_escape($successCredentials['password']); ?>"
-                                data-email="<?= html_escape($successCredentials['email']); ?>">Download
-                                Credentials</button>
-                            <a href="#" class="credentials-action primary" id="goToLoginLink"
-                                data-login-url="<?= html_escape($successCredentials['login_url']); ?>">Go to Login</a>
-                        </div>
-
-                        <!-- Last-chance confirmation before leaving the page. -->
-                        <div class="credentials-confirm" id="credentialsConfirm" style="display:none;">
-                            <p>Have you saved your password?</p>
-                            <span>You are advised to download or write down your password in case you forget it. Once
-                                you leave this page it will no longer be displayed.</span>
-                            <div class="credentials-actions">
-                                <button type="button" class="credentials-action"
-                                    id="credentialsConfirmCancel">No, let me save it</button>
-                                <button type="button" class="credentials-action primary"
-                                    id="credentialsConfirmGo">Yes, continue to login</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
 
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <script>
@@ -1267,12 +1371,11 @@ if (!function_exists('reg_sel')) {
         var $ = window.jQuery;
         if (!$) return;
 
-        var baseUrl = '<?= base_url(); ?>';
+        var baseUrl = 'http://localhost/misDDO/';
         var priorAddress = {
-            province: <?= json_encode(reg_raw('province')); ?>,
-            city: <?= json_encode(reg_raw('mun_city')); ?>,
-            barangay: <?= json_encode(reg_raw('barangay')); ?>
-        };
+            province: "",
+            city: "",
+            barangay: ""        };
 
         // ── Date pickers ──
         // startView 2 opens on the year grid so a birth year is two clicks away
@@ -1499,3 +1602,84 @@ if (!function_exists('reg_sel')) {
         }
     });
 </script>
+<!-- Footer Start -->
+<footer class="footer" style="left:0px">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                Human Resource Management Information System
+            </div>
+        </div>
+    </div>
+</footer>
+<!-- end Footer -->
+
+</div>
+
+<!-- ============================================================== -->
+<!-- End Page content -->
+<!-- ============================================================== -->
+
+</div>
+<!-- END wrapper -->
+
+
+<!-- Vendor js -->
+<script src="http://localhost/misDDO/assets/js/vendor.min.js"></script>
+
+<!-- Plugin js-->
+<script src="http://localhost/misDDO/assets/libs/parsleyjs/parsley.min.js"></script>
+
+<!-- Validation init js-->
+<script src="http://localhost/misDDO/assets/js/pages/form-validation.init.js"></script>
+
+<!-- App js -->
+<script src="http://localhost/misDDO/assets/js/app.min.js"></script>
+
+<script src="http://localhost/misDDO/assets/libs/custombox/custombox.min.js"></script>
+
+
+
+
+</body>
+
+</html><script>window.addEventListener("load",function(){
+ setTimeout(function(){
+  var $=window.jQuery, log=[];
+  var out=document.createElement("pre");
+  out.style.cssText="position:fixed;top:80px;right:8px;z-index:99999;background:#fff;border:2px solid red;padding:6px;font:11px monospace";
+  function dp(){ return document.querySelector(".datepicker.dropdown-menu"); }
+  function click(sel,txt){
+    var els=dp().querySelectorAll(sel);
+    for(var i=0;i<els.length;i++){ if(els[i].textContent.trim()===txt && !/disabled/.test(els[i].className)){ els[i].click(); return true; } }
+    return false;
+  }
+  function pick(input,year,mon,day,cb){
+    $(input).datepicker("show");
+    setTimeout(function(){
+      var target=parseInt(year,10);
+      for(var k=0;k<40;k++){
+        if(click(".datepicker-years span.year",year)) break;
+        var lbl=dp().querySelector(".datepicker-years .datepicker-switch").textContent;
+        var lo=parseInt(lbl.split("-")[0],10);
+        dp().querySelector(target<lo?".datepicker-years th.prev":".datepicker-years th.next").click();
+      }
+      setTimeout(function(){
+        click(".datepicker-months span.month",mon);
+        setTimeout(function(){ click(".datepicker-days td.day",day); setTimeout(cb,200); },200);
+      },200);
+    },300);
+  }
+  var b=document.getElementById("bday");
+  var dgEl=document.querySelector("input[name=dg]");
+  pick(b,"1958","Feb","3",function(){
+    log.push("bday 1958 -> "+b.value+"  age="+document.getElementById("resultBday").value);
+    pick(b,"2001","Jun","5",function(){
+      log.push("bday 2001 -> "+b.value+"  age="+document.getElementById("resultBday").value);
+      pick(dgEl,"1975","Apr","9",function(){
+        log.push("dg 1975 -> "+dgEl.value);
+        out.textContent=log.join("\n"); document.body.appendChild(out);
+      });
+    });
+  });
+ },1000);});</script>

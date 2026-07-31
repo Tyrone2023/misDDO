@@ -783,14 +783,20 @@ public function count_for_approval_leave4($table, $approver_username)
     public function insert_reg_user($id)
     {
 
-        $password = $this->input->post('bd');
+        // Applicant sign-up posts BirthDate; the older register() flow posts bd.
+        $password = $this->input->post('BirthDate');
+        if (empty($password)) {
+            $password = $this->input->post('bd');
+        }
         $hash = password_hash($password, PASSWORD_DEFAULT);
 
-        $p = $this->input->post('prefix');
-        if ($p == "Mr.") {
-            $prefix = 0;
+        // users.sex: 0 = male, 1 = female. Prefer the explicit Sex field and
+        // fall back to the prefix when it isn't on the form.
+        $sex = $this->input->post('Sex');
+        if ($sex === 'M' || $sex === 'F') {
+            $prefix = ($sex === 'M') ? 0 : 1;
         } else {
-            $prefix = 1;
+            $prefix = ($this->input->post('prefix') == "Mr.") ? 0 : 1;
         }
 
 
@@ -1298,11 +1304,34 @@ public function count_for_approval_leave4($table, $approver_username)
         $rn = $fname . $mname . $lname . $con;
 
         $p = $this->input->post('prefix');
-        if ($p == "Mr.") {
-            $sex = "M";
-        } else {
-            $sex = "F";
+        // The form now asks for Sex directly; fall back to the prefix for
+        // submissions that predate that field.
+        $sex = $this->input->post('Sex');
+        if ($sex !== 'M' && $sex !== 'F') {
+            $sex = ($p == "Mr.") ? "M" : "F";
         }
+
+        // Junior/Senior High specialisation is stored as one "area - specialty"
+        // string, the same shape profile_reg_edit writes back.
+        $jhss    = trim((string) $this->input->post('learn'));
+        $special = trim((string) $this->input->post('special'));
+        if ($jhss !== '' && $special !== '') {
+            $jhss .= ' - ' . $special;
+        }
+
+        $shss   = trim((string) $this->input->post('group'));
+        $strand = trim((string) $this->input->post('strand'));
+        if ($shss !== '' && $strand !== '') {
+            $shss .= ' - ' . $strand;
+        }
+
+        $resHouseNo  = $this->input->post('resHouseNo');
+        $resStreet   = $this->input->post('resStreet');
+        $resVillage  = strtoupper($this->input->post('purok'));
+        $resBarangay = strtoupper($this->input->post('barangay'));
+        $resCity     = strtoupper($this->input->post('mun_city'));
+        $resProvince = strtoupper($this->input->post('province'));
+        $resZipCode  = $this->input->post('resZipCode');
 
         $data = array(
             'FirstName' => strtoupper($this->input->post('fname')),
@@ -1312,11 +1341,58 @@ public function count_for_approval_leave4($table, $approver_username)
             'NameExtn' => $this->input->post('ext'),
             'empEmail' => $this->input->post('email'),
             'contactNo' => $this->input->post('contact'),
-            'BirthDate' => $this->input->post('bd'),
-            'resVillage' => strtoupper($this->input->post('purok')),
-            'resBarangay' => strtoupper($this->input->post('barangay')),
-            'resCity' => strtoupper($this->input->post('mun_city')),
-            'resProvince' => strtoupper($this->input->post('province')),
+            'empTelNo' => $this->input->post('empTelNo'),
+            'BirthDate' => $this->input->post('BirthDate'),
+            'BirthPlace' => $this->input->post('BirthPlace'),
+            'MaritalStatus' => $this->input->post('MaritalStatus'),
+            'height' => $this->input->post('height'),
+            'weight' => $this->input->post('weight'),
+            'bloodType' => $this->input->post('bloodType'),
+
+            'resHouseNo' => $resHouseNo,
+            'resStreet' => $resStreet,
+            'resVillage' => $resVillage,
+            'resBarangay' => $resBarangay,
+            'resCity' => $resCity,
+            'resProvince' => $resProvince,
+            'resZipCode' => $resZipCode,
+            // Permanent address mirrors the residential one at sign-up, matching
+            // what update_profile_reg() does on edit.
+            'perHouseNo' => $resHouseNo,
+            'perStreet' => $resStreet,
+            'perVillage' => $resVillage,
+            'perBarangay' => $resBarangay,
+            'perCity' => $resCity,
+            'perProvince' => $resProvince,
+            'perZipCode' => $resZipCode,
+
+            'citizenship' => $this->input->post('citizenship'),
+            'dualCitizenship' => $this->input->post('dualCitizenship'),
+            'citizenshipType' => $this->input->post('citizenshipType'),
+            'citizenshipCountry' => $this->input->post('citizenshipCountry'),
+            'csEligibility' => $this->input->post('csEligibility'),
+
+            'umid' => $this->input->post('umid'),
+            'philHealth' => $this->input->post('philHealth'),
+            'gsis' => $this->input->post('gsis'),
+            'pagibig' => $this->input->post('pagibig'),
+            'sssNo' => $this->input->post('sssNo'),
+            'tinNo' => $this->input->post('tinNo'),
+
+            'bd' => $this->input->post('bd'),
+            'dg' => $this->input->post('dg'),
+            'jhss' => $jhss,
+            'shss' => $shss,
+            'Major' => $this->input->post('Major'),
+
+            'contactName' => $this->input->post('contactName'),
+            'contactRel' => $this->input->post('contactRel'),
+            'contactEmail' => $this->input->post('contactEmail'),
+            // profile_reg_edit swaps these two: empMobile holds the emergency
+            // contact's number while contactNo holds the applicant's own.
+            'empMobile' => $this->input->post('empMobile'),
+            'contactAddress' => $this->input->post('contactAddress'),
+
             // 'specialization' => $this->input->post('specialization'),
             // 'track' => $this->input->post('track'),
             'age' => $this->input->post('age'),

@@ -824,8 +824,19 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
     </table>
     <?php $aipstat = (!empty($school) && !empty($data_row)) ? $this->Common->two_cond_row('sgod_aip_submit', 'school_id', $school->schoolID, 'b_code', $data_row->b_code) : null; ?>
 
-    <?php if($ivy->sgod_sign_type == 1){?>
-        
+    <?php
+    /*
+     * sgod_sign_type mirrors the behaviour in ca.php:
+     *   0 = signature images are always printed
+     *   1 = signature images are printed only once the AIP has been submitted
+     * The signatory names/positions print in both modes. Falls back to mode 1
+     * when the setting row is missing so a bad/absent setting can never blank
+     * out the whole signatory block.
+     */
+    $signType  = isset($ivy->sgod_sign_type) ? (int) $ivy->sgod_sign_type : 1;
+    $showSigns = ($signType === 0) || (!empty($aipstat) && $aipstat->status == 1);
+    ?>
+
     <div class="signWrapper">
          <p class="trusting">Trusting your preferential approval to herein request.</p>
          <?php $sh = $this->Common->one_cond_row_select('schools','','schoolID',1); ?>
@@ -847,7 +858,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <div class="rca-sig rca-left">
                     <p class="rca-role">Validated by</p>
                     <div class="rca-signspace">
-                        <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
+                        <?php if ($showSigns) { ?>
                         <img src="<?= base_url()?>assets/images/<?= $validated->sign; ?>" alt="">
                         <?php } ?>
                     </div>
@@ -858,7 +869,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <div class="rca-sig rca-right">
                     <p class="rca-role">Funds Available:</p>
                     <div class="rca-signspace">
-                        <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
+                        <?php if ($showSigns) { ?>
                         <img src="<?= base_url()?>assets/images/<?= $fund->sign; ?>" alt="">
                         <?php } ?>
                     </div>
@@ -872,7 +883,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
             <div class="rca-sig rca-center">
                 <p class="rca-role">Recommending Approval:</p>
                 <div class="rca-signspace">
-                    <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
+                    <?php if ($showSigns) { ?>
                     <img src="<?= base_url()?>assets/images/<?= $chief->sign; ?>" alt="">
                     <?php } ?>
                 </div>
@@ -883,7 +894,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
             <div class="rca-sig rca-center">
                 <p class="rca-role">Approved:</p>
                 <div class="rca-signspace">
-                    <?php if (!empty($aipstat) && $aipstat->status == 1) { ?>
+                    <?php if ($showSigns) { ?>
                     <img src="<?= base_url()?>assets/images/<?= $sds->sign; ?>" alt="">
                     <?php } ?>
                 </div>
@@ -896,7 +907,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
          <div class="blocker"></div>
 
     </div>
-    <?php }else{ ?>
+    <?php if (!$showSigns) { ?>
         <div style="margin-top:50px"></div>
         <div class="fcon">
                 <img style="width:90px; float:left;" src="https://qrcode.tec-it.com/API/QRCode?data=<?= base_url(); ?>Page/rca_view/<?= !empty($data_row) ? $data_row->school_id.'/'.$data_row->fy.'/'.$data_row->b_code.'/'.$mon : ''; ?>" title="" />
