@@ -502,6 +502,31 @@ HAVING
         return $result;
     }
 
+    /**
+     * Announcements HR posted on the vacancies this applicant applied for.
+     * One row per posting even if the applicant has more than one application
+     * against it; newest announcement first.
+     */
+    public function applied_job_announcements($empEmail)
+    {
+        $query = $this->db->query(
+            "select j.jobID, j.jobTitle, j.job_type, j.sy, j.empType,
+                    j.announcement, j.announcement_by, j.announcement_at,
+                    max(a.appStatus) as appStatus, max(a.dateSubmitted) as dateSubmitted
+               from hris_applications a
+               join hris_jobvacancy j on j.jobID = a.jobID
+              where a.empEmail = ?
+                and j.announcement is not null
+                and trim(j.announcement) != ''
+              group by j.jobID, j.jobTitle, j.job_type, j.sy, j.empType,
+                       j.announcement, j.announcement_by, j.announcement_at
+              order by j.announcement_at desc, j.jobID desc",
+            array($empEmail)
+        );
+
+        return $query->result();
+    }
+
     public function countTrainingNeeds($table, $empEmail)
     {
         $result = $this->db->where('IDNumber=', $empEmail);

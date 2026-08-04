@@ -128,6 +128,23 @@
 .hrp-chip-grey   { background: #f1f4f8; border-color: #e4e9f0; color: #7b8794; }
 .hrp-chip-red    { background: #fdf5f5; border-color: #f0dcdc; color: #b03a3a; }
 
+/* ---- announcements posted on the vacancies this applicant applied for ---- */
+.hrp-ann-list { display: flex; flex-direction: column; gap: .85rem; }
+.hrp-ann-item {
+    border: 1px solid #f0e3c4;
+    border-left: 4px solid #e0b34d;
+    background: #fdfaf3;
+    border-radius: 0 11px 11px 0;
+    padding: .85rem 1rem;
+}
+.hrp-ann-head {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+    margin-bottom: .45rem;
+}
+.hrp-ann-job { font-weight: 600; color: #313a46; font-size: .92rem; }
+.hrp-ann-body { color: #4a5568; font-size: .86rem; line-height: 1.55; white-space: normal; }
+.hrp-ann-foot { margin-top: .5rem; font-size: .72rem; color: #98a6ad; }
+
 @media (max-width: 767.98px) {
     .hrp-hero { padding: 1.25rem; }
     .hrp-hero-title { font-size: 1.15rem; }
@@ -172,7 +189,89 @@
                         </div>
                         <!-- end page header -->
 
-                            
+                        <?php
+                        // announcements/remarks HR attached to the vacancies this
+                        // applicant applied for (Page/jobVacancy -> Announcement column)
+                        $announcements = isset($announcements) ? $announcements : array();
+
+                        $jobTypes = [
+                            1  => 'Elementary',
+                            2  => 'Secondary',
+                            3  => 'Junior High School',
+                            4  => 'Senior High School',
+                            5  => 'Kindergarten',
+                            6  => 'IPED Elementary',
+                            7  => 'IPED Secondary',
+                            8  => 'IPED Junior High School',
+                            9  => 'IPED Senior High School',
+                            10 => 'SNED',
+                            11 => 'SHS Academic and Core Subjects',
+                            12 => 'SHS Arts and Design Track',
+                            13 => 'SHS Sports Track',
+                            14 => 'SHS Technical-Vocational(TVL) Track',
+                            15 => 'Elementary - SPIMS',
+                            16 => 'Junior High School - SPIMS',
+                            17 => 'DOST - (RA 7687)',
+                            18 => 'DOST - (RA 10612)',
+                            19 => '(SST I)',
+                            20 => 'FOR TESTING PURPOSES (DO NOT APPLY)'
+                        ];
+                        ?>
+
+                        <?php if (!empty($announcements)) : ?>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="hrp-card">
+                                    <div class="hrp-card-head">
+                                        <div>
+                                            <h4 class="hrp-card-title"><i class="mdi mdi-bullhorn-outline"></i> Announcements</h4>
+                                            <p class="hrp-card-sub">Notices from HR on the positions you applied for</p>
+                                        </div>
+                                        <div class="hrp-card-actions">
+                                            <span class="hrp-chip hrp-chip-amber">
+                                                <?= count($announcements); ?> announcement<?= count($announcements) == 1 ? '' : 's'; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="hrp-ann-list">
+                                        <?php foreach ($announcements as $ann) :
+                                            $typeLabel = isset($jobTypes[$ann->job_type]) ? $jobTypes[$ann->job_type] : '';
+                                        ?>
+                                            <div class="hrp-ann-item">
+                                                <div class="hrp-ann-head">
+                                                    <span class="hrp-ann-job"><?= html_escape($ann->jobTitle); ?></span>
+                                                    <?php if ($typeLabel !== '') : ?>
+                                                        <span class="hrp-chip hrp-chip-blue"><?= html_escape($typeLabel); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (trim((string) $ann->sy) !== '') : ?>
+                                                        <span class="hrp-chip hrp-chip-grey">SY <?= html_escape($ann->sy); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (trim((string) $ann->appStatus) !== '') : ?>
+                                                        <span class="hrp-chip hrp-chip-green"><?= html_escape($ann->appStatus); ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+
+                                                <div class="hrp-ann-body"><?= nl2br(html_escape(trim((string) $ann->announcement))); ?></div>
+
+                                                <?php if (trim((string) $ann->announcement_by) !== '' || trim((string) $ann->announcement_at) !== '') : ?>
+                                                    <div class="hrp-ann-foot">
+                                                        Posted
+                                                        <?php if (trim((string) $ann->announcement_by) !== '') : ?>
+                                                            by <?= html_escape($ann->announcement_by); ?>
+                                                        <?php endif; ?>
+                                                        <?php if (trim((string) $ann->announcement_at) !== '') : ?>
+                                                            <span class="hrp-dotsep">&bull;</span><?= date('M d, Y g:i A', strtotime($ann->announcement_at)); ?>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
 
                         <?php if ($is_endorser): ?>
 <div class="row">

@@ -876,6 +876,11 @@ class Pages extends CI_Controller
         $data['link'] = "company_new";
 
         $empEmail = $this->session->userdata('username');
+
+        // announcements HR posted on the vacancies this applicant applied for
+        $this->Reg->ensure_announcement_columns();
+        $result['announcements'] = $this->Page_model->applied_job_announcements($empEmail);
+
         $result['data1'] = $this->Page_model->countvacancy('hris_jobvacancy');
         $result['data2'] = $this->Page_model->countapplications('hris_applications', $empEmail);
         $result['data5'] = $this->Page_model->count_for_approval_leave3('hris_leave', $empEmail);
@@ -10970,6 +10975,42 @@ public function rqa_municipality_print_shsv2()
             $this->session->set_flashdata('danger', $this->upload->display_errors());
             redirect(base_url() . 'Page/jobVacancy');
         }
+    }
+
+    /**
+     * Announcement / remarks for a posting, maintained from the Job Vacancies
+     * table.  Whatever is saved here shows up on the dashboard of every
+     * applicant who applied for that position.
+     */
+    public function jobVacancy_announcement_update()
+    {
+        $allowed = array('Human Resource Admin', 'HR Staff', 'Super Admin', 'asds', 'sds');
+
+        if (!in_array($this->session->userdata('position'), $allowed, true)) {
+            $this->session->set_flashdata('danger', 'You are not allowed to post job vacancy announcements.');
+            redirect(base_url() . 'Page/jobVacancy');
+        }
+
+        $jobID = (int) $this->input->post('jobID');
+        $announcement = trim((string) $this->input->post('announcement'));
+
+        if ($jobID === 0) {
+            $this->session->set_flashdata('danger', 'No job vacancy selected.');
+            redirect(base_url() . 'Page/jobVacancy');
+        }
+
+        $this->Reg->ensure_announcement_columns();
+        $this->Reg->announcement_update($jobID, $announcement);
+
+        if ($announcement === '') {
+            $this->Page_model->insert_at('Removed Job Vacancy Announcement.', $jobID);
+            $this->session->set_flashdata('success', 'Announcement removed.');
+        } else {
+            $this->Page_model->insert_at('Posted Job Vacancy Announcement.', $jobID);
+            $this->session->set_flashdata('success', 'Announcement posted. Applicants for this position will see it on their dashboard.');
+        }
+
+        redirect(base_url() . 'Page/jobVacancy');
     }
 
     public function application_history()

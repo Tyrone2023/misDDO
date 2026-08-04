@@ -3662,6 +3662,7 @@ class Page extends CI_Controller
 	public function jobVacancy()
 	{
 		$this->ensure_position_id_width();
+		$this->Reg->ensure_announcement_columns();
 
 		$result['data'] = $this->PersonnelModel->JobVancancies();
 		$result['teaching'] = $this->Hiring_model->JobVancancies();

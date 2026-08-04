@@ -14,6 +14,40 @@ class Common extends CI_Model
         // rewrites.
         $this->db->query("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
     }
+
+    /**
+     * Adds any of $columns ('name' => 'column definition') that the table does
+     * not have yet.  Screens here regularly ship ahead of the database, so the
+     * first request that needs a column creates it instead of erroring out.
+     * One information_schema read in the common case where nothing is missing.
+     */
+    public function ensure_columns($table, array $columns)
+    {
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = false;
+
+        $q = $this->db->query(
+            "select COLUMN_NAME from information_schema.COLUMNS
+              where TABLE_SCHEMA = database() and TABLE_NAME = ?",
+            array($table)
+        );
+
+        $existing = array();
+        if ($q) {
+            foreach ($q->result() as $row) {
+                $existing[strtolower($row->COLUMN_NAME)] = true;
+            }
+        }
+
+        foreach ($columns as $column => $definition) {
+            if (!isset($existing[strtolower($column)])) {
+                $this->db->query("alter table `" . $table . "` add column `" . $column . "` " . $definition);
+            }
+        }
+
+        $this->db->db_debug = $debug;
+    }
+
     public function one_cond_between($table, $col, $val, $con, $minvalue, $maxvalue)
     {
         $this->db->where($col, $val);

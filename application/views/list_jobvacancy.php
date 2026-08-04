@@ -129,6 +129,22 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         font-weight: 600;
         margin-right: .15rem;
     }
+
+    /* announcement/remarks column */
+    .hrp-ann-cell { white-space: normal !important; min-width: 220px; max-width: 320px; }
+    .hrp-ann-text {
+        font-size: .82rem;
+        color: #4a5568;
+        line-height: 1.45;
+        background: #fdf9ef;
+        border-left: 3px solid #e0b34d;
+        border-radius: 0 7px 7px 0;
+        padding: .4rem .6rem;
+        max-height: 5.5rem;
+        overflow-y: auto;
+    }
+    .hrp-ann-meta { font-size: .7rem; color: #98a6ad; margin-top: .3rem; }
+    .hrp-ann-btn { margin-top: .35rem; }
 </style>
 
 <div class="content-page">
@@ -527,6 +543,7 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                                             <th>Office/Bureau/Service/<br />Unit where the vacancy exists</th>
                                             <th class="text-center">Status</th>
                                             <th class="text-center">Attachment</th>
+                                            <th>Announcement/Remarks</th>
                                             <th class="text-right">Action</th>
                                         </tr>
                                     </thead>
@@ -586,6 +603,38 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                                                             <?php } ?>
                                                         <?php } ?>
                                                     </div>
+                                                </td>
+
+                                                <?php
+                                                // announcement/remarks: HR maintains it here, every applicant
+                                                // for this posting sees it on their dashboard
+                                                $announcement = isset($row->announcement) ? trim((string) $row->announcement) : '';
+                                                $annBy        = isset($row->announcement_by) ? trim((string) $row->announcement_by) : '';
+                                                $annAt        = isset($row->announcement_at) ? trim((string) $row->announcement_at) : '';
+                                                ?>
+                                                <td class="hrp-ann-cell">
+                                                    <?php if ($announcement !== '') : ?>
+                                                        <div class="hrp-ann-text"><?= nl2br(html_escape($announcement)); ?></div>
+                                                        <?php if ($annBy !== '' || $annAt !== '') : ?>
+                                                            <div class="hrp-ann-meta">
+                                                                <?php if ($annBy !== '') : ?><?= html_escape($annBy); ?><?php endif; ?>
+                                                                <?php if ($annBy !== '' && $annAt !== '') : ?><span class="hrp-dotsep">&bull;</span><?php endif; ?>
+                                                                <?php if ($annAt !== '') : ?><?= date('M d, Y g:i A', strtotime($annAt)); ?><?php endif; ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    <?php elseif (!$is_hr) : ?>
+                                                        <span class="hrp-muted">&mdash;</span>
+                                                    <?php endif; ?>
+
+                                                    <?php if ($is_hr) : ?>
+                                                        <button type="button" class="hrp-btn hrp-btn-sm hrp-ann-btn"
+                                                                data-job="<?= $row->jobID; ?>"
+                                                                data-title="<?= html_escape(trim($row->jobTitle . ($typeLabel !== '' ? ' - ' . $typeLabel : ''))); ?>"
+                                                                data-announcement="<?= html_escape($announcement); ?>">
+                                                            <i class="mdi <?= $announcement !== '' ? 'mdi-pencil-outline' : 'mdi-bullhorn-outline'; ?>"></i>
+                                                            <?= $announcement !== '' ? 'Edit' : 'Add'; ?>
+                                                        </button>
+                                                    <?php endif; ?>
                                                 </td>
 
                                                 <td class="text-right">
@@ -1303,6 +1352,49 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
     </div>
     <!-- /.modal -->
 
+    <!--  Announcement / Remarks -->
+    <?php if ($is_hr) : ?>
+        <div class="modal fade hrp-modal" id="announcementModal" tabindex="-1" role="dialog" aria-labelledby="announcementModalLabel" style="display: none;" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="announcementModalLabel"><i class="mdi mdi-bullhorn-outline"></i> Announcement / Remarks</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    </div>
+                    <div class="modal-body">
+
+                        <?php
+                        $attributes = array('class' => 'parsley-examples');
+                        echo form_open('Pages/jobVacancy_announcement_update', $attributes);
+                        ?>
+
+                        <div class="hrp-field">
+                            <label class="hrp-label">Position</label>
+                            <input type="text" class="form-control" id="ann-position" readonly>
+                        </div>
+
+                        <div class="hrp-field">
+                            <label class="hrp-label" for="ann-text">Announcement / Remarks</label>
+                            <textarea class="form-control" name="announcement" id="ann-text" rows="5" placeholder="e.g. Schedule of demonstration teaching, list of requirements, or any advisory for this position."></textarea>
+                            <span class="hrp-help">Everyone who applied for this position sees this on their dashboard. Leave it blank to remove the announcement.</span>
+                        </div>
+
+                        <input type="hidden" name="jobID" id="ann-job-id">
+
+                        <div class="text-right">
+                            <input type="submit" name="submit" value="Save" class="hrp-btn hrp-btn-primary">
+                        </div>
+                        </form>
+
+                    </div>
+                </div>
+                <!-- /.modal-content -->
+            </div>
+            <!-- /.modal-dialog -->
+        </div>
+        <!-- /.modal -->
+    <?php endif; ?>
+
     <!--  Search Applicantion -->
     <div class="modal fade aa hrp-modal" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" style="display: none;" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -1430,7 +1522,7 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                     pageLength: 25,
                     lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                     order: [[2, 'desc']],
-                    columnDefs: [{ orderable: false, targets: [5, 6] }],
+                    columnDefs: [{ orderable: false, targets: [5, 6, 7] }],
                     language: { search: '', searchPlaceholder: 'Search vacancies...' },
                     dom: "<'row'<'col-sm-6'l><'col-sm-6'f>>tp<'row'<'col-sm-12'i>>"
                 });
@@ -1471,6 +1563,15 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                         $(target).modal('show');
                     })
                     .modal('hide');
+            });
+
+            /* ---------- announcement modal ---------- */
+            // .attr() rather than .data(), so a numeric announcement stays a string
+            $(document).on('click', '.hrp-ann-btn', function() {
+                $('#ann-job-id').val($(this).attr('data-job'));
+                $('#ann-position').val($(this).attr('data-title') || '');
+                $('#ann-text').val($(this).attr('data-announcement') || '');
+                $('#announcementModal').modal('show');
             });
 
             $('[data-toggle="tooltip"]').tooltip();

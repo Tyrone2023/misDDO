@@ -1833,13 +1833,54 @@ class Reg extends CI_Model{
     public function doc_update(){
 
       $file = $this->upload->data();
-      $filename = $file['file_name']; 
+      $filename = $file['file_name'];
 
       $data = array(
           'file' => $filename
           );
 
           $this->db->where('jobID', $this->input->post('jobID'));
+      return $this->db->update('hris_jobvacancy', $data);
+    }
+
+    /**
+     * The announcement columns were added after hris_jobvacancy shipped, so the
+     * screens that read them create the columns on first use.  See
+     * application/sql/hris_jobvacancy_announcement.sql.
+     */
+    public function ensure_announcement_columns(){
+
+      $this->Common->ensure_columns('hris_jobvacancy', array(
+          'announcement'    => 'text null',
+          'announcement_by' => 'varchar(150) null',
+          'announcement_at' => 'datetime null'
+          ));
+    }
+
+    /**
+     * Saves the announcement/remarks shown to everyone who applied for the
+     * posting.  Blanking the text clears the announcement along with its
+     * author/timestamp stamp.
+     */
+    public function announcement_update($jobID, $announcement){
+
+      date_default_timezone_set('Asia/Manila');
+
+      if ($announcement === '') {
+        $data = array(
+            'announcement' => null,
+            'announcement_by' => null,
+            'announcement_at' => null
+            );
+      } else {
+        $data = array(
+            'announcement' => $announcement,
+            'announcement_by' => $this->session->username,
+            'announcement_at' => date('Y-m-d H:i:s')
+            );
+      }
+
+      $this->db->where('jobID', $jobID);
       return $this->db->update('hris_jobvacancy', $data);
     }
 

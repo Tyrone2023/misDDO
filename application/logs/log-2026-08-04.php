@@ -204,3 +204,9 @@ ERROR - 2026-08-04 20:59:18 --> Severity: Warning --> Undefined property: stdCla
 ERROR - 2026-08-04 20:59:18 --> Severity: Warning --> Undefined property: stdClass::$training /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2404
 ERROR - 2026-08-04 21:01:14 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 363
 ERROR - 2026-08-04 21:01:14 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 681
+ERROR - 2026-08-04 21:26:46 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 363
+ERROR - 2026-08-04 21:26:46 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 681
+ERROR - 2026-08-04 21:29:03 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 363
+ERROR - 2026-08-04 21:29:03 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 681
+ERROR - 2026-08-04 21:30:42 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 363
+ERROR - 2026-08-04 21:30:42 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 681
