@@ -267,7 +267,35 @@
 
                         });
                 </script>
-                
-      
+
+                <!-- Searchable "Assign Evaluator" dropdowns in the Remarks modals -->
+                <script>
+                    $(function () {
+                        if (!$.fn.select2) { return; }
+
+                        function initEvaluatorSelect2($selects) {
+                            $selects.each(function () {
+                                var $sel = $(this);
+                                if ($sel.data('select2')) { return; }
+                                var $modal = $sel.closest('.modal');
+                                $sel.select2({
+                                    width: '100%',
+                                    placeholder: $sel.data('placeholder') || '-- select evaluator --',
+                                    dropdownParent: $modal.length ? $modal : $(document.body)
+                                });
+                            });
+                        }
+
+                        // Selects outside modals can be built right away; the ones inside a
+                        // modal need the modal visible so select2 can measure/position them.
+                        initEvaluatorSelect2($('select.evaluator-select2').filter(function () {
+                            return $(this).closest('.modal').length === 0;
+                        }));
+                        $(document).on('shown.bs.modal', '.modal', function () {
+                            initEvaluatorSelect2($(this).find('select.evaluator-select2'));
+                        });
+                    });
+                </script>
+
 </body>
 </html>

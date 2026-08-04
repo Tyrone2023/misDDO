@@ -134,4 +134,5 @@ $autoload['language'] = array();
 */
 
 $autoload['model'] = array('Page_model', 'SGODModel', 'Common', 'Reg', 'StudentModel','Sbfp_model','PdoModel',
-'SmeaModel','Ps_model','Coor_model','Drrm_model','Hrtd_model','Legal_model','Provident_model','Hiring_model');
+'SmeaModel','Ps_model','Coor_model','Drrm_model','Hrtd_model','Legal_model','Provident_model','Hiring_model',
+'Audit_model' => 'Audit');

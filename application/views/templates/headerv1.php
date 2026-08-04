@@ -2182,7 +2182,10 @@
                             <?php elseif ($this->session->position === 'District' || $this->session->position === 'Evaluator' || $this->session->position === 'doceval' || $this->session->position === 'rater' || $this->session->position === 'raters') : ?>
                                 <?php
                                     $hasAssigned = $this->db->where('rater_user_id', $this->session->id)->count_all_results('hris_rater_assignments') > 0;
-                                    $dashLink = $hasAssigned ? base_url('EvaluatorAssigned') : base_url();
+                                    // Evaluators/raters land on the assigned-applicants dashboard even when
+                                    // nothing is assigned yet; District/doceval keep the old landing page.
+                                    $isEvaluator = in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true);
+                                    $dashLink = ($isEvaluator || $hasAssigned) ? base_url('EvaluatorAssigned') : base_url();
                                 ?>
 
                                 <li><a href="<?= $dashLink; ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>

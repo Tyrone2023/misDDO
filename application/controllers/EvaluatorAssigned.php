@@ -15,7 +15,7 @@ class EvaluatorAssigned extends CI_Controller
     private function guard()
     {
         $pos = $this->session->userdata('position');
-        if (!in_array($pos, ['Evaluator','rater','raters','District','doceval'])) {
+        if (!in_array($pos, ['Evaluator','rater','raters','District','doceval','asds'])) {
             show_error('Forbidden', 403);
             exit;
         }
@@ -31,12 +31,10 @@ class EvaluatorAssigned extends CI_Controller
             return;
         }
 
+        // This is the evaluator's home page, so an empty assignment list is a valid
+        // state: the dashboard renders its own "nothing assigned yet" rows rather
+        // than bouncing back to the old landing page.
         $assignments = $this->assignRater->get_assigned_applicants($raterId);
-
-        if (empty($assignments['pending']) && empty($assignments['scored'])) {
-            redirect(base_url());
-            return;
-        }
 
         // Count distinct applicants (by applicant_id) with pending queries (stat = 0)
         $pending_queries = $this->db

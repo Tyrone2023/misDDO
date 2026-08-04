@@ -475,16 +475,15 @@ class Pages extends CI_Controller
             $this->load->view('templates/footer');
         } elseif ($this->session->position == 'District' || $this->session->position == 'Evaluator' || $this->session->position == 'rater') {
 
-            // If evaluator/rater already has assignments (excluding Closed vacancies), send to the new dashboard
+            // The assigned-applicants dashboard is the home page for evaluators/raters,
+            // whether or not anything is assigned to them yet. Only fall through to the
+            // district dashboard when there is no user id to look assignments up with.
             if (in_array($this->session->position, ['Evaluator','rater','raters'])) {
-                $rid = $this->session->id ?? $this->session->userdata('id');
-                if ($rid) {
-                    // use the AssignRater model which already filters out assignments for Closed job vacancies
-                    $assignments = $this->assignRater->get_assigned_applicants((int)$rid);
-                    $hasAssigned = (!empty($assignments['pending']) || !empty($assignments['scored']));
-                    if ($hasAssigned) {
-                        redirect(base_url('EvaluatorAssigned'));
-                    }
+                // Same test EvaluatorAssigned::index() uses, so the two can never
+                // bounce a session back and forth between each other.
+                $rid = (int) ($this->session->id ?? $this->session->userdata('id'));
+                if ($rid > 0) {
+                    redirect(base_url('EvaluatorAssigned'));
                 }
             }
 
@@ -2765,7 +2764,7 @@ class Pages extends CI_Controller
 
         $this->form_validation->set_error_delimiters('<div class="error">', '</div>');
         $this->form_validation->set_rules('username', 'username', 'required');
-        $this->form_validation->set_rules('password', 'uassword', 'required');
+        $this->form_validation->set_rules('password', 'password', 'required');
 
         if ($this->form_validation->run() == FALSE) {
 
@@ -7667,14 +7666,32 @@ public function rqa_municipality_print_shsv2()
         $this->load->view('templates/footer');
     }
 
+    /**
+     * Redirect back to the page an action was submitted from (the HTTP referrer),
+     * so actions on the applicant rating page (pages/ma/...) return to that exact
+     * applicant instead of a reconstructed/summary URL. The Referer header omits
+     * the fragment, so pass $anchor (e.g. '#efile') to re-append the scroll target.
+     * Falls back to $fallback (or the site root) when there is no same-site referrer.
+     */
+    private function redirect_back($anchor = '', $fallback = null)
+    {
+        $ref = (string) ($_SERVER['HTTP_REFERER'] ?? '');
+        if ($ref !== '' && strpos($ref, base_url()) === 0) {
+            $ref = strtok($ref, '#'); // drop any fragment already on the referrer
+            redirect($ref . $anchor);
+            return;
+        }
+        redirect($fallback !== null ? $fallback : base_url());
+    }
+
     public function update_educ()
     {
         $this->Reg->educ_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
         if ($this->session->position == 'asds') {
-            redirect(base_url() . 'pages/ma/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
+            $this->redirect_back('#efile', base_url() . 'pages/ma/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
         } else {
-            redirect(base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
+            $this->redirect_back('#efile', base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
         }
     }
 
@@ -7683,9 +7700,9 @@ public function rqa_municipality_print_shsv2()
         $this->Reg->educ_update_staff();
         $this->session->set_flashdata('success', 'Successfuly Saved');
         if ($this->session->position == 'asds') {
-            redirect(base_url() . 'pages/ma_staff/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
+            $this->redirect_back('#efile', base_url() . 'pages/ma_staff/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
         } else {
-            redirect(base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
+            $this->redirect_back('#efile', base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
         }
     }
 
@@ -7695,9 +7712,9 @@ public function rqa_municipality_print_shsv2()
         $this->Reg->ai_sex_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
         if ($this->session->position == 'asds') {
-            redirect(base_url() . 'pages/ma/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
+            $this->redirect_back('', base_url() . 'pages/ma/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
         } else {
-            redirect(base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
+            $this->redirect_back('', base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
         }
     }
 
@@ -7707,9 +7724,9 @@ public function rqa_municipality_print_shsv2()
         $this->Reg->ai_sex_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
         if ($this->session->position == 'asds') {
-            redirect(base_url() . 'pages/ma_staff/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
+            $this->redirect_back('', base_url() . 'pages/ma_staff/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
         } else {
-            redirect(base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
+            $this->redirect_back('', base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
         }
     }
 
@@ -7717,35 +7734,35 @@ public function rqa_municipality_print_shsv2()
     {
         $this->Reg->lr_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        redirect(base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#lr');
+        $this->redirect_back('#lr', base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#lr');
     }
 
     public function update_lr_staff()
     {
         $this->Reg->lr_update_staff();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        redirect(base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#lr');
+        $this->redirect_back('#lr', base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#lr');
     }
 
     public function update_ept()
     {
         $this->Reg->ept_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        redirect(base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#ept');
+        $this->redirect_back('#ept', base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#ept');
     }
 
     public function update_tc()
     {
         $this->Reg->tc_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        redirect(base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#tsc');
+        $this->redirect_back('#tsc', base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#tsc');
     }
 
     public function update_tc_staff()
     {
         $this->Reg->tc_update_staff();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        redirect(base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#tsc');
+        $this->redirect_back('#tsc', base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#tsc');
     }
 
     public function update_online_demo()
@@ -9786,8 +9803,13 @@ public function rqa_municipality_print_shsv2()
         if ($assignRater) {
             $validRater = $this->db
                 ->where('id', $raterId)
-                ->where('position', 'Evaluator')
-                ->where('egroup', 1)
+                ->group_start()
+                    ->group_start()
+                        ->where('position', 'Evaluator')
+                        ->where('egroup', 1)
+                    ->group_end()
+                    ->or_where('position', 'asds')
+                ->group_end()
                 ->count_all_results('users') > 0;
             if (!$validRater) {
                 $assignRater = false;
@@ -9890,7 +9912,7 @@ public function rqa_municipality_print_shsv2()
         }
 
         $this->session->set_flashdata('success', $msg);
-        redirect(base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
+        $this->redirect_back('', base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
     }
 
     public function multi_remarks() {
@@ -9920,8 +9942,13 @@ public function rqa_municipality_print_shsv2()
         if ($assignRater) {
             $validRater = $this->db
                 ->where('id', $raterId)
-                ->where('position', 'Evaluator')
-                ->where('egroup', 1)
+                ->group_start()
+                    ->group_start()
+                        ->where('position', 'Evaluator')
+                        ->where('egroup', 1)
+                    ->group_end()
+                    ->or_where('position', 'asds')
+                ->group_end()
                 ->count_all_results('users') > 0;
 
             if (!$validRater) {
@@ -10092,10 +10119,87 @@ public function rqa_municipality_print_shsv2()
         }
     
         if ($this->session->position === 'Secretariat') {
-            redirect(base_url('Pages/endorsed_applicants'));
+            $this->redirect_back('', base_url('Pages/endorsed_applicants'));
         }
 
-        redirect(base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
+        $this->redirect_back('', base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
+    }
+
+    /**
+     * Optional single-evaluator assignment posted from the Remarks modals
+     * (`rater_id`). Returns the fragment to append to the success flash, or an
+     * empty string when no evaluator was picked.
+     */
+    private function assign_rater_from_remarks($appID)
+    {
+        $raterId = (int) $this->input->post('rater_id');
+        if ($raterId <= 0) {
+            return '';
+        }
+
+        $validRater = $this->db
+            ->where('id', $raterId)
+            ->group_start()
+                ->group_start()
+                    ->where('position', 'Evaluator')
+                    ->where('egroup', 1)
+                ->group_end()
+                ->or_where('position', 'asds')
+            ->group_end()
+            ->count_all_results('users') > 0;
+        if (!$validRater) {
+            return ' Selected evaluator is not eligible; no assignment was made.';
+        }
+
+        $appRow = $this->Common->one_cond_row('hris_applications', 'appID', $appID);
+        if (empty($appRow)) {
+            return ' Unable to assign the evaluator.';
+        }
+
+        $jobRow = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $appRow->jobID);
+        $jobType = $jobRow->job_type ?? 0;
+
+        $applicant = $this->Common->one_cond_row('hris_applicant', 'id', $appRow->applicant_id);
+        if (empty($applicant)) {
+            $applicant = $this->Common->one_cond_row('hris_applicant', 'record_no', $appRow->applicant_id);
+        }
+        $spec = $applicant->specialization ?? '';
+
+        $assignedBy = $this->session->id ?? $this->session->userdata('id');
+
+        $existing = $this->db
+            ->where('fy', date('Y'))
+            ->where('app_id', $appRow->appID)
+            ->get('hris_rater_assignments')
+            ->row();
+
+        if ($existing) {
+            if ((int) $existing->rater_user_id === $raterId) {
+                return ' An evaluator is already assigned to this application.';
+            }
+            $this->db->where('id', $existing->id)
+                ->update('hris_rater_assignments', [
+                    'rater_user_id' => $raterId,
+                    'assigned_by' => $assignedBy,
+                    'assigned_at' => date('Y-m-d H:i:s'),
+                ]);
+        } else {
+            $this->db->insert('hris_rater_assignments', [
+                'fy' => date('Y'),
+                'applicant_id' => $appRow->applicant_id,
+                'app_id' => $appRow->appID,
+                'job_id' => $appRow->jobID,
+                'job_type' => $jobType,
+                'specialization' => $spec,
+                'rater_user_id' => $raterId,
+                'assigned_by' => $assignedBy,
+                'assigned_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        return $this->db->affected_rows() > 0
+            ? ' Evaluator assigned.'
+            : ' Unable to assign the evaluator.';
     }
 
     public function Unqualified_none()
@@ -10103,19 +10207,21 @@ public function rqa_municipality_print_shsv2()
         $dq = $this->input->post('remarks');
         $this->Reg->update_dq($dq);
         $this->Reg->insert_dq();
+        $msg = 'Successfuly Updated';
         if ($dq == 1) {
             $this->Reg->ap_change_stat('Endorsed for Rating');
             $this->Reg->ap_trackv2('Endorsed for Rating.');
+            $msg .= $this->assign_rater_from_remarks($this->input->post('appID'));
         }
         $this->Reg->insert_rate_none();
 
 
-        $this->session->set_flashdata('success', 'Successfuly Updated');
+        $this->session->set_flashdata('success', $msg);
         $redirect = $this->input->post('redirect');
         if (!empty($redirect)) {
-            redirect($redirect);
+            $this->redirect_back('', $redirect);
         }
-        redirect(base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
+        $this->redirect_back('', base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
     }
 
     public function Unqualified_promotion()
@@ -10123,19 +10229,21 @@ public function rqa_municipality_print_shsv2()
         $dq = $this->input->post('remarks');
         $this->Reg->update_dq($dq);
         $this->Reg->insert_dq();
+        $msg = 'Successfuly Updated';
         if ($dq == 1) {
             $this->Reg->ap_change_stat('Endorsed for Rating');
             $this->Reg->ap_trackv2('Endorsed for Rating.');
+            $msg .= $this->assign_rater_from_remarks($this->input->post('appID'));
         }
         $this->Reg->insert_rate_promotion();
 
 
-        $this->session->set_flashdata('success', 'Successfuly Updated');
+        $this->session->set_flashdata('success', $msg);
         $redirect = $this->input->post('redirect');
         if (!empty($redirect)) {
-            redirect($redirect);
+            $this->redirect_back('', $redirect);
         }
-        redirect(base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
+        $this->redirect_back('', base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
     }
 
     public function Unqualifiededit()
@@ -10155,8 +10263,13 @@ public function rqa_municipality_print_shsv2()
         if ($assignRater) {
             $validRater = $this->db
                 ->where('id', $raterId)
-                ->where('position', 'Evaluator')
-                ->where('egroup', 1)
+                ->group_start()
+                    ->group_start()
+                        ->where('position', 'Evaluator')
+                        ->where('egroup', 1)
+                    ->group_end()
+                    ->or_where('position', 'asds')
+                ->group_end()
                 ->count_all_results('users') > 0;
             if (!$validRater) {
                 $assignRater = false;
@@ -10256,9 +10369,9 @@ public function rqa_municipality_print_shsv2()
         $this->session->set_flashdata('success', $msg);
         $redirect = $this->input->post('redirect');
         if (!empty($redirect)) {
-            redirect($redirect);
+            $this->redirect_back('', $redirect);
         }
-        redirect(base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
+        $this->redirect_back('', base_url() . 'pages/validated_list/' . $this->input->post('jobID') . '/?district=' . $this->input->post('dist'));
     }
 
     public function qualified()
@@ -10292,10 +10405,10 @@ public function rqa_municipality_print_shsv2()
 
             $this->Reg->ap_track('The education rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#efile');
+            $this->redirect_back('#efile', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#efile');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no'));
+            $this->redirect_back('', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no'));
         }
     }
 
@@ -10317,10 +10430,10 @@ public function rqa_municipality_print_shsv2()
             
             $this->Reg->ap_track('The TOR & CAV - College / Graduate Studies rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#efile');
+            $this->redirect_back('#efile', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#efile');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no'));
+            $this->redirect_back('', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no'));
         }
     }
 
@@ -10340,10 +10453,10 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_rate_promotion('educ');
             $this->Reg->ap_track('The TOR & CAV - College / Graduate Studies rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#efile');
+            $this->redirect_back('#efile', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#efile');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no'));
+            $this->redirect_back('', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no'));
         }
     }
 
@@ -10368,10 +10481,10 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_rate('let_rating');
             $this->Reg->ap_track('The LET rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
+            $this->redirect_back('#lr', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
+            $this->redirect_back('#lr', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
         }
     }
 
@@ -10397,10 +10510,10 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_rate('tr_rating');
             $this->Reg->ap_track('Teachers Reflection rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
+            $this->redirect_back('#lr', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
+            $this->redirect_back('#lr', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
         }
     }
 
@@ -10426,10 +10539,10 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_rate('demo_rating');
             $this->Reg->ap_track('Demo rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $this->uri->segment(7) . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
+            $this->redirect_back('#lr', base_url() . 'pages/' . $this->uri->segment(7) . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
+            $this->redirect_back('#lr', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#lr');
         }
     }
 
@@ -10452,10 +10565,10 @@ public function rqa_municipality_print_shsv2()
 
             $this->Reg->ap_track('The trainings and seminars rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
+            $this->redirect_back('#tsc', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
+            $this->redirect_back('#tsc', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
         }
     }
 
@@ -10480,10 +10593,10 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_remarks($remarks);
             $this->Reg->ap_track('The ' . $message . ' rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
+            $this->redirect_back('#tsc', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
+            $this->redirect_back('#tsc', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
         }
     }
 
@@ -10507,10 +10620,10 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_rate_none($col);
             $this->Reg->ap_track('The ' . $message . ' rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
+            $this->redirect_back('#tsc', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
+            $this->redirect_back('#tsc', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
         }
     }
 
@@ -10533,10 +10646,10 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_rate_promotion($col);
             $this->Reg->ap_track('The ' . $message . ' rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
+            $this->redirect_back('#tsc', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
+            $this->redirect_back('#tsc', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');
         }
     }
 
@@ -10616,10 +10729,10 @@ public function rqa_municipality_print_shsv2()
             
             $this->Reg->ap_track('The experience rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#ept');
+            $this->redirect_back('#ept', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#ept');
         } else {
             $this->session->set_flashdata('danger', 'The points exceeded the maximum allowed value.');
-            redirect(base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#ept');
+            $this->redirect_back('#ept', base_url() . 'pages/' . $page . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#ept');
         }
     }
 

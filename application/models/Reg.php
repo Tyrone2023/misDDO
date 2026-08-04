@@ -84,7 +84,16 @@ class Reg extends CI_Model{
       );
 
       $this->db->where('id', $this->input->post('id'));
-      return $this->db->update('hris_applicant', $data);
+      $res = $this->db->update('hris_applicant', $data);
+      $this->Audit->log('update_document', [
+          'entity_type'  => 'document',
+          'entity_id'    => 'education',
+          'applicant_id' => $this->input->post('id'),
+          'job_id'       => $this->input->post('jobID') ?: $this->uri->segment(4),
+          'field'        => 'education',
+          'description'  => 'Updated education / QS details.',
+      ]);
+      return $res;
     }
 
     public function educ_update_staff(){
@@ -129,7 +138,16 @@ class Reg extends CI_Model{
       );
 
       $this->db->where('IDNumber', $this->input->post('id'));
-      return $this->db->update('hris_staff', $data);
+      $res = $this->db->update('hris_staff', $data);
+      $this->Audit->log('update_document', [
+          'entity_type'  => 'document',
+          'entity_id'    => 'education',
+          'applicant_id' => $this->input->post('id'),
+          'job_id'       => $this->input->post('jobID') ?: $this->uri->segment(4),
+          'field'        => 'education',
+          'description'  => 'Updated education / QS details (staff).',
+      ]);
+      return $res;
     }
 
     public function ai_update(){
@@ -826,11 +844,20 @@ class Reg extends CI_Model{
               'appStatus' => 'Application Submitted', 
               'applicant_id' => $this->session->c_id,
               'app_year' => date('Y'),
-              'district' => $this->input->post('district'), 
+              'district' => $this->input->post('district'),
               'pre_school' => $this->input->post('school')
       );
-  
-      return $this->db->insert('hris_applications', $data);
+
+      $res = $this->db->insert('hris_applications', $data);
+      $this->Audit->log('submit_application', [
+          'entity_type'  => 'application',
+          'entity_id'    => $this->db->insert_id(),
+          'app_id'       => $this->db->insert_id(),
+          'applicant_id' => $this->session->c_id,
+          'job_id'       => $this->input->post('id'),
+          'description'  => 'Applicant submitted an application.',
+      ]);
+      return $res;
     }
     public function ap_submit_non_teaching(){
       date_default_timezone_set('Asia/Manila');
@@ -844,11 +871,20 @@ class Reg extends CI_Model{
               'appStatus' => 'Application Submitted', 
               'applicant_id' => $this->session->c_id,
               'app_year' => date('Y'),
-              'district' => 'School Division Office', 
+              'district' => 'School Division Office',
               'pre_school' => '202401'
       );
-  
-      return $this->db->insert('hris_applications', $data);
+
+      $res = $this->db->insert('hris_applications', $data);
+      $this->Audit->log('submit_application', [
+          'entity_type'  => 'application',
+          'entity_id'    => $this->db->insert_id(),
+          'app_id'       => $this->db->insert_id(),
+          'applicant_id' => $this->session->c_id,
+          'job_id'       => $this->uri->segment(3),
+          'description'  => 'Applicant submitted a non-teaching application.',
+      ]);
+      return $res;
     }
 
     public function edit_submit(){
@@ -865,13 +901,33 @@ class Reg extends CI_Model{
 
     public function ap_change_stat($status){
 
-      $data = array( 
+      $data = array(
               'appStatus' => $status
       );
 
       $this->db->where('applicant_id', $this->uri->segment(3));
       $this->db->where('jobID', $this->uri->segment(4));
-      return $this->db->update('hris_applications', $data);
+      $res = $this->db->update('hris_applications', $data);
+      $this->audit_status_change($status);
+      return $res;
+    }
+
+    /**
+     * Log an application status change. "Endorsed for Rating" is surfaced as an
+     * `endorse` action so endorsements are easy to filter; everything else is a
+     * generic `status_change`.
+     */
+    private function audit_status_change($status){
+      $isEndorse = (stripos((string) $status, 'Endorsed') !== false);
+      $this->Audit->log($isEndorse ? 'endorse' : 'status_change', [
+          'entity_type'  => 'application',
+          'entity_id'    => $this->uri->segment(6) ?: $this->input->post('appID'),
+          'app_id'       => $this->uri->segment(6) ?: $this->input->post('appID'),
+          'applicant_id' => $this->uri->segment(3),
+          'job_id'       => $this->uri->segment(4),
+          'field'        => 'appStatus',
+          'description'  => 'Application status set to "' . $status . '".',
+      ]);
     }
 
     public function ap_change_stat_all_application($status){
@@ -1136,7 +1192,16 @@ class Reg extends CI_Model{
           );
 
       $this->db->where('id', $this->uri->segment(3));
-      return $this->db->update('hris_applicant', $data);
+      $res = $this->db->update('hris_applicant', $data);
+      $this->Audit->log('delete_document', [
+          'entity_type'  => 'document',
+          'entity_id'    => $column,
+          'applicant_id' => $this->uri->segment(3),
+          'job_id'       => $this->uri->segment(4),
+          'field'        => $column,
+          'description'  => 'Removed document / attachment: ' . $column . '.',
+      ]);
+      return $res;
     }
 
     public function remove_attach_staff($column){
@@ -1146,7 +1211,16 @@ class Reg extends CI_Model{
           );
 
       $this->db->where('IDNumber', $this->uri->segment(3));
-      return $this->db->update('hris_staff', $data);
+      $res = $this->db->update('hris_staff', $data);
+      $this->Audit->log('delete_document', [
+          'entity_type'  => 'document',
+          'entity_id'    => $column,
+          'applicant_id' => $this->uri->segment(3),
+          'job_id'       => $this->uri->segment(4),
+          'field'        => $column,
+          'description'  => 'Removed document / attachment: ' . $column . '.',
+      ]);
+      return $res;
     }
 
     public function remove_attach_app($column){
@@ -1156,7 +1230,17 @@ class Reg extends CI_Model{
           );
 
       $this->db->where('appID', $this->uri->segment(7));
-      return $this->db->update('hris_applications', $data);
+      $res = $this->db->update('hris_applications', $data);
+      $this->Audit->log('delete_document', [
+          'entity_type'  => 'document',
+          'entity_id'    => $column,
+          'app_id'       => $this->uri->segment(7),
+          'applicant_id' => $this->uri->segment(3),
+          'job_id'       => $this->uri->segment(4),
+          'field'        => $column,
+          'description'  => 'Removed document / attachment: ' . $column . '.',
+      ]);
+      return $res;
     }
 
     public function open_jv(){
@@ -1312,7 +1396,9 @@ class Reg extends CI_Model{
 
       $this->db->where('appID', $this->input->post('app_id'));
       $this->db->where('record_no', $this->input->post('record_no'));
-      return $this->db->update('hris_applications_rating', $data);
+      $res = $this->db->update('hris_applications_rating', $data);
+      $this->audit_rating('hris_applications_rating', $educ);
+      return $res;
     }
 
     public function update_rate_none($educ){
@@ -1325,7 +1411,9 @@ class Reg extends CI_Model{
 
       $this->db->where('appID', $this->input->post('app_id'));
       $this->db->where('record_no', $this->input->post('record_no'));
-      return $this->db->update('hris_rating_none', $data);
+      $res = $this->db->update('hris_rating_none', $data);
+      $this->audit_rating('hris_rating_none', $educ);
+      return $res;
     }
 
     public function update_rate_promotion($educ){
@@ -1338,7 +1426,49 @@ class Reg extends CI_Model{
 
       $this->db->where('appID', $this->input->post('app_id'));
       $this->db->where('record_no', $this->input->post('record_no'));
-      return $this->db->update('hris_rating_promotion', $data);
+      $res = $this->db->update('hris_rating_promotion', $data);
+      $this->audit_rating('hris_rating_promotion', $educ);
+      return $res;
+    }
+
+    /**
+     * Log a single encoded rating component to the audit trail. Called by every
+     * update_rate* funnel so who-rated-what is captured regardless of which
+     * controller flow (ma page, evaluator_applicant, etc.) triggered it.
+     */
+    private function audit_rating($table, $field){
+      $label = $this->rating_field_label($field);
+      $this->Audit->log('rate', [
+          'entity_type'  => 'rating',
+          'entity_id'    => $table,
+          'app_id'       => $this->input->post('app_id'),
+          'applicant_id' => $this->input->post('record_no'),
+          'job_id'       => $this->input->post('jobID') ?: $this->uri->segment(4),
+          'field'        => $field,
+          'description'  => 'Encoded ' . $label . ' rating: ' . $this->input->post($field),
+      ]);
+    }
+
+    /** Friendly label for a rating column, for the audit description. */
+    private function rating_field_label($field){
+      $map = [
+          'education'   => 'Education',
+          'educ'        => 'Education',
+          'training'    => 'Training',
+          'trainings'   => 'Training',
+          'experience'  => 'Experience',
+          'let_rating'  => 'LET',
+          'demo_rating' => 'Demo',
+          'tr_rating'   => "Teacher's Reflection",
+          'performance' => 'Performance',
+          'interview'   => 'Interview',
+          'written'     => 'Written',
+          'ppstco'      => 'PPST Classroom Observation',
+          'ppstpa'      => 'PPST Performance Assessment',
+          'oa'          => 'Outstanding Accomplishment',
+          'skills'      => 'Skills',
+      ];
+      return $map[$field] ?? ucfirst(str_replace('_', ' ', (string) $field));
     }
 
     public function lock_application($val){
@@ -1435,8 +1565,29 @@ class Reg extends CI_Model{
 
 
       );
-  
-      return $this->db->insert('hris_app_dq', $data);
+
+      $res = $this->db->insert('hris_app_dq', $data);
+      $this->audit_validation($this->input->post('remarks'), $this->input->post('reason'));
+      return $res;
+    }
+
+    /**
+     * Log a Qualified / Disqualified validation decision to the audit trail.
+     * remarks: 1 = Qualified, 2 = Disqualified.
+     */
+    private function audit_validation($remarks, $reason = ''){
+      $qualified = ((string) $remarks === '1');
+      $this->Audit->log($qualified ? 'validate' : 'disqualify', [
+          'entity_type'  => 'application',
+          'entity_id'    => $this->input->post('appID'),
+          'app_id'       => $this->input->post('appID'),
+          'applicant_id' => $this->input->post('id'),
+          'job_id'       => $this->input->post('jobID'),
+          'field'        => 'remarks',
+          'description'  => $qualified
+              ? 'Marked application as Qualified.'
+              : 'Marked application as Disqualified.' . ($reason ? ' Reason: ' . $reason : ''),
+      ]);
     }
 
     public function update_dq2(){
@@ -1466,10 +1617,12 @@ class Reg extends CI_Model{
       );
   
       $this->db->where('id', $this->input->post('dq_id'));
-      return $this->db->update('hris_app_dq', $data);
+      $res = $this->db->update('hris_app_dq', $data);
+      $this->audit_validation($this->input->post('remarks'), $this->input->post('reason'));
+      return $res;
     }
 
-    
+
 
     public function lock_applications($val){
 

@@ -3371,6 +3371,8 @@
                                                                     </div>
 
                                                                         
+                                                                    <?php $this->load->view("pages/_assign_evaluator", ["ae_app_id" => $aa->appID]); ?>
+
                                                                     <div class="row">
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
@@ -3532,6 +3534,8 @@
                                                                     </div>
 
                                                                         
+                                                                    <?php $this->load->view("pages/_assign_evaluator", ["ae_app_id" => $aa->appID]); ?>
+
                                                                     <div class="row">
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">

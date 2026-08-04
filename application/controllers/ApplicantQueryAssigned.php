@@ -19,7 +19,7 @@ class ApplicantQueryAssigned extends CI_Controller
     private function guard()
     {
         $pos = $this->session->userdata('position');
-        if (!in_array($pos, ['Evaluator', 'rater', 'raters', 'District', 'doceval', 'Admin', 'Super Admin'])) {
+        if (!in_array($pos, ['Evaluator', 'rater', 'raters', 'District', 'doceval', 'Admin', 'Super Admin', 'asds'])) {
             show_error('Forbidden', 403);
             exit;
         }

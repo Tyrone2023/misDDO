@@ -425,7 +425,22 @@
                                         <!-- <li><a href="<?= base_url(); ?>Page/appRatingUploading">Upload Applicant's Rating</a></li> -->
                                     </ul>
                                 </li>
-                                
+
+                                <?php if ($this->session->position === 'asds') { ?>
+                                    <li>
+                                        <a href="javascript: void(0);" class="waves-effect">
+                                            <i class="fas fa-user-tag"></i>
+                                            <span> Tagged Applicants </span>
+                                            <span class="menu-arrow"></span>
+                                        </a>
+                                        <ul class="nav-second-level" aria-expanded="false">
+                                            <li><a href="<?= base_url(); ?>EvaluatorAssigned#pendingApplicantsTable">Pending Assigned Applicants</a></li>
+                                            <li><a href="<?= base_url(); ?>EvaluatorAssigned#scoredApplicantsTable">With Scores</a></li>
+                                            <li><a href="<?= base_url(); ?>ApplicantQueryAssigned">My Applicants Query</a></li>
+                                        </ul>
+                                    </li>
+                                <?php } ?>
+
                                    <li>
     <a href="<?= base_url(); ?>Pages/rqa_corrigendum">
         <i class="mdi mdi-file-document-edit-outline"></i>
@@ -2000,7 +2015,10 @@
                             <?php elseif ($this->session->position === 'District' || $this->session->position === 'Evaluator' || $this->session->position === 'doceval' || $this->session->position === 'rater' || $this->session->position === 'raters') : ?>
                                 <?php
                                     $hasAssigned = $this->db->where('rater_user_id', $this->session->id)->count_all_results('hris_rater_assignments') > 0;
-                                    $dashLink = $hasAssigned ? base_url('EvaluatorAssigned') : base_url();
+                                    // Evaluators/raters land on the assigned-applicants dashboard even when
+                                    // nothing is assigned yet; District/doceval keep the old landing page.
+                                    $isEvaluator = in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true);
+                                    $dashLink = ($isEvaluator || $hasAssigned) ? base_url('EvaluatorAssigned') : base_url();
                                 ?>
 
                                 <li><a href="<?= $dashLink; ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>

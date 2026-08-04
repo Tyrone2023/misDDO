@@ -105,12 +105,17 @@
                 $tv = $this->Common->one_cond_row('settings', 'id', 12); // Training Version Old or New
                 $exv = $this->Common->one_cond_row('settings', 'id', 13); // Work experience Version Old or New
 
-                // Evaluators (egroup 1) for optional single assignment inside Remarks modal
+                // Evaluators (egroup 1) plus ASDS users, for optional single assignment inside Remarks modal
                 $raters = $this->db
                     ->select('id,fname,mname,lname,username')
                     ->from('users')
-                    ->where('position', 'Evaluator')
-                    ->where('egroup', 1)
+                    ->group_start()
+                        ->group_start()
+                            ->where('position', 'Evaluator')
+                            ->where('egroup', 1)
+                        ->group_end()
+                        ->or_where('position', 'asds')
+                    ->group_end()
                     ->order_by('lname', 'asc')
                     ->order_by('fname', 'asc')
                     ->get()
@@ -157,6 +162,20 @@
                 $hideCoreScores = $showCoreRatingStatus;
                 $hideDemoTrScores = $isApplicantPosition && (int)($demo_tr_hide->status ?? 0) === 1;
                 $canUploadDocuments = (int)($aa->stat ?? 1) === 0;
+
+                // Hover icon listing everyone who encoded each rating component. The
+                // names come from the audit trail (accurate per-component), falling
+                // back to the rating row's eval_id for pre-audit scores. Shown to all.
+                $ratingCI =& get_instance();
+                $ratingAppId = $aa->appID ?? ($rating->appID ?? null);
+                $showRater = function ($field, $fallbackEvalId = null) use ($ratingCI, $ratingAppId) {
+                    if (empty($ratingAppId)) { return; }
+                    $names = $ratingCI->Audit->raters($ratingAppId, $field, $fallbackEvalId);
+                    if (empty($names)) { return; }
+                    $title = htmlspecialchars('Rated by: ' . implode('; ', $names), ENT_QUOTES, 'UTF-8');
+                    echo ' <i class="mdi mdi-account-eye text-info tooltips" style="cursor:pointer;font-size:16px;vertical-align:middle;"'
+                        . ' data-toggle="tooltip" data-placement="top" title="' . $title . '"></i>';
+                };
 
                          
             ?>
@@ -650,6 +669,7 @@
                                                         <?php } ?>
 
                                                             <?php if($aa->educ_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->educ_remarks; ?></i><?php } ?>
+                                                            <?php $showRater('education', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -751,6 +771,7 @@
                                                             <?php $renderRatingScore($rating->training, $hideCoreScores, $showCoreRatingStatus); ?>
                                                         <?php } ?>
                                                             <?php if($aa->training_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->training_remarks; ?></i><?php } ?>
+                                                            <?php $showRater('training', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -813,7 +834,7 @@
                                                         <?php } ?>
 
                                                          <?php if($aa->experience_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->experience_remarks; ?></i><?php } ?>
-                                                          
+                                                          <?php $showRater('experience', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -867,10 +888,11 @@
                                                         <?php }else{ ?>
                                                             <?php $renderRatingScore($rating->let_rating, $hideCoreScores, $showCoreRatingStatus); ?>
                                                         <?php } ?>
+                                                            <?php $showRater('let_rating', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
-                         
+
                                                     <?php if($this->session->position == '0'){?>
                                                     <tr class="bg-warning text-white">
                                                         <th colspan="2" class="text-center" id="history">APPLICATION HISTORY</th>
@@ -914,8 +936,8 @@
                                                         <?php }elseif($this->session->id == $rating->eval_id3 || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){ ?>
                                                             <a href="#" data-toggle="modal" data-target=".writtenrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->tr_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
 
-                                                        <?php }}} ?>     
-
+                                                        <?php }}} ?>
+                                                        <?php $showRater('tr_rating', (!empty($rating) ? ($rating->eval_id3 ?? null) : null)); ?>
 
                                                         </td>
                                                     </tr>
@@ -938,7 +960,8 @@
                                                             <a href="#" data-toggle="modal" data-target=".demo_rating_ic"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->demo_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                         <?php }elseif($this->session->id == $rating->eval_id2 || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){ ?>
                                                             <a href="#" data-toggle="modal" data-target=".demo_rating_ic"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->demo_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
-                                                        <?php }}} ?> 
+                                                        <?php }}} ?>
+                                                        <?php $showRater('demo_rating', (!empty($rating) ? ($rating->eval_id2 ?? null) : null)); ?>
 </td>
                                                     </tr>
                                                                  
@@ -2774,7 +2797,7 @@
                                                                         <div class="col-lg-12">	
                                                                                 <h4 class="header-title">Assign Evaluator <span class="text-muted">(optional)</span></h4>
                                                                                 <div class="form-group">
-                                                                                    <select class="form-control" name="rater_id">
+                                                                                    <select class="form-control evaluator-select2" name="rater_id" data-placeholder="-- select evaluator --">
                                                                                         <?php if(empty($currentAssignId)): ?>
                                                                                             <option value="">-- select evaluator --</option>
                                                                                         <?php endif; ?>
@@ -2974,7 +2997,7 @@
                                                                         <div class="col-lg-12">	
                                                                                 <h4 class="header-title">Assign Evaluator <span class="text-muted">(optional)</span></h4>
                                                                                 <div class="form-group">
-                                                                                    <select class="form-control" name="rater_id">
+                                                                                    <select class="form-control evaluator-select2" name="rater_id" data-placeholder="-- select evaluator --">
                                                                                         <?php if(empty($currentAssignId)): ?>
                                                                                             <option value="">-- select evaluator --</option>
                                                                                         <?php endif; ?>
@@ -3797,7 +3820,7 @@
                                                                         <div class="col-lg-12"> 
                                                                                 <h4 class="header-title">Assign Evaluator <span class="text-muted">(optional)</span></h4>
                                                                                 <div class="form-group">
-                                                                                    <select class="form-control" name="rater_id">
+                                                                                    <select class="form-control evaluator-select2" name="rater_id" data-placeholder="-- select evaluator --">
                                                                                         <?php if(empty($currentAssignId)): ?>
                                                                                             <option value="">-- select evaluator --</option>
                                                                                         <?php endif; ?>

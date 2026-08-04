@@ -44,7 +44,20 @@
 
                 $request = $this->Common->one_cond_row('hris_rating_request', 'app_id',$aa->appID);
                 $canUploadDocuments = (int)($aa->stat ?? 1) === 0;
-                
+
+                // Hover icon listing everyone who encoded a rating component (from the
+                // audit trail, eval_id fallback for pre-audit scores). Shown to all.
+                $ratingCI =& get_instance();
+                $ratingAppId = $aa->appID ?? ($rating->appID ?? null);
+                $showRater = function ($field, $fallbackEvalId = null) use ($ratingCI, $ratingAppId) {
+                    if (empty($ratingAppId)) { return; }
+                    $names = $ratingCI->Audit->raters($ratingAppId, $field, $fallbackEvalId);
+                    if (empty($names)) { return; }
+                    $title = htmlspecialchars('Rated by: ' . implode('; ', $names), ENT_QUOTES, 'UTF-8');
+                    echo ' <i class="mdi mdi-account-eye text-info tooltips" style="cursor:pointer;font-size:16px;vertical-align:middle;"'
+                        . ' data-toggle="tooltip" data-placement="top" title="' . $title . '"></i>';
+                };
+
                $jobTypes = [
                     1 => '- Elementary',
                     2 => '- Secondary',
@@ -503,7 +516,7 @@
                                                            
                                                         <?php } ?>
                                                             <?php if($aa->educ_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->educ_remarks; ?></i><?php } ?>
-
+                                                            <?php $showRater('educ', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -571,6 +584,7 @@
                                                            
                                                         <?php } ?>
                                                         <?php if($aa->training_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->training_remarks; ?></i><?php } ?>
+                                                        <?php $showRater('trainings', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -625,7 +639,7 @@
                                                            
                                                         <?php } ?>
                                                         <?php if($aa->experience_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->experience_remarks; ?></i><?php } ?>
-                                                          
+                                                          <?php $showRater('experience', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -690,14 +704,14 @@
                                                            <?php }else{ ?>
                                                                 <span class="badge badge-purple noti-icon-badge">Not Yet Rated</span>
                                                            <?php } ?>
-                                                           
+
                                                         <?php } ?>
-                                                          
+                                                          <?php $showRater('performance', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
 
-                                                    
+
 
 
                                                     <tr class="bg-info text-white">
@@ -737,14 +751,15 @@
                                                            if($rating->oa != 0.00001){ ?>
                                                                 <?php if($open->status == 0){?>
                                                                     <?= $rating->oa; ?>
-                                                                <?php }else{?> 
+                                                                <?php }else{?>
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
                                                                 <?php } ?>
                                                            <?php }else{ ?>
                                                                 <span class="badge badge-purple noti-icon-badge">Not Yet Rated</span>
                                                            <?php } ?>
-                                                           
+
                                                         <?php } ?>
+                                                          <?php $showRater('oa', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -786,14 +801,15 @@
                                                            if($rating->ae != 0.00001){ ?>
                                                                 <?php if($open->status == 0){?>
                                                                     <?= $rating->ae; ?>
-                                                                <?php }else{?> 
+                                                                <?php }else{?>
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
                                                                 <?php } ?>
                                                            <?php }else{ ?>
                                                                 <span class="badge badge-purple noti-icon-badge">Not Yet Rated</span>
                                                            <?php } ?>
-                                                           
+
                                                         <?php } ?>
+                                                          <?php $showRater('ae', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -836,19 +852,19 @@
                                                            if($rating->ald != 0.00001){ ?>
                                                                 <?php if($open->status == 0){?>
                                                                     <?= $rating->ald; ?>
-                                                                <?php }else{?> 
+                                                                <?php }else{?>
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
                                                                 <?php } ?>
                                                            <?php }else{ ?>
                                                                 <span class="badge badge-purple noti-icon-badge">Not Yet Rated</span>
                                                            <?php } ?>
-                                                           
+
                                                         <?php } ?>
-                                                          
+                                                          <?php $showRater('ald', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
-                         
+
                                                     <?php if($this->session->position == '0'){?>
                                                     <tr class="bg-warning text-white">
                                                         <th colspan="2" class="text-center" id="history">APPLICATION HISTORY</th>
@@ -896,8 +912,7 @@
                                                         <?php if($this->session->position == 'asds' || $this->session->position == 'Secretariat'){  ?>
                                                             <a href="#" data-toggle="modal" data-target=".interrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->interview != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                         <?php } ?>
-
-                                                        
+                                                        <?php $showRater('interview', $rating->eval_id2 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <tr>
@@ -920,8 +935,9 @@
                                                         <?php if($this->session->position == 'asds' || $this->session->position == 'Secretariat'){  ?>
 
                                                             <a href="#" data-toggle="modal" data-target=".writtenrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->written != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
-                                                            
+
                                                         <?php } ?>
+                                                        <?php $showRater('written', $rating->eval_id3 ?? null); ?>
                                                         </td>
                                                     </tr>
 
@@ -947,8 +963,8 @@
                                                         <?php if($this->session->position == 'asds' || $this->session->position == 'Secretariat'){  ?>
 
                                                             <a href="#" data-toggle="modal" data-target=".skillsrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->skills != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
-                                                        <?php } ?> 
-
+                                                        <?php } ?>
+                                                        <?php $showRater('skills', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php // } ?>
@@ -2507,6 +2523,8 @@
                                                                     </div>
 
                                                                         
+                                                                    <?php $this->load->view("pages/_assign_evaluator", ["ae_app_id" => $aa->appID]); ?>
+
                                                                     <div class="row">
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
@@ -2668,6 +2686,8 @@
                                                                     </div>
 
                                                                         
+                                                                    <?php $this->load->view("pages/_assign_evaluator", ["ae_app_id" => $aa->appID]); ?>
+
                                                                     <div class="row">
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
