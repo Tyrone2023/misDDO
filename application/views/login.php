@@ -84,11 +84,11 @@
                                         </div>
                                     </div>
 
-                                    <div class="form-group row mb-0">
+                                    <!-- <div class="form-group row mb-0">
                                         <div class="col-sm-12 text-center">
                                             <p class="text-muted mb-0"><a href="<?= base_url(); ?>Pages/forgot_password" class="text-dark m-l-5"><b>Forgot Password?</b></a></p>
                                         </div>
-                                    </div>
+                                    </div> -->
 
                                     
                                 </form>

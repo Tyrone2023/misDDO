@@ -197,9 +197,9 @@
                                                 Show Password
                                             </label>
                                         </div>
-                                        <a href="<?= base_url(); ?>Pages/forgot_password" class="forgot-link">
+                                        <!-- <a href="<?= base_url(); ?>Pages/forgot_password" class="forgot-link">
                                             <i class="mdi mdi-lock-reset"></i> Forgot Password?
-                                        </a>
+                                        </a> -->
                                     </div>
 
                                     <div class="form-group mb-0">

@@ -243,7 +243,9 @@ $config['allow_get_array'] = TRUE;
 | your log files will fill up very fast.
 |
 */
-$config['log_threshold'] = 0;
+// Errors only, so we have a record of how often the database connection
+// drops without filling application/logs/ with debug noise.
+$config['log_threshold'] = 1;
 
 /*
 |--------------------------------------------------------------------------
