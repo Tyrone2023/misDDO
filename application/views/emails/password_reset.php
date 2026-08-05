@@ -10,7 +10,6 @@
  * @var string $password       temporary password, plain text
  * @var string $login_url      absolute URL of the sign-in page
  * @var string $requested_at   human readable request timestamp
- * @var string $support_email  where to report a request they did not make
  */
 ?>
 <!doctype html>
@@ -85,8 +84,7 @@
 
                             <p style="margin:0 0 6px; font-size:14px; line-height:1.65; color:#374151;">
                                 <strong>Did not request this?</strong> Your old password no longer works, so please reset it again yourself using
-                                the <em>Forgot Password</em> link, and report it to
-                                <a href="mailto:<?= html_escape($support_email); ?>" style="color:#0d6efd;"><?= html_escape($support_email); ?></a>.
+                                the <em>Forgot Password</em> link.
                             </p>
 
                             <p style="margin:24px 0 0; font-size:14px; line-height:1.6; color:#111827;">

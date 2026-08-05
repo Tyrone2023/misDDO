@@ -11877,7 +11877,6 @@ public function rqa_municipality_print_shsv2()
             'password'       => $password,
             'login_url'      => base_url() . 'log_in',
             'requested_at'   => date('F j, Y \a\t g:i A'),
-            'support_email'  => 'no-reply@depeddavor.com',
         );
 
         $html = $this->load->view('emails/password_reset', $data, TRUE);
@@ -11887,7 +11886,7 @@ public function rqa_municipality_print_shsv2()
             . "Username: " . $account['username'] . "\r\n"
             . "Temporary password: " . $password . "\r\n\r\n"
             . "Sign in at " . $data['login_url'] . " and change this password right away.\r\n"
-            . "Never share it with anyone. If you did not request this reset, please report it to " . $data['support_email'] . ".\r\n\r\n"
+            . "Never share it with anyone.\r\n\r\n"
             . $division . " - Management Information System";
 
         return mis_send_html_mail(
@@ -11895,8 +11894,8 @@ public function rqa_municipality_print_shsv2()
             'Password Reset - ' . $division . ' MIS',
             $html,
             $alt,
-            'no-reply@depeddavor.com',
-            $division . ' MIS'
+            'ddorecruitmentsystem@depedddo-mis.com',
+            'DepEd Davao de Oro MIS'
         );
     }
 

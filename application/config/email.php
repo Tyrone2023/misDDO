@@ -13,15 +13,18 @@
 //     'wordwrap' => TRUE
 // );
 
-$config['protocol']  = 'mail';
-$config['smtp_host'] = 'mail.depeddavor.com';
-$config['smtp_user'] = 'no-reply@depeddavor.com';
-$config['smtp_pass'] = 'moth34board';
-$config['smtp_port'] = 465;
-$config['charset']   = 'utf-8';
-$config['mailtype']  = 'html';
-$config['newline']   = "\r\n"; 
-$config['crlf']      = "\r\n";
+$config['protocol']     = 'smtp';
+$config['smtp_host']    = 'mail.depedddo-mis.com';
+$config['smtp_user']    = 'ddorecruitmentsystem@depedddo-mis.com';
+$config['smtp_pass']    = 'moth34board';
+$config['smtp_port']    = 465;
+$config['smtp_crypto']  = 'ssl';
+$config['smtp_timeout'] = 10;
+$config['charset']      = 'utf-8';
+$config['mailtype']     = 'html';
+$config['newline']      = "\r\n";
+$config['crlf']         = "\r\n";
+$config['wordwrap']     = true;
 
 // $config['protocol']    = 'smtp';
 // $config['smtp_host']   = 'mail.depeddavor.com';
