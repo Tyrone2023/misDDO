@@ -12026,6 +12026,49 @@ public function rqa_municipality_print_shsv2()
     }
 
     /**
+     * AJAX endpoint: verifies whether the supplied email exists for the
+     * chosen account type. Returns JSON { exists: true/false, message: '' }.
+     */
+    public function ajax_fp_check_email()
+    {
+        if (strtoupper((string) $this->input->server('REQUEST_METHOD')) !== 'POST') {
+            show_404();
+            return;
+        }
+
+        $type  = strtolower(trim((string) $this->input->post('account_type')));
+        $email = trim((string) $this->input->post('email'));
+
+        $result = array('exists' => false, 'message' => '');
+
+        if ($type !== 'applicant' && $type !== 'school') {
+            $result['message'] = 'Invalid account type.';
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $result['message'] = 'Please provide a valid email address.';
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
+        $account = ($type === 'applicant') ? $this->fp_find_applicant($email) : $this->fp_find_school($email);
+
+        if ($account !== NULL) {
+            $result['exists'] = true;
+            $result['message'] = 'Account exists.';
+        } else {
+            $result['exists'] = false;
+            $result['message'] = ($type === 'applicant')
+                ? 'We could not find an applicant account registered with that email address.'
+                : 'We could not find a school account registered with that email address.';
+        }
+
+        $this->output->set_content_type('application/json')->set_output(json_encode($result));
+    }
+
+    /**
      * Reads back a mail captured by the local mailer. Localhost only - it is a
      * no-op anywhere else, so captured mail can never be browsed on the server.
      */

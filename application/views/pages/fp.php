@@ -231,7 +231,7 @@
 
                                         <?= form_open('Pages/forgot_password', array('id' => 'resetPassword')); ?>
 
-                                            <span class="type-label">I am a</span>
+                                            <!-- <span class="type-label">I am a</span> -->
 
                                             <div class="type-option">
                                                 <input type="radio" name="account_type" id="type_applicant" value="applicant" <?= $selectedType === 'applicant' ? 'checked' : ''; ?> required>
@@ -267,6 +267,8 @@
                                                 </div>
                                                 <small class="form-text text-muted" id="emailHelp">
                                                     Use the email address you used when you signed up as an applicant.
+                                                </small>
+                                                <small class="form-text text-muted" id="emailStatus" style="display:none;">
                                                 </small>
                                             </div>
 
@@ -335,7 +337,7 @@
                 },
                 school: {
                     label: 'School Email',
-                    help: 'Use the school email address registered with the division office.',
+                    help: 'Use the school email address registered in the system.',
                     placeholder: 'Enter your registered school email'
                 }
             };
@@ -356,6 +358,83 @@
                 if (radio.checked) {
                     applyType(radio.value);
                 }
+            });
+
+            // Email existence check before enabling the submit button
+            var forgotSubmitBtn = document.getElementById('forgotSubmitBtn');
+            var emailStatus = document.getElementById('emailStatus');
+            var checkTimeout = null;
+
+            function setStatus(message, ok) {
+                emailStatus.style.display = 'block';
+                emailStatus.textContent = message;
+                emailStatus.style.color = ok ? '#0f9d58' : '#d03f3f';
+            }
+
+            function clearStatus() {
+                emailStatus.style.display = 'none';
+                emailStatus.textContent = '';
+            }
+
+            function checkEmail() {
+                var type = document.querySelector('input[name="account_type"]:checked').value;
+                var email = emailInput.value.trim();
+
+                if (email === '' || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+                    forgotSubmitBtn.disabled = true;
+                    setStatus('Please enter a valid email address.', false);
+                    return;
+                }
+
+                // debounce
+                if (checkTimeout) {
+                    clearTimeout(checkTimeout);
+                }
+                checkTimeout = setTimeout(function () {
+                    forgotSubmitBtn.disabled = true;
+                    setStatus('Checking email...', true);
+
+                    var data = 'account_type=' + encodeURIComponent(type) + '&email=' + encodeURIComponent(email);
+
+                    fetch('<?= base_url('Pages/ajax_fp_check_email'); ?>', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                        },
+                        body: data,
+                        credentials: 'same-origin'
+                    }).then(function (resp) {
+                        return resp.json();
+                    }).then(function (json) {
+                        if (json && json.exists) {
+                            setStatus('Email found. You may send the temporary password.', true);
+                            forgotSubmitBtn.disabled = false;
+                        } else {
+                            setStatus(json && json.message ? json.message : 'No matching account found for that email.', false);
+                            forgotSubmitBtn.disabled = true;
+                        }
+                    }).catch(function (err) {
+                        setStatus('Could not verify email right now. Try again later.', false);
+                        forgotSubmitBtn.disabled = true;
+                    });
+                }, 450);
+            }
+
+            emailInput.addEventListener('input', function () {
+                clearStatus();
+                forgotSubmitBtn.disabled = true;
+                checkEmail();
+            });
+
+            document.querySelectorAll('input[name="account_type"]').forEach(function (r) {
+                r.addEventListener('change', function () {
+                    // when type changes, re-run the check for the current email
+                    clearStatus();
+                    forgotSubmitBtn.disabled = true;
+                    if (emailInput.value.trim() !== '') {
+                        checkEmail();
+                    }
+                });
             });
         })();
         </script>

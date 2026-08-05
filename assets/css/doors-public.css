@@ -59,18 +59,21 @@ body.authentication-page {
     border-bottom: 1px solid rgba(122, 160, 214, .3);
     box-shadow: 0 4px 20px rgba(8, 14, 24, .55);
 }
+
 .site-nav .nav-inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
 }
+
 .nav-brand-group {
     display: flex;
     align-items: center;
     gap: .65rem;
     min-width: 0;
 }
+
 .nav-seal {
     height: 34px;
     width: 34px;
@@ -79,13 +82,15 @@ body.authentication-page {
     flex: 0 0 auto;
     filter: drop-shadow(0 2px 5px rgba(0, 0, 0, .5));
 }
+
 .nav-divider {
     width: 1px;
     height: 28px;
     flex: 0 0 auto;
-    background: linear-gradient(180deg, rgba(122,160,214,0) 0%, rgba(122,160,214,.7) 50%, rgba(122,160,214,0) 100%);
+    background: linear-gradient(180deg, rgba(122, 160, 214, 0) 0%, rgba(122, 160, 214, .7) 50%, rgba(122, 160, 214, 0) 100%);
     margin: 0 .2rem;
 }
+
 .site-nav .brand img {
     height: 38px;
     width: auto;
@@ -93,11 +98,13 @@ body.authentication-page {
     display: block;
     filter: drop-shadow(0 2px 10px rgba(229, 168, 18, .3));
 }
+
 .site-nav .nav-links {
     display: flex;
     align-items: center;
     gap: .4rem;
 }
+
 .nav-link-plain {
     color: rgba(255, 255, 255, .85) !important;
     font-size: .8rem;
@@ -108,15 +115,18 @@ body.authentication-page {
     transition: all .15s ease-in-out;
     white-space: nowrap;
 }
+
 .nav-link-plain:hover {
     color: #fff !important;
     background: rgba(122, 160, 214, .22);
     text-decoration: none;
 }
+
 .nav-link-ghost {
     border: 1px solid rgba(246, 205, 82, .5);
     color: var(--gold-light) !important;
 }
+
 .nav-link-ghost:hover {
     background: rgba(229, 168, 18, .2) !important;
     color: #fff !important;
@@ -129,6 +139,7 @@ body.authentication-page {
     min-height: 0;
     overflow: hidden;
 }
+
 .auth-photo {
     position: absolute;
     top: 0;
@@ -139,6 +150,7 @@ body.authentication-page {
     z-index: 0;
     background: var(--navy);
 }
+
 .auth-photo img {
     width: 100%;
     height: 100%;
@@ -146,6 +158,7 @@ body.authentication-page {
     object-position: center center;
     display: block;
 }
+
 /* navy-tinted veil */
 .auth-photo::after {
     content: "";
@@ -155,10 +168,11 @@ body.authentication-page {
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(72% 66% at 26% 50%, rgba(12,20,35,.76) 0%, rgba(12,20,35,.44) 48%, rgba(12,20,35,.05) 78%),
-        linear-gradient(100deg, rgba(16,26,43,.90) 0%, rgba(26,41,66,.76) 38%, rgba(45,62,94,.56) 70%, rgba(62,80,114,.46) 100%),
-        linear-gradient(180deg, rgba(16,26,43,.58) 0%, rgba(16,26,43,.08) 26%, rgba(16,26,43,.08) 74%, rgba(16,26,43,.58) 100%);
+        radial-gradient(72% 66% at 26% 50%, rgba(12, 20, 35, .76) 0%, rgba(12, 20, 35, .44) 48%, rgba(12, 20, 35, .05) 78%),
+        linear-gradient(100deg, rgba(16, 26, 43, .90) 0%, rgba(26, 41, 66, .76) 38%, rgba(45, 62, 94, .56) 70%, rgba(62, 80, 114, .46) 100%),
+        linear-gradient(180deg, rgba(16, 26, 43, .58) 0%, rgba(16, 26, 43, .08) 26%, rgba(16, 26, 43, .08) 74%, rgba(16, 26, 43, .58) 100%);
 }
+
 .auth-scroll {
     position: relative;
     z-index: 2;
@@ -167,7 +181,8 @@ body.authentication-page {
     display: flex;
     padding: 1.25rem 0;
 }
-.auth-scroll > .container {
+
+.auth-scroll>.container {
     margin-top: auto;
     margin-bottom: auto;
     width: 100%;
@@ -178,6 +193,7 @@ body.authentication-page {
     position: relative;
     padding: .9rem 0 .9rem 1.6rem;
 }
+
 /* gold accent bar down the left of the brand block */
 .hero-col::before {
     content: "";
@@ -188,10 +204,10 @@ body.authentication-page {
     width: 4px;
     border-radius: 100px;
     background: linear-gradient(180deg,
-        rgba(246, 205, 82, 0) 0%,
-        #f6cd52 16%,
-        #e5a812 84%,
-        rgba(229, 168, 18, 0) 100%);
+            rgba(246, 205, 82, 0) 0%,
+            #f6cd52 16%,
+            #e5a812 84%,
+            rgba(229, 168, 18, 0) 100%);
     box-shadow: 0 0 20px rgba(229, 168, 18, .55);
 }
 
@@ -214,6 +230,7 @@ body.authentication-page {
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
 }
+
 .hero-eyebrow img {
     height: 22px;
     width: 22px;
@@ -229,6 +246,7 @@ body.authentication-page {
     z-index: 0;
     line-height: 0;
 }
+
 .hero-brand::before {
     content: "";
     position: absolute;
@@ -240,6 +258,7 @@ body.authentication-page {
     background: radial-gradient(closest-side, rgba(229, 168, 18, .30) 0%, rgba(229, 168, 18, .09) 55%, rgba(229, 168, 18, 0) 100%);
     z-index: -1;
 }
+
 .hero-logo {
     --logo-h: 88px;
     display: block;
@@ -261,6 +280,7 @@ body.authentication-page {
     margin-top: .7rem;
     line-height: 1.05;
 }
+
 .hero-campaign-text {
     font-family: Montserrat, sans-serif;
     font-weight: 700;
@@ -271,6 +291,7 @@ body.authentication-page {
     color: rgba(255, 255, 255, .94);
     text-shadow: 0 2px 14px rgba(8, 14, 26, .95);
 }
+
 .hero-campaign-ddo {
     font-family: Montserrat, sans-serif;
     font-weight: 800;
@@ -301,6 +322,7 @@ body.authentication-page {
         0 22px 42px -12px rgba(16, 26, 43, .62),
         0 46px 90px -22px rgba(8, 14, 26, .8);
 }
+
 .login-card::before {
     content: "";
     position: absolute;
@@ -310,9 +332,11 @@ body.authentication-page {
     height: 4px;
     background: linear-gradient(90deg, #e5a812 0%, #f6cd52 50%, #e5a812 100%);
 }
+
 .login-card .card-body {
     padding: 1.5rem 1.75rem 1.3rem;
 }
+
 .login-title {
     font-family: Montserrat, sans-serif;
     font-weight: 700;
@@ -321,16 +345,19 @@ body.authentication-page {
     color: var(--navy);
     margin-bottom: .15rem;
 }
+
 .login-subtitle {
     color: #8b95a5;
     font-size: .82rem;
     line-height: 1.35;
     margin-bottom: 1.05rem;
 }
+
 .login-card .form-group {
     margin-bottom: .8rem;
 }
-.login-card .form-group > label {
+
+.login-card .form-group>label {
     font-weight: 700;
     color: #6f7d90;
     font-size: .69rem;
@@ -338,6 +365,7 @@ body.authentication-page {
     letter-spacing: .7px;
     margin-bottom: .3rem;
 }
+
 .login-card .input-group-text {
     background: #eef2f8;
     border: 1px solid #d6dfec;
@@ -348,6 +376,7 @@ body.authentication-page {
     justify-content: center;
     font-size: 1.15rem;
 }
+
 .login-card .form-control {
     border: 1px solid #d6dfec;
     border-left: none;
@@ -357,28 +386,34 @@ body.authentication-page {
     color: var(--navy);
     box-shadow: none;
 }
-.login-card .input-group > .input-group-prepend > .input-group-text {
+
+.login-card .input-group>.input-group-prepend>.input-group-text {
     border-top-left-radius: .45rem;
     border-bottom-left-radius: .45rem;
 }
-.login-card .input-group > .input-group-append > .btn {
+
+.login-card .input-group>.input-group-append>.btn {
     border-top-right-radius: .45rem;
     border-bottom-right-radius: .45rem;
 }
+
 .login-card .form-control:focus {
     box-shadow: none;
     border-color: #d6dfec;
     background: #fff;
 }
+
 .login-card .input-group:focus-within .input-group-text,
 .login-card .input-group:focus-within .form-control,
 .login-card .input-group:focus-within .btn-eye {
     border-color: var(--navy-light);
 }
+
 .login-card .input-group:focus-within .input-group-text {
     background: rgba(36, 54, 90, .1);
     color: var(--navy-light);
 }
+
 .btn-eye {
     background: #eef2f8;
     border: 1px solid #d6dfec;
@@ -390,11 +425,13 @@ body.authentication-page {
     line-height: 1;
     box-shadow: none !important;
 }
+
 .btn-eye:hover,
 .btn-eye:focus {
     background: #e3eaf4;
     color: var(--navy);
 }
+
 .btn-signin {
     height: 44px;
     font-weight: 700;
@@ -407,6 +444,7 @@ body.authentication-page {
     box-shadow: 0 8px 18px -6px rgba(229, 168, 18, .65);
     transition: all .15s ease-in-out;
 }
+
 .btn-signin:hover,
 .btn-signin:focus {
     color: #241a00;
@@ -414,6 +452,7 @@ body.authentication-page {
     box-shadow: 0 10px 24px -6px rgba(229, 168, 18, .8);
     transform: translateY(-1px);
 }
+
 .form-meta {
     display: flex;
     align-items: center;
@@ -425,6 +464,7 @@ body.authentication-page {
     line-height: 1.2;
     color: #8b95a5;
 }
+
 .forgot-link {
     display: inline-flex;
     align-items: center;
@@ -433,16 +473,19 @@ body.authentication-page {
     font-size: .79rem;
     color: #f1556c !important;
 }
+
 .forgot-link:hover {
     color: #e02c47 !important;
     text-decoration: underline;
 }
+
 .signup-box {
     margin-top: 1rem;
     padding-top: .9rem;
     border-top: 1px solid #e6ecf4;
     text-align: center;
 }
+
 .signup-box .signup-label {
     font-weight: 600;
     font-size: .78rem;
@@ -450,6 +493,7 @@ body.authentication-page {
     color: #8b95a5;
     margin-bottom: .55rem;
 }
+
 .signup-box .btn {
     min-width: 140px;
     margin: .2rem;
@@ -457,12 +501,14 @@ body.authentication-page {
     font-size: .81rem;
     border-radius: .45rem;
 }
+
 .login-card .alert {
     font-size: .83rem;
     line-height: 1.35;
     padding: .55rem .8rem;
     border-radius: .5rem;
 }
+
 .login-card .error {
     background: rgba(241, 85, 108, .09);
     border: 1px solid rgba(241, 85, 108, .35);
@@ -488,6 +534,7 @@ body.authentication-page {
     background: linear-gradient(0deg, #22345a 0%, var(--navy) 100%);
     box-shadow: 0 -4px 20px rgba(8, 14, 24, .55);
 }
+
 .site-foot .foot-inner {
     display: flex;
     align-items: center;
@@ -495,6 +542,7 @@ body.authentication-page {
     flex-wrap: wrap;
     gap: .25rem;
 }
+
 .site-foot .foot-brand {
     color: var(--gold-light);
     font-weight: 700;
@@ -517,12 +565,14 @@ body.authentication-page {
     border-bottom: 1px solid rgba(122, 160, 214, .3);
     box-shadow: 0 4px 20px rgba(8, 14, 24, .55) !important;
 }
+
 .public-topbar .nav-inner {
     max-width: 1160px;
     height: 70px;
     margin: 0 auto;
     padding: 0 16px;
 }
+
 .public-topbar .site-nav {
     background: none;
     border: none;
@@ -530,15 +580,27 @@ body.authentication-page {
     padding: 0;
 }
 
+/* Ensure the brand logo in the fixed public topbar doesn't grow too large
+   (fixes overlap with the hero text on registration pages) */
+.public-topbar .nav-inner .brand img,
+.public-topbar .nav-inner .nav-brand-group .brand img {
+    height: 38px;
+    width: auto;
+    max-width: 100%;
+    display: block;
+}
+
 /* ---------- Page shell ---------- */
 body.public-page {
     background: #eef2f8;
     color: var(--ink);
 }
+
 .public-page .content-page {
     margin-left: 0;
     padding-bottom: 0;
 }
+
 .reg-page {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     color: var(--ink);
@@ -554,6 +616,7 @@ body.public-page {
     color: #fff;
     text-align: center;
 }
+
 .reg-hero .reg-hero-photo {
     position: absolute;
     top: 0;
@@ -562,6 +625,7 @@ body.public-page {
     bottom: 0;
     z-index: 0;
 }
+
 .reg-hero .reg-hero-photo img {
     width: 100%;
     height: 100%;
@@ -569,6 +633,7 @@ body.public-page {
     object-position: center center;
     display: block;
 }
+
 .reg-hero .reg-hero-photo::after {
     content: "";
     position: absolute;
@@ -577,16 +642,19 @@ body.public-page {
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(72% 70% at 50% 45%, rgba(12,20,35,.72) 0%, rgba(12,20,35,.5) 50%, rgba(12,20,35,.28) 100%),
-        linear-gradient(180deg, rgba(16,26,43,.9) 0%, rgba(26,41,66,.78) 45%, rgba(16,26,43,.94) 100%);
+        radial-gradient(72% 70% at 50% 45%, rgba(12, 20, 35, .72) 0%, rgba(12, 20, 35, .5) 50%, rgba(12, 20, 35, .28) 100%),
+        linear-gradient(180deg, rgba(16, 26, 43, .9) 0%, rgba(26, 41, 66, .78) 45%, rgba(16, 26, 43, .94) 100%);
 }
-.reg-hero > .container {
+
+.reg-hero>.container {
     position: relative;
     z-index: 1;
 }
+
 .reg-hero .hero-eyebrow {
     margin-bottom: .85rem;
 }
+
 .reg-hero h1 {
     font-family: Montserrat, sans-serif;
     font-weight: 800;
@@ -596,6 +664,7 @@ body.public-page {
     margin: 0 0 .55rem;
     text-shadow: 0 2px 18px rgba(8, 14, 26, .85);
 }
+
 .reg-hero .reg-hero-rule {
     width: 74px;
     height: 4px;
@@ -604,6 +673,7 @@ body.public-page {
     background: linear-gradient(90deg, #e5a812 0%, #f6cd52 50%, #e5a812 100%);
     box-shadow: 0 0 18px rgba(229, 168, 18, .6);
 }
+
 .reg-hero p {
     max-width: 660px;
     margin: 0 auto;
@@ -633,6 +703,7 @@ body.public-page {
         0 8px 18px -6px rgba(16, 26, 43, .22),
         0 22px 42px -14px rgba(16, 26, 43, .28);
 }
+
 /* Gold rule on the leading card, exactly like the sign-in card */
 .reg-card.is-lead::before {
     content: "";
@@ -643,6 +714,7 @@ body.public-page {
     height: 4px;
     background: linear-gradient(90deg, #e5a812 0%, #f6cd52 50%, #e5a812 100%);
 }
+
 .reg-card-head {
     display: flex;
     align-items: center;
@@ -651,6 +723,7 @@ body.public-page {
     border-bottom: 1px solid var(--line);
     background: #f7f9fc;
 }
+
 .reg-card-head h2 {
     font-family: Montserrat, sans-serif;
     font-size: .88rem;
@@ -660,6 +733,7 @@ body.public-page {
     color: var(--navy);
     margin: 0;
 }
+
 .reg-card-head small {
     display: block;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -670,6 +744,7 @@ body.public-page {
     color: var(--muted);
     margin-top: .15rem;
 }
+
 .reg-step {
     flex: 0 0 auto;
     width: 32px;
@@ -685,6 +760,7 @@ body.public-page {
     background: linear-gradient(92deg, #f6cd52 0%, #e5a812 100%);
     box-shadow: 0 4px 12px -4px rgba(229, 168, 18, .8);
 }
+
 .reg-card-body {
     padding: 1.35rem 1.5rem .4rem;
 }
@@ -693,6 +769,7 @@ body.public-page {
 .reg-page .form-group {
     margin-bottom: 1.05rem;
 }
+
 .reg-page label {
     font-weight: 700;
     color: #6f7d90;
@@ -701,6 +778,7 @@ body.public-page {
     letter-spacing: .7px;
     margin-bottom: .3rem;
 }
+
 .reg-page .form-control {
     height: auto;
     border: 1px solid var(--field-line);
@@ -712,6 +790,7 @@ body.public-page {
     box-shadow: none;
     transition: border-color .15s, box-shadow .15s, background-color .15s;
 }
+
 .reg-page select.form-control {
     appearance: none;
     -webkit-appearance: none;
@@ -720,25 +799,30 @@ body.public-page {
     background-position: right 12px center;
     padding-right: 32px;
 }
+
 .reg-page .form-control:focus {
     background: #fff;
     border-color: var(--navy-light);
     box-shadow: 0 0 0 3px rgba(36, 54, 90, .14);
 }
+
 .reg-page .form-control[readonly] {
     background-color: #eef2f8;
     color: var(--muted);
 }
+
 .reg-page .input-group-text {
     background: #eef2f8;
     border: 1px solid var(--field-line);
     color: #8b98ab;
     justify-content: center;
 }
+
 .reg-req {
     color: #f1556c;
     margin-left: 2px;
 }
+
 .reg-hint {
     display: block;
     font-size: .7rem;
@@ -762,6 +846,7 @@ body.public-page {
     box-shadow: 0 8px 18px -6px rgba(229, 168, 18, .65);
     transition: all .15s ease-in-out;
 }
+
 .btn-gold:hover,
 .btn-gold:focus {
     color: #241a00;
@@ -769,6 +854,7 @@ body.public-page {
     box-shadow: 0 10px 24px -6px rgba(229, 168, 18, .8);
     transform: translateY(-1px);
 }
+
 .btn-navy-outline {
     font-weight: 700;
     font-size: .85rem;
@@ -779,6 +865,7 @@ body.public-page {
     border: 1px solid var(--field-line);
     transition: all .15s ease-in-out;
 }
+
 .btn-navy-outline:hover,
 .btn-navy-outline:focus {
     color: var(--navy);
@@ -796,6 +883,7 @@ body.public-page {
     background: linear-gradient(0deg, #22345a 0%, var(--navy) 100%);
     border-top: 1px solid rgba(122, 160, 214, .3);
 }
+
 .public-page .footer .foot-inner {
     display: flex;
     align-items: center;
@@ -803,6 +891,7 @@ body.public-page {
     flex-wrap: wrap;
     gap: .25rem;
 }
+
 .public-page .footer .foot-brand {
     color: var(--gold-light);
     font-weight: 700;
@@ -811,76 +900,240 @@ body.public-page {
 
 /* ---------- 8. Responsive ---------- */
 @media (max-width: 767.98px) {
-    .reg-hero { padding: 26px 0 78px; }
-    .reg-hero h1 { font-size: 1.4rem; }
-    .reg-hero p { font-size: .82rem; }
-    .reg-card-head { padding: .85rem 1.1rem; gap: .7rem; }
-    .reg-card-body { padding: 1.1rem 1.1rem .3rem; }
-    .reg-wrap { margin-top: -58px; }
+    .reg-hero {
+        padding: 26px 0 78px;
+    }
+
+    .reg-hero h1 {
+        font-size: 1.4rem;
+    }
+
+    .reg-hero p {
+        font-size: .82rem;
+    }
+
+    .reg-card-head {
+        padding: .85rem 1.1rem;
+        gap: .7rem;
+    }
+
+    .reg-card-body {
+        padding: 1.1rem 1.1rem .3rem;
+    }
+
+    .reg-wrap {
+        margin-top: -58px;
+    }
 }
 
 /* ---------- Responsive: width ---------- */
 @media (max-width: 1199.98px) {
-    .hero-logo { --logo-h: 74px; }
-    .hero-campaign-text { font-size: 1rem; letter-spacing: 2.8px; }
-    .hero-campaign-ddo { font-size: 1.5rem; }
+    .hero-logo {
+        --logo-h: 74px;
+    }
+
+    .hero-campaign-text {
+        font-size: 1rem;
+        letter-spacing: 2.8px;
+    }
+
+    .hero-campaign-ddo {
+        font-size: 1.5rem;
+    }
 }
+
 @media (max-width: 991.98px) {
     .auth-photo::after {
         background:
-            linear-gradient(180deg, rgba(16,26,43,.86) 0%, rgba(28,44,70,.74) 45%, rgba(16,26,43,.9) 100%);
+            linear-gradient(180deg, rgba(16, 26, 43, .86) 0%, rgba(28, 44, 70, .74) 45%, rgba(16, 26, 43, .9) 100%);
     }
+
     .hero-col {
         text-align: center;
         padding: 0 0 1.2rem;
     }
-    .hero-col::before { display: none; }
-    .hero-campaign { justify-content: center; }
-    .hero-logo { --logo-h: 62px; margin-left: auto; margin-right: auto; }
+
+    .hero-col::before {
+        display: none;
+    }
+
+    .hero-campaign {
+        justify-content: center;
+    }
+
+    .hero-logo {
+        --logo-h: 62px;
+        margin-left: auto;
+        margin-right: auto;
+    }
 }
+
 @media (max-width: 575.98px) {
-    .site-nav { padding: .45rem 0; }
-    .nav-seal { height: 28px; width: 28px; }
-    .nav-divider { height: 22px; }
-    .site-nav .brand img { height: 29px; }
-    .site-nav .nav-links .nav-hide-xs { display: none; }
-    .auth-scroll { padding: .9rem 0; }
-    .hero-eyebrow { font-size: .58rem; letter-spacing: .9px; margin-bottom: .6rem; }
-    .hero-eyebrow img { height: 19px; width: 19px; }
-    .hero-logo { --logo-h: 46px; }
-    .hero-campaign { margin-top: .55rem; gap: .05rem .4rem; }
-    .hero-campaign-text { font-size: .8rem; letter-spacing: 2px; }
-    .hero-campaign-ddo { font-size: 1.1rem; }
-    .hero-col { padding-bottom: 1rem; }
-    .login-card .card-body { padding: 1.25rem 1.15rem 1.05rem; }
-    .site-foot .foot-inner { justify-content: center; text-align: center; }
+    .site-nav {
+        padding: .45rem 0;
+    }
+
+    .nav-seal {
+        height: 28px;
+        width: 28px;
+    }
+
+    .nav-divider {
+        height: 22px;
+    }
+
+    .site-nav .brand img {
+        height: 29px;
+    }
+
+    .site-nav .nav-links .nav-hide-xs {
+        display: none;
+    }
+
+    .auth-scroll {
+        padding: .9rem 0;
+    }
+
+    .hero-eyebrow {
+        font-size: .58rem;
+        letter-spacing: .9px;
+        margin-bottom: .6rem;
+    }
+
+    .hero-eyebrow img {
+        height: 19px;
+        width: 19px;
+    }
+
+    .hero-logo {
+        --logo-h: 46px;
+    }
+
+    .hero-campaign {
+        margin-top: .55rem;
+        gap: .05rem .4rem;
+    }
+
+    .hero-campaign-text {
+        font-size: .8rem;
+        letter-spacing: 2px;
+    }
+
+    .hero-campaign-ddo {
+        font-size: 1.1rem;
+    }
+
+    .hero-col {
+        padding-bottom: 1rem;
+    }
+
+    .login-card .card-body {
+        padding: 1.25rem 1.15rem 1.05rem;
+    }
+
+    .site-foot .foot-inner {
+        justify-content: center;
+        text-align: center;
+    }
 }
 
 /* ---------- Responsive: height (stay on one screen) ---------- */
 @media (max-height: 800px) {
-    .auth-scroll { padding: .85rem 0; }
-    .hero-col { padding-top: .7rem; padding-bottom: .7rem; }
-    .hero-logo { --logo-h: 70px; }
-    .login-card .card-body { padding: 1.3rem 1.6rem 1.15rem; }
-    .login-subtitle { margin-bottom: .9rem; }
-    .form-meta { margin-bottom: .75rem; }
+    .auth-scroll {
+        padding: .85rem 0;
+    }
+
+    .hero-col {
+        padding-top: .7rem;
+        padding-bottom: .7rem;
+    }
+
+    .hero-logo {
+        --logo-h: 70px;
+    }
+
+    .login-card .card-body {
+        padding: 1.3rem 1.6rem 1.15rem;
+    }
+
+    .login-subtitle {
+        margin-bottom: .9rem;
+    }
+
+    .form-meta {
+        margin-bottom: .75rem;
+    }
 }
+
 @media (max-height: 680px) {
-    .site-nav { padding: .4rem 0; }
-    .nav-seal { height: 28px; width: 28px; }
-    .site-nav .brand img { height: 31px; }
-    .auth-scroll { padding: .6rem 0; }
-    .hero-col { padding-top: .45rem; padding-bottom: .45rem; }
+    .site-nav {
+        padding: .4rem 0;
+    }
+
+    .nav-seal {
+        height: 28px;
+        width: 28px;
+    }
+
+    .site-nav .brand img {
+        height: 31px;
+    }
+
+    .auth-scroll {
+        padding: .6rem 0;
+    }
+
+    .hero-col {
+        padding-top: .45rem;
+        padding-bottom: .45rem;
+    }
+
     /* .hero-eyebrow { margin-bottom: .25rem; } */
-    .hero-logo { --logo-h: 26px; }
-    .hero-campaign { margin-top: .25rem; }
-    .hero-campaign-text { font-size: .92rem; letter-spacing: 2.4px; }
-    .hero-campaign-ddo { font-size: 1.3rem; }
-    .login-card .card-body { padding: 1.05rem 1.4rem .95rem; }
-    .login-title { font-size: 1.15rem; }
-    .login-subtitle { font-size: .77rem; margin-bottom: .7rem; }
-    .login-card .form-group { margin-bottom: .6rem; }
-    .btn-signin { height: 40px; }
-    .signup-box { margin-top: .75rem; padding-top: .65rem; }
-    .site-foot { padding: .4rem 0; font-size: .69rem; }
+    .hero-logo {
+        --logo-h: 26px;
+    }
+
+    .hero-campaign {
+        margin-top: .25rem;
+    }
+
+    .hero-campaign-text {
+        font-size: .92rem;
+        letter-spacing: 2.4px;
+    }
+
+    .hero-campaign-ddo {
+        font-size: 1.3rem;
+    }
+
+    .login-card .card-body {
+        padding: 1.05rem 1.4rem .95rem;
+    }
+
+    .login-title {
+        font-size: 1.15rem;
+    }
+
+    .login-subtitle {
+        font-size: .77rem;
+        margin-bottom: .7rem;
+    }
+
+    .login-card .form-group {
+        margin-bottom: .6rem;
+    }
+
+    .btn-signin {
+        height: 40px;
+    }
+
+    .signup-box {
+        margin-top: .75rem;
+        padding-top: .65rem;
+    }
+
+    .site-foot {
+        padding: .4rem 0;
+        font-size: .69rem;
+    }
 }
