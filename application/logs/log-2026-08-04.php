@@ -210,3 +210,38 @@ ERROR - 2026-08-04 21:29:03 --> Severity: Warning --> Undefined variable $id /Ap
 ERROR - 2026-08-04 21:29:03 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 681
 ERROR - 2026-08-04 21:30:42 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 363
 ERROR - 2026-08-04 21:30:42 --> Severity: Warning --> Undefined variable $id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/profile_reg.php 681
+ERROR - 2026-08-04 15:32:53 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:32:58 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:33:04 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:33:06 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:33:10 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:33:20 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 114
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 114
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 123
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 123
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 123
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 123
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 123
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 123
+ERROR - 2026-08-04 21:33:24 --> Severity: Warning --> Attempt to read property "indicator" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_generate.php 123
+ERROR - 2026-08-04 21:33:34 --> Severity: Warning --> Undefined variable $district /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-04 21:33:34 --> Severity: Warning --> foreach() argument must be of type array|object, null given /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-04 15:33:34 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:33:36 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:33:43 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:33:48 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:33:52 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:34:01 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:34:03 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 21:34:09 --> Severity: Warning --> Attempt to read property "mb" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/ppmp_generate.php 68
+ERROR - 2026-08-04 21:34:09 --> Severity: Warning --> Attempt to read property "mr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/ppmp_generate.php 69
+ERROR - 2026-08-04 21:34:09 --> Severity: Warning --> Attempt to read property "tli" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/ppmp_generate.php 70
+ERROR - 2026-08-04 21:34:09 --> Severity: Warning --> Attempt to read property "tst" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/ppmp_generate.php 71
+ERROR - 2026-08-04 21:34:09 --> Severity: error --> Exception: Unsupported operand types: string * string /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/ppmp_generate.php 75
+ERROR - 2026-08-04 15:34:15 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:35:54 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:35:59 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:36:02 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:36:13 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-04 15:36:18 --> 404 Page Not Found: Uploads/profile

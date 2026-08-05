@@ -163,19 +163,11 @@
                 $hideDemoTrScores = $isApplicantPosition && (int)($demo_tr_hide->status ?? 0) === 1;
                 $canUploadDocuments = (int)($aa->stat ?? 1) === 0;
 
-                // Hover icon listing everyone who encoded each rating component. The
-                // names come from the audit trail (accurate per-component), falling
-                // back to the rating row's eval_id for pre-audit scores. Shown to all.
-                $ratingCI =& get_instance();
-                $ratingAppId = $aa->appID ?? ($rating->appID ?? null);
-                $showRater = function ($field, $fallbackEvalId = null) use ($ratingCI, $ratingAppId) {
-                    if (empty($ratingAppId)) { return; }
-                    $names = $ratingCI->Audit->raters($ratingAppId, $field, $fallbackEvalId);
-                    if (empty($names)) { return; }
-                    $title = htmlspecialchars('Rated by: ' . implode('; ', $names), ENT_QUOTES, 'UTF-8');
-                    echo ' <i class="mdi mdi-account-eye text-info tooltips" style="cursor:pointer;font-size:16px;vertical-align:middle;"'
-                        . ' data-toggle="tooltip" data-placement="top" title="' . $title . '"></i>';
-                };
+                // Who encoded each rating — along with every other action taken on
+                // this application — now lives in one place: the Tracking modal
+                // opened from the APPLICATION DETAILS header. The per-component
+                // hover icons that used to sit beside each score were replaced by
+                // it. See pages/partials/application_tracking.
 
                          
             ?>
@@ -291,9 +283,17 @@
                                                 <thead>
                                                     <tr class="bg-info text-center text-white">
                                                         <th colspan="2">APPLICATION DETAILS &nbsp; &nbsp; &nbsp;
-                                                            <a href="<?= base_url(); ?>Pages/application_history/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/<?= $this->uri->segment(5); ?>"><i class="mdi mdi-notebook-multiple tooltips text-white" data-placement="top" data-toggle="tooltip" data-original-title="View Application Status"></i></a> &nbsp; &nbsp;
-                                                            
-                                                        </th> 
+                                                            <?php if(in_array(strtolower((string)$this->session->position), ['asds','sds','human resource admin','hr staff'], true)){ ?>
+                                                                <?php $this->load->view('pages/partials/application_tracking', [
+                                                                    'trk_app_id'       => $aa->appID ?? null,
+                                                                    'trk_applicant_id' => $this->uri->segment(3),
+                                                                    'trk_job_id'       => $this->uri->segment(4),
+                                                                    'trk_block'        => 'button',
+                                                                ]); ?>
+                                                            <?php }else{ ?>
+                                                                <a href="<?= base_url(); ?>Pages/application_history/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/<?= $this->uri->segment(5); ?>"><i class="mdi mdi-notebook-multiple tooltips text-white" data-placement="top" data-toggle="tooltip" data-original-title="View Application Status"></i></a> &nbsp; &nbsp;
+                                                            <?php } ?>
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -669,7 +669,6 @@
                                                         <?php } ?>
 
                                                             <?php if($aa->educ_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->educ_remarks; ?></i><?php } ?>
-                                                            <?php $showRater('education', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -771,7 +770,6 @@
                                                             <?php $renderRatingScore($rating->training, $hideCoreScores, $showCoreRatingStatus); ?>
                                                         <?php } ?>
                                                             <?php if($aa->training_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->training_remarks; ?></i><?php } ?>
-                                                            <?php $showRater('training', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -834,7 +832,6 @@
                                                         <?php } ?>
 
                                                          <?php if($aa->experience_remarks != ""){ ?>&nbsp; &nbsp; &nbsp;  <i>Remarks: <?= $aa->experience_remarks; ?></i><?php } ?>
-                                                          <?php $showRater('experience', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -888,7 +885,6 @@
                                                         <?php }else{ ?>
                                                             <?php $renderRatingScore($rating->let_rating, $hideCoreScores, $showCoreRatingStatus); ?>
                                                         <?php } ?>
-                                                            <?php $showRater('let_rating', $rating->eval_id1 ?? null); ?>
                                                         </td>
                                                     </tr>
                                                     <?php } ?>
@@ -937,7 +933,6 @@
                                                             <a href="#" data-toggle="modal" data-target=".writtenrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->tr_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
 
                                                         <?php }}} ?>
-                                                        <?php $showRater('tr_rating', (!empty($rating) ? ($rating->eval_id3 ?? null) : null)); ?>
 
                                                         </td>
                                                     </tr>
@@ -961,7 +956,6 @@
                                                         <?php }elseif($this->session->id == $rating->eval_id2 || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){ ?>
                                                             <a href="#" data-toggle="modal" data-target=".demo_rating_ic"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->demo_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                         <?php }}} ?>
-                                                        <?php $showRater('demo_rating', (!empty($rating) ? ($rating->eval_id2 ?? null) : null)); ?>
 </td>
                                                     </tr>
                                                                  
@@ -4257,3 +4251,18 @@ function insertDefaultRating(data) {
     }
 }
 </script>
+
+<?php
+    // Full activity log for this application. Rendered outside the tables so the
+    // modal markup is not nested in a <table>; the button that opens it sits in
+    // the APPLICATION DETAILS header. ASDS / SDS / HR only.
+    $this->load->view('pages/partials/application_tracking', [
+        'trk_app_id'       => $aa->appID ?? null,
+        'trk_applicant_id' => $this->uri->segment(3),
+        'trk_job_id'       => $this->uri->segment(4),
+        'trk_applicant'    => trim(strtoupper($data->LastName.' '.$data->NameExtn).', '.strtoupper($data->FirstName.' '.$data->MiddleName)),
+        'trk_position'     => $job->jobTitle ?? '',
+        'trk_status'       => $aa->appStatus ?? '',
+        'trk_block'        => 'modal',
+    ]);
+?>

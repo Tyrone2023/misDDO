@@ -6,30 +6,7 @@
             <div class="content-page">
                 <div class="content">
 
-                <div class="row">
-                            <div class="col-12">
-                                <div class="page-title-box">
-                                    
-                                <?php
-                            $email = $this->session->username;
 
-                            if (strpos($email, '@deped.gov.ph') !== false) { ?>
-                                <div class="alert alert-icon alert-danger alert-dismissible fade show" role="alert">
-                                                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                                            <span aria-hidden="true">&times;</span>
-                                                                        </button>
-                                                                        <i class="mdi mdi-block-helper mr-2"></i>
-                                                                        <p><strong>Oh snap!</strong> Our system has identified that you are using a DepEd email address. This indicates that you may already be employed by DepEd Davao Oriental. In line with our application guidelines, this makes your job application ineligible for further processing.</p>
-                                                                        <p>We kindly encourage you to review the application instructions carefully to ensure compliance and avoid disqualification. If you have any questions or need further assistance, please don’t hesitate to contact us..</p>
-                                                                    </div>
-                            
-                            <?php } ?>
-
-                                </div>
-                            </div>
-                        </div>
-                   
-                
 
                     <!-- Start Content-->
                     <div class="container-fluid">

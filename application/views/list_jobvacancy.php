@@ -130,21 +130,104 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         margin-right: .15rem;
     }
 
-    /* announcement/remarks column */
-    .hrp-ann-cell { white-space: normal !important; min-width: 220px; max-width: 320px; }
-    .hrp-ann-text {
-        font-size: .82rem;
+    /* application details column — one button, the fields live in the modal */
+    .hrp-details-btn {
+        white-space: nowrap;
+        background: #eef4fd;
+        border-color: #d9e6f9;
+        color: #2c5282;
+        font-weight: 600;
+    }
+    .hrp-details-btn:hover { background: #e2edfb; color: #234069; }
+    .hrp-details-btn .mdi { color: #3b7dd8; }
+
+    /* vacancy details modal */
+    .hrp-detail-list { display: flex; flex-direction: column; gap: .1rem; }
+    .hrp-detail-row {
+        display: flex;
+        gap: 1rem;
+        padding: .6rem 0;
+        border-bottom: 1px solid #f1f4f8;
+    }
+    .hrp-detail-row:last-child { border-bottom: 0; }
+    .hrp-detail-label {
+        flex: 0 0 40%;
+        font-size: .74rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #98a6ad;
+        font-weight: 600;
+        padding-top: .1rem;
+    }
+    .hrp-detail-value {
+        flex: 1 1 auto;
+        font-size: .87rem;
         color: #4a5568;
-        line-height: 1.45;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    /* announcement/remarks column — one button, the text lives in the modal */
+    .hrp-ann-cell { white-space: nowrap; }
+    .hrp-ann-btn { white-space: nowrap; }
+    .hrp-ann-btn-posted {
+        background: #fdf3e2;
+        border-color: #f0dcb4;
+        color: #a86c14;
+        font-weight: 600;
+    }
+    .hrp-ann-btn-posted:hover { background: #fbe9cd; color: #8c580e; }
+    .hrp-ann-btn-posted .mdi { color: #c07d15; }
+
+    /* readable by the DataTables search box, invisible in the cell */
+    .hrp-ann-search {
+        position: absolute;
+        width: 1px; height: 1px;
+        padding: 0; margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* announcement modal */
+    .hrp-ann-head {
+        display: flex; flex-direction: column; gap: .15rem;
+        padding-bottom: .7rem;
+        margin-bottom: .9rem;
+        border-bottom: 1px solid #eef1f6;
+    }
+    .hrp-ann-head-pos { font-size: .95rem; font-weight: 600; color: #313a46; }
+    .hrp-ann-head-meta { font-size: .74rem; color: #98a6ad; }
+    .hrp-ann-head-meta:empty { display: none; }
+
+    .hrp-ann-read {
+        font-size: .87rem;
+        color: #4a5568;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
         background: #fdf9ef;
         border-left: 3px solid #e0b34d;
-        border-radius: 0 7px 7px 0;
-        padding: .4rem .6rem;
-        max-height: 5.5rem;
+        border-radius: 0 8px 8px 0;
+        padding: .8rem 1rem;
+        max-height: 45vh;
         overflow-y: auto;
     }
-    .hrp-ann-meta { font-size: .7rem; color: #98a6ad; margin-top: .3rem; }
-    .hrp-ann-btn { margin-top: .35rem; }
+    .hrp-ann-none {
+        display: flex; flex-direction: column; align-items: center; gap: .4rem;
+        padding: 2rem 1rem;
+        color: #98a6ad;
+        font-size: .85rem;
+        text-align: center;
+    }
+    .hrp-ann-none i { font-size: 2.1rem; opacity: .5; }
+
+    .hrp-ann-actions {
+        display: flex; align-items: center; gap: .45rem;
+        margin-top: 1.1rem;
+    }
+    .hrp-ann-actions-spacer { margin-left: auto; }
 </style>
 
 <div class="content-page">
@@ -534,16 +617,18 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                             </div>
 
                             <div class="table-responsive">
-                                <table id="jv-table" class="table hrp-table dt-responsive nowrap" style="width:100%;">
+                                <table id="jv-table" class="table hrp-table nowrap" style="width:100%;">
                                     <thead>
                                         <tr>
                                             <th>Position</th>
-                                            <th>Emp. Type</th>
-                                            <th>Date Posted</th>
-                                            <th>Office/Bureau/Service/<br />Unit where the vacancy exists</th>
+                                            <?php // hidden: keeps the default "newest first" sort and lets the
+                                                  // search box still reach type/date/office now that the
+                                                  // details live in a modal instead of a responsive child row ?>
+                                            <th>Posted</th>
+                                            <th class="text-center">Application Details</th>
                                             <th class="text-center">Status</th>
                                             <th class="text-center">Attachment</th>
-                                            <th>Announcement/Remarks</th>
+                                            <th class="text-center">Announcement</th>
                                             <th class="text-right">Action</th>
                                         </tr>
                                     </thead>
@@ -561,6 +646,14 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
 
                                             $typeLabel = $jobTypeLabels[$row->job_type] ?? '';
                                             $initials  = strtoupper(mb_substr(trim((string) $row->jobTitle), 0, 2));
+
+                                            // employment type, date posted and office/bureau are shown in the
+                                            // details modal so the row stays narrow enough to fit without the
+                                            // responsive expand control
+                                            $datePostedLabel = trim((string) $row->datePosted) !== ''
+                                                ? date('M d, Y', strtotime($row->datePosted))
+                                                : '';
+                                            $detailTitle = trim($row->jobTitle . ($typeLabel !== '' ? ' - ' . $typeLabel : ''));
                                         ?>
 
                                             <tr data-status="<?= (int) $row->a_stat === 0 ? '0' : '1'; ?>">
@@ -578,9 +671,19 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td><span class="hrp-chip hrp-chip-grey"><?= $row->empType; ?></span></td>
-                                                <td><span class="hrp-date"><?= $row->datePosted; ?></span></td>
-                                                <td><?= $row->assign; ?></td>
+                                                <td data-order="<?= html_escape($row->datePosted); ?>">
+                                                    <?= html_escape($row->datePosted . ' ' . $datePostedLabel . ' ' . $row->empType . ' ' . $row->assign); ?>
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="hrp-btn hrp-btn-sm hrp-details-btn"
+                                                            data-title="<?= html_escape($detailTitle); ?>"
+                                                            data-sy="<?= html_escape($row->sy); ?>"
+                                                            data-emptype="<?= html_escape($row->empType); ?>"
+                                                            data-posted="<?= html_escape($datePostedLabel); ?>"
+                                                            data-office="<?= html_escape($row->assign); ?>">
+                                                        <i class="mdi mdi-information-outline"></i> View Details
+                                                    </button>
+                                                </td>
                                                 <td class="text-center" data-order="<?= (int) $row->a_stat; ?>">
                                                     <?php if ((int) $row->a_stat === 0) : ?>
                                                         <span class="hrp-chip hrp-chip-green"><i class="mdi mdi-check-circle-outline"></i> Accepting</span>
@@ -607,33 +710,37 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
 
                                                 <?php
                                                 // announcement/remarks: HR maintains it here, every applicant
-                                                // for this posting sees it on their dashboard
+                                                // for this posting sees it on their dashboard. The text itself
+                                                // lives in the modal — the cell only carries the button that
+                                                // opens it, so long advisories no longer stretch the row.
                                                 $announcement = isset($row->announcement) ? trim((string) $row->announcement) : '';
                                                 $annBy        = isset($row->announcement_by) ? trim((string) $row->announcement_by) : '';
                                                 $annAt        = isset($row->announcement_at) ? trim((string) $row->announcement_at) : '';
+                                                $annAtLabel   = $annAt !== '' ? date('M d, Y g:i A', strtotime($annAt)) : '';
+                                                $annPosition  = trim($row->jobTitle . ($typeLabel !== '' ? ' - ' . $typeLabel : ''));
                                                 ?>
-                                                <td class="hrp-ann-cell">
-                                                    <?php if ($announcement !== '') : ?>
-                                                        <div class="hrp-ann-text"><?= nl2br(html_escape($announcement)); ?></div>
-                                                        <?php if ($annBy !== '' || $annAt !== '') : ?>
-                                                            <div class="hrp-ann-meta">
-                                                                <?php if ($annBy !== '') : ?><?= html_escape($annBy); ?><?php endif; ?>
-                                                                <?php if ($annBy !== '' && $annAt !== '') : ?><span class="hrp-dotsep">&bull;</span><?php endif; ?>
-                                                                <?php if ($annAt !== '') : ?><?= date('M d, Y g:i A', strtotime($annAt)); ?><?php endif; ?>
-                                                            </div>
-                                                        <?php endif; ?>
-                                                    <?php elseif (!$is_hr) : ?>
-                                                        <span class="hrp-muted">&mdash;</span>
-                                                    <?php endif; ?>
-
-                                                    <?php if ($is_hr) : ?>
-                                                        <button type="button" class="hrp-btn hrp-btn-sm hrp-ann-btn"
+                                                <td class="hrp-ann-cell text-center">
+                                                    <?php if ($announcement !== '' || $is_hr) : ?>
+                                                        <button type="button"
+                                                                class="hrp-btn hrp-btn-sm hrp-ann-btn<?= $announcement !== '' ? ' hrp-ann-btn-posted' : ''; ?>"
                                                                 data-job="<?= $row->jobID; ?>"
-                                                                data-title="<?= html_escape(trim($row->jobTitle . ($typeLabel !== '' ? ' - ' . $typeLabel : ''))); ?>"
-                                                                data-announcement="<?= html_escape($announcement); ?>">
-                                                            <i class="mdi <?= $announcement !== '' ? 'mdi-pencil-outline' : 'mdi-bullhorn-outline'; ?>"></i>
-                                                            <?= $announcement !== '' ? 'Edit' : 'Add'; ?>
+                                                                data-title="<?= html_escape($annPosition); ?>"
+                                                                data-announcement="<?= html_escape($announcement); ?>"
+                                                                data-by="<?= html_escape($annBy); ?>"
+                                                                data-at="<?= html_escape($annAtLabel); ?>">
+                                                            <i class="mdi <?= $announcement !== '' ? 'mdi-bullhorn' : 'mdi-bullhorn-outline'; ?>"></i>
+                                                            <?php if ($announcement !== '') : ?>
+                                                                <?= $is_hr ? 'View / Edit' : 'View'; ?>
+                                                            <?php else : ?>
+                                                                Add
+                                                            <?php endif; ?>
                                                         </button>
+                                                        <?php if ($announcement !== '') : ?>
+                                                            <!-- keeps the text reachable from the table's search box -->
+                                                            <span class="hrp-ann-search"><?= html_escape($announcement); ?></span>
+                                                        <?php endif; ?>
+                                                    <?php else : ?>
+                                                        <span class="hrp-muted">&mdash;</span>
                                                     <?php endif; ?>
                                                 </td>
 
@@ -1352,16 +1459,22 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
     </div>
     <!-- /.modal -->
 
-    <!--  Announcement / Remarks -->
-    <?php if ($is_hr) : ?>
-        <div class="modal fade hrp-modal" id="announcementModal" tabindex="-1" role="dialog" aria-labelledby="announcementModalLabel" style="display: none;" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="announcementModalLabel"><i class="mdi mdi-bullhorn-outline"></i> Announcement / Remarks</h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <!--  Announcement / Remarks — HR edits here, everyone else reads -->
+    <div class="modal fade hrp-modal" id="announcementModal" tabindex="-1" role="dialog" aria-labelledby="announcementModalLabel" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="announcementModalLabel"><i class="mdi mdi-bullhorn-outline"></i> Announcement / Remarks</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                </div>
+                <div class="modal-body">
+
+                    <div class="hrp-ann-head">
+                        <span class="hrp-ann-head-pos" id="ann-position"></span>
+                        <span class="hrp-ann-head-meta" id="ann-meta"></span>
                     </div>
-                    <div class="modal-body">
+
+                    <?php if ($is_hr) : ?>
 
                         <?php
                         $attributes = array('class' => 'parsley-examples');
@@ -1369,31 +1482,88 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                         ?>
 
                         <div class="hrp-field">
-                            <label class="hrp-label">Position</label>
-                            <input type="text" class="form-control" id="ann-position" readonly>
-                        </div>
-
-                        <div class="hrp-field">
                             <label class="hrp-label" for="ann-text">Announcement / Remarks</label>
-                            <textarea class="form-control" name="announcement" id="ann-text" rows="5" placeholder="e.g. Schedule of demonstration teaching, list of requirements, or any advisory for this position."></textarea>
+                            <textarea class="form-control" name="announcement" id="ann-text" rows="6" placeholder="e.g. Schedule of demonstration teaching, list of requirements, or any advisory for this position."></textarea>
                             <span class="hrp-help">Everyone who applied for this position sees this on their dashboard. Leave it blank to remove the announcement.</span>
                         </div>
 
                         <input type="hidden" name="jobID" id="ann-job-id">
 
-                        <div class="text-right">
-                            <input type="submit" name="submit" value="Save" class="hrp-btn hrp-btn-primary">
+                        <div class="hrp-ann-actions">
+                            <button type="button" class="hrp-btn hrp-btn-sm hrp-btn-ghost-danger" id="ann-remove">
+                                <i class="mdi mdi-trash-can-outline"></i> Remove
+                            </button>
+                            <span class="hrp-ann-actions-spacer"></span>
+                            <button type="button" class="hrp-btn hrp-btn-sm" data-dismiss="modal">Cancel</button>
+                            <input type="submit" name="submit" value="Save" class="hrp-btn hrp-btn-sm hrp-btn-primary">
                         </div>
                         </form>
 
-                    </div>
+                    <?php else : ?>
+
+                        <div class="hrp-ann-read" id="ann-read"></div>
+                        <div class="hrp-ann-none" id="ann-empty">
+                            <i class="mdi mdi-bullhorn-outline"></i>
+                            <span>No announcement has been posted for this position yet.</span>
+                        </div>
+
+                        <div class="hrp-ann-actions">
+                            <span class="hrp-ann-actions-spacer"></span>
+                            <button type="button" class="hrp-btn hrp-btn-sm" data-dismiss="modal">Close</button>
+                        </div>
+
+                    <?php endif; ?>
+
                 </div>
-                <!-- /.modal-content -->
             </div>
-            <!-- /.modal-dialog -->
+            <!-- /.modal-content -->
         </div>
-        <!-- /.modal -->
-    <?php endif; ?>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
+
+    <!--  Vacancy details -->
+    <div class="modal fade hrp-modal hrp-modal-compact" id="jvDetailsModal" tabindex="-1" role="dialog" aria-labelledby="jvDetailsModalLabel" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="jvDetailsModalLabel"><i class="mdi mdi-information-outline"></i> Vacancy Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                </div>
+                <div class="modal-body">
+
+                    <div class="hrp-ann-head">
+                        <span class="hrp-ann-head-pos" id="jvd-position"></span>
+                        <span class="hrp-ann-head-meta" id="jvd-sy"></span>
+                    </div>
+
+                    <div class="hrp-detail-list">
+                        <div class="hrp-detail-row">
+                            <div class="hrp-detail-label">Employment Type</div>
+                            <div class="hrp-detail-value" id="jvd-emptype"></div>
+                        </div>
+                        <div class="hrp-detail-row">
+                            <div class="hrp-detail-label">Date Posted</div>
+                            <div class="hrp-detail-value" id="jvd-posted"></div>
+                        </div>
+                        <div class="hrp-detail-row">
+                            <div class="hrp-detail-label">Office/Bureau/Service/Unit where the vacancy exists</div>
+                            <div class="hrp-detail-value" id="jvd-office"></div>
+                        </div>
+                    </div>
+
+                    <div class="hrp-ann-actions">
+                        <span class="hrp-ann-actions-spacer"></span>
+                        <button type="button" class="hrp-btn hrp-btn-sm" data-dismiss="modal">Close</button>
+                    </div>
+
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->
 
     <!--  Search Applicantion -->
     <div class="modal fade aa hrp-modal" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" style="display: none;" aria-hidden="true">
@@ -1521,8 +1691,13 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                 jvTable = $jv.DataTable({
                     pageLength: 25,
                     lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                    order: [[2, 'desc']],
-                    columnDefs: [{ orderable: false, targets: [5, 6, 7] }],
+                    order: [[1, 'desc']],
+                    columnDefs: [
+                        { orderable: false, targets: [2, 4, 5, 6] },
+                        // date/type/office are read from the details modal; the column
+                        // stays in the DOM only to drive sorting and the search box
+                        { visible: false, searchable: true, targets: 1 }
+                    ],
                     language: { search: '', searchPlaceholder: 'Search vacancies...' },
                     dom: "<'row'<'col-sm-6'l><'col-sm-6'f>>tp<'row'<'col-sm-12'i>>"
                 });
@@ -1565,13 +1740,57 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                     .modal('hide');
             });
 
+            /* ---------- vacancy details modal ---------- */
+            $(document).on('click', '.hrp-details-btn', function() {
+                var $btn = $(this),
+                    dash = '—';
+
+                $('#jvd-position').text($btn.attr('data-title') || '');
+
+                var sy = $btn.attr('data-sy') || '';
+                $('#jvd-sy').text(sy === '' ? '' : 'SY ' + sy);
+
+                $('#jvd-emptype').text($btn.attr('data-emptype') || dash);
+                $('#jvd-posted').text($btn.attr('data-posted') || dash);
+                $('#jvd-office').text($btn.attr('data-office') || dash);
+
+                $('#jvDetailsModal').modal('show');
+            });
+
             /* ---------- announcement modal ---------- */
             // .attr() rather than .data(), so a numeric announcement stays a string
             $(document).on('click', '.hrp-ann-btn', function() {
-                $('#ann-job-id').val($(this).attr('data-job'));
-                $('#ann-position').val($(this).attr('data-title') || '');
-                $('#ann-text').val($(this).attr('data-announcement') || '');
+                var $btn = $(this),
+                    text  = $btn.attr('data-announcement') || '',
+                    by    = $btn.attr('data-by') || '',
+                    at    = $btn.attr('data-at') || '';
+
+                $('#ann-position').text($btn.attr('data-title') || '');
+
+                var meta = (by !== '' && at !== '') ? by + ' • ' + at : (by || at);
+                $('#ann-meta').text(meta === '' ? '' : 'Posted by ' + meta);
+
+                // HR: editable form. Everyone else: read-only panel.
+                $('#ann-job-id').val($btn.attr('data-job'));
+                $('#ann-text').val(text);
+                $('#ann-remove').toggle(text !== '');
+
+                $('#ann-read').text(text).toggle(text !== '');
+                $('#ann-empty').toggle(text === '');
+
                 $('#announcementModal').modal('show');
+            });
+
+            // clearing the box and saving is what removes it — the controller
+            // treats an empty announcement as a removal
+            $(document).on('click', '#ann-remove', function() {
+                if (!confirm('Remove this announcement? Applicants will no longer see it on their dashboard.')) {
+                    return;
+                }
+                // click the real submit input — the form has a control named
+                // "submit", which shadows form.submit() and breaks .submit()
+                $('#ann-text').val('');
+                $(this).closest('form').find('input[type="submit"]').trigger('click');
             });
 
             $('[data-toggle="tooltip"]').tooltip();
