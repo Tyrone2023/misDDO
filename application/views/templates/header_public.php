@@ -3,139 +3,60 @@
 
 <head>
     <meta charset="utf-8" />
-    <title><?= isset($page_title) ? html_escape($page_title) . ' | ' : ''; ?>EduVision MIS</title>
+    <title><?= isset($page_title) ? html_escape($page_title) . ' | ' : ''; ?>DOORS &mdash; Davao de Oro Online Recruitment System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Online recruitment and human resource information system &mdash; create an account, apply for vacant positions and track your application." />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="theme-color" content="#0f2557" />
-    <link rel="shortcut icon" href="<?= base_url(); ?>assets/images/hris.ico">
+    <meta name="theme-color" content="#1a2942" />
+    <!-- <link rel="shortcut icon" href="<?= base_url(); ?>assets/images/hris.ico"> -->
+
+    <!-- Display weights for the campaign lockup -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+
     <link href="<?= base_url(); ?>assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" id="bootstrap-stylesheet" />
     <link href="<?= base_url(); ?>assets/css/icons.min.css" rel="stylesheet" type="text/css" />
     <link href="<?= base_url(); ?>assets/css/app.min.css" rel="stylesheet" type="text/css" id="app-stylesheet" />
     <link href="<?= base_url(); ?>assets/libs/custombox/custombox.min.css" rel="stylesheet" type="text/css">
 
-    <style>
-        /* Public topbar. .navbar-custom is position:fixed and 70px tall in the
-           theme, and .content-page offsets itself by exactly that much — so the
-           height stays 70px here and only the styling changes. */
-        .public-topbar {
-            background: linear-gradient(135deg, #0f2557 0%, #16336f 55%, #1b3d85 100%) !important;
-            padding: 0 !important;
-            box-shadow: 0 2px 10px rgba(15, 23, 42, .18) !important;
-        }
-
-        .public-topbar-inner {
-            max-width: 1120px;
-            height: 70px;
-            margin: 0 auto;
-            padding: 0 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-        }
-
-        .public-brand {
-            display: inline-flex;
-            align-items: center;
-            line-height: 0;
-        }
-
-        .public-brand img {
-            height: 44px;
-            width: auto;
-            display: block;
-        }
-
-        .public-nav {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .public-nav a {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            text-decoration: none !important;
-            white-space: nowrap;
-            transition: background .15s, color .15s;
-        }
-
-        .public-nav-link {
-            color: rgba(255, 255, 255, .85);
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: .3px;
-            padding: 8px 14px;
-            border-radius: 999px;
-        }
-
-        .public-nav-link:hover,
-        .public-nav-link:focus {
-            color: #fff;
-            background: rgba(255, 255, 255, .12);
-        }
-
-        .public-nav-btn {
-            color: #0f2557;
-            background: #fff;
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: .6px;
-            text-transform: uppercase;
-            padding: 9px 20px;
-            border-radius: 999px;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, .2);
-        }
-
-        .public-nav-btn:hover,
-        .public-nav-btn:focus {
-            background: #dbe6ff;
-            color: #0f2557;
-        }
-
-        @media (max-width: 575px) {
-            .public-topbar-inner {
-                padding: 0 12px;
-            }
-
-            .public-brand img {
-                height: 30px;
-            }
-
-            .public-nav-link {
-                display: none;
-            }
-
-            .public-nav-btn {
-                padding: 8px 15px;
-                font-size: 11px;
-            }
-        }
-    </style>
+    <!-- Shared DOORS public theme (sign in / forgot password / registration) -->
+    <link href="<?= base_url(); ?>assets/css/doors-public.css" rel="stylesheet" type="text/css" />
 
 </head>
 
-<body>
+<body class="public-page">
 
     <!-- Begin page -->
     <div id="wrapper">
 
 
         <!-- Topbar Start -->
+        <!-- .navbar-custom is position:fixed and 70px tall in the theme, and
+             .content-page offsets itself by exactly that much — so the height
+             stays 70px here and only the styling changes. The markup mirrors
+             the sign-in page's top bar so the two read as one site. -->
         <div class="navbar-custom public-topbar">
-            <div class="public-topbar-inner">
+            <div class="nav-inner d-flex align-items-center justify-content-between">
 
-                <a class="public-brand" href="<?= base_url(); ?>">
-                    <img src="<?= base_url(); ?>assets/images/logo.png"
-                        alt="DOORS &mdash; Davao De Oro Online Recruitment System">
-                </a>
+                <div class="nav-brand-group">
+                    <img class="nav-seal" src="<?= base_url(); ?>resources/background/ke.png" alt="Department of Education">
+                    <img class="nav-seal" src="<?= base_url(); ?>resources/background/deoro.jpg" alt="Division of Davao de Oro">
+                    <span class="nav-divider"></span>
+                    <a class="brand" href="<?= base_url(); ?>">
+                        <img src="<?= base_url(); ?>assets/images/logo.png"
+                            alt="DOORS &mdash; Davao de Oro Online Recruitment System">
+                    </a>
+                </div>
 
-                <nav class="public-nav">
-                    <!-- base_url() redirects to log_in, so a "Home" link here would
-                         just duplicate Sign In — the logo already covers it. -->
-                    <a class="public-nav-link" href="<?= base_url(); ?>new_applicant">Register</a>
-                    <a class="public-nav-btn" href="<?= base_url(); ?>log_in">Sign In</a>
+                <nav class="nav-links">
+                    <a class="nav-link-plain nav-hide-xs" href="<?= base_url(); ?>new_applicant">
+                        <i class="mdi mdi-account-plus-outline mr-1"></i>Register
+                    </a>
+                    <a class="nav-link-plain nav-link-ghost" href="<?= base_url(); ?>log_in">
+                        <i class="mdi mdi-login-variant mr-1"></i>Sign In
+                    </a>
                 </nav>
 
             </div>

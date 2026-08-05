@@ -3,7 +3,7 @@
 
     <head>
         <meta charset="utf-8" />
-        <title>Management Information System (MIS)</title>
+        <title>Forgot Password | DOORS &mdash; Davao de Oro Online Recruitment System</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta content="Responsive bootstrap 4 admin template" name="description" />
         <meta content="Coderthemes" name="author" />
@@ -11,223 +11,308 @@
         <!-- App favicon -->
         <link rel="shortcut icon" href="<?= base_url(); ?>assets/images/hris.ico">
 
+        <!-- Display weights for the campaign lockup -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+
         <!-- App css -->
         <link href="<?= base_url(); ?>assets/css/bootstrap.min.css" rel="stylesheet" type="text/css" id="bootstrap-stylesheet" />
         <link href="<?= base_url(); ?>assets/css/icons.min.css" rel="stylesheet" type="text/css" />
         <link href="<?= base_url(); ?>assets/css/app.min.css" rel="stylesheet" type="text/css" id="app-stylesheet" />
 
+        <!-- Shared DOORS public theme (sign in / forgot password / registration) -->
+        <link href="<?= base_url(); ?>assets/css/doors-public.css" rel="stylesheet" type="text/css" />
+
         <style>
-            body.authentication-page {
-                min-height: 100vh;
-                background: #ffffff;
+            /* Account-type picker: only this page needs it, so it stays here
+               instead of in the shared theme. */
+            .type-label {
+                display: block;
+                font-weight: 700;
+                color: #6f7d90;
+                font-size: .69rem;
+                text-transform: uppercase;
+                letter-spacing: .7px;
+                margin-bottom: .35rem;
             }
-            .account-pages {
-                min-height: 100vh;
+            .type-option { margin-bottom: .5rem; }
+            .type-option input {
+                position: absolute;
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .type-option .type-box {
                 display: flex;
                 align-items: center;
-                padding: 1.25rem 0;
+                gap: .7rem;
+                width: 100%;
+                margin: 0;
+                padding: .55rem .75rem;
+                border: 1px solid var(--field-line);
+                border-radius: .5rem;
+                background: var(--field-bg);
+                cursor: pointer;
+                transition: all .15s ease-in-out;
             }
-            .login-card {
-                border: none;
-                border-radius: .75rem;
-                overflow: hidden;
-                box-shadow: 0 1rem 3rem rgba(0, 0, 0, .3);
+            .type-option .type-box:hover { border-color: var(--navy-light); }
+            .type-option input:checked + .type-box {
+                border-color: var(--gold);
+                background: rgba(246, 205, 82, .12);
+                box-shadow: 0 0 0 1px var(--gold);
             }
-            .login-card .card-header {
-                border-bottom: none;
+            .type-option input:focus-visible + .type-box {
+                box-shadow: 0 0 0 3px rgba(229, 168, 18, .35);
             }
-            .login-card .card-body {
-                padding: 1.5rem 1.75rem 1.75rem;
-            }
-            .login-card .form-group > label {
-                font-weight: 600;
-                color: #6c757d;
-                font-size: .8rem;
-                text-transform: uppercase;
-                letter-spacing: .3px;
-            }
-            .login-card .input-group-text {
-                background: #f7f7f9;
-                border-right: none;
-                color: #98a6ad;
-                width: 46px;
-                padding: 0;
+            .type-option .type-icon {
+                flex: 0 0 34px;
+                height: 34px;
+                border-radius: 50%;
+                background: #eef2f8;
+                color: #8b98ab;
+                display: flex;
+                align-items: center;
                 justify-content: center;
                 font-size: 1.15rem;
+                transition: all .15s ease-in-out;
             }
-            .login-card .form-control {
-                border-left: none;
-                height: calc(1.5em + .9rem + 2px);
+            .type-option input:checked + .type-box .type-icon {
+                color: #241a00;
+                background: linear-gradient(92deg, #f6cd52 0%, #e5a812 100%);
+                box-shadow: 0 4px 12px -4px rgba(229, 168, 18, .8);
             }
-            .login-card .form-control:focus {
-                box-shadow: none;
-                border-color: #ced4da;
+            .type-option .type-title {
+                font-weight: 700;
+                font-size: .86rem;
+                line-height: 1.2;
+                color: var(--navy);
             }
-            .login-card .input-group:focus-within .input-group-text,
-            .login-card .input-group:focus-within .form-control {
-                border-color: #3688fc;
+            .type-option .type-desc {
+                font-size: .72rem;
+                line-height: 1.3;
+                color: var(--muted);
             }
-            .btn-signin {
-                height: 44px;
-                font-weight: 600;
-                letter-spacing: .5px;
-                border-radius: .35rem;
+            .type-option .type-check {
+                margin-left: auto;
+                color: var(--gold);
+                opacity: 0;
+                font-size: 1.15rem;
             }
-            .reset-subtitle {
-                color: #98a6ad;
-                font-size: .85rem;
+            .type-option input:checked + .type-box .type-check { opacity: 1; }
+
+            .security-note {
+                display: flex;
+                gap: .45rem;
+                font-size: .73rem;
+                line-height: 1.4;
+                color: var(--muted);
+                background: #f4f7fb;
+                border: 1px solid var(--line);
+                border-radius: .5rem;
+                padding: .5rem .65rem;
+                margin-top: .85rem;
             }
-            /* Password field with show/hide eye */
-            .pw-wrap { position: relative; }
-            .pw-wrap .toggle-eye {
-                position: absolute;
-                right: 10px;
-                top: 50%;
-                transform: translateY(-50%);
-                z-index: 5;
-                border: 0;
-                background: transparent;
-                color: #98a6ad;
-                padding: 4px;
-                cursor: pointer;
-                font-size: 1.1rem;
-                line-height: 1;
-            }
-            .pw-wrap .form-control { padding-right: 38px; }
-            /* Toggle / back links */
-            .toggle-link {
+            .security-note i { color: #1abc9c; font-size: .9rem; line-height: 1.35; }
+
+            .back-link {
                 display: inline-flex;
                 align-items: center;
-                gap: .3rem;
-                font-weight: 700;
-                color: #f1556c !important;
-                transition: color .15s ease-in-out;
+                font-weight: 600;
+                font-size: .78rem;
+                color: var(--muted) !important;
             }
-            .toggle-link:hover { color: #e02c47 !important; text-decoration: none; }
-            .back-link { color: #98a6ad !important; font-weight: 500; }
-            .back-link:hover { color: #6c757d !important; text-decoration: none; }
+            .back-link:hover { color: var(--navy) !important; text-decoration: none; }
+
+            @media (max-height: 680px) {
+                .type-option .type-desc { display: none; }
+                .type-option .type-box { padding: .45rem .7rem; }
+                .security-note { display: none; }
+            }
         </style>
     </head>
 
     <body class="authentication-page">
 
-        <div class="account-pages">
-            <div class="container">
-                <div class="row justify-content-center">
-                    <div class="col-md-8 col-lg-6 col-xl-5">
-                        <div class="card login-card">
-                            <div class="card-header p-3 bg-primary text-center">
-                                <h4 class="text-white mb-0 mt-0"><i class="mdi mdi-lock-reset mr-1"></i> Forgot Password</h4>
-                            </div>
-                            <div class="card-body">
+        <?php
+            // Keeps the chosen account type selected when the form comes back
+            // with an error.
+            $selectedType = $this->session->flashdata('fp_account_type');
+            $selectedType = ($selectedType === 'school') ? 'school' : 'applicant';
+        ?>
 
-                            <?php if($this->session->flashdata('failed')) : ?>
+        <div class="auth-shell">
 
-                                <?= '<div class="alert alert-danger alert-dismissible fade show" role="alert">
-                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span>
-                                        </button>'
-                                        .$this->session->flashdata('failed').
-                                    '</div>';
-                                ?>
-                                <?php endif; ?>
-
-                                <?php if($this->session->flashdata('success')) : ?>
-
-                                    <?= '<div class="alert alert-success alert-dismissible fade show" role="alert">
-                                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                                <span aria-hidden="true">&times;</span>
-                                            </button>'
-                                            .$this->session->flashdata('success').
-                                        '</div>';
-                                    ?>
-                                    <?php endif; ?>
-
-                                <?= form_open('Pages/forgot_password', array('id' => 'resetPassword')); ?>
-
-                                    <input type="hidden" name="reset_mode" id="reset_mode" value="manual">
-
-                                    <p class="reset-subtitle mb-3" id="resetHintManual">
-                                        Enter your <strong>Username / ID</strong> and a new password.
-                                        You may also enter your registered email to help verify your identity.
-                                    </p>
-                                    <p class="reset-subtitle mb-3" id="resetHintEmail" style="display:none;">
-                                        Enter your registered email and we will send a temporary password to it.
-                                    </p>
-
-                                    <!-- Manual reset fields (shown by default) -->
-                                    <div id="manualResetFields">
-                                        <div class="form-group mb-3">
-                                            <label for="forgot_identifier">Username / ID</label>
-                                            <div class="input-group">
-                                                <div class="input-group-prepend">
-                                                    <span class="input-group-text"><i class="mdi mdi-account-outline"></i></span>
-                                                </div>
-                                                <input type="text" name="identifier" id="forgot_identifier" class="form-control" placeholder="Enter your username or ID" autocomplete="off" required>
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group mb-3">
-                                            <label for="forgot_new_password">New Password</label>
-                                            <div class="input-group pw-wrap">
-                                                <div class="input-group-prepend">
-                                                    <span class="input-group-text"><i class="mdi mdi-lock-outline"></i></span>
-                                                </div>
-                                                <input type="password" name="new_password" id="forgot_new_password" class="form-control" placeholder="At least 8 characters" minlength="8" autocomplete="new-password" required>
-                                                <button type="button" class="toggle-eye" data-target="forgot_new_password" aria-label="Show password"><i class="mdi mdi-eye-outline"></i></button>
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group mb-3">
-                                            <label for="forgot_confirm_password">Confirm New Password</label>
-                                            <div class="input-group pw-wrap">
-                                                <div class="input-group-prepend">
-                                                    <span class="input-group-text"><i class="mdi mdi-lock-check-outline"></i></span>
-                                                </div>
-                                                <input type="password" name="confirm_password" id="forgot_confirm_password" class="form-control" placeholder="Re-enter your new password" minlength="8" autocomplete="new-password" required>
-                                                <button type="button" class="toggle-eye" data-target="forgot_confirm_password" aria-label="Show password"><i class="mdi mdi-eye-outline"></i></button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Email: optional in manual mode, required in email mode -->
-                                    <div class="form-group mb-3">
-                                        <label for="forgot_email">Email <span class="text-muted" id="emailOptionalHint" style="text-transform:none;">(optional for those no email)</span></label>
-                                        <div class="input-group">
-                                            <div class="input-group-prepend">
-                                                <span class="input-group-text"><i class="mdi mdi-email-outline"></i></span>
-                                            </div>
-                                            <input type="email" name="email" id="forgot_email" class="form-control" placeholder="Enter your email" autocomplete="email">
-                                        </div>
-                                    </div>
-
-                                    <button type="submit" id="forgotSubmitBtn" class="btn btn-block btn-primary btn-signin waves-effect waves-light">
-                                        <i class="mdi mdi-lock-reset mr-1"></i> Update Password
-                                    </button>
-
-                                    <div class="text-center mt-3">
-                                        <a href="#" id="toggleManualReset" class="toggle-link">
-                                            <i class="mdi mdi-email-send-outline"></i> Send a temporary password by email instead
-                                        </a>
-                                    </div>
-
-                                    <div class="text-center mt-2">
-                                        <a href="<?= base_url(); ?>log_in" class="back-link"><i class="mdi mdi-arrow-left mr-1"></i>Back to Login</a>
-                                    </div>
-
-                                </form>
-
-                            </div>
-                            <!-- end card-body -->
+            <!-- Top bar -->
+            <header class="site-nav">
+                <div class="container">
+                    <div class="nav-inner">
+                        <div class="nav-brand-group">
+                            <img class="nav-seal" src="<?= base_url(); ?>resources/background/ke.png" alt="Department of Education">
+                            <img class="nav-seal" src="<?= base_url(); ?>resources/background/deoro.jpg" alt="Division of Davao de Oro">
+                            <span class="nav-divider"></span>
+                            <a class="brand" href="<?= base_url(); ?>">
+                                <img src="<?= base_url(); ?>assets/images/logo.png" alt="DOORS">
+                            </a>
                         </div>
-                        <!-- end card -->
-
+                        <nav class="nav-links">
+                            <a class="nav-link-plain nav-hide-xs" href="<?= base_url('log_in'); ?>">
+                                <i class="mdi mdi-home-outline mr-1"></i>Home
+                            </a>
+                            <?php if (isset($page) && $page->status == 0) { ?>
+                            <a class="nav-link-plain nav-link-ghost" href="<?= base_url('Pages/new_applicant'); ?>">
+                                <i class="mdi mdi-account-plus-outline mr-1"></i>Apply Now
+                            </a>
+                            <?php } ?>
+                        </nav>
                     </div>
-                    <!-- end col -->
                 </div>
-                <!-- end row -->
+            </header>
 
-            </div>
+            <!-- Middle band: background image is confined here -->
+            <main class="auth-main">
+
+                <div class="auth-photo">
+                    <img src="<?= base_url(); ?>resources/background/background.png" alt="">
+                </div>
+
+                <div class="auth-scroll">
+                    <div class="container">
+                        <div class="row align-items-center justify-content-center">
+
+                            <!-- Hero: DOORS leads -->
+                            <div class="col-lg-6 col-xl-6 hero-col">
+
+                                <div class="hero-brand">
+                                    <img class="hero-logo" style="width: 420px; height: auto;" src="<?= base_url(); ?>assets/images/logo.png" alt="DOORS — Davao de Oro Online Recruitment System">
+                                </div>
+                                  <span class="hero-eyebrow">
+                                    <img src="<?= base_url(); ?>resources/background/deoro.jpg" alt="">
+                                     Schools Division of Davao de Oro
+                                </span>
+                                <div class="hero-campaign">
+                                    <span class="hero-campaign-text" style="font-size: 2rem;">Make It Happen</span>
+                                    <span class="hero-campaign-ddo" style="font-size: 2rem;">DDO</span>
+                                </div>
+                            </div>
+
+                            <!-- Reset card -->
+                            <div class="col-md-9 col-lg-6 col-xl-5 offset-xl-1">
+                                <div class="card login-card mb-0">
+                                    <div class="card-body">
+
+                                        <h4 class="login-title">Forgot Password</h4>
+                                        <p class="login-subtitle">
+                                            For your security we only send a reset to the email registered with your
+                                            account. Tell us what account you have and we will email a temporary password.
+                                        </p>
+
+                                        <?php if($this->session->flashdata('failed')) : ?>
+
+                                        <?= '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                    <span aria-hidden="true">&times;</span>
+                                                </button>'
+                                                .$this->session->flashdata('failed').
+                                            '</div>';
+                                        ?>
+                                        <?php endif; ?>
+
+                                        <?php if($this->session->flashdata('success')) : ?>
+
+                                            <?= '<div class="alert alert-success alert-dismissible fade show" role="alert">
+                                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>'
+                                                    .$this->session->flashdata('success').
+                                                '</div>';
+                                            ?>
+                                            <?php endif; ?>
+
+                                        <?= form_open('Pages/forgot_password', array('id' => 'resetPassword')); ?>
+
+                                            <span class="type-label">I am a</span>
+
+                                            <div class="type-option">
+                                                <input type="radio" name="account_type" id="type_applicant" value="applicant" <?= $selectedType === 'applicant' ? 'checked' : ''; ?> required>
+                                                <label class="type-box" for="type_applicant">
+                                                    <span class="type-icon"><i class="mdi mdi-account-tie-outline"></i></span>
+                                                    <span>
+                                                        <span class="type-title d-block">Applicant</span>
+                                                        <span class="type-desc">I applied for a position online</span>
+                                                    </span>
+                                                    <i class="mdi mdi-check-circle type-check"></i>
+                                                </label>
+                                            </div>
+
+                                            <div class="type-option mb-3">
+                                                <input type="radio" name="account_type" id="type_school" value="school" <?= $selectedType === 'school' ? 'checked' : ''; ?>>
+                                                <label class="type-box" for="type_school">
+                                                    <span class="type-icon"><i class="mdi mdi-school-outline"></i></span>
+                                                    <span>
+                                                        <span class="type-title d-block">School</span>
+                                                        <span class="type-desc">I sign in using our School ID</span>
+                                                    </span>
+                                                    <i class="mdi mdi-check-circle type-check"></i>
+                                                </label>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="forgot_email" id="emailLabel">Applicant Email</label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text"><i class="mdi mdi-email-outline"></i></span>
+                                                    </div>
+                                                    <input class="form-control" type="email" name="email" id="forgot_email" placeholder="Enter the email you registered with" autocomplete="email" required>
+                                                </div>
+                                                <small class="form-text text-muted" id="emailHelp">
+                                                    Use the email address you used when you signed up as an applicant.
+                                                </small>
+                                            </div>
+
+                                            <div class="form-group mb-0">
+                                                <button class="btn btn-block btn-signin waves-effect" type="submit" id="forgotSubmitBtn">
+                                                    <i class="mdi mdi-email-send-outline mr-1"></i> Send Temporary Password
+                                                </button>
+                                            </div>
+
+                                            <div class="security-note">
+                                                <i class="mdi mdi-shield-check"></i>
+                                                <span>We will never ask for your password. If you did not request a reset, simply ignore the email.</span>
+                                            </div>
+
+                                            <div class="text-center mt-3">
+                                                <a href="<?= base_url(); ?>log_in" class="back-link">
+                                                    <i class="mdi mdi-arrow-left mr-1"></i>Back to Sign In
+                                                </a>
+                                            </div>
+
+                                        <?= form_close(); ?>
+
+                                    </div>
+                                    <!-- end card-body -->
+                                </div>
+                                <!-- end card -->
+                            </div>
+                            <!-- end col -->
+
+                        </div>
+                        <!-- end row -->
+                    </div>
+                </div>
+
+            </main>
+
+            <!-- Footer -->
+            <footer class="site-foot">
+                <div class="container">
+                    <div class="foot-inner">
+                        <span><span class="foot-brand">DOORS</span> &mdash; Davao de Oro Online Recruitment System &copy; <?= date('Y'); ?></span>
+                        <span class="nav-hide-xs">Department of Education &bull; Region XI &bull; Schools Division of Davao de Oro</span>
+                    </div>
+                </div>
+            </footer>
+
         </div>
 
         <!-- Vendor js -->
@@ -238,70 +323,39 @@
 
         <script>
         (function () {
-            var toggleLink       = document.getElementById('toggleManualReset');
-            var manualFields     = document.getElementById('manualResetFields');
-            var modeInput        = document.getElementById('reset_mode');
-            var submitBtn        = document.getElementById('forgotSubmitBtn');
-            var hintEmail        = document.getElementById('resetHintEmail');
-            var hintManual       = document.getElementById('resetHintManual');
-            var identifierInput  = document.getElementById('forgot_identifier');
-            var newPasswordInput = document.getElementById('forgot_new_password');
-            var confirmInput     = document.getElementById('forgot_confirm_password');
-            var emailInput       = document.getElementById('forgot_email');
-            var emailHint        = document.getElementById('emailOptionalHint');
+            var emailLabel = document.getElementById('emailLabel');
+            var emailHelp  = document.getElementById('emailHelp');
+            var emailInput = document.getElementById('forgot_email');
 
-            function setManualMode(isManual) {
-                if (isManual) {
-                    manualFields.style.display = 'block';
-                    modeInput.value = 'manual';
-                    submitBtn.innerHTML = '<i class="mdi mdi-lock-reset mr-1"></i> Update Password';
-                    toggleLink.innerHTML = '<i class="mdi mdi-email-send-outline"></i> Send a temporary password by email instead';
-                    hintManual.style.display = 'block';
-                    hintEmail.style.display = 'none';
-                    if (emailHint) emailHint.style.display = '';
-                    emailInput.removeAttribute('required');
-                    identifierInput.setAttribute('required', 'required');
-                    newPasswordInput.setAttribute('required', 'required');
-                    confirmInput.setAttribute('required', 'required');
-                } else {
-                    manualFields.style.display = 'none';
-                    modeInput.value = 'email';
-                    submitBtn.innerHTML = '<i class="mdi mdi-email-send-outline mr-1"></i> Request a New Password';
-                    toggleLink.innerHTML = '<i class="mdi mdi-form-textbox-password"></i> Set a new password manually instead';
-                    hintManual.style.display = 'none';
-                    hintEmail.style.display = 'block';
-                    if (emailHint) emailHint.style.display = 'none';
-                    emailInput.setAttribute('required', 'required');
-                    identifierInput.removeAttribute('required');
-                    newPasswordInput.removeAttribute('required');
-                    confirmInput.removeAttribute('required');
+            var copy = {
+                applicant: {
+                    label: 'Applicant Email',
+                    help: 'Use the email address you used when you signed up as an applicant.',
+                    placeholder: 'Enter the email you registered with'
+                },
+                school: {
+                    label: 'School Email',
+                    help: 'Use the school email address registered with the division office.',
+                    placeholder: 'Enter your registered school email'
                 }
+            };
+
+            function applyType(type) {
+                var text = copy[type] || copy.applicant;
+                emailLabel.textContent = text.label;
+                emailHelp.textContent = text.help;
+                emailInput.setAttribute('placeholder', text.placeholder);
             }
 
-            if (toggleLink) {
-                toggleLink.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    setManualMode(modeInput.value !== 'manual');
-                });
-            }
-
-            // Default: manual mode
-            setManualMode(true);
-
-            // Show / hide password eye toggles
-            document.querySelectorAll('#resetPassword .toggle-eye').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var input = document.getElementById(this.getAttribute('data-target'));
-                    if (!input) return;
-                    var icon = this.querySelector('i');
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        if (icon) { icon.classList.remove('mdi-eye-outline'); icon.classList.add('mdi-eye-off-outline'); }
-                    } else {
-                        input.type = 'password';
-                        if (icon) { icon.classList.remove('mdi-eye-off-outline'); icon.classList.add('mdi-eye-outline'); }
+            document.querySelectorAll('input[name="account_type"]').forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    if (this.checked) {
+                        applyType(this.value);
                     }
                 });
+                if (radio.checked) {
+                    applyType(radio.value);
+                }
             });
         })();
         </script>

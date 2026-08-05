@@ -11769,18 +11769,17 @@ public function rqa_municipality_print_shsv2()
         $this->load->view('templates/footer');
     }
 
+    /**
+     * Self-service password reset. The reset is always delivered by email: the
+     * account holder picks what kind of account they have (applicant / school),
+     * gives the email registered for it, and a temporary password is mailed to
+     * that address. Nothing is ever reset from the browser alone, so knowing a
+     * username is not enough to take over an account.
+     */
     public function forgot_password()
     {
-        // Dual-mode self-service reset (no account type selection):
-        //   reset_mode = "manual" (default) -> user sets a new password directly
-        //   reset_mode = "email"            -> email a temporary password
         if (strtoupper((string) $this->input->server('REQUEST_METHOD')) === 'POST') {
-            $mode = strtolower(trim((string) $this->input->post('reset_mode')));
-            if ($mode === 'email') {
-                $this->fp_send_email();
-            } else {
-                $this->fp_manual();
-            }
+            $this->fp_send_email();
             return;
         }
 
@@ -11788,120 +11787,272 @@ public function rqa_municipality_print_shsv2()
         if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
             show_404();
         }
-        $this->load->view('pages/' . $page);
+
+        // Same payload the sign-in page gets, so the shared top bar can show
+        // the "Apply Now" link only while registration is open.
+        $data['page'] = $this->Page_model->get_single_row_by_id('settings', 'id', 1);
+        $this->load->view('pages/' . $page, $data);
     }
 
     /**
-     * Email mode: locate the account by email across applicants (users),
-     * employees (hris_staff) and schools (schools), then email a new
-     * temporary password. Reuses Reg::update_request_password() which handles
-     * the mailer + password update, keyed off the detected account type.
+     * Validates the request, resets the password of the matching account and
+     * mails the temporary password to the address on file.
      */
     private function fp_send_email()
     {
+        $this->load->helper('mis_mailer');
+
+        $type  = strtolower(trim((string) $this->input->post('account_type')));
         $email = trim((string) $this->input->post('email'));
 
-        if ($email === '') {
-            $this->session->set_flashdata('failed', 'Email is required.');
-            redirect(base_url() . 'Pages/forgot_password');
+        if ($type !== 'applicant' && $type !== 'school') {
+            $this->fp_fail('Please choose whether you are an applicant or a school.');
+            return;
+        }
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->fp_fail('Please enter a valid email address.', $type);
+            return;
+        }
+        if ($this->fp_is_throttled()) {
+            $this->fp_fail('Too many reset requests. Please wait a few minutes before trying again.', $type);
             return;
         }
 
-        $at = $this->fp_detect_account_type($email);
-        if ($at === 0) {
-            $this->session->set_flashdata('failed', 'We could not find your email address.');
-            redirect(base_url() . 'Pages/forgot_password');
+        $account = ($type === 'applicant')
+            ? $this->fp_find_applicant($email)
+            : $this->fp_find_school($email);
+
+        if ($account === NULL) {
+            $this->fp_fail($type === 'applicant'
+                ? 'We could not find an applicant account registered with that email address. Please use the email you signed up with.'
+                : 'We could not find a school account registered with that email address. Please use the school email on file with the division.',
+                $type);
             return;
         }
 
-        // Reg::update_request_password() reads $_POST['at'] and $_POST['email'].
-        $_POST['at'] = $at;
-        $this->Reg->update_request_password();
+        $password = $this->fp_generate_password();
 
-        $this->session->set_flashdata('success', 'The new password has been sent to your email.');
+        // Mail first: if it cannot be delivered we must not leave the account
+        // holder locked out with a password only the server knows.
+        $sendResult = $this->fp_mail_password($account, $password);
+
+        if (!$sendResult['sent']) {
+            log_message('error', 'Password reset email failed for ' . $account['email'] . ' - ' . $sendResult['error']);
+            $this->fp_fail('We could not send the email right now, so your password was left unchanged. Please try again in a few minutes or contact the division office.', $type);
+            return;
+        }
+
+        $this->db->where('username', $account['username']);
+        $this->db->update('users', array('password' => password_hash($password, PASSWORD_DEFAULT)));
+
+        log_message('info', 'Password reset issued for ' . $type . ' account ' . $account['username']);
+
+        $message = 'A temporary password has been sent to <strong>' . html_escape($this->fp_mask_email($account['email']))
+            . '</strong>. Please check your inbox (and your spam folder), then sign in and change your password.';
+
+        if (!empty($sendResult['captured'])) {
+            $message = 'Local test mode: no mail server is configured, so the email was saved instead of sent. '
+                . '<a href="' . $sendResult['preview_url'] . '" target="_blank" class="alert-link">Open the email preview</a> '
+                . 'to read the temporary password.';
+        }
+
+        $this->session->set_flashdata('success', $message);
         redirect(base_url() . 'log_in');
+    }
+
+    /** Renders and sends the reset notice. */
+    private function fp_mail_password(array $account, $password)
+    {
+        $division = 'DepEd Davao de Oro';
+        $settings = $this->PersonnelModel->mis_settings();
+        if (!empty($settings[0]->division)) {
+            $division = 'DepEd ' . $settings[0]->division;
+        }
+
+        $data = array(
+            'division'       => $division,
+            'account_label'  => $account['label'],
+            'recipient_name' => $account['name'],
+            'username'       => $account['username'],
+            'password'       => $password,
+            'login_url'      => base_url() . 'log_in',
+            'requested_at'   => date('F j, Y \a\t g:i A'),
+            'support_email'  => 'no-reply@depeddavor.com',
+        );
+
+        $html = $this->load->view('emails/password_reset', $data, TRUE);
+
+        $alt = "Dear " . $account['name'] . ",\r\n\r\n"
+            . "A password reset was requested for your " . strtolower($account['label']) . " account on " . $data['requested_at'] . ".\r\n\r\n"
+            . "Username: " . $account['username'] . "\r\n"
+            . "Temporary password: " . $password . "\r\n\r\n"
+            . "Sign in at " . $data['login_url'] . " and change this password right away.\r\n"
+            . "Never share it with anyone. If you did not request this reset, please report it to " . $data['support_email'] . ".\r\n\r\n"
+            . $division . " - Management Information System";
+
+        return mis_send_html_mail(
+            $account['email'],
+            'Password Reset - ' . $division . ' MIS',
+            $html,
+            $alt,
+            'no-reply@depeddavor.com',
+            $division . ' MIS'
+        );
     }
 
     /**
-     * Manual mode (default): the user supplies their Username / ID and a new
-     * password. Employees and schools must also supply the email on file.
+     * Applicant accounts are created with users.username = the email supplied
+     * at sign-up, so the applicant record and the login account are matched on
+     * that address (with the applicant row id as a fallback for older rows).
      */
-    private function fp_manual()
+    private function fp_find_applicant($email)
     {
-        $identifier = trim((string) $this->input->post('identifier'));
-        $email      = trim((string) $this->input->post('email'));
-        $new        = (string) $this->input->post('new_password');
-        $confirm    = (string) $this->input->post('confirm_password');
-
-        if ($identifier === '' || $new === '' || $confirm === '') {
-            $this->session->set_flashdata('failed', 'Username / ID, new password, and confirmation are required.');
-            redirect(base_url() . 'Pages/forgot_password');
-            return;
-        }
-        if (strlen($new) < 8) {
-            $this->session->set_flashdata('failed', 'Password must be at least 8 characters.');
-            redirect(base_url() . 'Pages/forgot_password');
-            return;
-        }
-        if ($new !== $confirm) {
-            $this->session->set_flashdata('failed', 'New password and confirmation do not match.');
-            redirect(base_url() . 'Pages/forgot_password');
-            return;
+        $applicant = $this->Common->one_cond_row('hris_applicant', 'empEmail', $email);
+        if (!$applicant) {
+            return NULL;
         }
 
-        $user = $this->Common->one_cond_row('users', 'username', $identifier);
+        $user = $this->Common->one_cond_row('users', 'username', $email);
         if (!$user) {
-            $this->session->set_flashdata('failed', 'We could not verify your account. Please make sure the Username / ID is correct.');
-            redirect(base_url() . 'Pages/forgot_password');
+            $user = $this->Common->two_cond_row('users', 'user_id', $applicant->id, 'position', 'reg');
+        }
+        if (!$user) {
+            return NULL;
+        }
+
+        $name = trim(preg_replace('/\s+/', ' ', $applicant->FirstName . ' ' . $applicant->LastName));
+
+        return array(
+            'label'    => 'Applicant',
+            'username' => $user->username,
+            'email'    => trim($applicant->empEmail),
+            'name'     => ($name !== '' ? $name : 'Applicant'),
+        );
+    }
+
+    /**
+     * School accounts sign in with the school ID. The registered school email
+     * is matched first; the admin's email is accepted as a fallback because a
+     * number of schools registered with that address instead.
+     */
+    private function fp_find_school($email)
+    {
+        $school = $this->Common->one_cond_row('schools', 'schoolEmail', $email);
+        $onFile = $school ? trim($school->schoolEmail) : '';
+
+        if (!$school) {
+            $school = $this->Common->one_cond_row('schools', 'adminEmail', $email);
+            $onFile = $school ? trim($school->adminEmail) : '';
+        }
+        if (!$school || $onFile === '') {
+            return NULL;
+        }
+
+        $user = $this->Common->one_cond_row('users', 'username', $school->schoolID);
+        if (!$user) {
+            return NULL;
+        }
+
+        $name = trim((string) $school->schoolName);
+
+        return array(
+            'label'    => 'School',
+            'username' => $user->username,
+            'email'    => $onFile,
+            'name'     => ($name !== '' ? $name : 'School Administrator'),
+        );
+    }
+
+    /** Temporary password: 10 characters, no look-alike glyphs (0/O, 1/l/I). */
+    private function fp_generate_password()
+    {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+        $max      = strlen($alphabet) - 1;
+        $password = '';
+
+        for ($i = 0; $i < 10; $i++) {
+            $password .= $alphabet[random_int(0, $max)];
+        }
+
+        return $password;
+    }
+
+    /** Allows 5 reset requests per browser session every 15 minutes. */
+    private function fp_is_throttled()
+    {
+        $attempts = $this->session->userdata('fp_attempts');
+        $attempts = is_array($attempts) ? $attempts : array();
+        $now      = time();
+
+        $attempts = array_values(array_filter($attempts, function ($stamp) use ($now) {
+            return ($now - (int) $stamp) < 900;
+        }));
+
+        if (count($attempts) >= 5) {
+            $this->session->set_userdata('fp_attempts', $attempts);
+            return TRUE;
+        }
+
+        $attempts[] = $now;
+        $this->session->set_userdata('fp_attempts', $attempts);
+
+        return FALSE;
+    }
+
+    /** j****e@gmail.com - confirms the address without exposing it in full. */
+    private function fp_mask_email($email)
+    {
+        $at = strrpos($email, '@');
+        if ($at === FALSE || $at < 1) {
+            return $email;
+        }
+
+        $name   = substr($email, 0, $at);
+        $domain = substr($email, $at);
+
+        if (strlen($name) <= 2) {
+            return $name[0] . str_repeat('*', max(1, strlen($name) - 1)) . $domain;
+        }
+
+        return $name[0] . str_repeat('*', strlen($name) - 2) . substr($name, -1) . $domain;
+    }
+
+    /** Sends the user back to the reset form with the account type preserved. */
+    private function fp_fail($message, $type = '')
+    {
+        $this->session->set_flashdata('failed', $message);
+        $this->session->set_flashdata('fp_account_type', $type);
+        redirect(base_url() . 'Pages/forgot_password');
+    }
+
+    /**
+     * Reads back a mail captured by the local mailer. Localhost only - it is a
+     * no-op anywhere else, so captured mail can never be browsed on the server.
+     */
+    public function mail_preview($token = '')
+    {
+        $this->load->helper('mis_mailer');
+
+        if (!mis_mail_is_local()) {
+            show_404();
             return;
         }
 
-        // Optional email verification: some employees / schools no longer know
-        // the email on file, so it is not required. When the user does supply an
-        // email, it must match the one on record before we allow the reset.
-        if ($email !== '') {
-            $onFileEmail = $this->fp_email_on_file($identifier);
-            if ($onFileEmail !== '' && strtolower($onFileEmail) !== strtolower($email)) {
-                $this->session->set_flashdata('failed', 'The email you entered does not match the one on file for this account.');
-                redirect(base_url() . 'Pages/forgot_password');
-                return;
-            }
+        $token = basename((string) $token);
+        if ($token === '' || !preg_match('/^[0-9]{8}-[0-9]{6}-[0-9a-f]{8}$/', $token)) {
+            show_404();
+            return;
         }
 
-        $this->db->where('username', $identifier);
-        $this->db->update('users', array('Password' => password_hash($new, PASSWORD_DEFAULT)));
+        $file = APPPATH . 'logs/dev_emails/' . $token . '.html';
+        if (!file_exists($file)) {
+            show_404();
+            return;
+        }
 
-        $this->session->set_flashdata('success', 'Password updated successfully. You can now log in with your new password.');
-        redirect(base_url() . 'log_in');
-    }
-
-    /** Detect which source table an email belongs to. 0 = not found. */
-    private function fp_detect_account_type($email)
-    {
-        if ($this->Common->one_cond_count_row('users', 'username', $email)->num_rows() > 0) {
-            return 1;
-        }
-        if ($this->Common->one_cond_count_row('hris_staff', 'empEmail', $email)->num_rows() > 0) {
-            return 2;
-        }
-        if ($this->Common->one_cond_count_row('schools', 'schoolEmail', $email)->num_rows() > 0) {
-            return 3;
-        }
-        return 0;
-    }
-
-    /** Registered email on file for a users.username (employees / schools). */
-    private function fp_email_on_file($username)
-    {
-        $emp = $this->Common->one_cond_row('hris_staff', 'IDNumber', $username);
-        if ($emp && !empty($emp->empEmail)) {
-            return trim($emp->empEmail);
-        }
-        $sch = $this->Common->one_cond_row('schools', 'schoolID', $username);
-        if ($sch && !empty($sch->schoolEmail)) {
-            return trim($sch->schoolEmail);
-        }
-        return '';
+        $this->output
+            ->set_content_type('text/html', 'utf-8')
+            ->set_output(file_get_contents($file));
     }
 
 

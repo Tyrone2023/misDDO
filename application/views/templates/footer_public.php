@@ -1,10 +1,9 @@
 <!-- Footer Start -->
-<footer class="footer" style="left:0px">
+<footer class="footer">
     <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                Human Resource Management Information System
-            </div>
+        <div class="foot-inner">
+            <span><span class="foot-brand">DOORS</span> &mdash; Davao de Oro Online Recruitment System &copy; <?= date('Y'); ?></span>
+            <span class="nav-hide-xs">Department of Education &bull; Region XI &bull; Schools Division of Davao de Oro</span>
         </div>
     </div>
 </footer>
