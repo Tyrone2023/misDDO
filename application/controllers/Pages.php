@@ -7544,19 +7544,113 @@ public function rqa_municipality_print_shsv2()
         return !empty($job) && in_array((int)($job->job_type ?? 0), $allowedJobTypes, true);
     }
 
+    /**
+     * The applicant listings do not agree on what belongs in the id slot of a
+     * rating link: most pass hris_applicant.id (what pages/ma expects), a few
+     * pass the record_no, and the ma / ma_staff tag itself is derived per query,
+     * so a DepEd employee can end up on the applicant route and an applicant on
+     * the staff route. Whenever the identifier and the route disagree the rating
+     * page renders against a NULL row and every single field on it warns
+     * "Attempt to read property ... on null", leaving the applicant unratable.
+     *
+     * Resolve whatever identifier arrived back to a real record and, when the
+     * canonical route/id differ from the current URL, redirect there. The view
+     * and every form inside it re-post uri->segment(3), so correcting the URL
+     * fixes the whole page (and the actions posted from it) rather than just the
+     * first null. The lookup for the current route is tried first so an existing
+     * working link never changes meaning - e.g. a purely numeric staff IDNumber
+     * on pages/ma_staff still resolves as staff, not as an applicant id.
+     *
+     * Returns the resolved hris_applicant / hris_staff row, or NULL when the
+     * identifier matches nothing at all.
+     */
+    private function canonicalize_rating_url($route)
+    {
+        $key = (string) $this->uri->segment(3);
+
+        if ($key === '') {
+            return null;
+        }
+
+        $lookups = ($route === 'ma_staff')
+            ? [['hris_staff', 'IDNumber'], ['hris_applicant', 'record_no'], ['hris_applicant', 'id']]
+            : [['hris_applicant', 'id'], ['hris_applicant', 'record_no'], ['hris_staff', 'IDNumber']];
+
+        $row = null;
+        $table = null;
+
+        foreach ($lookups as $lookup) {
+            // hris_applicant.id is an integer column; handing MySQL a record_no
+            // there matches every id = 0 row instead of nothing.
+            if ($lookup[1] === 'id' && !ctype_digit($key)) {
+                continue;
+            }
+
+            $row = $this->Common->one_cond_row($lookup[0], $lookup[1], $key);
+
+            if (!empty($row)) {
+                $table = $lookup[0];
+                break;
+            }
+        }
+
+        // Last resort: the appID in the URL still says whose application this is,
+        // even when the id slot holds something unusable.
+        if (empty($row) && !empty($this->uri->segment(6))) {
+            $application = $this->Common->one_cond_row('hris_applications', 'appID', $this->uri->segment(6));
+
+            if (!empty($application)) {
+                $row = $this->Common->one_cond_row('hris_applicant', 'empEmail', $application->empEmail);
+                $table = 'hris_applicant';
+
+                if (empty($row)) {
+                    $row = $this->Common->one_cond_row('hris_staff', 'IDNumber', $application->empEmail);
+                    $table = 'hris_staff';
+                }
+            }
+        }
+
+        if (empty($row)) {
+            return null;
+        }
+
+        $canonical_route = $table === 'hris_staff' ? 'ma_staff' : 'ma';
+        $canonical_key = $table === 'hris_staff' ? $row->IDNumber : $row->id;
+
+        if ($route !== $canonical_route || (string) $canonical_key !== $key) {
+            $segments = $this->uri->segment_array();
+            $segments[2] = $canonical_route;
+            $segments[3] = $canonical_key;
+
+            $query_string = (string) ($_SERVER['QUERY_STRING'] ?? '');
+
+            redirect(base_url() . implode('/', $segments) . ($query_string !== '' ? '?' . $query_string : ''));
+        }
+
+        return $row;
+    }
+
     // renren new code please don't touch
 
-    public function ma($param)
+    public function ma($param = null)
     {
+        // Send record_no / staff links back to the identifier this page expects
+        // before anything reads it - the whole view is keyed off segment(3).
+        $applicant = $this->canonicalize_rating_url('ma');
+
+        if (empty($applicant)) {
+            show_404();
+        }
+
         $jobvacancy = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->uri->segment(4));
 
-        if ($jobvacancy->position == 1) {
-            if($jobvacancy->promotion == 0){
+        if (($jobvacancy->position ?? 0) == 1) {
+            if(($jobvacancy->promotion ?? 0) == 0){
                 $page = "rp";
             }else{
                 $page = "rp_reg_promotion";
             }
-        }elseif($jobvacancy->position == 5){
+        }elseif(($jobvacancy->position ?? 0) == 5){
             $page = "rp_reg_promotion";
         } else {
             $page = "rp_reg_none";
@@ -7583,8 +7677,8 @@ public function rqa_municipality_print_shsv2()
         // }  
 
 
-        $data['staff'] = $this->Common->one_cond_row('hris_applicant', 'id', $this->uri->segment(3));
-        $data['user'] = $this->Common->one_cond_row('users', 'user_id', $param);
+        $data['staff'] = $applicant;
+        $data['user'] = $this->Common->one_cond_row('users', 'user_id', $applicant->id);
         $data['online_demo_enabled'] = $this->online_demo_enabled() && $this->online_demo_allowed_for_job($jobvacancy);
 
         // Consolidate duplicate ratings and auto-mark as Rated when complete
@@ -7609,17 +7703,27 @@ public function rqa_municipality_print_shsv2()
         $this->load->view('templates/footer');
     }
 
-    public function ma_staff($param)
+    public function ma_staff($param = null)
     {
+        // Same as pages/ma: an applicant tagged onto the staff route (or a
+        // record_no in the id slot) is rerouted before the view reads it.
+        $staff = $this->canonicalize_rating_url('ma_staff');
+
+        if (empty($staff)) {
+            show_404();
+        }
+
+        $param = $staff->IDNumber;
+
         $jobvacancy = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->uri->segment(4));
 
-        if ($jobvacancy->position == 1) {
-            if($jobvacancy->promotion == 0){
+        if (($jobvacancy->position ?? 0) == 1) {
+            if(($jobvacancy->promotion ?? 0) == 0){
                 $page = "rp_staff";
             }else{
                 $page = "rp_staff_promotion";
             }
-        }elseif($jobvacancy->position == 5){
+        }elseif(($jobvacancy->position ?? 0) == 5){
             $page = "rp_staff_promotion";
         } else {
             $page = "rp_none";
@@ -7630,7 +7734,7 @@ public function rqa_municipality_print_shsv2()
         }
 
 
-        $data['staff'] = $this->Common->one_cond_row('hris_staff', 'IDNumber', $this->uri->segment(3));
+        $data['staff'] = $staff;
 
         $data['data'] = $this->Common->one_cond_row('hris_applications', 'empEmail', $param);
 

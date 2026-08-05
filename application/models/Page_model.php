@@ -2930,6 +2930,7 @@ public function dq_list_promotion($jobID)
         a.*,
         r.*,
         COALESCE(app.record_no, staff.IDNumber) AS code,
+        COALESCE(app.id, staff.IDNumber) AS id,
         COALESCE(app.empEmail, staff.IDNumber) AS renren,
         COALESCE(app.contactNo, staff.contactNo) AS contactNo,
         COALESCE(app.FirstName, staff.FirstName) AS FirstName,

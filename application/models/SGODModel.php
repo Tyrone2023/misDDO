@@ -356,7 +356,20 @@ class SGODModel extends CI_Model
 		$this->db->group_by('fy');
 		$result = $this->db->get('sgod_aip');
 
-		return $result->row();
+		$row = $result->row();
+
+		// A batch can have an allocation (and even an approved submission) while no line
+		// items were ever encoded for it. The report views build their headings and links
+		// off this row, so hand back the keys that were asked for instead of null.
+		if (empty($row)) {
+			$row = new stdClass();
+			$row->id        = null;
+			$row->school_id = $school_id;
+			$row->fy        = $fy;
+			$row->b_code    = $bcode;
+		}
+
+		return $row;
 	}
 
 

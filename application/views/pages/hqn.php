@@ -139,7 +139,7 @@ if($session->position == 'asds'){redirect(base_url());}
                 ?>
                 <tr>
                     <td><?= $row->appID; ?></td>
-                    <td><a style="text-decoration:none; color:#222" target="_blank" href="<?= base_url(); ?>pages/<?= $row->st; ?>/<?= $row->code; ?>/<?= $row->jobID; ?>/<?= $row->pre_school; ?>/<?= $row->appID; ?>/<?= $row->code; ?>/" class="text-success tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View Applicant Information"><?= $row->LastName.', '. $row->MiddleName.' '.$row->FirstName; ?></a></td>
+                    <td><a style="text-decoration:none; color:#222" target="_blank" href="<?= base_url(); ?>pages/<?= $row->st; ?>/<?= $row->id; ?>/<?= $row->jobID; ?>/<?= $row->pre_school; ?>/<?= $row->appID; ?>/<?= $row->code; ?>/" class="text-success tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View Applicant Information"><?= $row->LastName.', '. $row->MiddleName.' '.$row->FirstName; ?></a></td>
                     <td><?= $row->resCity; ?></td>
                     <td style="text-align:center; <?php if($row->li == 0){echo "color:red; font-weight:bold";} ?>"><?php if($row->li == 1){echo "&#x1F5F8;";}else{echo "&#215;";}?></td>
                     <td style="text-align:center; <?php if($row->da_pds == 0){echo "color:red; font-weight:bold";} ?>"><?php if($row->da_pds == 1){echo "&#x1F5F8;";}else{echo "&#215;";}?></td>
