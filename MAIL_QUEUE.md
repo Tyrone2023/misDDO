@@ -108,7 +108,29 @@ All are CLI-only except `run`.
 | `php index.php mailqueue status` | Counts per status plus the last 15 messages. |
 | `php index.php mailqueue check` | Log in to the mail server and hang up — separates "credentials are wrong" from "message is bad". |
 | `MAILQUEUE_TO=you@example.com php index.php mailqueue test` | Queue a test message. |
+| `php index.php mailqueue bounces` | Read delivery failures back out of the sending mailbox over IMAP and record them against the messages they belong to. |
 | `php index.php mailqueue retry [id]` | Put failed messages back in the queue. |
+
+### `sent` does not mean delivered
+
+`sent` means **our own mail server accepted the message for relay** — that is
+all any SMTP client can ever know at the moment of sending. Whether the
+recipient's server accepts it is decided afterwards, and comes back minutes or
+hours later as a bounce addressed to
+`ddorecruitmentsystem@depedddo-mis.com`, where nobody was looking.
+
+That is why a message can sit in the queue marked `sent` having never been
+delivered. `mailqueue bounces` closes that gap: it reads those bounces and
+re-marks the messages as `bounced`, with the reason. Run it whenever mail is
+"sent" but not arriving. It only ever reads the mailbox — nothing is deleted,
+and messages are not even marked as read.
+
+Two rejections seen in practice, which need completely different responses:
+
+| Reason | Meaning |
+|---|---|
+| `550 5.4.1 Recipient address rejected: Access denied` (from `*.mail.protection.outlook.com`) | DepEd's Microsoft 365 tenant refused us. Either the mailbox does not exist, or the tenant blocks outside senders. Needs DepEd ICT, not a code change. |
+| `Domain … has exceeded the max defers and failures per hour` | **Our own** server discarded it — see above. Nothing to do with the address. |
 
 `test` takes the address from an environment variable because CodeIgniter
 builds its URI from the command line arguments and its `permitted_uri_chars`
@@ -150,6 +172,40 @@ would change nothing and would only bury the real problem under four more
 identical failures. A rejected *login* is not treated this way: those keep
 their attempts, so once the credentials are fixed the backlog goes out on its
 own without anyone running `retry`.
+
+### ⚠️ "Message discarded" — the hourly failure quota
+
+**This is the one that breaks delivery to addresses that are perfectly fine.**
+
+```
+Domain depedddo-mis.com has exceeded the max defers and failures
+per hour (5/5 (100%)) allowed. Message discarded.
+```
+
+cPanel's Exim allows the domain **5 failed or deferred deliveries per hour**.
+Once that is used up, it **throws away everything else the domain tries to
+send for the rest of the hour** — including mail to good addresses.
+
+That is the cascade behind "it works for Gmail sometimes":
+
+1. A handful of bad addresses fail — a `.edu.ph` with no mailbox, a
+   `deped.gov.ph` that refuses us, a Gmail deferral.
+2. Five of those in an hour uses up the quota.
+3. Every message after that is discarded. Valid Gmail addresses included.
+
+`php index.php mailqueue bounces` labels these `THROTTLED` rather than
+`PERMANENT`, because the address is not the problem and dropping it from your
+list would be exactly the wrong response.
+
+**To fix it:**
+
+* Raise **Max defers and failures per hour** for the domain — WHM → Tweak
+  Settings (needs root, or ask the host). The default of 5 is far too low for
+  a system that sends password resets to hundreds of applicants.
+* **Reduce the failures feeding it.** Every dead address burns quota that
+  working recipients need. The queue now fails permanently-rejected addresses
+  on the first attempt instead of retrying them five times, which alone cuts
+  the burn rate substantially.
 
 ### "No Such User Here" for a domain on the same server
 

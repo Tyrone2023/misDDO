@@ -171,7 +171,7 @@ class Mailqueue extends CI_Controller
 		$counts = $this->Mail_queue_model->status_counts();
 
 		$this->_line('Mail queue: '.$counts['pending'].' pending, '.$counts['sending'].' sending, '
-			.$counts['sent'].' sent, '.$counts['failed'].' failed.');
+			.$counts['sent'].' sent, '.$counts['failed'].' failed, '.$counts['bounced'].' bounced.');
 		$this->_line('');
 
 		foreach ($this->Mail_queue_model->recent(15) as $row)
@@ -327,6 +327,116 @@ class Mailqueue extends CI_Controller
 		$this->_line('Nothing in the queue can go out until smtp_user / smtp_pass in');
 		$this->_line('application/config/email.php match a real mailbox on '.$settings['smtp_host'].',');
 		$this->_line('or SRMS_SMTP_PASS is set in the environment to the right password.');
+	}
+
+	// ------------------------------------------------------------------
+
+	/**
+	 * Read delivery failures back out of the sending mailbox and record them
+	 * against the messages they belong to. CLI only.
+	 *
+	 * Run this whenever mail is "sent" but not arriving. It is the only way to
+	 * see what the recipient's mail server actually said, because that verdict
+	 * arrives long after our own server accepted the message.
+	 *
+	 * @return	void
+	 */
+	public function bounces()
+	{
+		if ( ! $this->_authorise())
+		{
+			return;
+		}
+
+		$settings = mis_mail_config();
+
+		$host = (string) $this->config->item('mail_queue_imap_host');
+		$host = ($host !== '') ? $host : (isset($settings['smtp_host']) ? $settings['smtp_host'] : '');
+
+		$this->load->library('Mail_bounces');
+
+		$connected = $this->mail_bounces->connect(array(
+			'host' => $host,
+			'port' => (int) $this->config->item('mail_queue_imap_port'),
+			'user' => isset($settings['smtp_user']) ? $settings['smtp_user'] : '',
+			'pass' => isset($settings['smtp_pass']) ? $settings['smtp_pass'] : '',
+		));
+
+		if ( ! $connected)
+		{
+			$this->_line('Could not read the mailbox: '.$this->mail_bounces->last_error());
+			return;
+		}
+
+		$found = $this->mail_bounces->fetch((int) $this->config->item('mail_queue_bounce_days'));
+		$this->mail_bounces->disconnect();
+
+		if ($found === array())
+		{
+			$this->_line('No delivery failures in the mailbox.');
+			return;
+		}
+
+		$matched = 0;
+		$seen = array();
+		$throttled = 0;
+
+		foreach ($found as $bounce)
+		{
+			if ( ! empty($bounce['throttled']))
+			{
+				$throttled++;
+			}
+
+			$id = $this->Mail_queue_model->mark_bounced(
+				$bounce['recipient'], $bounce['reason'], $bounce['date']
+			);
+
+			if ($id > 0)
+			{
+				$matched++;
+				log_message('error', 'Mail queue: #'.$id.' to '.$bounce['recipient']
+					.' bounced - '.$bounce['reason']);
+			}
+
+			// One dead address usually produces several bounces; report it once.
+			if (isset($seen[$bounce['recipient']]))
+			{
+				continue;
+			}
+
+			$seen[$bounce['recipient']] = TRUE;
+
+			if ( ! empty($bounce['throttled']))
+			{
+				$label = 'THROTTLED';
+			}
+			elseif ($bounce['permanent'])
+			{
+				$label = 'PERMANENT';
+			}
+			else
+			{
+				$label = 'temporary';
+			}
+
+			$this->_line($label.' '.$bounce['recipient']);
+			$this->_line('          '.$this->_shorten($bounce['reason'], 150));
+		}
+
+		$this->_line('');
+		$this->_line(count($found).' bounce(s) read, '.count($seen).' distinct address(es), '
+			.$matched.' matched to queued messages.');
+
+		if ($throttled > 0)
+		{
+			$this->_line('');
+			$this->_line('*** '.$throttled.' of those were thrown away by our OWN mail server, not the');
+			$this->_line('*** recipient: the domain hit its hourly quota of failed deliveries and');
+			$this->_line('*** everything after that is discarded - including good addresses.');
+			$this->_line('*** Raise "Max defers and failures per hour" for the domain in WHM, and');
+			$this->_line('*** stop sending to the addresses that are failing. See MAIL_QUEUE.md.');
+		}
 	}
 
 	// ------------------------------------------------------------------

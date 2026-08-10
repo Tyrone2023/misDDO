@@ -8,6 +8,13 @@
 --
 -- Run once per database:
 --   mysql -u root -p depedddomis_db1 < mail_queue.sql
+--
+-- Upgrading a database created before bounce tracking was added:
+--   ALTER TABLE mail_queue
+--     MODIFY COLUMN status enum('pending','sending','sent','failed','bounced')
+--       NOT NULL DEFAULT 'pending',
+--     ADD COLUMN bounce_reason text DEFAULT NULL AFTER last_error,
+--     ADD COLUMN bounced_at datetime DEFAULT NULL AFTER sent_at;
 -- --------------------------------------------------------
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -40,7 +47,10 @@ CREATE TABLE IF NOT EXISTS `mail_queue` (
   -- replaced with a placeholder as soon as the message is sent.
   `is_sensitive`  tinyint(1) NOT NULL DEFAULT 0,
 
-  `status`        enum('pending','sending','sent','failed') NOT NULL DEFAULT 'pending',
+  -- 'sent' only means the mail server accepted the message for relay. A
+  -- recipient that rejects it afterwards produces a bounce, which
+  -- `mailqueue bounces` reads back and records as 'bounced'.
+  `status`        enum('pending','sending','sent','failed','bounced') NOT NULL DEFAULT 'pending',
   `attempts`      int(11) NOT NULL DEFAULT 0,
   `max_attempts`  int(11) NOT NULL DEFAULT 5,
 
@@ -54,8 +64,13 @@ CREATE TABLE IF NOT EXISTS `mail_queue` (
   `locked_by`     varchar(64) DEFAULT NULL,
 
   `last_error`    text DEFAULT NULL,
+
+  -- Why the recipient's mail server refused it, taken from the bounce.
+  `bounce_reason` text DEFAULT NULL,
+
   `created_at`    datetime NOT NULL,
   `sent_at`       datetime DEFAULT NULL,
+  `bounced_at`    datetime DEFAULT NULL,
 
   PRIMARY KEY (`id`),
   KEY `idx_claim` (`status`, `available_at`),

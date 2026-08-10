@@ -319,13 +319,81 @@ class Mail_queue_model extends CI_Model
 	// ------------------------------------------------------------------
 
 	/**
+	 * Record that a message our mail server accepted was refused later on by
+	 * the recipient's mail server.
+	 *
+	 * Matched on the address alone, against the most recent message sent to it
+	 * at or before the bounce arrived. That is not watertight - two messages to
+	 * the same address minutes apart could in principle be confused - but the
+	 * bounce reason is what anyone actually needs, and it is attached to the
+	 * right address either way.
+	 *
+	 * @param	string	$email	the recipient that bounced
+	 * @param	string	$reason	what their mail server said
+	 * @param	string	$when	when the bounce arrived, '' for now
+	 * @return	int	the mail_queue row updated, or 0 if there was nothing to match
+	 */
+	public function mark_bounced($email, $reason, $when = '')
+	{
+		$when = ($when !== '') ? $when : date('Y-m-d H:i:s');
+
+		$this->db->select('id')
+			->where('to_email', $email)
+			->where('status', 'sent')
+			->where('sent_at <=', $when)
+			->order_by('sent_at', 'DESC')
+			->limit(1);
+
+		$row = $this->db->get(self::TABLE)->row_array();
+
+		if ( ! $row)
+		{
+			return 0;
+		}
+
+		$this->db->where('id', $row['id'])->update(self::TABLE, array(
+			'status'        => 'bounced',
+			'bounced_at'    => $when,
+			'bounce_reason' => $this->_trim_error($reason),
+		));
+
+		return (int) $row['id'];
+	}
+
+	// ------------------------------------------------------------------
+
+	/**
+	 * Addresses that have bounced, newest first.
+	 *
+	 * Worth looking at before a mail-out: on cPanel hosting every failed
+	 * delivery counts against an hourly quota for the whole domain, and once
+	 * that is used up the mail server discards everything else it is asked to
+	 * send - including messages to addresses that work perfectly well.
+	 *
+	 * @param	int	$limit
+	 * @return	array
+	 */
+	public function bounced_addresses($limit = 50)
+	{
+		return $this->db
+			->select('to_email, category, bounced_at, bounce_reason')
+			->where('status', 'bounced')
+			->order_by('bounced_at', 'DESC')
+			->limit(max(1, (int) $limit))
+			->get(self::TABLE)
+			->result_array();
+	}
+
+	// ------------------------------------------------------------------
+
+	/**
 	 * Counts per status, for the cron summary and for eyeballing the queue.
 	 *
-	 * @return	array	status => count, always with all four keys present
+	 * @return	array	status => count, always with every key present
 	 */
 	public function status_counts()
 	{
-		$counts = array('pending' => 0, 'sending' => 0, 'sent' => 0, 'failed' => 0);
+		$counts = array('pending' => 0, 'sending' => 0, 'sent' => 0, 'failed' => 0, 'bounced' => 0);
 
 		$rows = $this->db->select('status, COUNT(*) AS total', FALSE)
 			->group_by('status')

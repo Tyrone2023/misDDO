@@ -65,6 +65,32 @@ $config['mail_queue_inline'] = TRUE;
 $config['mail_queue_inline_timeout'] = 5;
 
 /*
+| -------------------------------------------------------------------------
+| BOUNCE READING
+| -------------------------------------------------------------------------
+|
+| `sent` in the queue only means our own mail server accepted the message for
+| relay. A recipient that refuses it does so afterwards, and says so in a
+| bounce sent back to the sending mailbox - which is why a message that was
+| never delivered can sit in the queue marked `sent`.
+|
+| `php index.php mailqueue bounces` logs into that mailbox over IMAP, reads
+| the bounces and marks the matching messages `bounced` with the reason. It
+| only ever reads: nothing is deleted, and messages are not even marked read.
+|
+| Host and mailbox default to the SMTP ones from config/email.php.
+*/
+$config['mail_queue_imap_host'] = getenv('SRMS_IMAP_HOST') ?: '';
+$config['mail_queue_imap_port'] = (int) (getenv('SRMS_IMAP_PORT') ?: 993);
+
+/*
+| How far back to read. Bounces can take hours to come back - a recipient
+| server that defers before giving up can take a day or two - so this wants to
+| be comfortably longer than the gap between runs.
+*/
+$config['mail_queue_bounce_days'] = 7;
+
+/*
 | Shared secret for triggering the worker over HTTP:
 |
 |     https://your-site/mailqueue/run?token=...
