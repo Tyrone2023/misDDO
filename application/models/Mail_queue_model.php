@@ -414,10 +414,11 @@ class Mail_queue_model extends CI_Model
 	 * The most recent messages, newest first, for the cron summary.
 	 *
 	 * @param	int	$limit
+	 * @param	int	$offset	for pagination
 	 * @param	string	$status	'' for any status
 	 * @return	array
 	 */
-	public function recent($limit = 20, $status = '')
+	public function recent($limit = 20, $offset = 0, $status = '')
 	{
 		if ($status !== '')
 		{
@@ -427,9 +428,27 @@ class Mail_queue_model extends CI_Model
 		return $this->db
 			->select('id, to_email, subject, category, status, attempts, available_at, created_at, sent_at, last_error')
 			->order_by('id', 'DESC')
-			->limit(max(1, (int) $limit))
+			->limit(max(1, (int) $limit), max(0, (int) $offset))
 			->get(self::TABLE)
 			->result_array();
+	}
+
+	// ------------------------------------------------------------------
+
+	/**
+	 * Total number of rows, optionally filtered by status.
+	 *
+	 * @param	string	$status	'' for all
+	 * @return	int
+	 */
+	public function count_all($status = '')
+	{
+		if ($status !== '')
+		{
+			$this->db->where('status', $status);
+		}
+
+		return (int) $this->db->count_all_results(self::TABLE);
 	}
 
 	// ------------------------------------------------------------------
