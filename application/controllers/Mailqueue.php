@@ -462,11 +462,55 @@ class Mailqueue extends CI_Controller
 	// ------------------------------------------------------------------
 
 	/**
+	 * Show the queue status and, for a logged-in admin, the cron URL + token.
+	 *
+	 * Accessible over HTTP (unlike the other commands) so it can be visited in
+	 * a browser. A non-logged-in visitor gets only the queue counts; a logged-in
+	 * admin who passes ?show_cron=1 also gets the ready-to-paste cron command.
+	 */
+	public function key()
+	{
+		$counts = $this->Mail_queue_model->status_counts();
+
+		$out = "DepEd DDO MIS Mail Queue\n"
+			."=========================\n"
+			."Queue: pending=".$counts['pending']
+			."  sending=".$counts['sending']
+			."  sent=".$counts['sent']
+			."  failed=".$counts['failed']
+			."  bounced=".$counts['bounced']."\n";
+
+		// Only reveal the cron URL to a logged-in user.
+		$username = (string) $this->session->userdata('username');
+		$position = (string) $this->session->userdata('position');
+
+		if ($username !== '' && ! in_array(strtolower($position), array('school', 'student', 'applicant'), TRUE))
+		{
+			$token  = mis_mailqueue_token();
+			$cron   = '*/2 * * * * curl -s "'.site_url('mailqueue/run').'?token='.$token.'" > /dev/null 2>&1';
+			$explicit = (string) $this->config->item('mail_queue_cron_token');
+
+			$out .= "\nCron command (hPanel > Advanced > Cron Jobs, every 2 minutes):\n\n"
+				."  ".$cron."\n";
+
+			if ($explicit !== '')
+			{
+				$out .= "\n(Note: SRMS_CRON_TOKEN is set in the environment and overrides the derived token.)\n";
+			}
+		}
+
+		$this->output->set_content_type('text/plain')->set_output($out);
+	}
+
+	// ------------------------------------------------------------------
+
+	/**
 	 * Who is allowed to run this.
 	 *
-	 * CLI is trusted outright. Over HTTP a token has to be configured and
-	 * match; with no token configured, HTTP triggering is refused entirely so
-	 * a mistyped config cannot leave the endpoint open.
+	 * CLI is trusted outright. Over HTTP, the token in the URL must match the
+	 * derived token (mis_mailqueue_token) or the explicit override from
+	 * SRMS_CRON_TOKEN. Only run() is exposed over HTTP; the other commands
+	 * print queue contents and are refused.
 	 *
 	 * @return	bool
 	 */
@@ -477,14 +521,23 @@ class Mailqueue extends CI_Controller
 			return TRUE;
 		}
 
-		// Only run() is safe to expose; the rest print queue contents.
-		if (strtolower((string) $this->router->fetch_method()) !== 'run')
+		// Only run() and key() are safe to expose; the rest print queue contents.
+		$method = strtolower((string) $this->router->fetch_method());
+		if ($method !== 'run' && $method !== 'key')
 		{
 			show_404();
 			return FALSE;
 		}
 
-		$expected = (string) $this->config->item('mail_queue_cron_token');
+		// key() has its own auth (logged-in admin), so let it through.
+		if ($method === 'key')
+		{
+			return TRUE;
+		}
+
+		// An explicit env override wins; otherwise the derived token is used.
+		$explicit = (string) $this->config->item('mail_queue_cron_token');
+		$expected = ($explicit !== '') ? $explicit : mis_mailqueue_token();
 		$given    = (string) $this->input->get_post('token');
 
 		if ($expected === '' OR ! hash_equals($expected, $given))

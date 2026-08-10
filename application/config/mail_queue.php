@@ -91,14 +91,21 @@ $config['mail_queue_imap_port'] = (int) (getenv('SRMS_IMAP_PORT') ?: 993);
 $config['mail_queue_bounce_days'] = 7;
 
 /*
-| Shared secret for triggering the worker over HTTP:
+| Secret used to derive the HTTP-trigger token (see mis_mailqueue_token()).
+| The token is sha256(this secret + the database name), so it is deterministic
+| and needs no environment variable or .htaccess line — the same approach as
+| the srms-college email queue. Change this secret and the token changes.
+*/
+$config['mail_queue_token_secret'] = '1abf1d256bb065c10a37d456921acaa7';
+
+/*
+| Optional explicit override for the HTTP-trigger token:
 |
 |     https://your-site/mailqueue/run?token=...
 |
-| Only needed on hosts that cannot run a real CLI cron job. Leave empty to
-| refuse HTTP triggering entirely, which is the safer default; the CLI entry
-| point (php index.php mailqueue run) never uses a token.
+| When set (via the SRMS_CRON_TOKEN environment variable), this value is used
+| instead of the derived one. Leave empty to use the derived token.
 |
-| Set it through the environment rather than by editing this file.
+| Only run() is exposed over HTTP; the other commands print queue contents.
 */
 $config['mail_queue_cron_token'] = getenv('SRMS_CRON_TOKEN') ?: '';

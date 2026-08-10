@@ -526,3 +526,26 @@ if ( ! function_exists('mis_send_html_mail'))
 		return $result;
 	}
 }
+
+if ( ! function_exists('mis_mailqueue_token'))
+{
+	/**
+	 * The deterministic HTTP-trigger token for the mail queue worker.
+	 *
+	 * Derived from the configured secret (mail_queue_token_secret) plus the
+	 * database name, so it is stable across requests and needs no environment
+	 * variable or .htaccess line. The same approach as the srms-college email
+	 * queue: whoever knows this token can trigger mailqueue/run over HTTP, and
+	 * it is shown by mailqueue/key to a logged-in admin.
+	 *
+	 * @return	string	40-char hex token
+	 */
+	function mis_mailqueue_token()
+	{
+		$CI =& get_instance();
+		$secret = (string) $CI->config->item('mail_queue_token_secret');
+		$dbName = isset($CI->db) ? (string) $CI->db->database : '';
+
+		return substr(hash('sha256', 'mis-mail-queue|'.$secret.'|'.$dbName), 0, 40);
+	}
+}
