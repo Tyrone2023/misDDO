@@ -1,0 +1,1065 @@
+/* ==========================================================================
+   EduVision MIS — shared modern theme layer
+   --------------------------------------------------------------------------
+   Loaded last in templates/head.php so it overrides the stock Velonic
+   app.min.css without editing the vendor file (which is minified and would be
+   lost on any template update).
+
+   Two jobs:
+     1. Retheme the chrome — left sidebar + topbar — so the navigation reads
+        as one tidy column instead of a ragged list of mixed icon sets.
+     2. Provide the `mis-*` dashboard components (hero, stat grid, panels,
+        quick links) that the dashboard views are built from, plus a general
+        polish pass on `.card` / `.widget-style-2` / `.page-title-box` so the
+        dashboards that have NOT been rewritten still pick up the new look.
+
+   Palette matches the already-modernised pages (dashboard_user's `hrp-*` and
+   dashboard_plansup's `ps-*`) so the whole app stays in one visual family.
+   ========================================================================== */
+
+:root {
+    /* brand */
+    --mis-navy-900: #1f3a5f;
+    --mis-navy-700: #2c5282;
+    --mis-blue-500: #3182ce;
+    --mis-blue-300: #4da3e8;
+
+    /* content */
+    --mis-ink: #313a46;
+    --mis-muted: #7b8794;
+    --mis-faint: #98a6ad;
+
+    /* surfaces */
+    --mis-surface: #ffffff;
+    --mis-canvas: #f5f7fa;
+    --mis-border: #e9edf2;
+    --mis-hairline: #f1f4f8;
+
+    /* status */
+    --mis-green: #1e7d44;
+    --mis-amber: #a86c14;
+    --mis-red: #b03a3a;
+    --mis-purple: #5b3fb0;
+    --mis-teal: #0f766e;
+
+    /* sidebar */
+    --mis-side-bg: #16233a;
+    --mis-side-bg-2: #1b2c48;
+    --mis-side-text: #8a99b5;
+    --mis-side-head: #5d6d8c;
+    --mis-side-width: 245px;
+
+    --mis-radius: 14px;
+    --mis-shadow: 0 2px 10px rgba(16, 30, 54, .05);
+    --mis-shadow-lg: 0 14px 30px rgba(31, 58, 95, .14);
+}
+
+
+/* ==========================================================================
+   1. LEFT SIDEBAR
+   ========================================================================== */
+
+.left-side-menu {
+    width: var(--mis-side-width);
+    background: linear-gradient(180deg, var(--mis-side-bg-2) 0%, var(--mis-side-bg) 100%);
+    border-right: 1px solid rgba(255, 255, 255, .04);
+    padding: 8px 0 24px;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .18);
+}
+
+.content-page {
+    margin-left: var(--mis-side-width);
+    background: var(--mis-canvas);
+}
+
+/* slimScroll injects its own bar; keep it thin and unobtrusive */
+.left-side-menu .slimScrollBar {
+    background: rgba(255, 255, 255, .16) !important;
+    width: 4px !important;
+    border-radius: 4px !important;
+}
+
+#sidebar-menu {
+    padding: 0 10px;
+}
+
+/* --- section headers ------------------------------------------------------
+   `menu-title` is what breaks a 25-item role menu into readable groups. Give
+   it a hairline rule above so each group is visually fenced off. */
+#sidebar-menu .menu-title {
+    padding: 9px 12px 7px;
+    margin: 14px 0 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--mis-side-head);
+    border-top: 1px solid rgba(255, 255, 255, .06);
+}
+
+/* the very first one ("Navigation") needs no rule above it */
+#sidebar-menu > ul > li.menu-title:first-child {
+    margin-top: 4px;
+    border-top: 0;
+}
+
+/* --- top level rows ------------------------------------------------------- */
+#sidebar-menu > ul > li {
+    position: relative;
+}
+
+#sidebar-menu > ul > li > a {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    margin: 1px 0;
+    border-radius: 9px;
+    color: var(--mis-side-text);
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    transition: background .15s ease, color .15s ease;
+}
+
+#sidebar-menu > ul > li > a:hover,
+#sidebar-menu > ul > li > a:focus,
+#sidebar-menu > ul > li > a:active {
+    color: #fff;
+    background: rgba(255, 255, 255, .05);
+    text-decoration: none;
+}
+
+/* Fixed icon column. The menus mix Font Awesome, Ionicons and Material Design
+   Icons, whose glyphs have very different intrinsic widths — without this the
+   labels never line up and the column looks ragged. */
+#sidebar-menu > ul > li > a i {
+    flex: 0 0 22px;
+    width: 22px;
+    margin: 0 11px 0 0;
+    font-size: 16px;
+    line-height: 1;
+    text-align: center;
+    color: var(--mis-side-text);
+    opacity: .9;
+    transition: color .15s ease, opacity .15s ease;
+}
+
+#sidebar-menu > ul > li > a:hover i {
+    color: var(--mis-blue-300);
+    opacity: 1;
+}
+
+/* label takes the remaining width and truncates rather than wrapping to a
+   second line, which is what made long items look like a wall of text */
+#sidebar-menu > ul > li > a > span:not(.menu-arrow):not(.badge) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* --- active / open state -------------------------------------------------- */
+#sidebar-menu > ul > li > a.active,
+#sidebar-menu > ul > li.mm-active > a {
+    color: #fff;
+    background: rgba(77, 163, 232, .14);
+}
+
+#sidebar-menu > ul > li > a.active i,
+#sidebar-menu > ul > li.mm-active > a i {
+    color: var(--mis-blue-300);
+    opacity: 1;
+}
+
+/* left accent bar on the active row */
+#sidebar-menu > ul > li > a.active::before,
+#sidebar-menu > ul > li.mm-active > a::before {
+    content: "";
+    position: absolute;
+    left: -10px;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--mis-blue-300);
+}
+
+/* --- the expand/collapse caret -------------------------------------------- */
+#sidebar-menu .menu-arrow {
+    position: static;
+    flex: 0 0 auto;
+    margin-left: auto;
+    font-size: 15px;
+    line-height: 1;
+    opacity: .55;
+}
+
+#sidebar-menu li.mm-active > a > span.menu-arrow {
+    opacity: .9;
+}
+
+#sidebar-menu .badge {
+    margin: 0 0 0 8px;
+    flex: 0 0 auto;
+}
+
+/* --- sub levels -----------------------------------------------------------
+   A guide rail down the left of each nested list makes the hierarchy obvious
+   at a glance instead of relying on indentation alone. */
+#sidebar-menu > ul > li > ul {
+    position: relative;
+    padding-left: 22px;
+    margin: 2px 0 6px;
+}
+
+/* The rail must line up with the dot markers below: the <a> starts at the ul's
+   22px padding edge and its dot sits 2px in, 4px wide — centre 26px. */
+#sidebar-menu > ul > li > ul::before {
+    content: "";
+    position: absolute;
+    left: 26px;
+    top: 2px;
+    bottom: 2px;
+    width: 1px;
+    background: rgba(255, 255, 255, .09);
+}
+
+#sidebar-menu > ul > li > ul ul {
+    padding-left: 16px;
+}
+
+.nav-second-level li a,
+.nav-third-level li a,
+.nav-thrid-level li a {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 7px 10px 7px 16px;
+    border-radius: 7px;
+    color: var(--mis-side-text);
+    font-size: 12.75px;
+    font-weight: 400;
+    line-height: 1.4;
+    transition: color .15s ease, background .15s ease, padding-left .15s ease;
+}
+
+/* small dot marker sitting on the guide rail */
+.nav-second-level > li > a::before,
+.nav-third-level > li > a::before,
+.nav-thrid-level > li > a::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    margin-top: -2px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .22);
+    transition: background .15s ease;
+}
+
+.nav-second-level li a:hover,
+.nav-second-level li a:focus,
+.nav-third-level li a:hover,
+.nav-third-level li a:focus,
+.nav-thrid-level li a:hover,
+.nav-thrid-level li a:focus {
+    color: #fff;
+    background: rgba(255, 255, 255, .05);
+    padding-left: 19px;
+    text-decoration: none;
+}
+
+.nav-second-level > li > a:hover::before,
+.nav-third-level > li > a:hover::before,
+.nav-thrid-level > li > a:hover::before {
+    background: var(--mis-blue-300);
+}
+
+.nav-second-level li.mm-active > a,
+.nav-third-level li.mm-active > a,
+.nav-second-level li a.active,
+.nav-third-level li a.active {
+    color: #fff;
+    font-weight: 500;
+}
+
+.nav-second-level > li.mm-active > a::before,
+.nav-third-level > li.mm-active > a::before,
+.nav-second-level > li > a.active::before,
+.nav-third-level > li > a.active::before {
+    background: var(--mis-blue-300);
+}
+
+/* A nested toggle keeps its caret hard right. The ID selector is needed to beat
+   `#sidebar-menu .menu-arrow` above, which pins the top-level carets to static. */
+#sidebar-menu .nav-second-level li a .menu-arrow,
+#sidebar-menu .nav-third-level li a .menu-arrow {
+    position: static;
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding-left: 6px;
+    opacity: .5;
+}
+
+/* --- collapsed ("enlarged") sidebar --------------------------------------- */
+.enlarged .left-side-menu {
+    width: 70px;
+}
+
+.enlarged .content-page {
+    margin-left: 70px;
+}
+
+.enlarged #sidebar-menu {
+    padding: 0 8px;
+}
+
+.enlarged .left-side-menu #sidebar-menu > ul > li > a {
+    justify-content: center;
+    padding: 13px 0;
+    border-radius: 9px;
+}
+
+.enlarged .left-side-menu #sidebar-menu > ul > li > a i {
+    flex: 0 0 auto;
+    margin: 0;
+    font-size: 18px;
+}
+
+.enlarged .left-side-menu #sidebar-menu > ul > li > a.active::before,
+.enlarged .left-side-menu #sidebar-menu > ul > li.mm-active > a::before {
+    display: none;
+}
+
+/* the flyout panel shown on hover when collapsed */
+.enlarged .left-side-menu #sidebar-menu > ul > li:hover > a {
+    background: var(--mis-navy-700);
+    color: #fff;
+    width: calc(var(--mis-side-width) - 4px);
+    border-radius: 9px 0 0 9px;
+}
+
+.enlarged .left-side-menu #sidebar-menu > ul > li:hover > a span {
+    display: inline-block;
+    padding-left: 10px;
+}
+
+.enlarged .left-side-menu #sidebar-menu > ul > li:hover > ul {
+    background: var(--mis-side-bg-2);
+    border-radius: 0 9px 9px 0;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .3);
+    padding: 8px 10px;
+}
+
+.enlarged .left-side-menu #sidebar-menu > ul > li:hover > ul::before {
+    display: none;
+}
+
+
+/* ==========================================================================
+   2. TOPBAR
+   ========================================================================== */
+
+.navbar-custom {
+    background-color: var(--mis-surface);
+    box-shadow: 0 1px 0 rgba(31, 58, 95, .07), 0 2px 8px rgba(31, 58, 95, .04);
+}
+
+.logo-box {
+    background: linear-gradient(180deg, var(--mis-side-bg-2) 0%, var(--mis-side-bg) 100%);
+    width: var(--mis-side-width);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.enlarged .logo-box {
+    width: 70px !important;
+}
+
+/* search box — pill shaped, calmer borders */
+.app-search .app-search-box .form-control {
+    height: 38px;
+    border-radius: 8px 0 0 8px;
+    border: 1px solid var(--mis-border);
+    border-right: 0;
+    background: #f7f9fc;
+    font-size: 13px;
+    box-shadow: none;
+}
+
+.app-search .app-search-box .form-control:focus {
+    background: #fff;
+    border-color: #cfe0f4;
+}
+
+.app-search .app-search-box .input-group-append .btn {
+    height: 38px;
+    border-radius: 0 8px 8px 0;
+    border: 1px solid var(--mis-border);
+    border-left: 0;
+    background: #f7f9fc;
+    color: var(--mis-muted);
+}
+
+.app-search .app-search-box .input-group-append .btn:hover {
+    color: var(--mis-navy-700);
+}
+
+.button-menu-mobile {
+    color: var(--mis-muted);
+}
+
+.navbar-custom .nav-user {
+    display: inline-flex;
+    align-items: center;
+}
+
+.navbar-custom .nav-user img {
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
+    border: 2px solid var(--mis-border);
+}
+
+.navbar-custom .pro-user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mis-ink);
+}
+
+.noti-icon {
+    font-size: 21px;
+    color: var(--mis-muted);
+}
+
+.noti-icon-badge {
+    top: 16px;
+}
+
+.navbar-custom .dropdown-menu {
+    border: 1px solid var(--mis-border);
+    border-radius: 11px;
+    box-shadow: 0 12px 30px rgba(31, 58, 95, .14);
+    padding: 6px;
+}
+
+.navbar-custom .dropdown-item {
+    border-radius: 7px;
+    font-size: 13px;
+    padding: .5rem .7rem;
+}
+
+.navbar-custom .dropdown-item i {
+    width: 18px;
+    margin-right: 6px;
+}
+
+
+/* ==========================================================================
+   3. PAGE SHELL
+   ========================================================================== */
+
+.page-title-box {
+    padding: 22px 20px 18px;
+}
+
+.page-title-box .page-title {
+    font-size: 1.12rem;
+    font-weight: 600;
+    color: var(--mis-ink);
+}
+
+
+/* ==========================================================================
+   4. DASHBOARD COMPONENTS  (mis-*)
+   ========================================================================== */
+
+.mis-shell {
+    padding-bottom: 24px;
+}
+
+/* --- hero banner ---------------------------------------------------------- */
+.mis-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    padding: 1.75rem 1.9rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(120deg, var(--mis-navy-900) 0%, var(--mis-navy-700) 55%, var(--mis-blue-500) 100%);
+    box-shadow: 0 10px 26px rgba(31, 58, 95, .22);
+    color: #fff;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+}
+
+.mis-hero::before {
+    content: "";
+    position: absolute;
+    width: 230px;
+    height: 230px;
+    border-radius: 50%;
+    right: -80px;
+    top: -95px;
+    background: rgba(255, 255, 255, .10);
+}
+
+.mis-hero-text {
+    position: relative;
+    z-index: 2;
+    min-width: 0;
+}
+
+.mis-hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    background: rgba(255, 255, 255, .18);
+    border-radius: 999px;
+    padding: .22rem .7rem;
+    font-size: .7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.mis-hero-title {
+    margin: .6rem 0 .3rem;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.mis-hero-sub {
+    margin: 0;
+    opacity: .85;
+    font-size: .875rem;
+    max-width: 68ch;
+}
+
+.mis-hero-sub strong {
+    color: #fff;
+}
+
+.mis-hero-aside {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.mis-hero-stat {
+    background: rgba(255, 255, 255, .13);
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 11px;
+    padding: .7rem 1.1rem;
+    min-width: 104px;
+    text-align: center;
+}
+
+.mis-hero-stat-value {
+    display: block;
+    font-size: 1.45rem;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.mis-hero-stat-label {
+    display: block;
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    opacity: .8;
+}
+
+/* a pill that sits in the hero, e.g. "FY 2026" or "Live" */
+.mis-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    border-radius: 999px;
+    padding: .45rem .9rem;
+    font-size: .76rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #fff;
+    background: rgba(255, 255, 255, .16);
+    border: 1px solid rgba(255, 255, 255, .22);
+    transition: background .15s ease;
+}
+
+a.mis-pill:hover {
+    background: rgba(255, 255, 255, .26);
+    color: #fff;
+    text-decoration: none;
+}
+
+.mis-pill-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #5af0c4;
+    animation: mis-pulse 1.6s infinite;
+}
+
+@keyframes mis-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(90, 240, 196, .6); }
+    70% { box-shadow: 0 0 0 9px rgba(90, 240, 196, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(90, 240, 196, 0); }
+}
+
+/* --- stat card grid ------------------------------------------------------- */
+.mis-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.mis-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.mis-grid-2 { grid-template-columns: repeat(2, 1fr); }
+
+@media (max-width: 1199.98px) {
+    .mis-grid,
+    .mis-grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 575.98px) {
+    .mis-grid,
+    .mis-grid-3,
+    .mis-grid-2 { grid-template-columns: 1fr; }
+}
+
+.mis-card {
+    display: block;
+    background: var(--mis-surface);
+    border: 1px solid var(--mis-border);
+    border-radius: var(--mis-radius);
+    padding: 1.15rem 1.25rem;
+    box-shadow: var(--mis-shadow);
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+a.mis-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--mis-shadow-lg);
+    border-color: #dbe6f5;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* a card rendered as an <a> with no href — a figure the current role may not
+   drill into. It must not offer any affordance that it is clickable. */
+a.mis-card-static,
+a.mis-card-static:hover {
+    transform: none;
+    box-shadow: var(--mis-shadow);
+    border-color: var(--mis-border);
+    cursor: default;
+}
+
+.mis-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .6rem;
+    gap: .75rem;
+}
+
+.mis-card-num {
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--mis-ink);
+}
+
+.mis-card-ico {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: var(--mis-hairline);
+    color: var(--mis-muted);
+}
+
+.mis-card-label {
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--mis-ink);
+}
+
+.mis-card-sub {
+    font-size: .74rem;
+    color: var(--mis-faint);
+    margin-top: .15rem;
+}
+
+.mis-card-go {
+    margin-top: .75rem;
+    font-size: .74rem;
+    font-weight: 600;
+    color: var(--mis-navy-700);
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+}
+
+/* accent variants for the icon tile */
+.mis-t-blue   .mis-card-ico { background: #e8edfb; color: #33499e; }
+.mis-t-sky    .mis-card-ico { background: #e6f2fb; color: #1d6fa5; }
+.mis-t-green  .mis-card-ico { background: #e4f5ec; color: var(--mis-green); }
+.mis-t-amber  .mis-card-ico { background: #fdf3e2; color: var(--mis-amber); }
+.mis-t-purple .mis-card-ico { background: #f0ebfb; color: var(--mis-purple); }
+.mis-t-teal   .mis-card-ico { background: #e2f3f1; color: var(--mis-teal); }
+.mis-t-red    .mis-card-ico { background: #fdeeee; color: var(--mis-red); }
+.mis-t-grey   .mis-card-ico { background: #eef1f5; color: #5c6873; }
+
+/* --- panel (a titled content block) --------------------------------------- */
+.mis-panel {
+    background: var(--mis-surface);
+    border: 1px solid var(--mis-border);
+    border-radius: var(--mis-radius);
+    box-shadow: var(--mis-shadow);
+    margin-bottom: 1.4rem;
+    overflow: hidden;
+}
+
+.mis-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .75rem;
+    padding: 1.1rem 1.35rem;
+    border-bottom: 1px solid var(--mis-hairline);
+}
+
+.mis-panel-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--mis-ink);
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+}
+
+.mis-panel-title i {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef5ff;
+    color: var(--mis-navy-900);
+    font-size: 17px;
+}
+
+.mis-panel-sub {
+    margin: .3rem 0 0;
+    font-size: .8rem;
+    color: var(--mis-faint);
+}
+
+.mis-panel-body {
+    padding: 1.35rem;
+}
+
+.mis-panel-body-flush {
+    padding: 0;
+}
+
+/* --- quick link tiles ----------------------------------------------------- */
+.mis-links {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: .75rem;
+}
+
+@media (max-width: 991.98px) { .mis-links { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 575.98px) { .mis-links { grid-template-columns: 1fr; } }
+
+.mis-link {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .8rem 1rem;
+    border-radius: 11px;
+    border: 1px solid var(--mis-border);
+    background: #fbfdff;
+    color: var(--mis-ink);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: .84rem;
+    transition: background .15s ease, border-color .15s ease;
+}
+
+.mis-link:hover {
+    background: #eef5ff;
+    border-color: #cfe0f4;
+    color: var(--mis-navy-700);
+    text-decoration: none;
+}
+
+.mis-link i {
+    flex: 0 0 auto;
+    font-size: 20px;
+    color: var(--mis-navy-700);
+}
+
+.mis-link span {
+    min-width: 0;
+}
+
+.mis-link small {
+    display: block;
+    font-weight: 400;
+    color: var(--mis-faint);
+    font-size: .7rem;
+}
+
+/* --- chips ---------------------------------------------------------------- */
+.mis-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    background: var(--mis-hairline);
+    border: 1px solid var(--mis-border);
+    border-radius: 999px;
+    padding: .16rem .6rem;
+    font-size: .74rem;
+    font-weight: 500;
+    color: #4a5568;
+    white-space: nowrap;
+}
+
+.mis-chip-blue   { background: #e8f0fb; border-color: #d6e4f7; color: var(--mis-navy-700); }
+.mis-chip-green  { background: #e6f4ec; border-color: #d2ebdd; color: var(--mis-green); }
+.mis-chip-amber  { background: #fdf3e2; border-color: #f7e5c6; color: var(--mis-amber); }
+.mis-chip-purple { background: #f0ebfb; border-color: #e2d9f7; color: var(--mis-purple); }
+.mis-chip-red    { background: #fdf5f5; border-color: #f0dcdc; color: var(--mis-red); }
+.mis-chip-grey   { background: #f1f4f8; border-color: #e4e9f0; color: var(--mis-muted); }
+
+/* --- tables inside panels ------------------------------------------------- */
+.mis-table {
+    border-collapse: separate !important;
+    border-spacing: 0;
+    width: 100%;
+    margin: 0;
+}
+
+.mis-table thead th {
+    border: none !important;
+    border-bottom: 1px solid var(--mis-border) !important;
+    background: transparent;
+    color: var(--mis-muted);
+    font-size: .7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: .75rem 1.35rem !important;
+    white-space: nowrap;
+}
+
+.mis-table tbody td {
+    border: none !important;
+    border-bottom: 1px solid var(--mis-hairline) !important;
+    padding: .8rem 1.35rem !important;
+    vertical-align: middle;
+    font-size: .86rem;
+}
+
+.mis-table tbody tr:last-child td {
+    border-bottom: 0 !important;
+}
+
+.mis-table tbody tr:hover {
+    background: #f9fbfd;
+}
+
+/* --- buttons -------------------------------------------------------------- */
+.mis-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    border: 1px solid var(--mis-border);
+    background: #f7f9fc;
+    color: #5c6873;
+    border-radius: 8px;
+    padding: .45rem .9rem;
+    font-size: .82rem;
+    font-weight: 500;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+.mis-btn:hover {
+    background: #eef2f8;
+    color: var(--mis-ink);
+    text-decoration: none;
+}
+
+.mis-btn-primary {
+    background: var(--mis-navy-700);
+    border-color: var(--mis-navy-700);
+    color: #fff;
+}
+
+.mis-btn-primary:hover {
+    background: #24446c;
+    border-color: #24446c;
+    color: #fff;
+}
+
+.mis-btn-sm {
+    padding: .3rem .65rem;
+    font-size: .78rem;
+    border-radius: 7px;
+}
+
+/* --- empty state ---------------------------------------------------------- */
+.mis-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--mis-faint);
+}
+
+.mis-empty i {
+    font-size: 40px;
+    display: block;
+    margin-bottom: .6rem;
+    opacity: .5;
+}
+
+.mis-empty p {
+    margin: 0;
+    font-size: .86rem;
+}
+
+
+/* ==========================================================================
+   5. FALLBACK POLISH
+   --------------------------------------------------------------------------
+   Dashboards that still use the stock Velonic `.card` / `.widget-style-2`
+   markup pick these up automatically, so they stop looking dated even though
+   their markup has not been rewritten.
+   ========================================================================== */
+
+.card {
+    border: 1px solid var(--mis-border);
+    border-radius: var(--mis-radius);
+    box-shadow: var(--mis-shadow);
+}
+
+.card-header {
+    border-bottom: 1px solid var(--mis-hairline);
+}
+
+/* the stock widget renders a 60px icon with negative margins so it bleeds out
+   of the card corner — box it into a neat rounded tile instead */
+.widget-style-2 {
+    display: block;
+}
+
+.widget-style-2 .media {
+    align-items: center;
+    gap: 1rem;
+}
+
+.widget-style-2 i {
+    flex: 0 0 auto;
+    width: 52px;
+    height: 52px;
+    margin: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border-radius: 13px;
+    background: var(--mis-hairline);
+    color: var(--mis-muted);
+}
+
+/* on the coloured cards keep the translucent-on-brand treatment */
+.card[class*="bg-"] .widget-style-2 i {
+    background: rgba(255, 255, 255, .18);
+    color: #fff;
+}
+
+.widget-style-2 h2 {
+    font-size: 1.9rem;
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.widget-style-2 p {
+    font-size: .82rem;
+    color: var(--mis-muted);
+}
+
+.card[class*="bg-"] .widget-style-2 p {
+    color: rgba(255, 255, 255, .85);
+}
+
+
+/* ==========================================================================
+   6. RESPONSIVE
+   ========================================================================== */
+
+@media (max-width: 991.98px) {
+    .mis-hero { padding: 1.4rem 1.5rem; }
+}
+
+@media (max-width: 767.98px) {
+    .content-page {
+        margin-left: 0;
+    }
+
+    .left-side-menu {
+        width: var(--mis-side-width);
+    }
+
+    .logo-box {
+        width: auto;
+        background: transparent;
+        padding: 0 12px;
+    }
+
+    .mis-hero {
+        padding: 1.25rem;
+    }
+
+    .mis-hero-title {
+        font-size: 1.15rem;
+    }
+
+    .mis-hero-stat {
+        min-width: 88px;
+        padding: .55rem .8rem;
+    }
+
+    .mis-card-num {
+        font-size: 1.7rem;
+    }
+}

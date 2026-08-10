@@ -7,6 +7,60 @@ $redirect_urls = [
 if (isset($redirect_urls[$this->session->position])) {
     redirect(base_url() . $redirect_urls[$this->session->position]);
 }
+
+// Human Resource Admin landing page. Counts arrive as CI query objects from
+// Pages::view(); $data4 is the queue of leave applications awaiting approval.
+$isAdmin = ($this->session->position == 'Admin');
+
+$total        = is_object($data)  ? $data->num_rows()  : 0;
+$teaching     = is_object($data2) ? $data2->num_rows() : 0;
+$nonTeaching  = is_object($data3) ? $data3->num_rows() : 0;
+$inactive     = is_object($data1) ? $data1->num_rows() : 0;
+$pendingLeave = is_object($data4) ? $data4->num_rows() : 0;
+
+// Only Admin may drill into the personnel lists; everyone else sees the figure
+// without a working link, which is how this page has always behaved.
+$cards = array(
+    array(
+        'value' => $total,
+        'label' => 'Total Employees',
+        'sub'   => 'All personnel on record',
+        'link'  => $isAdmin ? 'Pages/personnel' : '',
+        'icon'  => 'mdi-account-group-outline',
+        'tone'  => 'mis-t-blue',
+    ),
+    array(
+        'value' => $teaching,
+        'label' => 'Teaching Personnel',
+        'sub'   => 'Teachers and master teachers',
+        'link'  => $isAdmin ? 'Pages/personnel_teaching' : '',
+        'icon'  => 'mdi-teach',
+        'tone'  => 'mis-t-purple',
+    ),
+    array(
+        'value' => $nonTeaching,
+        'label' => 'Non-Teaching Personnel',
+        'sub'   => 'Support and admin staff',
+        'link'  => $isAdmin ? 'Pages/personnel_nonteaching' : '',
+        'icon'  => 'mdi-account-tie-outline',
+        'tone'  => 'mis-t-sky',
+    ),
+    array(
+        'value' => $inactive,
+        'label' => 'Inactive List',
+        'sub'   => 'Separated, retired or transferred',
+        'link'  => $isAdmin ? 'Pages/personnel_inactive' : '',
+        'icon'  => 'mdi-account-off-outline',
+        'tone'  => 'mis-t-grey',
+    ),
+);
+
+$quickLinks = array(
+    array('link' => 'Page/jobVacancy',           'icon' => 'mdi-briefcase-outline',     'label' => 'Job Vacancies',  'sub' => 'Posted positions'),
+    array('link' => 'Pages/endorsed_applicants', 'icon' => 'mdi-account-check-outline', 'label' => 'Endorsed',       'sub' => 'Applicants for rating'),
+    array('link' => 'Pages/rqa_appointed_list',  'icon' => 'mdi-account-tie',           'label' => 'Appointed List', 'sub' => 'Issued appointments'),
+    array('link' => 'hrusers',                   'icon' => 'mdi-account-settings-outline',   'label' => 'Manage Users',   'sub' => 'System accounts'),
+);
 ?>
 
 <!-- ============================================================== -->
@@ -16,122 +70,79 @@ if (isset($redirect_urls[$this->session->position])) {
 <div class="content-page">
     <div class="content">
 
-
-
         <!-- Start Content-->
-        <div class="container-fluid">
+        <div class="container-fluid mis-shell">
 
-            <!-- start page title -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="page-title-box">
-                        <h4 class="page-title"></h4>
-                        <div class="clearfix"></div>
+            <div class="mis-hero">
+                <div class="mis-hero-text">
+                    <span class="mis-hero-eyebrow"><i class="mdi mdi-account-group-outline"></i> Human Resource</span>
+                    <h3 class="mis-hero-title">Personnel Overview</h3>
+                    <p class="mis-hero-sub">
+                        Headcount across the division, plus anything currently waiting on you.
+                    </p>
+                </div>
+                <div class="mis-hero-aside">
+                    <div class="mis-hero-stat">
+                        <span class="mis-hero-stat-value"><?= number_format($total); ?></span>
+                        <span class="mis-hero-stat-label">Employees</span>
                     </div>
+                    <?php if (!$isAdmin) : ?>
+                        <div class="mis-hero-stat">
+                            <span class="mis-hero-stat-value"><?= number_format($pendingLeave); ?></span>
+                            <span class="mis-hero-stat-label">Pending Leave</span>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
-            <!-- end page title -->
 
-            <div class="row">
-                <div class="col-xl-3 col-sm-6">
-                    <div class="card bg-pink">
-                        <div class="card-body widget-style-2">
-                            <div class="text-white media">
-                                <div class="media-body align-self-center">
-                                    <h2 class="my-0 text-white"><a href="<?php if ($this->session->position == 'Admin') { ?><?= base_url(); ?>Pages/personnel<?php } else {
-                                                                                                                                                                echo '#';
-                                                                                                                                                            } ?>" class="text-white"><span data-plugin="counterup"><?= $data->num_rows(); ?></span></a></h2>
-
-                                    <p class="mb-0 ">Total Employees</p>
-                                </div>
-                                <i class="ion ion-md-people"></i>
-                            </div>
+            <div class="mis-grid">
+                <?php foreach ($cards as $card) : ?>
+                    <?php $linkable = ($card['link'] !== ''); ?>
+                    <a <?php if ($linkable) : ?>href="<?= base_url() . $card['link']; ?>"<?php endif; ?>
+                       class="mis-card <?= $card['tone']; ?><?= $linkable ? '' : ' mis-card-static'; ?>">
+                        <div class="mis-card-top">
+                            <span class="mis-card-num"><?= number_format($card['value']); ?></span>
+                            <span class="mis-card-ico"><i class="mdi <?= $card['icon']; ?>"></i></span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-3 col-sm-6">
-                    <div class="card bg-purple">
-                        <div class="card-body widget-style-2">
-                            <div class="text-white media">
-                                <div class="media-body align-self-center">
-                                    <h2 class="my-0 text-white"><a href="<?php if ($this->session->position == 'Admin') { ?><?= base_url(); ?>Pages/personnel_teaching<?php } else {
-                                                                                                                                                                        echo '#';
-                                                                                                                                                                    } ?>" class="text-white"><span data-plugin="counterup"><?= $data2->num_rows(); ?></span></a></h2>
-                                    <p class="mb-0">Teaching Personnel</p>
-                                </div>
-                                <i class="ion ion-md-person-add "></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-3 col-sm-6">
-                    <div class="card bg-info">
-                        <div class="card-body widget-style-2">
-                            <div class="text-white media">
-                                <div class="media-body align-self-center">
-                                    <h2 class="my-0 text-white"><a href="<?php if ($this->session->position == 'Admin') { ?><?= base_url(); ?>Pages/personnel_nonteaching<?php } else {
-                                                                                                                                                                            echo '#';
-                                                                                                                                                                        } ?>" class="text-white"><span data-plugin="counterup"><?= $data3->num_rows(); ?></span></a></h2>
-                                    <p class="mb-0">Non-Teaching Personnel</p>
-                                </div>
-                                <i class=" ion ion-md-contact"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-3 col-sm-6">
-                    <div class="card bg-primary">
-                        <div class="card-body widget-style-2">
-                            <div class="text-white media">
-                                <div class="media-body align-self-center">
-                                    <h2 class="my-0 text-white"><a href="<?php if ($this->session->position == 'Admin') { ?><?= base_url(); ?>Pages/personnel_inactive<?php } else {
-                                                                                                                                                                        echo '#';
-                                                                                                                                                                    } ?>" class="text-white"><span data-plugin="counterup"><?= $data1->num_rows(); ?></span></a></h2>
-                                    <p class="mb-0">Inactive List</p>
-                                </div>
-                                <i class="  ion ion-md-person"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                        <div class="mis-card-label"><?= $card['label']; ?></div>
+                        <div class="mis-card-sub"><?= $card['sub']; ?></div>
+                        <?php if ($linkable) : ?>
+                            <span class="mis-card-go">View list <i class="mdi mdi-arrow-right"></i></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endforeach; ?>
             </div>
-            <!-- End row -->
 
-         
-
-<?php if ($this->session->userdata('position') != 'Admin'): ?>
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header py-3 bg-transparent">
-                    <div class="card-widgets">
-                        <a href="javascript:;" data-toggle="reload"><i class="mdi mdi-refresh"></i></a>
-                        <a data-toggle="collapse" href="#cardCollpase3" role="button" aria-expanded="false" aria-controls="cardCollpase3"><i class="mdi mdi-minus"></i></a>
-                        <a href="#" data-toggle="remove"><i class="mdi mdi-close"></i></a>
+            <?php if (!$isAdmin) : ?>
+                <div class="mis-panel">
+                    <div class="mis-panel-head">
+                        <div>
+                            <h5 class="mis-panel-title"><i class="mdi mdi-clipboard-check-outline"></i> Pending Task</h5>
+                            <p class="mis-panel-sub">Items waiting for action from this account</p>
+                        </div>
+                        <?php if ($pendingLeave > 0) : ?>
+                            <span class="mis-chip mis-chip-amber"><?= number_format($pendingLeave); ?> pending</span>
+                        <?php else : ?>
+                            <span class="mis-chip mis-chip-green">All clear</span>
+                        <?php endif; ?>
                     </div>
-                    <h5 class="header-title mb-2">Pending Task</h5>
-                </div>
-                <div id="cardCollpase3" class="collapse show">
-                    <div class="card-body">
+                    <div class="mis-panel-body mis-panel-body-flush">
                         <div class="table-responsive">
-                            <table class="table table-nowrap mb-0">
+                            <table class="table mis-table">
                                 <thead>
                                     <tr>
                                         <th>Task</th>
-                                        <th style="text-align:center">Counts</th>
-                                        <th style="text-align:center">Action</th>
+                                        <th class="text-center">Counts</th>
+                                        <th class="text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
                                         <td>Leave Applications for Approval</td>
-                                        <td style="text-align:center"><span class="badge badge-info"><?= $data4->num_rows(); ?></span></td>
-                                        <td style="text-align:center">
-                                            <a href="<?= base_url(); ?>Page/pendingLeave" class="text-success">
-                                                <i class="mdi mdi-file-document-box-check-outline"></i>View List
+                                        <td class="text-center"><span class="mis-chip mis-chip-blue"><?= number_format($pendingLeave); ?></span></td>
+                                        <td class="text-center">
+                                            <a href="<?= base_url(); ?>Page/pendingLeave" class="mis-btn mis-btn-primary mis-btn-sm">
+                                                <i class="mdi mdi-file-document-box-check-outline"></i> View List
                                             </a>
                                         </td>
                                     </tr>
@@ -140,14 +151,29 @@ if (isset($redirect_urls[$this->session->position])) {
                         </div>
                     </div>
                 </div>
+            <?php endif; ?>
+
+            <div class="mis-panel">
+                <div class="mis-panel-head">
+                    <div>
+                        <h5 class="mis-panel-title"><i class="mdi mdi-flash-outline"></i> Quick access</h5>
+                        <p class="mis-panel-sub">The recruitment screens used most often</p>
+                    </div>
+                </div>
+                <div class="mis-panel-body">
+                    <div class="mis-links">
+                        <?php foreach ($quickLinks as $q) : ?>
+                            <a href="<?= base_url() . $q['link']; ?>" class="mis-link">
+                                <i class="mdi <?= $q['icon']; ?>"></i>
+                                <span><?= $q['label']; ?><small><?= $q['sub']; ?></small></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
             </div>
+
         </div>
+        <!-- end container-fluid -->
+
     </div>
-<?php endif; ?>
-
-
-
-
-
-        </div>
-        <!-- end content -->
+    <!-- end content -->

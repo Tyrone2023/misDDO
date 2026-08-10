@@ -241,7 +241,9 @@
                         <?php if ($this->session->sp == 0) { ?>
 
                             <?php if ($this->session->position === 'Admin') : ?>
-                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
+
+                                <li class="menu-title">Records</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="ion ion-ios-school"></i>
@@ -253,6 +255,9 @@
                                         <li><a href="<?= base_url(); ?>Pages/schools?type=Private">Private</a></li>
                                     </ul>
                                 </li>
+                                <li><a href="<?= base_url(); ?>Page/announcements" class="waves-effect"><i class="mdi mdi-bullhorn-outline"></i><span>Announcements</span></a></li>
+
+                                <li class="menu-title">Administration</li>
                                 <!-- <li><a href="<?= base_url(); ?>users" class="waves-effect"><i class="ion ion-ios-person-add"></i><span> Manage Users </span></a></li> -->
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
@@ -271,7 +276,7 @@
                                 </li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="mdi mdi-file-document-box-check-outline"></i>
+                                        <i class="mdi mdi-chart-bar"></i>
                                         <span>Reports</span>
                                         <span class="menu-arrow"></span>
                                     </a>
@@ -280,9 +285,10 @@
                                     </ul>
                                 </li>
 
+                                <li class="menu-title">System</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class=" ion ion-md-settings "></i>
+                                        <i class="ion ion-md-settings"></i>
                                         <span>System Settings</span>
                                         <span class="menu-arrow"></span>
                                     </a>
@@ -295,11 +301,9 @@
                                     </ul>
                                 </li>
 
-                                <li><a href="<?= base_url(); ?>Page/announcements" class="waves-effect"><i class="fab fa-buromobelexperte"></i><span>Announcements </span></a></li>
-
                             <?php elseif ($this->session->position ===  'Human Resource Admin' || $this->session->position === 'asds') : ?>
 
-                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
                                 <!--<li>-->
                                     <!--<a href="javascript: void(0);" class="waves-effect">-->
                                     <!--    <i class="far fa-address-book "></i>-->
@@ -403,10 +407,11 @@
                                 <!--   </ul>-->
                                 <!--</li>-->
 
+                                <li class="menu-title">Recruitment</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-chalkboard-teacher"></i>
-                                        <span> Recruitment </span>
+                                        <span>Recruitment</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -420,7 +425,7 @@
                                         <li><a href="<?= base_url(); ?>Pages/dq_applicants">Disqualified Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Page/jobArchieved">Archived Vacancies</a></li>
                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
-                                        <li><a href="<?= base_url(); ?>Pages/request_rating">Retained Rating Request</span></a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/request_rating">Retained Rating Request</a></li>
                                         <li><a href="<?= base_url(); ?>Page/positionSettings">Positions Settings</a></li>
                                         <!-- <li><a href="<?= base_url(); ?>Page/appRatingUploading">Upload Applicant's Rating</a></li> -->
                                     </ul>
@@ -430,7 +435,7 @@
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="fas fa-user-tag"></i>
-                                            <span> Tagged Applicants </span>
+                                            <span>Tagged Applicants</span>
                                             <span class="menu-arrow"></span>
                                         </a>
                                         <ul class="nav-second-level" aria-expanded="false">
@@ -441,45 +446,39 @@
                                     </li>
                                 <?php } ?>
 
-                                   <li>
-    <a href="<?= base_url(); ?>Pages/rqa_corrigendum">
-        <i class="mdi mdi-file-document-edit-outline"></i>
-        <span> Corrigendum / Addendum  </span>
-    </a>
-</li>
-
-                                   <li>
-    <a href="<?= base_url(); ?>Pages/rqa_recommendation">
-        <i class="mdi mdi-account-check-outline"></i>
-        <span> RQA Recommendation  </span>
-    </a>
-</li>
-
-
-
-<li>
-    <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
-        <i class="mdi mdi-file-document-outline"></i>
-        <span> For Issuance of Appointment  </span>
-    </a>
-</li>
-
-<li>
-    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
-        <i class="mdi mdi-account-tie"></i>
-        <span> Appointed List  </span>
-    </a>
-</li>
-
-
-
+                                <li class="menu-title">Appointments</li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_corrigendum" class="waves-effect">
+                                        <i class="mdi mdi-file-document-edit-outline"></i>
+                                        <span>Corrigendum / Addendum</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_recommendation" class="waves-effect">
+                                        <i class="mdi mdi-account-check-outline"></i>
+                                        <span>RQA Recommendation</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
+                                        <i class="mdi mdi-file-document-outline"></i>
+                                        <span>For Issuance of Appointment</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
+                                        <i class="mdi mdi-account-tie"></i>
+                                        <span>Appointed List</span>
+                                    </a>
+                                </li>
 
                                 <?php if ($this->session->position === 'Admin') { ?>
+                                    <li class="menu-title">Planning</li>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="fas fa-scroll"></i>
-                                            <spa>Implementation Plans</span>
-                                                <span class="menu-arrow"></span>
+                                            <span>Implementation Plans</span>
+                                            <span class="menu-arrow"></span>
                                         </a>
                                         <ul class="nav-second-level" aria-expanded="false">
 
@@ -505,10 +504,11 @@
 
                                 <!--    </ul>-->
                                 <!--</li>-->
+                                <li class="menu-title">Administration</li>
                                 <?php if ($this->session->position === 'Admin') { ?>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
-                                            <i class=" ion ion-md-settings "></i>
+                                            <i class="ion ion-md-settings"></i>
                                             <span>System Settings</span>
                                             <span class="menu-arrow"></span>
                                         </a>
@@ -520,16 +520,16 @@
 
                                         </ul>
                                     </li>
-                                    <li><a href="<?= base_url(); ?>Page/document_verifier" class="waves-effect"><i class="fas fa-address-book"></i><span> Document Verifier </span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/document_verifier" class="waves-effect"><i class="fas fa-address-book"></i><span>Document Verifier</span></a></li>
                                 <?php } ?>
-                                <?php if ($this->session->position === 'Human Resource Admin') { ?>
-                                <?php } ?>
-                                <li><a href="<?= base_url(); ?>hrusers" class="waves-effect"><i class="ion ion-ios-person-add"></i><span> Manage Users </span></a></li>
-                                <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i>Manage Sub Users</a></li>
+                                <li><a href="<?= base_url(); ?>hrusers" class="waves-effect"><i class="ion ion-ios-person-add"></i><span>Manage Users</span></a></li>
+                                <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i><span>Manage Sub Users</span></a></li>
                                 <!--<li><a href="<?= base_url(); ?>Page/empReports" class="waves-effect"><i class="mdi mdi-equalizer "></i><span> Reports </span></a></li>-->
                                 <!--<li><a href="<?= base_url(); ?>Page/announcements" class="waves-effect"><i class="fab fa-buromobelexperte"></i><span>Announcements </span></a></li>-->
-                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>
+
+                                <li class="menu-title">Support</li>
+                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="mdi mdi-message-alert-outline"></i><span>System Feedback Form</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class="mdi mdi-help-circle-outline"></i><span>Help</span></a></li>
 
                             <?php elseif ($this->session->position === 'titling') : ?>
 
@@ -667,7 +667,7 @@
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-scroll"></i>
-                                        <spa>Implementation Plans</span>
+                                        <span>Implementation Plans</span>
                                             <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -853,76 +853,74 @@
                                 <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>
 
                             <?php elseif ($this->session->position === 'Secretariat') : ?>
-                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
+
+                                <li class="menu-title">Recruitment</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-chalkboard-teacher"></i>
-                                        <span> Recruitment </span>
+                                        <span>Recruitment</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
                                         <li><a href="<?= base_url(); ?>Pages/validated_applicant">Validated Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants">Endorse Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants_unassigned">Endorsed (No Evaluator)</a></li>
-                                        <li><a href="<?= base_url(); ?>Pages/secretariat_endorsed">Endorsed & Scored</a></li>
-                                                                                <li><a href="<?= base_url(); ?>Pages/secretariat_dq_applicants">Disqualified</a></li>
-                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
-
-                                                                                
-
+                                        <li><a href="<?= base_url(); ?>Pages/secretariat_endorsed">Endorsed &amp; Scored</a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/secretariat_dq_applicants">Disqualified</a></li>
+                                        <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
                                     </ul>
                                 </li>
 
+                                <li class="menu-title">Appointments</li>
                                 <li>
-    <a href="<?= base_url(); ?>Pages/rqa_corrigendum">
-        <i class="mdi mdi-file-document-edit-outline"></i>
-        <span> Corrigendum / Addendum  </span>
-    </a>
-</li>
-
+                                    <a href="<?= base_url(); ?>Pages/rqa_corrigendum" class="waves-effect">
+                                        <i class="mdi mdi-file-document-edit-outline"></i>
+                                        <span>Corrigendum / Addendum</span>
+                                    </a>
+                                </li>
                                 <li>
-    <a href="<?= base_url(); ?>Pages/rqa_recommendation">
-        <i class="mdi mdi-account-check-outline"></i>
-        <span> RQA Recommendation  </span>
-    </a>
-</li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_recommendation" class="waves-effect">
+                                        <i class="mdi mdi-account-check-outline"></i>
+                                        <span>RQA Recommendation</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
+                                        <i class="mdi mdi-file-document-outline"></i>
+                                        <span>For Issuance of Appointment</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
+                                        <i class="mdi mdi-account-tie"></i>
+                                        <span>Appointed List</span>
+                                    </a>
+                                </li>
 
-<li>
-    <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
-        <i class="mdi mdi-file-document-outline"></i>
-        <span> For Issuance of Appointment  </span>
-    </a>
-</li>
-
-<li>
-    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
-        <i class="mdi mdi-account-tie"></i>
-        <span> Appointed List  </span>
-    </a>
-</li>
-
-                                  <li>
+                                <li class="menu-title">Reports</li>
+                                <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="mdi mdi-file-document-box"></i>
-                                        <span> Report </span>
+                                        <span>Report</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
                                         <li><a href="<?= base_url(); ?>Pages/secretariat_scores_report">Scores Report</a></li>
-                                         <li><a href="<?= base_url(); ?>Pages/secretariat_inquiry_report">Inquiry Report</a></li>
-                                         <li><a href="<?= base_url(); ?>Pages/secretariat_applicant_evaluation_report">Applicant Evaluation Report</a></li>
-
+                                        <li><a href="<?= base_url(); ?>Pages/secretariat_inquiry_report">Inquiry Report</a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/secretariat_applicant_evaluation_report">Applicant Evaluation Report</a></li>
                                     </ul>
                                 </li>
-                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
 
-                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>
-                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
+                                <li class="menu-title">Account</li>
+                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="mdi mdi-message-alert-outline"></i><span>System Feedback Form</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class="mdi mdi-help-circle-outline"></i><span>Help</span></a></li>
+                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
 
                             <?php elseif ($this->session->position === 'sds') : ?>
 
-                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
                                 <!--<li>-->
                                 <!--    <a href="javascript: void(0);" class="waves-effect">-->
                                 <!--        <i class="far fa-address-book "></i>-->
@@ -1014,10 +1012,11 @@
                                 <!--    </ul>-->
                                 <!--</li>-->
 
+                                <li class="menu-title">Recruitment</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-chalkboard-teacher"></i>
-                                        <span> Recruitment </span>
+                                        <span>Recruitment</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1031,59 +1030,58 @@
                                         <li><a href="<?= base_url(); ?>Pages/dq_applicants">Disqualified Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Page/jobArchieved">Archived Vacancies</a></li>
                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
-                                        <li><a href="<?= base_url(); ?>Pages/request_rating">Retained Rating Request</span></a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/request_rating">Retained Rating Request</a></li>
                                         <!-- <li><a href="<?= base_url(); ?>Page/appRatingUploading">Upload Applicant's Rating</a></li> -->
                                     </ul>
                                 </li>
-                                
-                                
-                                   <li>
-    <a href="<?= base_url(); ?>Pages/rqa_corrigendum">
-        <i class="mdi mdi-file-document-edit-outline"></i>
-        <span> Corrigendum / Addendum  </span>
-    </a>
-</li>
 
-                                   <li>
-    <a href="<?= base_url(); ?>Pages/rqa_recommendation">
-        <i class="mdi mdi-account-check-outline"></i>
-        <span> RQA Recommendation  </span>
-    </a>
-</li>
+                                <li class="menu-title">Appointments</li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_corrigendum" class="waves-effect">
+                                        <i class="mdi mdi-file-document-edit-outline"></i>
+                                        <span>Corrigendum / Addendum</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_recommendation" class="waves-effect">
+                                        <i class="mdi mdi-account-check-outline"></i>
+                                        <span>RQA Recommendation</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_approval" class="waves-effect">
+                                        <i class="mdi mdi-check-decagram"></i>
+                                        <span>RQA Approval</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
+                                        <i class="mdi mdi-file-document-outline"></i>
+                                        <span>For Issuance of Appointment</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
+                                        <i class="mdi mdi-account-tie"></i>
+                                        <span>Appointed List</span>
+                                    </a>
+                                </li>
 
-                               <li>
-    <a href="<?= base_url(); ?>Pages/rqa_approval" class="waves-effect">
-        <i class="mdi mdi-check-decagram"></i>
-        <span> RQA Approval  </span>
-    </a>
-</li>
-
-<li>
-    <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
-        <i class="mdi mdi-file-document-outline"></i>
-        <span> For Issuance of Appointment  </span>
-    </a>
-</li>
-
-<li>
-    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
-        <i class="mdi mdi-account-tie"></i>
-        <span> Appointed List  </span>
-    </a>
-</li>
-                                 <li><a href="<?= base_url(); ?>users" class="waves-effect"><i class="ion ion-ios-person-add"></i><span> Manage Users </span></a></li> 
+                                <li class="menu-title">Administration</li>
+                                <li><a href="<?= base_url(); ?>users" class="waves-effect"><i class="ion ion-ios-person-add"></i><span>Manage Users</span></a></li>
                                 <!--<li><a href="<?= base_url(); ?>Page/empReports" class="waves-effect"><i class="mdi mdi-equalizer "></i><span> Reports </span></a></li>-->
                                 <!--<li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>-->
                                 <!--<li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>-->
 
 
                             <?php elseif ($this->session->position === 'observer') : ?>
-                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
 
+                                <li class="menu-title">Appointments</li>
                                 <li>
                                     <a href="<?= base_url(); ?>Pages/observer_recommendation" class="waves-effect">
                                         <i class="mdi mdi-account-check-outline"></i>
-                                        <span> RQA Recommendation </span>
+                                        <span>RQA Recommendation</span>
                                     </a>
                                 </li>
 
@@ -1112,11 +1110,13 @@
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
 
                             <?php elseif ($this->session->userdata('position') === 'SHNS') : ?>
-                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
+
+                                <li class="menu-title">Health Services</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="far fa-address-book"></i>
-                                        <span> Medical </span>
+                                        <span>Medical</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1147,8 +1147,8 @@
 
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="mdi mdi-view-compact-outline "></i>
-                                        <span> SBFP </span>
+                                        <i class="mdi mdi-food-apple-outline"></i>
+                                        <span>SBFP</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1161,7 +1161,7 @@
                                         <li><a href="<?= base_url(); ?>Page/sbfp_form1" target="_blank">Form 1</a></li>
                                         <li><a href="<?= base_url(); ?>Page/sbfp_form2" target="_blank">Form 2</a></li>
                                         <li><a href="<?= base_url(); ?>Page/sbfp_form3" target="_blank">Form 3</a></li>
-                                        <li><a href="<?= base_url(); ?>Page/sbfp_sf8" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>SF 8</a></li> -->
+                                        <li><a href="<?= base_url(); ?>Page/sbfp_sf8" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>SF 8</span></a></li> -->
                                     </ul>
                                 </li>
 
@@ -1169,10 +1169,11 @@
 
 
 
+                                <li class="menu-title">Reports</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="mdi mdi-view-compact-outline "></i>
-                                        <span> Reports </span>
+                                        <i class="mdi mdi-chart-bar"></i>
+                                        <span>Reports</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1182,11 +1183,11 @@
                                     </ul>
                                 </li>
 
-
+                                <li class="menu-title">Administration</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class=" ion ion-md-settings"></i>
-                                        <span> Settings </span>
+                                        <i class="ion ion-md-settings"></i>
+                                        <span>Settings</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1195,14 +1196,13 @@
 
                                     </ul>
                                 </li>
-
-                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
                                 <!-- <li><a href="<?= base_url(); ?>Page/med_settings" class="waves-effect"><i class=" fas fa-marker"></i><span>E - signature </span></a></li> -->
+                                <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i><span>Manage Sub Users</span></a></li>
 
-                                <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i>Manage Sub Users</a></li>
-
-                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>
+                                <li class="menu-title">Account</li>
+                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="mdi mdi-message-alert-outline"></i><span>System Feedback Form</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class="mdi mdi-help-circle-outline"></i><span>Help</span></a></li>
 
 
 
@@ -1213,7 +1213,7 @@
 
                             <?php elseif ($this->session->userdata('position') === 'Endorser') : ?>
 
-                                <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
+                                <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="mdi mdi-check-underline-circle "></i>
@@ -1232,7 +1232,7 @@
                             
 
                             <?php elseif ($this->session->position == "cid") : ?>
-                                <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
+                                <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-box "></i>
@@ -1292,17 +1292,14 @@
                                                                     echo "";
                                                                 } ?>" class="waves-effect"><i class="ion ion-md-contacts "></i><span>My Profile </span></a></li>
 
-                                <li><a href="<?= base_url(); ?>mycoor" class="waves-effect"><i class="mdi mdi-account-group "></i><span>Coordinatorships</span></a></li>
+                                <li><a href="<?= base_url(); ?>mycoor" class="waves-effect"><i class="mdi mdi-account-group"></i><span>Coordinatorships</span></a></li>
 
-                                <li><a href="<?= base_url(); ?>Page/trainingNeeds" class="waves-effect"><i class="ion ion-ios-checkbox-outline"></i><span>Training Needs </span></a></li>
-                                <li><a href="<?= base_url(); ?>available_trainings"><i class="mdi mdi-format-list-checks"></i>Available Training</a></li>
-
-                                <li><a href="<?= base_url(); ?>Page/individualDevelopment" class="waves-effect"><i class="ion ion-ios-filing "></i><span>Individual Development </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/empServiceRecord" class="waves-effect"><i class=" ion ion-ios-attach"></i><span>Service Record </span></a></li>
+                                <li class="menu-title">My Records</li>
+                                <li><a href="<?= base_url(); ?>Page/empServiceRecord" class="waves-effect"><i class="ion ion-ios-attach"></i><span>Service Record</span></a></li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-cash-register"></i>
-                                        <span> Payroll </span>
+                                        <span>Payroll</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1315,8 +1312,8 @@
 
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="mdi mdi-check-underline-circle "></i>
-                                        <span> Leave </span>
+                                        <i class="mdi mdi-check-underline-circle"></i>
+                                        <span>Leave</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1333,7 +1330,7 @@
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-angle-double-right"></i>
-                                        <span> Request </span>
+                                        <span>Request</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1341,17 +1338,22 @@
                                     </ul>
                                 </li>
 
+                                <li class="menu-title">Learning &amp; Development</li>
+                                <li><a href="<?= base_url(); ?>Page/trainingNeeds" class="waves-effect"><i class="ion ion-ios-checkbox-outline"></i><span>Training Needs</span></a></li>
+                                <li><a href="<?= base_url(); ?>available_trainings" class="waves-effect"><i class="mdi mdi-format-list-checks"></i><span>Available Training</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/individualDevelopment" class="waves-effect"><i class="ion ion-ios-filing"></i><span>Individual Development</span></a></li>
+
                                 <!-- Enrollment begin -->
                                 <?php
                                 $cstaff = $this->Common->one_cond_row('sections', 'IDNumber', $this->session->username);
                                 if (!empty($cstaff)) {
                                 ?>
 
-
+                                    <li class="menu-title">Classroom</li>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="fas fa-user-plus"></i>
-                                            <span> Enrollment </span>
+                                            <span>Enrollment</span>
                                             <span class="menu-arrow"></span>
                                         </a>
                                         <ul class="nav-second-level" aria-expanded="false">
@@ -1380,24 +1382,11 @@
 
                                 <!-- Enrollment end -->
 
-
+                                <li class="menu-title">Travel &amp; Recruitment</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="fas fa-chalkboard-teacher "></i>
-                                        <span> Recruitment </span>
-                                        <span class="menu-arrow"></span>
-                                    </a>
-                                    <ul class="nav-second-level" aria-expanded="false">
-                                        <li><a href="<?= base_url(); ?>Page/jobVacancy">Job Vacancies</a></li>
-                                        <li><a href="<?= base_url(); ?>Pages/ja/<?= $this->session->c_id; ?>">My Application</a></li>
-                                        <li><a href="<?= base_url(); ?>Pages/ah/<?= $this->session->c_id; ?>">Application History</a></li>
-                                    </ul>
-                                </li>
-
-                                <li>
-                                    <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="fas fa-box "></i>
-                                        <span> Authority to Travel </span>
+                                        <i class="fas fa-box"></i>
+                                        <span>Authority to Travel</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1415,37 +1404,44 @@
 
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="ion ion-md-paper"> </i>
-                                        <span> To Do </span>
+                                        <i class="fas fa-chalkboard-teacher"></i>
+                                        <span>Recruitment</span>
+                                        <span class="menu-arrow"></span>
+                                    </a>
+                                    <ul class="nav-second-level" aria-expanded="false">
+                                        <li><a href="<?= base_url(); ?>Page/jobVacancy">Job Vacancies</a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/ja/<?= $this->session->c_id; ?>">My Application</a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/ah/<?= $this->session->c_id; ?>">Application History</a></li>
+                                    </ul>
+                                </li>
+
+                                <li class="menu-title">Workspace</li>
+                                <li>
+                                    <a href="javascript: void(0);" class="waves-effect">
+                                        <i class="mdi mdi-check-circle-outline"></i>
+                                        <span>To Do</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
                                         <li><a href="<?= base_url(); ?>ToDo/">ToDo</a></li>
                                     </ul>
                                 </li>
-
-
                                 <li>
-                                    <a href="<?= base_url(); ?>Calendar/" target="_blank" class=" waves-effect">
-                                        <i class="ion ion-md-paper"> </i>
-                                        <span> Calendar </span>
-
+                                    <a href="<?= base_url(); ?>Calendar/" target="_blank" class="waves-effect">
+                                        <i class="mdi mdi-calendar-month-outline"></i>
+                                        <span>Calendar</span>
                                     </a>
-
+                                </li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Note/" class="waves-effect">
+                                        <i class="mdi mdi-note-text"></i>
+                                        <span>Notes</span>
+                                    </a>
                                 </li>
 
-                                <li>
-                                    <a href="<?= base_url(); ?>Note/" class=" waves-effect">
-                                        <i class="ion ion-md-paper"> </i>
-                                        <span> Notes </span>
-
-                                    </a>
-
-                                </li>
-                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>
-
-
-                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-user-alt"></i><span> Change Password </span></a></li>
+                                <li class="menu-title">Account</li>
+                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="mdi mdi-message-alert-outline"></i><span>System Feedback Form</span></a></li>
                                 <!-- <li><a href="<?= base_url(); ?>Page/changepassword/" class="waves-effect"><i class="ion ion-ios-keypad "></i><span>Change Password </span></a></li> -->
                                 <!-- <li>
                        <a href="javascript: void(0);" class="waves-effect">
@@ -1462,7 +1458,7 @@
                                 <!-- Request Email Sidebar -->
                             <?php elseif ($this->session->userdata('position') === 'readmin') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_sned"><i class="fas fa-scroll"></i>sample</a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_sned"><i class="fas fa-scroll"></i><span>sample</span></a></li>
 
                                 <!-- SMME Sidebar -->
                             <?php elseif ($this->session->userdata('position') === 'smme') : ?>
@@ -1470,7 +1466,7 @@
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-scroll"></i>
-                                        <spa>Implementation Plans</span>
+                                        <span>Implementation Plans</span>
                                             <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1561,7 +1557,7 @@
                                 <!-- SMME Sidebar -->
                             <?php elseif ($this->session->userdata('position') === 'sned') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_sned"><i class="fas fa-scroll"></i>Implementation Plans</a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_sned"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li>
 
 
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
@@ -1571,8 +1567,8 @@
 
                             <?php elseif ($this->session->userdata('position') === 'review') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_review"><i class="fas fa-scroll"></i>Implementation Plans</a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i>Approved Plans</a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_review"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i><span>Approved Plans</span></a></li>
 
 
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
@@ -1581,8 +1577,8 @@
 
                             <?php elseif ($this->session->userdata('position') === 'funds') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_funds"><i class="fas fa-scroll"></i>Implementation Plans</a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i>Approved Plans</a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_funds"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i><span>Approved Plans</span></a></li>
 
 
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
@@ -1591,7 +1587,7 @@
                             
                             <?php elseif ($this->session->userdata('position') === 'approval') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_funds"><i class="fas fa-scroll"></i>Implementation Plans</a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_funds"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li>
 
 
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
@@ -1623,8 +1619,8 @@
 
                                 <!-- School Sidebar -->
                             <?php elseif ($this->session->userdata('position') === 'School') : ?>
-                                <li><a href="<?= base_url(); ?>Page/schoolDashboard" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/schoolProfile" class="waves-effect"><i class="mdi mdi-school"></i><span>School Profile </span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/schoolDashboard" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/schoolProfile" class="waves-effect"><i class="mdi mdi-school-outline"></i><span>School Profile</span></a></li>
 
                                 <!--<li>-->
                                 <!--    <a href="javascript: void(0);" class="waves-effect">-->
@@ -1662,10 +1658,11 @@
                                 <!--<li><a href="<?= base_url(); ?>coor" class="waves-effect"><i class="mdi mdi-account-group "></i><span>Coordinatorships</span></a></li>-->
 
 
+                                <li class="menu-title">Recruitment</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-chalkboard-teacher"></i>
-                                        <span>Recruitment </span>
+                                        <span>Recruitment</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1779,10 +1776,11 @@
                                 </li> -->
 
 
+                                <li class="menu-title">Planning</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="mdi mdi-notebook-multiple"></i>
-                                        <span> Implementation Plans </span>
+                                        <span>Implementation Plans</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1820,7 +1818,7 @@
                                     </ul>
                                 </li> -->
                                 <!--<?php $imp = $this->Common->one_cond_row('implementing_school','school_id', $this->session->username); if($imp){?>-->
-                                <!--<li><a href="<?= base_url(); ?>provident_school"><i class="fab fa-whmcs"></i>Provident Loans</a></li>-->
+                                <!--<li><a href="<?= base_url(); ?>provident_school"><i class="fab fa-whmcs"></i><span>Provident Loans</span></a></li>-->
                                 <!--<?php } ?>-->
 
                                 <!--<li>-->
@@ -1836,7 +1834,7 @@
 
                                 <!--    </ul>-->
                                 <!--</li>-->
-                                <!--<li><a href="<?= base_url(); ?>Page/sbcp_list"><i class="mdi mdi-format-list-checks"></i>SBCP Monitoring Tool</a></li>-->
+                                <!--<li><a href="<?= base_url(); ?>Page/sbcp_list"><i class="mdi mdi-format-list-checks"></i><span>SBCP Monitoring Tool</span></a></li>-->
                                 <!--<li>-->
                                 <!--    <a href="javascript: void(0);" class="waves-effect">-->
                                 <!--        <i class="fas fa-box "></i>-->
@@ -1873,12 +1871,14 @@
 
 
 
-                                <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i>Manage Users</a></li>
+                                <li class="menu-title">Administration</li>
+                                <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i><span>Manage Users</span></a></li>
 
-                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>
-                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>
-                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
+                                <li class="menu-title">Account</li>
+                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="mdi mdi-message-alert-outline"></i><span>System Feedback Form</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class="mdi mdi-help-circle-outline"></i><span>Help</span></a></li>
+                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
 
                                 <!-- Accountant Sidebar -->
                             <?php elseif ($this->session->userdata('position') === 'Accountant') : ?>
@@ -1887,7 +1887,7 @@
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-scroll"></i>
-                                        <spa>Implementation Plans</span>
+                                        <span>Implementation Plans</span>
                                             <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1913,7 +1913,7 @@
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-scroll"></i>
-                                        <spa>Implementation Plans</span>
+                                        <span>Implementation Plans</span>
                                             <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1935,18 +1935,30 @@
 
                             <?php elseif ($this->session->position === 'sgod') : ?>
 
-                                <li><a href="<?= base_url(); ?>Page/deptDashboard" class="waves-effect"><i class="fas fa-user-alt"></i><span>Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_sgod_chief"><i class="fas fa-scroll"></i>Implementation Plans</a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i>Approved Plans</a></li>
+                                <li><a href="<?= base_url(); ?>Page/deptDashboard" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
 
+                                <li class="menu-title">Planning</li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_sgod_chief" class="waves-effect"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_sub_approved" class="waves-effect"><i class="fas fa-check-circle"></i><span>Approved Plans</span></a></li>
 
-                                <li><a href="<?= base_url(); ?>Page/sections"><i class="fas fa-dice-four"></i>Sections</a></li>
-
-                                <li><a href="<?= base_url(); ?>Page/memo" class="waves-effect"><i class=" fas fa-clipboard"></i>Memo</a></li>
+                                <li class="menu-title">Monitoring</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="fas fa-box "></i>
-                                        <span> Authority to Travel </span>
+                                        <i class="fas fa-book-open"></i>
+                                        <span>SBM</span>
+                                        <span class="menu-arrow"></span>
+                                    </a>
+                                    <ul class="nav-second-level" aria-expanded="false">
+                                        <li><a href="<?= base_url(); ?>Page/sbm">Dimensions</a></li>
+                                        <li><a href="<?= base_url(); ?>Page/sbm_sub">Indicators</a></li>
+                                        <li><a href="<?= base_url(); ?>Page/sbm_districts">SBM District List</a></li>
+                                        <li><a href="<?= base_url(); ?>Page/sbm_list">Self-Assesment Checklist</a></li>
+                                    </ul>
+                                </li>
+                                <li>
+                                    <a href="javascript: void(0);" class="waves-effect">
+                                        <i class="fas fa-box"></i>
+                                        <span>Authority to Travel</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -1958,30 +1970,21 @@
                                     </ul>
                                 </li>
 
-                                <li>
-                                    <a href="javascript: void(0);" class="waves-effect">
-                                        <i class="fas fa-book-open"></i>
-                                        <span> SBM </span>
-                                        <span class="menu-arrow"></span>
-                                    </a>
-                                    <ul class="nav-second-level" aria-expanded="false">
-                                        <li><a href="<?= base_url(); ?>Page/sbm">Dimensions</a></li>
-                                        <li><a href="<?= base_url(); ?>Page/sbm_sub">Indicators</a></li>
-                                        <li><a href="<?= base_url(); ?>Page/sbm_districts">SBM District List</a></li>
-                                        <li><a href="<?= base_url(); ?>Page/sbm_list">Self-Assesment Checklist</a></li>
-                                    </ul>
-                                </li>
-
-                                <li><a href="<?= base_url(); ?>Page/districts" class="waves-effect"><i class="fas fa-building"></i>Districts</a></li>
+                                <li class="menu-title">Records</li>
+                                <li><a href="<?= base_url(); ?>Page/districts" class="waves-effect"><i class="fas fa-building"></i><span>Districts</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/sections" class="waves-effect"><i class="fas fa-dice-four"></i><span>Sections</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/memo" class="waves-effect"><i class="fas fa-clipboard"></i><span>Memo</span></a></li>
 
                             <?php elseif ($this->session->position === 'plansup') : ?>
 
-                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
+
+                                <li class="menu-title">Planning</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-scroll"></i>
-                                        <spa>Implementation Plans</span>
-                                            <span class="menu-arrow"></span>
+                                        <span>Implementation Plans</span>
+                                        <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
 
@@ -1991,14 +1994,12 @@
                                         <li><a href="<?= base_url(); ?>Page/plansup_approved">Approved</a></li>
                                     </ul>
                                 </li>
-                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>
-                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
-                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
 
+                                <li class="menu-title">Records</li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-book-reader"></i>
-                                        <span> Schools </span>
+                                        <span>Schools</span>
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
@@ -2006,10 +2007,12 @@
                                         <li><a href="<?= base_url(); ?>Pages/schools?type=Private">Private</a></li>
                                     </ul>
                                 </li>
+                                <li><a href="#" class="waves-effect"><i class="fas fa-user"></i><span>Manage Users</span></a></li>
 
-
-
-                                <li><a href="#" class="waves-effect"><i class=" fas fa-user"></i>Manage Users</a></li>
+                                <li class="menu-title">Account</li>
+                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="mdi mdi-message-alert-outline"></i><span>System Feedback Form</span></a></li>
+                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
 
 
                             <?php elseif ($this->session->position === 'District' || $this->session->position === 'Evaluator' || $this->session->position === 'doceval' || $this->session->position === 'rater' || $this->session->position === 'raters') : ?>
@@ -2049,63 +2052,29 @@
                                     </li>
                                 <?php } ?>
                                 <?php if ($this->session->position != 'District') { ?>
-                                    <li><a href="<?= base_url(); ?>Pages/query_applicants"><i class="far fa-comment-dots "></i>Applicant's Query</a></li>
+                                    <li class="menu-title">Applicants</li>
+                                    <li><a href="<?= base_url(); ?>Pages/query_applicants" class="waves-effect"><i class="far fa-comment-dots"></i><span>Applicant's Query</span></a></li>
                                     <?php if ($hasAssigned) { ?>
-                                        <li><a href="<?= base_url(); ?>ApplicantQueryAssigned"><i class="far fa-comment-dots "></i>My Applicant Queries</a></li>
+                                        <li><a href="<?= base_url(); ?>ApplicantQueryAssigned" class="waves-effect"><i class="far fa-comment-dots"></i><span>My Applicant Queries</span></a></li>
                                     <?php } ?>
                                 <?php } ?>
-                                <!-- <li><a href="<?= base_url(); ?>Page/sbm_district_list"><i class="fas fa-user-plus"></i>SBM</a></li> -->
+                                <!-- <li><a href="<?= base_url(); ?>Page/sbm_district_list"><i class="fas fa-user-plus"></i><span>SBM</span></a></li> -->
 
                                 <?php if ($this->session->position == 'District') { ?>
-                                    <li>
-                                        <a href="javascript: void(0);" class="waves-effect">
-                                            <i class="mdi mdi-format-list-checks"></i>
-                                            <span> SBM</span>
-                                            <span class="menu-arrow"></span>
-                                        </a>
-                                        <ul class="nav-second-level" aria-expanded="false">
-                                            <li><a href="<?= base_url(); ?>Page/sbm_district_list">School List</a></li>
-                                            <li><a href="<?= base_url(); ?>Page/sbm_district_tech">Technical Assisstance</a></li>
-                                        </ul>
-                                    </li>
-                                    <li>
-                                        <a href="javascript: void(0);" class="waves-effect">
-                                            <i class="fas fa-box "></i>
-                                            <span> Authority to Travel </span>
-                                            <span class="menu-arrow"></span>
-                                        </a>
-                                        <ul class="nav-second-level" aria-expanded="false">
-                                            <li><a href="<?= base_url(); ?>Travel/travel_request_list_district/0">Local Travel</a></li>
-                                            <li><a href="<?= base_url(); ?>Travel/travel_request_list_district/1">Outside the Division</a></li>
-                                            <li><a href="<?= base_url(); ?>Travel/travel_list_district">Travel List</a></li>
-
-                                        </ul>
-                                    </li>
-
-                                    <li>
-                                        <a href="javascript: void(0);" class="waves-effect">
-                                            <i class="fas fa-user-plus"></i>
-                                            <span> Brigada Eskwela</span>
-                                            <span class="menu-arrow"></span>
-                                        </a>
-                                        <ul class="nav-second-level" aria-expanded="false">
-                                            <li><a href="<?= base_url(); ?>Brigada/spc_district_list" target="_blank">School Preparedness</a></li>
-
-                                        </ul>
-                                    </li>
-                                    <li><a href="<?= base_url(); ?>Coor/mycoor_district" class="waves-effect"><i class="mdi mdi-account-group "></i><span>Math Coordinatorships</span></a></li>
-
-
+                                    <li class="menu-title">Schools</li>
                                     <li>
                                         <a href="<?= base_url(); ?>Page/school_list" class="waves-effect">
                                             <i class="mdi mdi-format-list-checks"></i>
                                             <span>School List</span>
                                         </a>
                                     </li>
+                                    <li><a href="<?= base_url(); ?>Coor/mycoor_district" class="waves-effect"><i class="mdi mdi-account-group"></i><span>Math Coordinatorships</span></a></li>
+
+                                    <li class="menu-title">Planning</li>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="mdi mdi-notebook-multiple"></i>
-                                            <span> Implementation Plans </span>
+                                            <span>Implementation Plans</span>
                                             <span class="menu-arrow"></span>
                                         </a>
                                         <ul class="nav-second-level" aria-expanded="false">
@@ -2116,35 +2085,71 @@
 
                                     </li>
 
+                                    <li class="menu-title">Monitoring</li>
+                                    <li>
+                                        <a href="javascript: void(0);" class="waves-effect">
+                                            <i class="mdi mdi-format-list-checks"></i>
+                                            <span>SBM</span>
+                                            <span class="menu-arrow"></span>
+                                        </a>
+                                        <ul class="nav-second-level" aria-expanded="false">
+                                            <li><a href="<?= base_url(); ?>Page/sbm_district_list">School List</a></li>
+                                            <li><a href="<?= base_url(); ?>Page/sbm_district_tech">Technical Assisstance</a></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <a href="javascript: void(0);" class="waves-effect">
+                                            <i class="fas fa-user-plus"></i>
+                                            <span>Brigada Eskwela</span>
+                                            <span class="menu-arrow"></span>
+                                        </a>
+                                        <ul class="nav-second-level" aria-expanded="false">
+                                            <li><a href="<?= base_url(); ?>Brigada/spc_district_list" target="_blank">School Preparedness</a></li>
+
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <a href="javascript: void(0);" class="waves-effect">
+                                            <i class="fas fa-box"></i>
+                                            <span>Authority to Travel</span>
+                                            <span class="menu-arrow"></span>
+                                        </a>
+                                        <ul class="nav-second-level" aria-expanded="false">
+                                            <li><a href="<?= base_url(); ?>Travel/travel_request_list_district/0">Local Travel</a></li>
+                                            <li><a href="<?= base_url(); ?>Travel/travel_request_list_district/1">Outside the Division</a></li>
+                                            <li><a href="<?= base_url(); ?>Travel/travel_list_district">Travel List</a></li>
+
+                                        </ul>
+                                    </li>
+
                                 <?php } ?>
 
-
-
-                                <!-- <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i>Manage Users</a></li> -->
-                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_eval_pass"><i class="fas fa-user-alt"></i><span> Change Password </span></a></li>
-                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
+                                <!-- <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i><span>Manage Users</span></a></li> -->
+                                <li class="menu-title">Account</li>
+                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_eval_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
+                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
 
                             <?php elseif ($this->session->position === 'Validator') : ?>
 
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="fas fa-user-alt"></i><span> Dashboard </span></a></li>
 
-                                <li><a href="<?= base_url(); ?>Page/jobVacancy"><i class="fas fa-chalkboard-teacher"></i>Job Vacancies</a></li>
+                                <li><a href="<?= base_url(); ?>Page/jobVacancy"><i class="fas fa-chalkboard-teacher"></i><span>Job Vacancies</span></a></li>
 
-                                <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i>Manage Users</a></li>
+                                <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i><span>Manage Users</span></a></li>
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
 
                             <?php elseif ($this->session->position == "sbfp") : ?>
 
-                                <li><a href="<?= base_url(); ?>Page/sbfp_dashboard"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
-                                <li><a href="<?= base_url(); ?>Page/uploadEnrolees"><i class="mdi mdi-folder-edit-outline"></i>Upload Data</a></li>
-                                <li><a href="<?= base_url(); ?>Page/sbfp_form"><i class="mdi mdi-database-import"></i>SBFP Data</a></li>
-                                <li><a href="<?= base_url(); ?>Page/baseline" target="_blank"><i class="mdi mdi-weight"></i>Baseline Weighing</a></li>
-                                <li><a href="<?= base_url(); ?>Page/baseline2nd" target="_blank"><i class="mdi mdi-weight-kilogram"></i>Second Weighing</a></li>
-                                <li><a href="<?= base_url(); ?>Page/baseline3nd" target="_blank"><i class="mdi mdi-weight-kilogram"></i>Third Weighing</a></li>
-                                <li><a href="<?= base_url(); ?>Page/sbfp_form1" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>Form 1</a></li>
-                                <li><a href="<?= base_url(); ?>Page/sbfp_form2" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>Form 2</a></li>
-                                <li><a href="<?= base_url(); ?>Page/sbfp_form3" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>Form 3</a></li>
-                                <li><a href="<?= base_url(); ?>Page/sbfp_sf8" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>SF 8</a></li>
+                                <li><a href="<?= base_url(); ?>Page/sbfp_dashboard"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/uploadEnrolees"><i class="mdi mdi-folder-edit-outline"></i><span>Upload Data</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/sbfp_form"><i class="mdi mdi-database-import"></i><span>SBFP Data</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/baseline" target="_blank"><i class="mdi mdi-weight"></i><span>Baseline Weighing</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/baseline2nd" target="_blank"><i class="mdi mdi-weight-kilogram"></i><span>Second Weighing</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/baseline3nd" target="_blank"><i class="mdi mdi-weight-kilogram"></i><span>Third Weighing</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/sbfp_form1" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>Form 1</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/sbfp_form2" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>Form 2</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/sbfp_form3" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>Form 3</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/sbfp_sf8" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>SF 8</span></a></li>
 
                             <?php elseif ($this->session->userdata('position') === 'private') : ?>
 
@@ -2252,20 +2257,20 @@
 
                                 <?php elseif ($sp->position == "SBFP") : ?>
 
-                                    <li><a href="<?= base_url(); ?>Page/sbfp_dashboard"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/uploadEnrolees"><i class="mdi mdi-folder-edit-outline"></i>Upload Data</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/sbfp_form"><i class="mdi mdi-database-import"></i>SBFP Data</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/baseline" target="_blank"><i class="mdi mdi-weight"></i>Baseline Weighing</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/baseline2nd" target="_blank"><i class="mdi mdi-weight-kilogram"></i>Second Weighing</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/baseline3nd" target="_blank"><i class="mdi mdi-weight-kilogram"></i>Third Weighing</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/sbfp_form1" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>Form 1</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/sbfp_form2" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>Form 2</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/sbfp_form3" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>Form 3</a></li>
-                                    <li><a href="<?= base_url(); ?>Page/sbfp_sf8" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>SF 8</a></li>
+                                    <li><a href="<?= base_url(); ?>Page/sbfp_dashboard"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/uploadEnrolees"><i class="mdi mdi-folder-edit-outline"></i><span>Upload Data</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/sbfp_form"><i class="mdi mdi-database-import"></i><span>SBFP Data</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/baseline" target="_blank"><i class="mdi mdi-weight"></i><span>Baseline Weighing</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/baseline2nd" target="_blank"><i class="mdi mdi-weight-kilogram"></i><span>Second Weighing</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/baseline3nd" target="_blank"><i class="mdi mdi-weight-kilogram"></i><span>Third Weighing</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/sbfp_form1" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>Form 1</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/sbfp_form2" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>Form 2</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/sbfp_form3" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>Form 3</span></a></li>
+                                    <li><a href="<?= base_url(); ?>Page/sbfp_sf8" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>SF 8</span></a></li>
 
                                 <?php elseif ($sp->position == "Service Record Staff") : ?>
 
-                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
+                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="ion ion-ios-attach"></i>
@@ -2315,7 +2320,7 @@
 
                                 <?php elseif ($sp->position == "Leave Credits Staff") : ?>
 
-                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
+                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="mdi mdi-check-underline-circle "></i>
@@ -2332,7 +2337,7 @@
                                     </li>
 
                                 <?php elseif ($sp->position == "Nurse") : ?>
-                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
+                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="far fa-address-book "></i>
@@ -2369,7 +2374,7 @@
                                             <li><a href="<?= base_url(); ?>Page/sbfp_form1" target="_blank">Form 1</a></li>
                                             <li><a href="<?= base_url(); ?>Page/sbfp_form2" target="_blank">Form 2</a></li>
                                             <li><a href="<?= base_url(); ?>Page/sbfp_form3" target="_blank">Form 3</a></li>
-                                            <li><a href="<?= base_url(); ?>Page/sbfp_sf8" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i>SF 8</a></li>
+                                            <li><a href="<?= base_url(); ?>Page/sbfp_sf8" target="_blank"><i class="mdi mdi-file-document-box-check-outline"></i><span>SF 8</span></a></li>
                                         </ul>
                                     </li>
 
@@ -2384,7 +2389,7 @@
                                             <li><a href="#">Patient's Case Summary</a></li>
                                         </ul>
                                     </li>
-                                    <!-- <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i>Manage Sub Users</a></li>  -->
+                                    <!-- <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i><span>Manage Sub Users</span></a></li>  -->
 
                                     <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>
                                     <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>
@@ -2394,7 +2399,7 @@
 
                                 <?php elseif ($sp->position == "Enrollment In-Charge") : ?>
 
-                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
+                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="fas fa-user-plus"></i>
@@ -2424,7 +2429,7 @@
 
                                 <?php elseif ($sp->position == "PDO") : ?>
 
-                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i>Dashboard</a></li>
+                                    <li><a href="<?= base_url(); ?>"><i class="mdi mdi-view-dashboard"></i><span>Dashboard</span></a></li>
                                     <li>
                                         <a href="javascript: void(0);" class="waves-effect">
                                             <i class="fas fa-user-plus"></i>

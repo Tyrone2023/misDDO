@@ -1,101 +1,148 @@
+<?php
+// SGOD Chief landing page. Counts arrive as CI query objects from Pages::view().
+$schools   = is_object($school)   ? $school->num_rows()   : 0;
+$accoms    = is_object($accom)    ? $accom->num_rows()    : 0;
+$sections  = is_object($section)  ? $section->num_rows()  : 0;
+// Replaces the "Users: 55" card, which was a hardcoded literal.
+$districts = (isset($district) && is_object($district)) ? $district->num_rows() : 0;
 
+$cards = array(
+    array(
+        'value' => $schools,
+        'label' => 'Schools',
+        'sub'   => 'Public and private schools',
+        'link'  => 'Pages/schools?type=Public',
+        'icon'  => 'mdi-school-outline',
+        'tone'  => 'mis-t-blue',
+    ),
+    array(
+        'value' => $districts,
+        'label' => 'Districts',
+        'sub'   => 'Districts in the division',
+        'link'  => 'Page/districts',
+        'icon'  => 'mdi-map-marker-multiple',
+        'tone'  => 'mis-t-teal',
+    ),
+    array(
+        'value' => $sections,
+        'label' => 'Sections',
+        'sub'   => 'SGOD sections on record',
+        'link'  => 'Page/sections',
+        'icon'  => 'mdi-view-grid',
+        'tone'  => 'mis-t-sky',
+    ),
+    array(
+        'value' => $accoms,
+        'label' => 'Accomplishments',
+        'sub'   => 'Reported section accomplishments',
+        'link'  => 'Page/sections',
+        'icon'  => 'mdi-trophy-outline',
+        'tone'  => 'mis-t-purple',
+    ),
+);
 
-            <!-- ============================================================== -->
-            <!-- Start Page Content here -->
-            <!-- ============================================================== -->
+$quickLinks = array(
+    array('link' => 'Page/aip_sub_sgod_chief', 'icon' => 'mdi-notebook-multiple',    'label' => 'Implementation Plans', 'sub' => 'Plans awaiting the chief'),
+    array('link' => 'Page/aip_sub_approved',   'icon' => 'mdi-check-decagram',       'label' => 'Approved Plans',       'sub' => 'Reached final approval'),
+    array('link' => 'Page/sbm_list',           'icon' => 'mdi-clipboard-list-outline','label' => 'SBM',                 'sub' => 'Self-assessment checklist'),
+    array('link' => 'Page/memo',               'icon' => 'mdi-file-document-outline','label' => 'Memo',                 'sub' => 'Issued memoranda'),
+);
+?>
 
-            <div class="content-page">
-                <div class="content">
+<!-- ============================================================== -->
+<!-- Start Page Content here -->
+<!-- ============================================================== -->
 
-                    <!-- Start Content-->
-                    <div class="container-fluid">
+<div class="content-page">
+    <div class="content">
 
-                        <!-- start page title -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="page-title-box">
-                                    <h4 class="page-title"><?= $title; ?></h4>
-                                    <div class="page-title-right">
-                                        <ol class="breadcrumb p-0 m-0">
-                                            <li class="breadcrumb-item"><a href="#" data-toggle="modal" data-target="#myModal">Current Fiscal Year : <span class="badge badge-success"><?= $this->session->cur_fy; ?></span></a></li>
-                                        </ol>
-                                    </div>
-                                    <div class="clearfix"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- end page title -->
+        <!-- Start Content-->
+        <div class="container-fluid mis-shell">
 
-                        <div class="row">
-                            <div class="col-xl-3 col-sm-6">
-                                <div class="card bg-primary">
-                                    <div class="card-body widget-style-2">
-                                        <div class="text-white media">
-                                            <div class="media-body align-self-center">
-                                                <h2 class="my-0 text-white"><span data-plugin="counterup"><?= $school->num_rows(); ?></span></h2>
-                                                <p class="mb-0">Schools</p>
-                                            </div>
-                                            <i class="ion-md-eye"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-3 col-sm-6">
-                                <div class="card bg-purple">
-                                    <div class="card-body widget-style-2">
-                                        <div class="text-white media">
-                                            <div class="media-body align-self-center">
-                                                <h2 class="my-0 text-white"><span data-plugin="counterup"><?= $accom->num_rows(); ?></span></h2>
-                                                <p class="mb-0">Accomplishments</p>
-                                            </div>
-                                            <i class="ion-md-paper-plane"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-3 col-sm-6">
-                                <div class="card bg-info">
-                                    <div class="card-body widget-style-2">
-                                        <div class="text-white media">
-                                            <div class="media-body align-self-center">
-                                                <h2 class="my-0 text-white"><span data-plugin="counterup"><?= $section->num_rows(); ?></span></h2>
-                                                <p class="mb-0">Sections</p>
-                                            </div>
-                                            <i class="ion-ios-pricetag"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-3 col-sm-6">
-                                <div class="card bg-success">
-                                    <div class="card-body widget-style-2">
-                                        <div class="text-white media">
-                                            <div class="media-body align-self-center">
-                                                <h2 class="my-0 text-white"><span data-plugin="counterup">55</span></h2>
-                                                <p class="mb-0">Users</p>
-                                            </div>
-                                            <i class="mdi mdi-comment-multiple"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                      
-                        <!-- End row -->
-
-                        
-                    
-
-
-                    </div>
-                    <!-- end container-fluid -->
-
+            <div class="mis-hero">
+                <div class="mis-hero-text">
+                    <span class="mis-hero-eyebrow"><i class="mdi mdi-office-building"></i> SGOD</span>
+                    <h3 class="mis-hero-title"><?= html_escape($title); ?></h3>
+                    <p class="mis-hero-sub">
+                        Division coverage at a glance for fiscal year
+                        <strong><?= html_escape($this->session->cur_fy); ?></strong>.
+                    </p>
                 </div>
-                <!-- end content -->
+                <div class="mis-hero-aside">
+                    <a href="#" class="mis-pill" data-toggle="modal" data-target="#myModal">
+                        <i class="mdi mdi-calendar-outline"></i> FY <?= html_escape($this->session->cur_fy); ?>
+                        <i class="mdi mdi-pencil-outline"></i>
+                    </a>
+                </div>
+            </div>
 
-                
+            <div class="mis-grid">
+                <?php foreach ($cards as $card) : ?>
+                    <a href="<?= base_url() . $card['link']; ?>" class="mis-card <?= $card['tone']; ?>">
+                        <div class="mis-card-top">
+                            <span class="mis-card-num"><?= number_format($card['value']); ?></span>
+                            <span class="mis-card-ico"><i class="mdi <?= $card['icon']; ?>"></i></span>
+                        </div>
+                        <div class="mis-card-label"><?= $card['label']; ?></div>
+                        <div class="mis-card-sub"><?= $card['sub']; ?></div>
+                        <span class="mis-card-go">View list <i class="mdi mdi-arrow-right"></i></span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
 
-                
+            <div class="mis-panel">
+                <div class="mis-panel-head">
+                    <div>
+                        <h5 class="mis-panel-title"><i class="mdi mdi-flash-outline"></i> Quick access</h5>
+                        <p class="mis-panel-sub">The screens this account uses most often</p>
+                    </div>
+                </div>
+                <div class="mis-panel-body">
+                    <div class="mis-links">
+                        <?php foreach ($quickLinks as $q) : ?>
+                            <a href="<?= base_url() . $q['link']; ?>" class="mis-link">
+                                <i class="mdi <?= $q['icon']; ?>"></i>
+                                <span><?= $q['label']; ?><small><?= $q['sub']; ?></small></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- end container-fluid -->
+
+    </div>
+    <!-- end content -->
+
+    <!-- Change Fiscal Year. templates/modal.php does not define #myModal, so the
+         old breadcrumb link on this page opened nothing. -->
+    <div id="myModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success">
+                    <h5 class="modal-title text-white" id="myModalLabel">Change Fiscal Year</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form action="<?= base_url('Pages/change_fy') ?>" method="post">
+                        <div class="form-group row">
+                            <div class="col-lg-12">
+                                <select name="new_fy" class="form-control" onchange="this.form.submit()">
+                                    <option disabled selected>Change FY</option>
+                                    <?php for ($y = 2023; $y <= 2030; $y++) : ?>
+                                        <option value="<?= $y ?>" <?= ($this->session->userdata('cur_fy') == $y) ? 'selected' : '' ?>>
+                                            <?= $y ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->

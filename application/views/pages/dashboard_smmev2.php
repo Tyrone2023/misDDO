@@ -1,138 +1,166 @@
+<?php
+// AIP dashboard for the `review` and `funds` roles. Both sit mid-pipeline, so
+// the view shows every stage and highlights the one this role owns.
+// $counts comes from SGODModel::aip_stage_counts() — the same source the Plan
+// Supervisor dashboard uses. Before, this page rendered hardcoded figures.
+$counts = isset($counts) && is_array($counts)
+    ? $counts
+    : array('submitted' => 0, 'reviewed' => 0, 'funds' => 0, 'approved' => 0);
 
-            
-           <!-- ============================================================== -->
-            <!-- Start Page Content here -->
-            <!-- ============================================================== -->
+$fy = isset($fy) ? $fy : $this->session->cur_fy;
+$districts = (isset($district) && is_object($district)) ? $district->num_rows() : 0;
 
-            <div class="content-page">
-                <div class="content">
+$isFunds = ($this->session->position == 'funds');
 
+// The stage this role acts on gets the emphasis treatment.
+$ownStage = $isFunds ? 'funds' : 'reviewed';
 
-                    <!-- Start Content-->
-                    <div class="container-fluid">
+$cards = array(
+    array(
+        'key'   => 'submitted',
+        'value' => (int) $counts['submitted'],
+        'label' => 'Submitted AIP',
+        'sub'   => 'Schools that submitted a plan',
+        'link'  => 'Page/aip_sub',
+        'icon'  => 'mdi-send-check-outline',
+        'tone'  => 'mis-t-blue',
+    ),
+    array(
+        'key'   => 'reviewed',
+        'value' => (int) $counts['reviewed'],
+        'label' => 'Reviewed',
+        'sub'   => 'Passed the review stage',
+        'link'  => 'Page/aip_sub_review',
+        'icon'  => 'mdi-file-find-outline',
+        'tone'  => 'mis-t-sky',
+    ),
+    array(
+        'key'   => 'funds',
+        'value' => (int) $counts['funds'],
+        'label' => 'Funds Available',
+        'sub'   => 'Certified with available funds',
+        'link'  => 'Page/aip_sub_funds',
+        'icon'  => 'mdi-cash-multiple',
+        'tone'  => 'mis-t-amber',
+    ),
+    array(
+        'key'   => 'approved',
+        'value' => (int) $counts['approved'],
+        'label' => 'Approved',
+        'sub'   => 'Reached final approval',
+        'link'  => 'Page/aip_sub_approved',
+        'icon'  => 'mdi-check-decagram',
+        'tone'  => 'mis-t-green',
+    ),
+);
+?>
 
-                        <!-- start page title -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="page-title-box">
+<!-- ============================================================== -->
+<!-- Start Page Content here -->
+<!-- ============================================================== -->
 
-                                    <div class="page-title-right">
-                                        <ol class="breadcrumb p-0 m-0">
-                                            <li class="breadcrumb-item"><a href="#" data-toggle="modal" data-target="#myModal">Current Fiscal Year : <span class="badge badge-success"><?= $this->session->cur_fy; ?></span></a></li>
-                                        </ol>
-                                    </div>
-                                    <div class="clearfix"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- end page title -->
-                       
-                        <div class="row">
-                            <div class="col-xl-3 col-sm-6">
-                                <div class="card bg-pink">
-                                    <div class="card-body widget-style-2">
-                                        <div class="text-white media">
-                                            <div class="media-body align-self-center">
-                                                <h2 class="my-0 text-white"><a href="<?=base_url(); ?>Page/aip_sub_district" class="text-white"><span data-plugin="counterup">18</span></a></h2>
-                                                <p class="mb-0 ">District</p>
-                                            </div>
-                                            <i class="ion ion-md-people"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+<div class="content-page">
+    <div class="content">
 
-                            <div class="col-xl-3 col-sm-6">
-                                <div class="card bg-purple">
-                                    <div class="card-body widget-style-2">
-                                        <div class="text-white media">
-                                            <div class="media-body align-self-center">
-                                                <h2 class="my-0 text-white"><a href="<?=base_url(); ?>Page/aip_sub"  class="text-white"><span data-plugin="counterup">10</span></a></h2>
-                                                <p class="mb-0">SUBMITTED</p>
-                                            </div>
-                                            <i class="ion ion-md-person-add "></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+        <!-- Start Content-->
+        <div class="container-fluid mis-shell">
 
-                            <div class="col-xl-3 col-sm-6">
-                                <div class="card bg-info">
-                                    <div class="card-body widget-style-2">
-                                        <div class="text-white media">
-                                            <div class="media-body align-self-center">
-                                                <h2 class="my-0 text-white"><a href="<?=base_url(); ?>Page/aip_approved"  class="text-white"><span data-plugin="counterup">3</span></a></h2>
-                                                <p class="mb-0">APPROVED</p>
-                                            </div>
-                                            <i class=" ion ion-md-contact"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-3 col-sm-6">
-                                <div class="card bg-primary">
-                                    <div class="card-body widget-style-2">
-                                        <div class="text-white media">
-                                            <div class="media-body align-self-center">
-                                                <h2 class="my-0 text-white"><a href="<?=base_url(); ?>Page/aip_requested" class="text-white"><span data-plugin="counterup">20</span></a></h2>
-                                                <p class="mb-0">REQUESTED</p>
-                                            </div>
-                                            <i class="  ion ion-md-person"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- End row -->
-
-                        <!-- <div class="row">
-                            <div class="col-12">
-                                <div id="barchart_values"></div>
-                            </div>
-                        </div> -->
-
-                        
-
-                        
-
-                        
-                    
-
+            <div class="mis-hero">
+                <div class="mis-hero-text">
+                    <span class="mis-hero-eyebrow">
+                        <i class="mdi <?= $isFunds ? 'mdi-cash-usd-outline' : 'mdi-file-find-outline'; ?>"></i>
+                        <?= $isFunds ? 'Funds Certification' : 'Plan Review'; ?>
+                    </span>
+                    <h3 class="mis-hero-title"><?= html_escape($title); ?></h3>
+                    <p class="mis-hero-sub">
+                        Annual Implementation Plan pipeline for fiscal year <strong><?= html_escape($fy); ?></strong>
+                        across <strong><?= number_format($districts); ?></strong> districts.
+                        Select any count to open its list.
+                    </p>
                 </div>
-                <!-- end content -->
+                <div class="mis-hero-aside">
+                    <div class="mis-hero-stat">
+                        <span class="mis-hero-stat-value"><?= number_format((int) $counts[$ownStage]); ?></span>
+                        <span class="mis-hero-stat-label"><?= $isFunds ? 'Certified' : 'Reviewed'; ?></span>
+                    </div>
+                    <a href="#" class="mis-pill" data-toggle="modal" data-target="#myModal">
+                        <i class="mdi mdi-calendar-outline"></i> FY <?= html_escape($fy); ?>
+                        <i class="mdi mdi-pencil-outline"></i>
+                    </a>
+                </div>
+            </div>
 
-                 <!-- sample modal content -->
-                                        <div id="myModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="display: none;" aria-hidden="true">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header bg-success">
-                                                        <h5 class="modal-title text-white" id="myModalLabel">Change Fiscal Year</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                    <form action="<?= base_url('Pages/change_fy') ?>" method="post">
-                                                        <div class="form-group row">
-                                                            <div class="col-lg-12">
-                                                                <select name="new_fy" class="form-control" onchange="this.form.submit()">
-                                                                <option disabled selected>Change FY</option>
-                                                                <?php for ($y = 2023; $y <= 2030; $y++) : ?>
-                                                                    <option value="<?= $y ?>" <?= ($this->session->userdata('cur_fy') == $y) ? 'selected' : '' ?>>
-                                                                        <?= $y ?>
-                                                                    </option>
-                                                                <?php endfor; ?>
-                                                            </select>
-                                                            </div>
-                                                        </div>
-                                                    </form>
-                                                    </div>
-                                                </div>
-                                                <!-- /.modal-content -->
-                                            </div>
-                                            <!-- /.modal-dialog -->
-                                        </div>
-                                        <!-- /.modal -->
+            <div class="mis-grid">
+                <?php foreach ($cards as $card) : ?>
+                    <a href="<?= base_url() . $card['link']; ?>" class="mis-card <?= $card['tone']; ?>">
+                        <div class="mis-card-top">
+                            <span class="mis-card-num"><?= number_format($card['value']); ?></span>
+                            <span class="mis-card-ico"><i class="mdi <?= $card['icon']; ?>"></i></span>
+                        </div>
+                        <div class="mis-card-label">
+                            <?= $card['label']; ?>
+                            <?php if ($card['key'] === $ownStage) : ?>
+                                <span class="mis-chip mis-chip-blue ml-1">Your stage</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="mis-card-sub"><?= $card['sub']; ?></div>
+                        <span class="mis-card-go">View list <i class="mdi mdi-arrow-right"></i></span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
 
-                
+            <div class="mis-panel">
+                <div class="mis-panel-head">
+                    <div>
+                        <h5 class="mis-panel-title"><i class="mdi mdi-format-list-bulleted"></i> Plan lists</h5>
+                        <p class="mis-panel-sub">Every stage of the pipeline</p>
+                    </div>
+                </div>
+                <div class="mis-panel-body">
+                    <div class="mis-links">
+                        <?php foreach ($cards as $card) : ?>
+                            <a href="<?= base_url() . $card['link']; ?>" class="mis-link">
+                                <i class="mdi <?= $card['icon']; ?>"></i>
+                                <span><?= $card['label']; ?><small><?= $card['sub']; ?></small></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
 
-                
+        </div>
+        <!-- end container-fluid -->
+
+    </div>
+    <!-- end content -->
+
+    <!-- Change Fiscal Year -->
+    <div id="myModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" style="display: none;" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success">
+                    <h5 class="modal-title text-white" id="myModalLabel">Change Fiscal Year</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form action="<?= base_url('Pages/change_fy') ?>" method="post">
+                        <div class="form-group row">
+                            <div class="col-lg-12">
+                                <select name="new_fy" class="form-control" onchange="this.form.submit()">
+                                    <option disabled selected>Change FY</option>
+                                    <?php for ($y = 2023; $y <= 2030; $y++) : ?>
+                                        <option value="<?= $y ?>" <?= ($this->session->userdata('cur_fy') == $y) ? 'selected' : '' ?>>
+                                            <?= $y ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div>
+    <!-- /.modal -->

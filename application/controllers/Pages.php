@@ -245,6 +245,8 @@ class Pages extends CI_Controller
             $result['sub'] = $this->SGODModel->two_cond_count_rows('sgod_aip_submit', 'fy', $fy, 'status', 0);
             $result['ap'] = $this->SGODModel->two_cond_count_rows('sgod_aip_submit', 'fy', $fy, 'status', 1);
             $result['req'] = $this->SGODModel->two_cond_count_rows('sgod_aip_request', 'fy', $fy, 'stat', 0);
+            // The District card used to render a hardcoded 18.
+            $result['district'] = $this->Common->no_cond_count_row('district');
 
 
 
@@ -287,6 +289,7 @@ class Pages extends CI_Controller
             $result['ap'] = $this->SGODModel->two_cond_count_rows('sgod_aip_submit', 'fy', '2024', 'status', 1);
             $result['req'] = $this->SGODModel->two_cond_count_rows('sgod_aip_request', 'fy', '2024', 'stat', 0);
             $result['last'] = $this->SGODModel->get_last_record('sgod_school_allocation');
+            $result['district'] = $this->Common->no_cond_count_row('district');
 
 
 
@@ -303,16 +306,14 @@ class Pages extends CI_Controller
                 show_404();
             }
 
-            $result['title'] = "Company List";
+            $result['title'] = "Plan Review Dashboard";
 
-
-            // $result['data'] = $this->Page_model->count_all('hris_staff');
-            // $result['sub'] = $this->SGODModel->two_cond_count_rows('sgod_aip_submit', 'fy', '2024', 'status', 0);
-            // $result['ap'] = $this->SGODModel->two_cond_count_rows('sgod_aip_submit', 'fy', '2024', 'status', 1);
-            // $result['req'] = $this->SGODModel->two_cond_count_rows('sgod_aip_request', 'fy', '2024', 'stat', 0);
-            // $result['last'] = $this->SGODModel->get_last_record('sgod_school_allocation');
-
-
+            // The view used to render hardcoded figures. Reuse the same stage
+            // counts the Plan Supervisor dashboard is built from so the numbers
+            // are real and follow the selected fiscal year.
+            $result['fy'] = $this->session->cur_fy;
+            $result['counts'] = $this->SGODModel->aip_stage_counts($this->session->cur_fy);
+            $result['district'] = $this->Common->no_cond_count_row('district');
 
             $this->load->view('templates/head');
             $this->load->view('templates/header');
@@ -348,16 +349,13 @@ class Pages extends CI_Controller
                 show_404();
             }
 
-            $result['title'] = "Company List";
+            $result['title'] = "Funds Certification Dashboard";
 
-
-            // $result['data'] = $this->Page_model->count_all('hris_staff');
-            // $result['sub'] = $this->SGODModel->two_cond_count_rows('sgod_aip_submit', 'fy', '2024', 'status', 0);
-            // $result['ap'] = $this->SGODModel->two_cond_count_rows('sgod_aip_submit', 'fy', '2024', 'status', 1);
-            // $result['req'] = $this->SGODModel->two_cond_count_rows('sgod_aip_request', 'fy', '2024', 'stat', 0);
-            // $result['last'] = $this->SGODModel->get_last_record('sgod_school_allocation');
-
-
+            // Same as the 'review' branch above: real stage counts instead of the
+            // hardcoded figures this view used to render.
+            $result['fy'] = $this->session->cur_fy;
+            $result['counts'] = $this->SGODModel->aip_stage_counts($this->session->cur_fy);
+            $result['district'] = $this->Common->no_cond_count_row('district');
 
             $this->load->view('templates/head');
             $this->load->view('templates/header');
@@ -365,7 +363,7 @@ class Pages extends CI_Controller
             $this->load->view('templates/modal');
             $this->load->view('templates/footer');
         }
-        
+
        
         
 
@@ -550,7 +548,9 @@ class Pages extends CI_Controller
             $data['school'] = $this->Common->no_cond_count_row('schools');
             $data['accom'] = $this->Common->no_cond_count_row('sgod_accomplishments');
             $data['section'] = $this->Common->no_cond_count_row('sgod_sections');
-            
+            // The Users card used to render a hardcoded 55.
+            $data['district'] = $this->Common->no_cond_count_row('district');
+
 
 
             $this->load->view('templates/head');
