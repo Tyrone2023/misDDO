@@ -1,38 +1,42 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
-// $config = array(
-//     'protocol' => 'ssmtp', // 'mail', 'sendmail', or 'smtp'
-//     'smtp_host' => 'ssl://ssmtp.googlemail.com', 
-//     'smtp_port' => 465,
-//     'smtp_user' => 'depedroxidev@gmail.com',
-//     'smtp_pass' => 'Caballero18',
-//     'smtp_crypto' => 'ssl', //can be 'ssl' or 'tls' for example
-//     'mailtype' => 'text', //plaintext 'text' mails or 'html'
-//     'smtp_timeout' => '4', //in seconds
-//     'charset' => 'iso-8859-1',
-//     'wordwrap' => TRUE
-// );
+/*
+| -------------------------------------------------------------------------
+| SMTP CREDENTIALS
+| -------------------------------------------------------------------------
+|
+| Used by the mail queue worker (Mailqueue::run) and by anything else that
+| loads CodeIgniter's Email library. Nothing sends mail directly from a web
+| request any more - see application/config/mail_queue.php.
+|
+| Every setting can be overridden from the environment, so credentials can be
+| rotated on the live server - and the whole thing pointed somewhere else for
+| testing - without editing this file. The literals are the fallback for
+| machines with no environment set up.
+|
+| To check the credentials without sending anything:
+|   php index.php mailqueue check
+*/
 
 $config['protocol']     = 'smtp';
-$config['smtp_host']    = 'mail.depedddo-mis.com';
-$config['smtp_user']    = 'ddorecruitmentsystem@depedddo-mis.com';
-$config['smtp_pass']    = 'moth34board';
-$config['smtp_port']    = 465;
-$config['smtp_crypto']  = 'ssl';
+$config['smtp_host']    = getenv('SRMS_SMTP_HOST') ?: 'mail.depedddo-mis.com';
+$config['smtp_user']    = getenv('SRMS_SMTP_USER') !== FALSE ? getenv('SRMS_SMTP_USER') : 'ddorecruitmentsystem@depedddo-mis.com';
+$config['smtp_pass']    = getenv('SRMS_SMTP_PASS') !== FALSE ? getenv('SRMS_SMTP_PASS') : '.P0liceReport';
+$config['smtp_port']    = (int) (getenv('SRMS_SMTP_PORT') ?: 465);
+
+// '' for a plain connection, 'ssl' for port 465, 'tls' for port 587.
+$config['smtp_crypto']  = getenv('SRMS_SMTP_CRYPTO') !== FALSE ? getenv('SRMS_SMTP_CRYPTO') : 'ssl';
+
 $config['smtp_timeout'] = 10;
-$config['charset']      = 'utf-8';
 $config['mailtype']     = 'html';
+$config['charset']      = 'utf-8';
 $config['newline']      = "\r\n";
 $config['crlf']         = "\r\n";
 $config['wordwrap']     = true;
 
-// $config['protocol']    = 'smtp';
-// $config['smtp_host']   = 'mail.depeddavor.com';
-// $config['smtp_user']   = 'no-reply@depeddavor.com';
-// $config['smtp_pass']   = 'moth34board';
-// $config['smtp_port']   = 465;
-// $config['smtp_crypto'] = 'ssl';
-// $config['mailtype']    = 'html';
-// $config['charset']     = 'utf-8';
-// $config['newline']     = "\r\n";
-// $config['crlf']        = "\r\n";
+/*
+| Envelope defaults. The From address has to be a mailbox that belongs to
+| smtp_user's domain or the server will reject the message as a relay attempt.
+*/
+$config['smtp_from_email'] = $config['smtp_user'];
+$config['smtp_from_name']  = 'DepEd Davao de Oro MIS';

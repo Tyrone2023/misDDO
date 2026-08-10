@@ -11913,35 +11913,50 @@ public function rqa_municipality_print_shsv2()
 
         $password = $this->fp_generate_password();
 
-        // Mail first: if it cannot be delivered we must not leave the account
-        // holder locked out with a password only the server knows.
+        // The message goes on the mail queue rather than out over SMTP here,
+        // so a slow or unreachable mail server cannot turn a valid reset into
+        // an error on screen. The new password hash travels with the message
+        // and is written to the account only once the message has really been
+        // delivered - the account holder keeps the password they have until
+        // the replacement is genuinely on its way to them.
         $sendResult = $this->fp_mail_password($account, $password);
 
-        if (!$sendResult['sent']) {
-            log_message('error', 'Password reset email failed for ' . $account['email'] . ' - ' . $sendResult['error']);
-            $this->fp_fail('We could not send the email right now, so your password was left unchanged. Please try again in a few minutes or contact the division office.', $type);
+        if (empty($sendResult['queued'])) {
+            log_message('error', 'Password reset could not be queued for ' . $account['email'] . ' - ' . $sendResult['error']);
+            $this->fp_fail('We could not start the password reset right now, so your password was left unchanged. Please try again in a few minutes or contact the division office.', $type);
             return;
         }
 
-        $this->db->where('username', $account['username']);
-        $this->db->update('users', array('password' => password_hash($password, PASSWORD_DEFAULT)));
+        log_message('info', 'Password reset queued for ' . $type . ' account ' . $account['username']
+            . ' (mail_queue #' . $sendResult['id'] . ')');
 
-        log_message('info', 'Password reset issued for ' . $type . ' account ' . $account['username']);
-
-        $message = 'A temporary password has been sent to <strong>' . html_escape($this->fp_mask_email($account['email']))
-            . '</strong>. Please check your inbox (and your spam folder), then sign in and change your password.';
+        $masked = html_escape($this->fp_mask_email($account['email']));
 
         if (!empty($sendResult['captured'])) {
+            // A developer machine with no mail server configured at all.
             $message = 'Local test mode: no mail server is configured, so the email was saved instead of sent. '
                 . '<a href="' . $sendResult['preview_url'] . '" target="_blank" class="alert-link">Open the email preview</a> '
                 . 'to read the temporary password.';
+        } elseif (!empty($sendResult['delivered'])) {
+            $message = 'A temporary password has been sent to <strong>' . $masked
+                . '</strong>. Please check your inbox (and your spam folder), then sign in and change your password.';
+        } else {
+            $message = 'A temporary password is on its way to <strong>' . $masked
+                . '</strong>. It usually arrives within a few minutes - please check your inbox and your spam folder. '
+                . 'Your current password keeps working until the new one reaches you.';
         }
 
         $this->session->set_flashdata('success', $message);
         redirect(base_url() . 'log_in');
     }
 
-    /** Renders and sends the reset notice. */
+    /**
+     * Renders the reset notice and puts it on the mail queue.
+     *
+     * The message carries the new password hash in its payload; whoever
+     * delivers it (the inline attempt, or the cron worker) writes that hash to
+     * the account afterwards. See application/helpers/mis_mailer_helper.php.
+     */
     private function fp_mail_password(array $account, $password)
     {
         $division = 'DepEd Davao de Oro';
@@ -11970,14 +11985,25 @@ public function rqa_municipality_print_shsv2()
             . "Never share it with anyone.\r\n\r\n"
             . $division . " - Management Information System";
 
-        return mis_send_html_mail(
-            $account['email'],
-            'Password Reset - ' . $division . ' MIS',
-            $html,
-            $alt,
-            'ddorecruitmentsystem@depedddo-mis.com',
-            'DepEd Davao de Oro MIS'
-        );
+        return mis_queue_html_mail(array(
+            'to_email'  => $account['email'],
+            'to_name'   => $account['name'],
+            'subject'   => 'Password Reset - ' . $division . ' MIS',
+            'body_html' => $html,
+            'body_text' => $alt,
+            'category'  => 'password_reset',
+
+            // Applied only after the message has actually been delivered.
+            'payload'   => array(
+                'type'          => 'password_reset',
+                'username'      => $account['username'],
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            ),
+
+            // The body holds a temporary password in the clear, so it is
+            // discarded from the queue as soon as it has been sent.
+            'is_sensitive' => 1,
+        ));
     }
 
     /**

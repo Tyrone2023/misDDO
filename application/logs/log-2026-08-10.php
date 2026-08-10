@@ -165,3 +165,70 @@ ERROR - 2026-08-10 10:42:50 --> Severity: Warning --> Undefined property: stdCla
 ERROR - 2026-08-10 10:42:50 --> Severity: Warning --> Undefined property: stdClass::$training /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2395
 ERROR - 2026-08-10 10:42:50 --> Severity: Warning --> Undefined property: stdClass::$training /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2395
 ERROR - 2026-08-10 11:19:42 --> The upload destination folder does not appear to be writable.
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "let_rating" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2336
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "let_rating" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2336
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "training" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2395
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "training" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2395
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "educ" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3133
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "educ" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3133
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "trainings" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3201
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "trainings" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3201
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "experience" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3269
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "experience" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3269
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "performance" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3336
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "performance" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3336
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "oa" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3399
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "oa" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3399
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "ae" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3462
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "ae" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3462
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "ald" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3525
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "ald" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3525
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "interview" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3588
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "interview" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3588
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "written" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3651
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "written" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3651
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "skills" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3714
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "skills" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3714
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "educ" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4024
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "educ" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4024
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "trainings" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4108
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "trainings" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4108
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "experience" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4192
+ERROR - 2026-08-10 11:38:43 --> Severity: Warning --> Attempt to read property "experience" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4192
+ERROR - 2026-08-10 05:38:43 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-10 05:38:46 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "let_rating" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2336
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "let_rating" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2336
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "training" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2395
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "training" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2395
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Undefined property: stdClass::$id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2604
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "educ" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3133
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "educ" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3133
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "trainings" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3201
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "trainings" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3201
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "experience" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3269
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "experience" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3269
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "performance" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3336
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "performance" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3336
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "oa" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3399
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "oa" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3399
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "ae" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3462
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "ae" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3462
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "ald" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3525
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "ald" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3525
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "interview" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3588
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "interview" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3588
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "written" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3651
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "written" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3651
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "skills" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3714
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "skills" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 3714
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "educ" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4024
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "educ" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4024
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "trainings" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4108
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "trainings" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4108
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "experience" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4192
+ERROR - 2026-08-10 11:38:57 --> Severity: Warning --> Attempt to read property "experience" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 4192
+ERROR - 2026-08-10 05:41:19 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-10 05:41:37 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-10 05:41:58 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-10 05:42:09 --> 404 Page Not Found: Uploads/profile
