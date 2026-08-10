@@ -559,8 +559,13 @@
                                                             <tr>
                                                                 <td><?= $row->trainingTitle; ?></td>
                                                                 <td><a  href="<?= base_url().'uploads/trainings_staff/'.$row->file; ?>" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg text-primary"></i></a></td>
-                                                                <td><?= $row->dateStarted; ?></td>
-                                                                <td><?= $row->dateFinished; ?></td>
+                                                                <?php
+                                                                    // The columns carry a time now; midnight means none was recorded.
+                                                                    $tStart = ($row->dateStarted && substr($row->dateStarted, 0, 10) !== '0000-00-00') ? strtotime($row->dateStarted) : false;
+                                                                    $tEnd   = ($row->dateFinished && substr($row->dateFinished, 0, 10) !== '0000-00-00') ? strtotime($row->dateFinished) : false;
+                                                                ?>
+                                                                <td><?= $tStart ? date(date('H:i', $tStart) !== '00:00' ? 'M d, Y g:i A' : 'M d, Y', $tStart) : '&mdash;'; ?></td>
+                                                                <td><?= $tEnd ? date(date('H:i', $tEnd) !== '00:00' ? 'M d, Y g:i A' : 'M d, Y', $tEnd) : '&mdash;'; ?></td>
                                                                 <td>
                                                                     <?php if ($this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Evaluator'){ ?>
                                                                             <a data-toggle="modal" data-id="<?= $row->trainingID; ?>" data-appid="<?= $row->noHours; ?>" class="open-AddBookDialog badge badge-primary" href=".ivan"><?= $row->noHours; ?></a>

@@ -487,15 +487,32 @@
                                                                             </thead>
 
                                                                             <tbody>
-                                                                                <?php foreach($training as $row){
-                                                                                    // Rows added before the dates were captured store 0000-00-00.
-                                                                                    $tStart = (!empty($row->dateStarted) && $row->dateStarted !== '0000-00-00') ? strtotime($row->dateStarted) : false;
-                                                                                    $tEnd   = (!empty($row->dateFinished) && $row->dateFinished !== '0000-00-00') ? strtotime($row->dateFinished) : false;
+                                                                                <?php
+                                                                                    // Rows kept a time only once the encoding form started asking for
+                                                                                    // one, so midnight reads as "no time recorded".
+                                                                                    $training_stamp = function ($value) {
+                                                                                        if (empty($value) || substr($value, 0, 10) === '0000-00-00') {
+                                                                                            return '<span class="text-muted">&mdash;</span>';
+                                                                                        }
+
+                                                                                        $stamp = strtotime($value);
+                                                                                        if (!$stamp) {
+                                                                                            return '<span class="text-muted">&mdash;</span>';
+                                                                                        }
+
+                                                                                        $out = date('M d, Y', $stamp);
+                                                                                        if (date('H:i', $stamp) !== '00:00') {
+                                                                                            $out .= '<br><small class="text-muted">' . date('g:i A', $stamp) . '</small>';
+                                                                                        }
+
+                                                                                        return $out;
+                                                                                    };
                                                                                 ?>
+                                                                                <?php foreach($training as $row){ ?>
                                                                                 <tr>
                                                                                     <td><?= html_escape($row->trainingTitle); ?></td>
-                                                                                    <td class="text-nowrap"><?= $tStart ? date('M d, Y', $tStart) : '<span class="text-muted">&mdash;</span>'; ?></td>
-                                                                                    <td class="text-nowrap"><?= $tEnd ? date('M d, Y', $tEnd) : '<span class="text-muted">&mdash;</span>'; ?></td>
+                                                                                    <td class="text-nowrap"><?= $training_stamp($row->dateStarted); ?></td>
+                                                                                    <td class="text-nowrap"><?= $training_stamp($row->dateFinished); ?></td>
                                                                                     <td class="text-center"><a  href="<?= base_url().'uploads/trainings_staff/'.$row->file; ?>" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg text-primary"></i></a></td>
                                                                                     <td class="text-center">
                                                                                         <?php if ($canRateTrainings){ ?>
@@ -603,11 +620,22 @@
                                                                             </thead>
 
                                                                             <tbody>
+                                                                                <?php $xpTotalMonths = 0; ?>
                                                                                 <?php foreach($experience as $row){
                                                                                     $xpFrom = !empty($row->date_from ?? null) && $row->date_from !== '0000-00-00' ? $row->date_from : null;
                                                                                     $xpTo   = !empty($row->date_to   ?? null) && $row->date_to   !== '0000-00-00' ? $row->date_to   : null;
-                                                                                    $xpYears  = (int) $row->ny;
-                                                                                    $xpMonths = (int) $row->nm;
+
+                                                                                    // Read the length straight off the range. Records kept from
+                                                                                    // before the dates were captured have none to read, so those
+                                                                                    // still show the stored years and months.
+                                                                                    $xpFromRange = ($xpFrom && $xpTo);
+                                                                                    $xpSpan = $xpFromRange
+                                                                                        ? $this->Reg->experience_months($xpFrom, $xpTo)
+                                                                                        : ((int) $row->ny * 12) + (int) $row->nm;
+
+                                                                                    if ((int) $row->stat === 1) {
+                                                                                        $xpTotalMonths += $xpSpan;
+                                                                                    }
                                                                                 ?>
                                                                                 <tr>
                                                                                     <td><?= html_escape($row->title); ?></td>
@@ -634,7 +662,7 @@
                                                                                         <?php } ?>
                                                                                     </td>
                                                                                     <td class="text-center text-nowrap">
-                                                                                        <span class="badge badge-info"><?= $xpYears; ?> yr <?= $xpMonths; ?> mo</span>
+                                                                                        <span class="badge badge-info" title="<?= $xpFromRange ? 'Computed from the inclusive dates.' : 'Stored years and months - this record has no inclusive dates.'; ?>"><?= intdiv($xpSpan, 12); ?> yr <?= $xpSpan % 12; ?> mo</span>
                                                                                     </td>
                                                                                     <td class="text-center"><a  href="<?= base_url().'uploads/experience/'.$row->file; ?>" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg text-primary"></i></a></td>
                                                                                     <td class="text-center">
@@ -674,14 +702,10 @@
                                                                                 <?php } ?>
                                                                             </tbody>
                                                                             <tfoot>
-                                                                                <?php
-                                                                                    $ex_year_sum  = (int) ($ex_year_sum  ?? 0);
-                                                                                    $ex_month_sum = (int) ($ex_month_sum ?? 0);
-                                                                                ?>
                                                                                 <tr class="bg-light">
                                                                                     <th colspan="3" class="text-right">Total Relevant Experience</th>
                                                                                     <th class="text-center text-nowrap">
-                                                                                        <span class="badge badge-purple"><?= ($ex_year_sum + intdiv($ex_month_sum, 12)); ?> yr <?= ($ex_month_sum % 12); ?> mo</span>
+                                                                                        <span class="badge badge-purple"><?= intdiv($xpTotalMonths, 12); ?> yr <?= $xpTotalMonths % 12; ?> mo</span>
                                                                                     </th>
                                                                                     <th colspan="3"></th>
                                                                                 </tr>
@@ -853,14 +877,16 @@
 
                                                             <div class="form-row">
                                                                 <div class="form-group col-md-6">
-                                                                    <label class="font-weight-semibold">Inclusive Date &mdash; From <span class="text-danger">*</span></label>
-                                                                    <input type="date" value="<?= set_value('dateStarted'); ?>" name="dateStarted" class="form-control js-range-from" data-range="training" required>
+                                                                    <label class="font-weight-semibold">Inclusive Date &amp; Time &mdash; From <span class="text-danger">*</span></label>
+                                                                    <input type="datetime-local" value="<?= set_value('dateStarted'); ?>" name="dateStarted" class="form-control js-range-from" data-range="training" required>
                                                                 </div>
                                                                 <div class="form-group col-md-6">
-                                                                    <label class="font-weight-semibold">Inclusive Date &mdash; To <span class="text-danger">*</span></label>
-                                                                    <input type="date" value="<?= set_value('dateFinished'); ?>" name="dateFinished" class="form-control js-range-to" data-range="training" required>
+                                                                    <label class="font-weight-semibold">Inclusive Date &amp; Time &mdash; To <span class="text-danger">*</span></label>
+                                                                    <input type="datetime-local" value="<?= set_value('dateFinished'); ?>" name="dateFinished" class="form-control js-range-to" data-range="training" required>
                                                                 </div>
                                                             </div>
+
+                                                            <div class="text-danger small mb-2 js-range-warning" data-for="training" style="display:none;"></div>
 
                                                             <div class="form-row">
                                                                 <div class="form-group col-md-8">
@@ -869,7 +895,8 @@
                                                                 </div>
                                                                 <div class="form-group col-md-4">
                                                                     <label class="font-weight-semibold">No. of Hours <span class="text-danger">*</span></label>
-                                                                    <input name="noHours" type="text" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="form-control" value="" required>
+                                                                    <input name="noHours" type="text" class="form-control js-hours-total" data-for="training" value="" readonly required>
+                                                                    <small class="form-text text-muted">Daily time window &times; number of days; 8 hours a day when no time window is set.</small>
                                                                 </div>
                                                             </div>
 
@@ -921,6 +948,8 @@
                                                                 </div>
                                                             </div>
 
+                                                            <div class="text-danger small mb-2 js-range-warning" data-for="newxp" style="display:none;"></div>
+
                                                             <div class="alert alert-secondary py-2 mb-3">
                                                                 <i class="mdi mdi-calendar-clock mr-1"></i>
                                                                 Length of service: <strong class="js-xp-preview" data-for="newxp">&mdash;</strong>
@@ -970,6 +999,8 @@
                                                                     <input name="date_to" type="date" id="xp_date_to" class="form-control js-range-to js-xp-to" data-range="editxp" value="" required>
                                                                 </div>
                                                             </div>
+
+                                                            <div class="text-danger small mb-2 js-range-warning" data-for="editxp" style="display:none;"></div>
 
                                                             <div class="alert alert-secondary py-2 mb-0">
                                                                 <i class="mdi mdi-calendar-clock mr-1"></i>
@@ -1029,10 +1060,12 @@
                                             // Plain JS throughout: jQuery is not loaded until the footer runs.
                                             (function () {
 
+                                                // Handles both the date-only experience fields and the training
+                                                // fields, which carry a time (2025-01-15T08:00).
                                                 function parseDate(value) {
-                                                    var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+                                                    var parts = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(value || '');
                                                     if (!parts) return null;
-                                                    return new Date(+parts[1], parts[2] - 1, +parts[3]);
+                                                    return new Date(+parts[1], parts[2] - 1, +parts[3], +(parts[4] || 0), +(parts[5] || 0));
                                                 }
 
                                                 // Mirrors Reg::experience_duration() so the preview matches what the
@@ -1051,23 +1084,67 @@
                                                     return months;
                                                 }
 
+                                                // Records are historical, so these fields must accept any date. A min/max
+                                                // bound on them (Parsley reads those attributes) is what blocked saving an
+                                                // older range, so the bounds are stripped and the order is checked here.
+                                                function unbindDateLimits(field) {
+                                                    if (!field) return;
+                                                    field.removeAttribute('min');
+                                                    field.removeAttribute('max');
+                                                }
+
+                                                function clearAllDateLimits() {
+                                                    var fields = document.querySelectorAll('.js-range-from, .js-range-to');
+                                                    for (var i = 0; i < fields.length; i++) {
+                                                        unbindDateLimits(fields[i]);
+                                                    }
+                                                }
+
+                                                function setRangeWarning(group, message) {
+                                                    var box = document.querySelector('.js-range-warning[data-for="' + group + '"]');
+                                                    if (!box) return;
+                                                    box.textContent = message || '';
+                                                    box.style.display = message ? '' : 'none';
+                                                }
+
+                                                // Mirrors Page_model::training_hours(): the daily time window times
+                                                // the number of days, so overnight gaps are not credited. Without a
+                                                // usable window the day counts as a standard 8 hours.
+                                                function trainingHours(start, end) {
+                                                    var startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+                                                    var endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+                                                    var days = Math.round((endDay - startDay) / 86400000) + 1;
+                                                    if (days <= 0) return 0;
+
+                                                    var window = (end.getHours() * 60 + end.getMinutes()) - (start.getHours() * 60 + start.getMinutes());
+                                                    if (window <= 0) return days * 8;
+
+                                                    return Math.round(days * window / 60 * 100) / 100;
+                                                }
+
                                                 function refreshRange(group) {
                                                     var from = document.querySelector('.js-range-from[data-range="' + group + '"]');
                                                     var to = document.querySelector('.js-range-to[data-range="' + group + '"]');
                                                     var preview = document.querySelector('.js-xp-preview[data-for="' + group + '"]');
+                                                    var hours = document.querySelector('.js-hours-total[data-for="' + group + '"]');
                                                     if (!from || !to) return;
 
-                                                    // Stop the end date being set before the start date.
-                                                    to.min = from.value || '';
-                                                    if (from.value && to.value && to.value < from.value) {
-                                                        to.value = '';
+                                                    unbindDateLimits(from);
+                                                    unbindDateLimits(to);
+
+                                                    var start = parseDate(from.value);
+                                                    var end = parseDate(to.value);
+                                                    var reversed = !!(start && end && end < start);
+
+                                                    setRangeWarning(group, reversed ? 'The "to" date cannot be earlier than the "from" date.' : '');
+
+                                                    if (hours) {
+                                                        hours.value = (start && end && !reversed) ? trainingHours(start, end) : '';
                                                     }
 
                                                     if (!preview) return;
 
-                                                    var start = parseDate(from.value);
-                                                    var end = parseDate(to.value);
-                                                    if (!start || !end || end < start) {
+                                                    if (!start || !end || reversed) {
                                                         preview.textContent = '—';
                                                         return;
                                                     }
@@ -1083,6 +1160,32 @@
                                                         refreshRange(field.getAttribute('data-range'));
                                                     }
                                                 });
+
+                                                // Captured on the way down so the range is settled before Parsley's own
+                                                // submit handler on the form runs.
+                                                document.addEventListener('submit', function (e) {
+                                                    var form = e.target;
+                                                    if (!form || !form.querySelector) return;
+
+                                                    var from = form.querySelector('.js-range-from');
+                                                    var to = form.querySelector('.js-range-to');
+                                                    if (!from || !to) return;
+
+                                                    unbindDateLimits(from);
+                                                    unbindDateLimits(to);
+
+                                                    var start = parseDate(from.value);
+                                                    var end = parseDate(to.value);
+                                                    if (start && end && end < start) {
+                                                        e.preventDefault();
+                                                        e.stopImmediatePropagation();
+                                                        setRangeWarning(from.getAttribute('data-range'), 'The "to" date cannot be earlier than the "from" date.');
+                                                        to.focus();
+                                                    }
+                                                }, true);
+
+                                                clearAllDateLimits();
+                                                document.addEventListener('DOMContentLoaded', clearAllDateLimits);
 
                                                 // The shared .open-AddBookDialog handler in the footer only knows about
                                                 // single-value modals, so the inclusive-dates modal fills itself.

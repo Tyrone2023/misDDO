@@ -1173,21 +1173,83 @@ public function count_for_approval_leave4($table, $approver_username)
         return $this->db->insert('hris_educ', $data);
     }
 
+    /**
+     * Credited training hours: the daily time window multiplied by the number
+     * of days, both end dates included.  A 3-day training running 8:00 AM to
+     * 5:00 PM is 9 hours a day, so 27 hours - the overnight gaps are not paid.
+     *
+     * Rows encoded without a time (the older date-only forms, and every legacy
+     * record) leave no window to measure, so those fall back to a standard
+     * 8-hour training day.  Mirrors the preview the registered profile shows.
+     */
+    public function training_hours($from, $to)
+    {
+        if (empty($from) || empty($to)) {
+            return 0;
+        }
+
+        $start = date_create($from);
+        $end   = date_create($to);
+
+        if (!$start || !$end || $end < $start) {
+            return 0;
+        }
+
+        $days = date_create($start->format('Y-m-d'))
+            ->diff(date_create($end->format('Y-m-d')))
+            ->days + 1;
+
+        $window = ((int) $end->format('H') * 60 + (int) $end->format('i'))
+            - ((int) $start->format('H') * 60 + (int) $start->format('i'));
+
+        if ($window <= 0) {
+            return $days * 8;
+        }
+
+        return round($days * $window / 60, 2);
+    }
+
+    // Normalises whatever a training form posted into a DATETIME the column
+    // accepts, or NULL when nothing usable was given.
+    public function training_stamp($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        $stamp = strtotime($value);
+
+        return $stamp ? date('Y-m-d H:i:s', $stamp) : null;
+    }
+
     public function insert_trainings()
     {
 
       $file = $this->upload->data();
-      $filename = $file['file_name']; 
+      $filename = $file['file_name'];
 
       date_default_timezone_set('Asia/Manila');
 	  $now = date('H:i:s A');
 	  $date = date("Y-m-d");
 
+      // The browser posts datetime-local as 2025-01-15T08:00; the date-only
+      // forms still post a plain date, which stores as midnight.
+      $started  = $this->training_stamp($this->input->post('dateStarted'));
+      $finished = $this->training_stamp($this->input->post('dateFinished'));
+
+      $hours = $this->input->post('noHours');
+
+      // The encoding form posts a read-only, computed value; fall back to the
+      // same computation when a form leaves it blank.
+      if (!is_numeric($hours) || (float) $hours <= 0) {
+          $hours = $this->training_hours($started, $finished);
+      }
+
         $data = array(
             'trainingTitle' => $this->input->post('trainingTitle'),
-            'dateStarted' => $this->input->post('dateStarted'),
-            'dateFinished' => $this->input->post('dateFinished'),
-            'noHours' => $this->input->post('noHours'),
+            'dateStarted' => $started,
+            'dateFinished' => $finished,
+            'noHours' => $hours,
             'sponsor' => $this->input->post('sponsor'),
             'IDNumber' => $this->input->post('id'),
             'file' => $filename

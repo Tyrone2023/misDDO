@@ -164,3 +164,4 @@ ERROR - 2026-08-10 10:42:50 --> Severity: Warning --> Undefined property: stdCla
 ERROR - 2026-08-10 10:42:50 --> Severity: Warning --> Undefined property: stdClass::$let_rating /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2336
 ERROR - 2026-08-10 10:42:50 --> Severity: Warning --> Undefined property: stdClass::$training /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2395
 ERROR - 2026-08-10 10:42:50 --> Severity: Warning --> Undefined property: stdClass::$training /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2395
+ERROR - 2026-08-10 11:19:42 --> The upload destination folder does not appear to be writable.

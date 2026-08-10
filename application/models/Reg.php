@@ -3176,6 +3176,52 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
     }
 
     /**
+     * Trainings are encoded with a start and end time, so the two date columns
+     * have to carry a time component.  Older installs still have plain DATE
+     * columns, so widen them once, in place.
+     *
+     * Legacy rows hold '0000-00-00', which strict mode refuses to convert, so
+     * the zero-date checks are lifted for the conversion and those rows are
+     * then stored as NULL - the profile already renders a blank for them.
+     */
+    public function ensure_training_datetime(){
+
+      $debug = $this->db->db_debug;
+      $this->db->db_debug = false;
+
+      $q = $this->db->query(
+          "select DATA_TYPE from information_schema.COLUMNS
+            where TABLE_SCHEMA = database()
+              and TABLE_NAME = 'hris_trainings'
+              and COLUMN_NAME in ('dateStarted', 'dateFinished')");
+
+      $needs_widening = false;
+      if ($q) {
+        foreach ($q->result() as $row) {
+          if (strtolower($row->DATA_TYPE) === 'date') {
+            $needs_widening = true;
+          }
+        }
+      }
+
+      if ($needs_widening) {
+        $this->db->query("set @mis_sql_mode = @@session.sql_mode");
+        $this->db->query("set session sql_mode = replace(replace(@@session.sql_mode, 'NO_ZERO_DATE', ''), 'NO_ZERO_IN_DATE', '')");
+
+        $this->db->query("alter table `hris_trainings`
+                            modify `dateStarted` datetime null default null,
+                            modify `dateFinished` datetime null default null");
+
+        $this->db->query("update `hris_trainings` set `dateStarted` = null where `dateStarted` = '0000-00-00 00:00:00'");
+        $this->db->query("update `hris_trainings` set `dateFinished` = null where `dateFinished` = '0000-00-00 00:00:00'");
+
+        $this->db->query("set session sql_mode = @mis_sql_mode");
+      }
+
+      $this->db->db_debug = $debug;
+    }
+
+    /**
      * Work experience is captured as an inclusive date range, but the rating
      * screens still sum the ny/nm columns.  This converts a range into those
      * columns so both stay in step: whole months are counted, and a trailing
@@ -3184,15 +3230,26 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
      */
     public function experience_duration($from, $to){
 
+      $months = $this->experience_months($from, $to);
+
+      return array('ny' => intdiv($months, 12), 'nm' => $months % 12);
+    }
+
+    /**
+     * The same range expressed as a plain month count, for the profile's
+     * length-of-service column and its running total.
+     */
+    public function experience_months($from, $to){
+
       if (empty($from) || empty($to)) {
-        return array('ny' => 0, 'nm' => 0);
+        return 0;
       }
 
       $start = date_create($from);
       $end   = date_create($to);
 
       if (!$start || !$end || $end < $start) {
-        return array('ny' => 0, 'nm' => 0);
+        return 0;
       }
 
       $diff = $start->diff($end);
@@ -3202,7 +3259,7 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
         $months++;
       }
 
-      return array('ny' => intdiv($months, 12), 'nm' => $months % 12);
+      return $months;
     }
 
     public function insert_experience(){

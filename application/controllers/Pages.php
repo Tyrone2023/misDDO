@@ -2293,7 +2293,18 @@ class Pages extends CI_Controller
         // $this->session->set_flashdata('success', 'One record added successfully!');
         // redirect(base_url() . 'personnel_profile/' . $id);
 
-        $config['allowed_types'] = 'pdf';
+			$this->Reg->ensure_training_datetime();
+
+			$started  = $this->input->post('dateStarted');
+			$finished = $this->input->post('dateFinished');
+
+			// Any past range is accepted; only a reversed one is rejected.
+			if (!empty($started) && !empty($finished) && strtotime($finished) < strtotime($started)) {
+				$this->session->set_flashdata('danger', 'The "to" date cannot be earlier than the "from" date.');
+				redirect($_SERVER['HTTP_REFERER'] . '#trainings');
+			}
+
+			$config['allowed_types'] = 'pdf';
 			$config['upload_path'] = './uploads/trainings_staff';
 			$new_name = $this->input->post('id') . '-'. time() . $_FILES["file"]['name'];
 			$config['file_name'] = $new_name;
@@ -2622,6 +2633,7 @@ class Pages extends CI_Controller
 
         $this->Page_model->check_ownership($param);
         $this->Reg->ensure_experience_columns();
+        $this->Reg->ensure_training_datetime();
 
         $page = "profile_reg";
 
