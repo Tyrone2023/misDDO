@@ -11668,6 +11668,8 @@ class Page extends CI_Controller
 
 	public function insert_experience()
 	{
+		$this->Reg->ensure_experience_columns();
+
 		$config['allowed_types'] = 'pdf';
 		$config['upload_path'] = './uploads/experience';
 		$new_name = $this->input->post('id_number') . '-' . time() . $_FILES["file"]['name'];
@@ -11694,6 +11696,23 @@ class Page extends CI_Controller
 	public function update_year_experience()
 	{
 		$this->Reg->update_experience('ny');
+		$this->session->set_flashdata('success', 'Successfully updated');
+		redirect($_SERVER['HTTP_REFERER'] . '#work');
+	}
+
+	public function update_experience_dates()
+	{
+		$this->Reg->ensure_experience_columns();
+
+		$from = $this->input->post('date_from');
+		$to = $this->input->post('date_to');
+
+		if (empty($from) || empty($to) || strtotime($to) < strtotime($from)) {
+			$this->session->set_flashdata('danger', 'Please supply a valid inclusive date range.');
+			redirect($_SERVER['HTTP_REFERER'] . '#work');
+		}
+
+		$this->Reg->update_experience_dates();
 		$this->session->set_flashdata('success', 'Successfully updated');
 		redirect($_SERVER['HTTP_REFERER'] . '#work');
 	}

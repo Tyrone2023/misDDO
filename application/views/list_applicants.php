@@ -54,7 +54,7 @@
                             <div class="col-12">
                                 <div class="card">
                                     <div class="card-body table-responsive">
-                                    <h4 class="header-title mb-4">List of Applicants<br /><span class="float-left badge badge-primary inline mt-2"><?php echo $_GET['jobTitle']; ?></span></h4><br />
+                                    <h4 class="header-title mb-4">List of Applicants<br /><span class="float-left badge badge-primary inline mt-2"><?= html_escape((string) $this->input->get('jobTitle')); ?></span></h4><br />
                                         <table id="datatable" class="table table-bordered dt-responsive nowrap" style="border-collapse: collapse; border-spacing: 0; width: 100%;">
                                         <!-- <table id="datatable-buttons" class="table table-striped table-bordered dt-responsive nowrap" style="border-collapse: collapse; border-spacing: 0; width: 100%;"> -->
                                         <thead>
@@ -103,13 +103,22 @@
                                                 //     }
                                                 //}
 
+                                               // An application can outlive (or never have had) its applicant/staff
+                                               // record, in which case every COALESCEd column comes back NULL.
+                                               $hasProfile = $row->st !== 'unknown' && $row->id !== null;
                                                ?>
 
                                                 <tr>
-                                                    <td><?= strtoupper($row->LastName); ?></td>
-                                                    <td><?= strtoupper($row->FirstName); ?></td>
-                                                    <td><?= strtoupper($row->MiddleName); ?></td>
-                                                    <td><?= $row->code; ?></td>
+                                                    <td>
+                                                        <?php if($hasProfile){ ?>
+                                                            <?= html_escape(strtoupper((string) $row->LastName)); ?>
+                                                        <?php }else{ ?>
+                                                            <span class="text-danger" title="No applicant/staff record found for <?= html_escape((string) $row->empEmail); ?>">&mdash;</span>
+                                                        <?php } ?>
+                                                    </td>
+                                                    <td><?= html_escape(strtoupper((string) $row->FirstName)); ?></td>
+                                                    <td><?= html_escape(strtoupper((string) $row->MiddleName)); ?></td>
+                                                    <td><?= $hasProfile ? html_escape((string) $row->code) : html_escape((string) $row->empEmail); ?></td>
                                                     <td><?= $row->dateSubmitted; ?></td>
                                                     <td><span class="badge badge-<?php 
                                                         if($row->appStatus == 'Validated'){echo "info";
@@ -122,9 +131,13 @@
                                             <?php  //$ca = $this->Common->two_cond_count_row('hris_rating_none', 'record_no', $record,'appID',date('Y')); ?>
                                             <td style="text-align:center">
                                                 
+                                               <?php if($hasProfile){ ?>
                                                <a href="<?= base_url(); ?>pages/<?= $row->st; ?>/<?= $row->id; ?>/<?= $row->jobID; ?>/<?= $row->pre_school; ?>" target="_blank" class="btn btn-info tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View Applicant Information"><i class="fas fa-file-alt"></i></a>&nbsp;&nbsp;
-                                               <?php 
-                                                $rate = $this->Common->two_cond_row('hris_applications_rating', 'appID', $row->appID,'record_no',$row->code); 
+                                               <?php }else{ ?>
+                                               <span class="btn btn-secondary disabled tooltips" data-placement="top" data-toggle="tooltip" data-original-title="No applicant profile linked to this application"><i class="fas fa-file-alt"></i></span>&nbsp;&nbsp;
+                                               <?php } ?>
+                                               <?php
+                                                $rate = $hasProfile ? $this->Common->two_cond_row('hris_applications_rating', 'appID', $row->appID,'record_no',$row->code) : null;
                                                 if(!empty($rate)){
                                                ?>
                                                <a href="<?= base_url(); ?>Pages/ies/<?= $row->id;?>/<?= $row->appID; ?>/<?= $row->jobID; ?>" target="_blank" class="btn btn-success tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View IES"><i class=" mdi mdi-xbox-controller-view"></i></button></a> &nbsp; 
@@ -132,10 +145,14 @@
 
                                                <?php if($row->ren == 1){echo '<span class="text-danger">&#33;</span>';} ?>
 
-                                               <?php if($row->stat == 0){ ?>
-                                                    <a href="<?=base_url(); ?>Pages/close_applications/<?= $row->jobID; ?>/<?= $row->code; ?>/?ee=<?= $row->empEmail; ?>&jt=<?= $this->input->get('jobTitle'); ?>" class="text-primary tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Lock Applications"><i class="mdi mdi-pencil-lock-outline btn btn-warning"></i></a>&nbsp;&nbsp;&nbsp;&nbsp;
-                                                <?php }else{ ?>
-                                                    <a href="<?=base_url(); ?>Pages/open_applications/<?= $row->jobID; ?>/<?= $row->code; ?>/?ee=<?= $row->empEmail; ?>&jt=<?= $this->input->get('jobTitle'); ?>" class="text-primary tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Unlock Applications"><i class="mdi mdi-account-edit btn btn-primary"></i></a>&nbsp;&nbsp;&nbsp;&nbsp;
+                                               <?php if($hasProfile){
+                                                    $lockQuery = '?ee=' . rawurlencode((string) $row->empEmail) . '&jt=' . rawurlencode((string) $this->input->get('jobTitle'));
+                                               ?>
+                                                    <?php if($row->stat == 0){ ?>
+                                                        <a href="<?=base_url(); ?>Pages/close_applications/<?= $row->jobID; ?>/<?= rawurlencode((string) $row->code); ?>/<?= $lockQuery; ?>" class="text-primary tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Lock Applications"><i class="mdi mdi-pencil-lock-outline btn btn-warning"></i></a>&nbsp;&nbsp;&nbsp;&nbsp;
+                                                    <?php }else{ ?>
+                                                        <a href="<?=base_url(); ?>Pages/open_applications/<?= $row->jobID; ?>/<?= rawurlencode((string) $row->code); ?>/<?= $lockQuery; ?>" class="text-primary tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Unlock Applications"><i class="mdi mdi-account-edit btn btn-primary"></i></a>&nbsp;&nbsp;&nbsp;&nbsp;
+                                                    <?php } ?>
                                                 <?php } ?>
 
                                                 <?php if($this->session->username == 'asdsv2' || $this->session->username == 'Cyanne25'){?>

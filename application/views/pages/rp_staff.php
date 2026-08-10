@@ -23,21 +23,8 @@
                     $tv = $this->Common->one_cond_row('settings', 'id', 12); // Training Version Old or New
                     $exv = $this->Common->one_cond_row('settings', 'id', 13); // Work experience Version Old or New
 
-                    // Evaluators (egroup 1) plus ASDS users, for optional single assignment inside Remarks modal
-                    $raters = $this->db
-                        ->select('id,fname,mname,lname,username')
-                        ->from('users')
-                        ->group_start()
-                            ->group_start()
-                                ->where('position', 'Evaluator')
-                                ->where('egroup', 1)
-                            ->group_end()
-                            ->or_where('position', 'asds')
-                        ->group_end()
-                        ->order_by('lname', 'asc')
-                        ->order_by('fname', 'asc')
-                        ->get()
-                        ->result();
+                    // Every Evaluator plus ASDS users, for optional single assignment inside Remarks modal
+                    $raters = $this->Reg->eligible_raters();
 
                     // Current single-assignment info (latest)
                     $currentAssign = $this->db

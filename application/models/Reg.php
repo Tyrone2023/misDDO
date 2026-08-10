@@ -3167,22 +3167,62 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
         return $this->db->insert('hris_training', $data);
     }
 
+    public function ensure_experience_columns(){
+
+      $this->Common->ensure_columns('hris_experience', array(
+          'date_from' => 'date null',
+          'date_to'   => 'date null'
+          ));
+    }
+
+    /**
+     * Work experience is captured as an inclusive date range, but the rating
+     * screens still sum the ny/nm columns.  This converts a range into those
+     * columns so both stay in step: whole months are counted, and a trailing
+     * partial month of at least 15 days rounds up (so Jan 1 - Dec 31 reads as
+     * a full year rather than 11 months).
+     */
+    public function experience_duration($from, $to){
+
+      if (empty($from) || empty($to)) {
+        return array('ny' => 0, 'nm' => 0);
+      }
+
+      $start = date_create($from);
+      $end   = date_create($to);
+
+      if (!$start || !$end || $end < $start) {
+        return array('ny' => 0, 'nm' => 0);
+      }
+
+      $diff = $start->diff($end);
+      $months = ($diff->y * 12) + $diff->m;
+
+      if ($diff->d >= 15) {
+        $months++;
+      }
+
+      return array('ny' => intdiv($months, 12), 'nm' => $months % 12);
+    }
+
     public function insert_experience(){
 
       $file = $this->upload->data();
-      $filename = $file['file_name']; 
+      $filename = $file['file_name'];
 
-      date_default_timezone_set('Asia/Manila');
-			$now = date('H:i:s A');
-			$date = date("Y-m-d");
+      $from = $this->input->post('date_from');
+      $to   = $this->input->post('date_to');
+      $span = $this->experience_duration($from, $to);
 
       $data = array(
-          'title' => $this->input->post('title'), 
+          'title' => $this->input->post('title'),
           'file' => $filename,
-          'nm' => $this->input->post('nm'), 
-          'ny' => $this->input->post('ny'), 
-          'stat' => 0, 
-          'id_number' => $this->input->post('id_number'), 
+          'date_from' => $from ?: null,
+          'date_to' => $to ?: null,
+          'nm' => $span['nm'],
+          'ny' => $span['ny'],
+          'stat' => 0,
+          'id_number' => $this->input->post('id_number'),
           );
         return $this->db->insert('hris_experience', $data);
     }
@@ -3190,7 +3230,24 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
     public function update_experience($col){
 
       $data = array(
-          $col => $this->input->post($col), 
+          $col => $this->input->post($col),
+          );
+
+        $this->db->where('id', $this->input->post('id'));
+        return $this->db->update('hris_experience', $data);
+    }
+
+    public function update_experience_dates(){
+
+      $from = $this->input->post('date_from');
+      $to   = $this->input->post('date_to');
+      $span = $this->experience_duration($from, $to);
+
+      $data = array(
+          'date_from' => $from ?: null,
+          'date_to' => $to ?: null,
+          'ny' => $span['ny'],
+          'nm' => $span['nm'],
           );
 
         $this->db->where('id', $this->input->post('id'));
@@ -3353,17 +3410,51 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           if (!empty($idNumber)) $this->db->where('IDNumber', $idNumber);
           if (!empty($fy))       $this->db->where('fy', $fy);
 
-          return $this->db->get()->row(); 
+          return $this->db->get()->row();
       }
-  
 
-  
-    
+    /**
+     * Who may be assigned as the evaluator of a single application.
+     *
+     * Anyone carrying the Evaluator position qualifies - egroup only buckets
+     * evaluators for the bulk Assign Rater tool, so requiring egroup 1 here hid
+     * most of the roster from the rating screens. ASDS users stay eligible.
+     *
+     * Kept in one place so the dropdown in pages/_assign_evaluator.php and the
+     * server-side checks in Pages cannot drift apart.
+     */
+    private function eligible_rater_conditions()
+    {
+      $this->db->group_start()
+          ->where('position', 'Evaluator')
+          ->or_where('position', 'asds')
+        ->group_end();
+    }
 
-    
+    public function eligible_raters()
+    {
+      $this->db->select('id,fname,mname,lname,username')->from('users');
+      $this->eligible_rater_conditions();
 
+      return $this->db
+          ->order_by('lname', 'asc')
+          ->order_by('fname', 'asc')
+          ->get()
+          ->result();
+    }
 
+    public function is_eligible_rater($raterId)
+    {
+      $raterId = (int) $raterId;
 
+      if ($raterId <= 0) {
+        return false;
+      }
 
+      $this->db->where('id', $raterId);
+      $this->eligible_rater_conditions();
+
+      return $this->db->count_all_results('users') > 0;
+    }
 
 }

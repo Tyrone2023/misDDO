@@ -3,6 +3,24 @@
             <!-- ============================================================== -->
              <?php $setting = $this->Common->one_cond_row('settings','id',11); ?>
 
+            <style>
+                .profile-record-table th,
+                .profile-record-table td { vertical-align: middle; }
+                .profile-record-table thead th {
+                    text-transform: uppercase;
+                    font-size: .72rem;
+                    letter-spacing: .04em;
+                    border-top: 0;
+                    white-space: nowrap;
+                }
+                .profile-record-table tfoot th { border-top: 2px solid #dee2e6; }
+                .profile-record-table .badge { font-size: .78rem; padding: .35em .6em; }
+                /* Editable badges should read as controls, not as static labels. */
+                .profile-record-table a.badge { cursor: pointer; }
+                .profile-record-table a.badge:hover { filter: brightness(.9); }
+                .profile-record-table .btn-lg { padding: 0; line-height: 1; }
+            </style>
+
             <div class="content-page">
                 <div class="content">
 
@@ -337,7 +355,7 @@
                                                                     <h4 class="page-title">FAMILY MEMBERS </h4>
                                                                     <div class="page-title-right">
                                                                         <ol class="breadcrumb p-0 m-0">
-                                                                        <!-- <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog btn btn-info waves-effect width-md waves-light" href="#familymodal">Add New</a></li>  -->
+                                                                        <!-- <li><a data-toggle="modal" data-id="" class="open-AddBookDialog btn btn-info waves-effect width-md waves-light" href="#familymodal">Add New</a></li>  -->
                                                                         </ol>
                                                                     </div>
                                                                     <div class="clearfix"></div>
@@ -454,24 +472,32 @@
                                                                     <?php if($canRateTrainings): ?>
                                                                         <p class="text-muted mb-2">Tip: Click the badge under <strong>No. of Hours</strong> to update the value.</p>
                                                                     <?php endif; ?>
-                                                                    <!-- <table id="datatable" class="table table-bordered dt-responsive nowrap" style="border-collapse: collapse; border-spacing: 0; width: 100%;"> -->
-                                                                   <table class="table mb-0">
-                                                                        <thead>
+                                                                    <div class="table-responsive">
+                                                                   <table class="table table-hover align-middle profile-record-table mb-0">
+                                                                        <thead class="thead-light">
                                                                                 <tr>
                                                                                     <th>Training Title</th>
-                                                                                    <th>Attachment</th>
-                                                                                    <th>No. of Hours</th>
+                                                                                    <th class="text-nowrap">From</th>
+                                                                                    <th class="text-nowrap">To</th>
+                                                                                    <th class="text-center">Attachment</th>
+                                                                                    <th class="text-center text-nowrap">No. of Hours</th>
                                                                                     <th class="text-center">Status</th>
-                                                                                    <th style="text-align:center"><?= $canDeleteTrainings ? 'Manage' : '&nbsp;' ?></th>
+                                                                                    <th class="text-center"><?= $canDeleteTrainings ? 'Manage' : '&nbsp;' ?></th>
                                                                                 </tr>
                                                                             </thead>
 
                                                                             <tbody>
-                                                                                <?php foreach($training as $row){  ?>
+                                                                                <?php foreach($training as $row){
+                                                                                    // Rows added before the dates were captured store 0000-00-00.
+                                                                                    $tStart = (!empty($row->dateStarted) && $row->dateStarted !== '0000-00-00') ? strtotime($row->dateStarted) : false;
+                                                                                    $tEnd   = (!empty($row->dateFinished) && $row->dateFinished !== '0000-00-00') ? strtotime($row->dateFinished) : false;
+                                                                                ?>
                                                                                 <tr>
-                                                                                    <td><?= $row->trainingTitle; ?></td>
-                                                                                    <td><a  href="<?= base_url().'uploads/trainings_staff/'.$row->file; ?>" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg text-primary"></i></a></td>
-                                                                                    <td>
+                                                                                    <td><?= html_escape($row->trainingTitle); ?></td>
+                                                                                    <td class="text-nowrap"><?= $tStart ? date('M d, Y', $tStart) : '<span class="text-muted">&mdash;</span>'; ?></td>
+                                                                                    <td class="text-nowrap"><?= $tEnd ? date('M d, Y', $tEnd) : '<span class="text-muted">&mdash;</span>'; ?></td>
+                                                                                    <td class="text-center"><a  href="<?= base_url().'uploads/trainings_staff/'.$row->file; ?>" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg text-primary"></i></a></td>
+                                                                                    <td class="text-center">
                                                                                         <?php if ($canRateTrainings){ ?>
                                                                                             <a data-toggle="modal" data-id="<?= $row->trainingID; ?>" data-appid="<?= $row->noHours; ?>" class="open-AddBookDialog badge badge-primary" href=".ivan"><?= $row->noHours; ?></a>
                                                                                         <?php }else{ ?>
@@ -505,21 +531,28 @@
                                                                                             <?php endif; ?>
                                                                                         <?php endif; ?>
                                                                                     </td>
-                                                                                    <td style="text-align:center">
+                                                                                    <td class="text-center">
                                                                                         <?php if($canDeleteTrainings): ?>
-                                                                                            <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Page/training_delete_staff/<?= $row->trainingID; ?>" class="text-danger"><i class="mdi mdi-file-document-box-check-outline"></i>Delete</a> 
+                                                                                            <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Page/training_delete_staff/<?= $row->trainingID; ?>" class="btn btn-sm btn-outline-danger"><i class="mdi mdi-trash-can-outline"></i> Delete</a>
                                                                                         <?php endif; ?>
                                                                                     </td>
                                                                                 </tr>
                                                                                 <?php } ?>
+                                                                                <?php if(empty($training)){ ?>
                                                                                 <tr>
-                                                                                    <th colspan="2">Total</th>
-                                                                                    <td><span class="badge badge-purple"><?= $training_sum; ?></span></td>
-                                                                                    <td></td>
-                                                                                    <td></td>
+                                                                                    <td colspan="7" class="text-center text-muted py-4">No trainings or seminars recorded yet.</td>
                                                                                 </tr>
+                                                                                <?php } ?>
                                                                             </tbody>
+                                                                            <tfoot>
+                                                                                <tr class="bg-light">
+                                                                                    <th colspan="4" class="text-right">Total Relevant Hours</th>
+                                                                                    <th class="text-center"><span class="badge badge-purple"><?= (float) ($training_sum ?? 0); ?></span></th>
+                                                                                    <th colspan="2"></th>
+                                                                                </tr>
+                                                                            </tfoot>
                                                                         </table>
+                                                                    </div>
 
                                                                 </div>
                                                             </div>
@@ -548,49 +581,62 @@
                                                                     </div>
                                                                     <div class="clearfix"></div>
                                                                     <br />
-                                                                    <?php 
+                                                                    <?php
                                                                         $canRateExperience = ($this->session->position == 'asds' || $this->session->position == 'raters' || ($this->session->position == 'Evaluator' && !empty($isAssignedEvaluator)));
+                                                                        $canEditExperienceDates = ($this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Evaluator' || $setting->status == 0);
                                                                     ?>
-                                                                    <!-- <table id="datatable" class="table table-bordered dt-responsive nowrap" style="border-collapse: collapse; border-spacing: 0; width: 100%;"> -->
-                                                                    <table class="table mb-0">
-                                                                        <thead>
+                                                                    <?php if($canEditExperienceDates): ?>
+                                                                        <p class="text-muted mb-2">Tip: Click the <strong>inclusive dates</strong> of a row to correct them. The length of service is computed from the range.</p>
+                                                                    <?php endif; ?>
+                                                                    <div class="table-responsive">
+                                                                    <table class="table table-hover align-middle profile-record-table mb-0">
+                                                                        <thead class="thead-light">
                                                                                 <tr>
                                                                                     <th>Company Name</th>
-                                                                                    <th>Attachment</th>
-                                                                                    <th>Year</th>
-                                                                                    <th>Month</th>
-                                                                                    <th>Status</th>
-                                                                                    <th style="text-align:center">Manage</th>
+                                                                                    <th class="text-nowrap">From</th>
+                                                                                    <th class="text-nowrap">To</th>
+                                                                                    <th class="text-center text-nowrap">Length of Service</th>
+                                                                                    <th class="text-center">Attachment</th>
+                                                                                    <th class="text-center">Status</th>
+                                                                                    <th class="text-center">Manage</th>
                                                                                 </tr>
                                                                             </thead>
 
                                                                             <tbody>
-                                                                                <?php foreach($experience as $row){  ?>
+                                                                                <?php foreach($experience as $row){
+                                                                                    $xpFrom = !empty($row->date_from ?? null) && $row->date_from !== '0000-00-00' ? $row->date_from : null;
+                                                                                    $xpTo   = !empty($row->date_to   ?? null) && $row->date_to   !== '0000-00-00' ? $row->date_to   : null;
+                                                                                    $xpYears  = (int) $row->ny;
+                                                                                    $xpMonths = (int) $row->nm;
+                                                                                ?>
                                                                                 <tr>
-                                                                                    <td><?= $row->title; ?></td>
-                                                                                    <td><a  href="<?= base_url().'uploads/experience/'.$row->file; ?>" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg text-primary"></i></a></td>
-                                                                                    <td>
-                                                                                        <?php if ($this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Evaluator'){ ?>
-                                                                                        <a data-toggle="modal" data-id="<?= $row->id; ?>" data-appid="<?= $row->ny; ?>" class="open-AddBookDialog badge badge-success" href=".ivy"><?= $row->ny; ?></a>
+                                                                                    <td><?= html_escape($row->title); ?></td>
+                                                                                    <?php
+                                                                                        // One control spans both date cells: clicking either opens the
+                                                                                        // same "inclusive dates" modal pre-filled with the stored range.
+                                                                                        $dateAttrs = 'data-id="' . (int) $row->id . '"'
+                                                                                            . ' data-from="' . html_escape((string) $xpFrom) . '"'
+                                                                                            . ' data-to="' . html_escape((string) $xpTo) . '"'
+                                                                                            . ' data-title="' . html_escape((string) $row->title) . '"';
+                                                                                    ?>
+                                                                                    <td class="text-nowrap">
+                                                                                        <?php if($canEditExperienceDates){ ?>
+                                                                                            <a data-toggle="modal" <?= $dateAttrs; ?> class="open-xp-dates badge badge-<?= $xpFrom ? 'success' : 'warning'; ?>" href=".ivy"><?= $xpFrom ? date('M d, Y', strtotime($xpFrom)) : 'Set date'; ?></a>
                                                                                         <?php }else{ ?>
-                                                                                            <?php if ($setting->status == 0){ ?>
-                                                                                                <a data-toggle="modal" data-id="<?= $row->id; ?>" data-appid="<?= $row->ny; ?>" class="open-AddBookDialog badge badge-success" href=".ivy"><?= $row->ny; ?></a>
-                                                                                            <?php }else{ ?>
-                                                                                                <span class="badge badge-success"><?= $row->ny; ?></span>
-                                                                                            <?php } ?>
+                                                                                            <?= $xpFrom ? '<span class="badge badge-success">' . date('M d, Y', strtotime($xpFrom)) . '</span>' : '<span class="text-muted">&mdash;</span>'; ?>
                                                                                         <?php } ?>
                                                                                     </td>
-                                                                                    <td>
-                                                                                        <?php if ($this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Evaluator'){ ?>
-                                                                                            <a data-toggle="modal" data-id="<?= $row->id; ?>" data-appid="<?= $row->nm; ?>" class="open-AddBookDialog badge badge-success" href=".ic"><?= $row->nm; ?></a>
+                                                                                    <td class="text-nowrap">
+                                                                                        <?php if($canEditExperienceDates){ ?>
+                                                                                            <a data-toggle="modal" <?= $dateAttrs; ?> class="open-xp-dates badge badge-<?= $xpTo ? 'success' : 'warning'; ?>" href=".ivy"><?= $xpTo ? date('M d, Y', strtotime($xpTo)) : 'Set date'; ?></a>
                                                                                         <?php }else{ ?>
-                                                                                            <?php if ($setting->status == 0){ ?>
-                                                                                                <a data-toggle="modal" data-id="<?= $row->id; ?>" data-appid="<?= $row->nm; ?>" class="open-AddBookDialog badge badge-success" href=".ic"><?= $row->nm; ?></a>
-                                                                                            <?php }else{ ?>
-                                                                                                <span class="badge badge-success"><?= $row->nm; ?></span>
-                                                                                            <?php } ?>
+                                                                                            <?= $xpTo ? '<span class="badge badge-success">' . date('M d, Y', strtotime($xpTo)) . '</span>' : '<span class="text-muted">&mdash;</span>'; ?>
                                                                                         <?php } ?>
                                                                                     </td>
+                                                                                    <td class="text-center text-nowrap">
+                                                                                        <span class="badge badge-info"><?= $xpYears; ?> yr <?= $xpMonths; ?> mo</span>
+                                                                                    </td>
+                                                                                    <td class="text-center"><a  href="<?= base_url().'uploads/experience/'.$row->file; ?>" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg text-primary"></i></a></td>
                                                                                     <td class="text-center">
                                                                                         <?php if ($canRateExperience || $this->session->position == 'Evaluator'): ?>
                                                                                             <?php if ($row->stat == 1): ?>
@@ -614,23 +660,34 @@
                                                                                             <?php endif; ?>
                                                                                         <?php endif; ?>
                                                                                     </td>
-                                                                                    <td style="text-align:center">
+                                                                                    <td class="text-center">
                                                                                         <?php if($setting->status == 0): ?>
-                                                                                        <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Page/experience_delete/<?= $row->id; ?>" class="text-danger"><i class="mdi mdi-file-document-box-check-outline"></i>Delete</a> 
+                                                                                        <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Page/experience_delete/<?= $row->id; ?>" class="btn btn-sm btn-outline-danger"><i class="mdi mdi-trash-can-outline"></i> Delete</a>
                                                                                         <?php endif; ?>
                                                                                     </td>
                                                                                 </tr>
                                                                                 <?php } ?>
+                                                                                <?php if(empty($experience)){ ?>
                                                                                 <tr>
-                                                                                    <th colspan="2">Total</th>
-                                                                                    <td><span class="badge badge-purple"><?= $ex_year_sum  = (int)($ex_year_sum  ?? 0); ?></span></td>
-                                                                                    <td><span class="badge badge-purple"><?= $ex_month_sum = (int)($ex_month_sum ?? 0) ?></span></td>
-                                                                                    <td colspan="2">
-                                                                                        <span class="badge badge-purple"><?= ($ex_year_sum + intdiv($ex_month_sum,12)) . " years and " . ($ex_month_sum % 12) . " months"; ?></span>
-                                                                                    </td>
+                                                                                    <td colspan="7" class="text-center text-muted py-4">No work experience recorded yet.</td>
                                                                                 </tr>
+                                                                                <?php } ?>
                                                                             </tbody>
+                                                                            <tfoot>
+                                                                                <?php
+                                                                                    $ex_year_sum  = (int) ($ex_year_sum  ?? 0);
+                                                                                    $ex_month_sum = (int) ($ex_month_sum ?? 0);
+                                                                                ?>
+                                                                                <tr class="bg-light">
+                                                                                    <th colspan="3" class="text-right">Total Relevant Experience</th>
+                                                                                    <th class="text-center text-nowrap">
+                                                                                        <span class="badge badge-purple"><?= ($ex_year_sum + intdiv($ex_month_sum, 12)); ?> yr <?= ($ex_month_sum % 12); ?> mo</span>
+                                                                                    </th>
+                                                                                    <th colspan="3"></th>
+                                                                                </tr>
+                                                                            </tfoot>
                                                                         </table>
+                                                                    </div>
 
                                                                 </div>
                                                             </div>
@@ -655,7 +712,7 @@
                                                                     <h4 class="page-title">201 FILES</h4>
                                                                     <div class="page-title-right">
                                                                         <ol class="breadcrumb p-0 m-0">
-                                                                                <!-- <li><a data-toggle="modal_awards" data-id="<?= $id; ?>" class="open-AddBookDialog btn btn-info waves-effect width-md waves-light" href="#addAwards">Add New</a></li> -->
+                                                                                <!-- <li><a data-toggle="modal_awards" data-id="" class="open-AddBookDialog btn btn-info waves-effect width-md waves-light" href="#addAwards">Add New</a></li> -->
                                                                                 <li><a data-toggle="modal" data-id="<?= $user->id; ?>" class="open-AddBookDialog btn btn-info waves-effect width-md waves-light" href="#addBookDialog">Add New</a></li>
                                                                         </ol>
                                                                     </div>
@@ -776,138 +833,58 @@
                 </div>
                 <!-- end content -->
 
-                                        <div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" style="display: none;" aria-hidden="true">
-                                            <div class="modal-dialog modal-lg">
+                                        <div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="addTrainingLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg modal-dialog-centered">
                                                 <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="myLargeModalLabel">TRAININGS AND SEMINARS ATTENDED</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        
-                                                   <?php 
-                                                        $attributes = array('class' => 'parsley-examples');
-                                                        echo form_open_multipart('Pages/trainings', $attributes);
-                                                    ?>
+                                                    <?php echo form_open_multipart('Pages/trainings', array('class' => 'parsley-examples')); ?>
+                                                        <div class="modal-header bg-info text-white">
+                                                            <h5 class="modal-title" id="addTrainingLabel"><i class="mdi mdi-school-outline mr-1"></i> Add Training / Seminar</h5>
+                                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        </div>
 
-                                                    <div class="form-group row">
-                                                            <label for="inputPassword5" class="col-md-3 col-form-label">Training Title</label>
-                                                            <div class="col-lg-9">
-                                                                <textarea name="trainingTitle" class="form-control" rows="5" id=""></textarea>
+                                                        <div class="modal-body">
+                                                            <!-- The shared footer handler fills .modal-body #id from data-id. -->
+                                                            <input type="hidden" name="id" id="id" value="">
+
+                                                            <div class="form-group">
+                                                                <label class="font-weight-semibold">Training Title <span class="text-danger">*</span></label>
+                                                                <textarea name="trainingTitle" class="form-control" rows="3" placeholder="e.g. Regional Training on Learning Recovery" required></textarea>
                                                             </div>
-                                                        </div>
-                                                   
-                                                
 
-                                                   <div class="form-group row">
-                                                        <label for="inputPassword5" class="col-md-3 col-form-label">Date Started</label>
-                                                        <div class="col-lg-9">
-                                                            <input type="date" value="<?= set_value('dateStarted'); ?>" name="dateStarted" class="form-control">
-                                                        </div>
-                                                   </div>
-
-                                                   
-
-                                                   <div class="form-group row">
-                                                        <label for="inputPassword5" class="col-md-3 col-form-label">Date Finished</label>
-                                                        <div class="col-lg-9">
-                                                            <input type="date" value="<?= set_value('dateFinished'); ?>" name="dateFinished" class="form-control">
-                                                        </div>
-                                                   </div>
-                                                   
-                                                   <div class="form-group row">
-                                                        <label for="inputPassword5" class="col-md-3 col-form-label">Conducted By</label>
-                                                        <div class="col-lg-9">
-                                                            <input type="text" value="<?= set_value('sponsor'); ?>" name="sponsor" class="form-control">
-                                                        </div>
-                                                   </div>
-
-                                                        
-                                                        <div class="form-group row">
-                                                            <label for="inputPassword5" class="col-md-3 col-form-label">Attachment</label>
-                                                            <div class="col-md-9">
-                                                                <input type="file" class="form-control" name="file" required>
+                                                            <div class="form-row">
+                                                                <div class="form-group col-md-6">
+                                                                    <label class="font-weight-semibold">Inclusive Date &mdash; From <span class="text-danger">*</span></label>
+                                                                    <input type="date" value="<?= set_value('dateStarted'); ?>" name="dateStarted" class="form-control js-range-from" data-range="training" required>
+                                                                </div>
+                                                                <div class="form-group col-md-6">
+                                                                    <label class="font-weight-semibold">Inclusive Date &mdash; To <span class="text-danger">*</span></label>
+                                                                    <input type="date" value="<?= set_value('dateFinished'); ?>" name="dateFinished" class="form-control js-range-to" data-range="training" required>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        
-                                                        <div class="form-group row">
-                                                            <label for="inputPassword5" class="col-md-3 col-form-label">No. of hours</label>
-                                                            <div class="col-lg-9">
-                                                                <input name="noHours" type="text" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="assign" class="form-control" value="" required>
+
+                                                            <div class="form-row">
+                                                                <div class="form-group col-md-8">
+                                                                    <label class="font-weight-semibold">Conducted By</label>
+                                                                    <input type="text" value="<?= set_value('sponsor'); ?>" name="sponsor" class="form-control" placeholder="Sponsoring office or organization">
+                                                                </div>
+                                                                <div class="form-group col-md-4">
+                                                                    <label class="font-weight-semibold">No. of Hours <span class="text-danger">*</span></label>
+                                                                    <input name="noHours" type="text" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="form-control" value="" required>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="form-group mb-0">
+                                                                <label class="font-weight-semibold">Attachment <span class="text-danger">*</span></label>
+                                                                <input type="file" class="form-control" name="file" accept="application/pdf" required>
+                                                                <small class="form-text text-muted">PDF file only.</small>
                                                             </div>
                                                         </div>
 
-                                                   
-                                                   <div class="modal-body">
-                                                       <input type="hidden" name="id" id="id" value="">
-                                                   </div>    
-
-                                               </div>
-                                               <div class="modal-footer">
-                                               <button type="submit" name="awards" class="btn btn-primary waves-effect waves-light">Save</button>
-                                               </div>
-                                           </div>
-                                            </form>
-
-                                                    </div>
-                                                </div>
-                                                <!-- /.modal-content -->
-                                            </div>
-                                            <!-- /.modal-dialog -->
-                                        </div>
-                                        <!-- /.modal -->
-
-
-                                        <div class="modal renrenguapo" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" style="display: none;" aria-hidden="true">
-                                            <div class="modal-dialog modal-lg">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="myLargeModalLabel">WORK EXPERIENCE</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        
-                                                    <?php 
-                                                        $attributes = array('class' => 'parsley-examples');
-                                                        echo form_open_multipart('Page/insert_experience', $attributes);
-                                                    ?>
-
-                                                    <input type="hidden" value="<?= $this->uri->segment(2); ?>" name="id_number">
-
-                                                        <div class="form-group row">
-                                                            <label for="inputPassword5" class="col-md-3 col-form-label">Company Name</label>
-                                                            <div class="col-lg-9">
-                                                                <textarea name="title" class="form-control" rows="5" id=""></textarea>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="form-group row">
-                                                            <label for="inputPassword5" class="col-md-3 col-form-label">Attachment</label>
-                                                            <div class="col-md-9">
-                                                                <input type="file" class="form-control" name="file" required>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="form-group row">
-                                                            <label for="inputPassword5" class="col-md-3 col-form-label">No. of Year</label>
-                                                            <div class="col-lg-3">
-                                                                <input name="ny" type="text" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="form-control" value="" required>
-                                                            </div>
-                                                            <label for="inputPassword5" class="col-md-2 col-form-label">No. of Month</label>
-                                                            <div class="col-lg-4">
-                                                                <input name="nm" type="text" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="form-control" value="" required>
-                                                            </div>
-                                                        </div>
-                                                       
-                                                        <div class="form-group mb-0 justify-content-end row">
-                                                            <div class="col-md-9">
-                                                                <input type="submit" name="submit" value="Submit" class="btn btn-primary waves-effect waves-light">
-                                                                <!-- <button type="submit" class="btn btn-info waves-effect waves-light">Submit</button> -->
-                                                            </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                                                            <button type="submit" name="awards" class="btn btn-primary waves-effect waves-light">Save Training</button>
                                                         </div>
                                                     </form>
-
-                                                    </div>
                                                 </div>
                                                 <!-- /.modal-content -->
                                             </div>
@@ -915,39 +892,52 @@
                                         </div>
                                         <!-- /.modal -->
 
-                                        <div class="modal ivy" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" style="display: none;" aria-hidden="true">
-                                            <div class="modal-dialog">
+
+                                        <div class="modal fade renrenguapo" tabindex="-1" role="dialog" aria-labelledby="addExperienceLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg modal-dialog-centered">
                                                 <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="myLargeModalLabel">UPDATE YEAR</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        
-                                                    <?php 
-                                                        $attributes = array('class' => 'parsley-examples');
-                                                        echo form_open('Page/update_year_experience', $attributes);
-                                                    ?>
+                                                    <?php echo form_open_multipart('Page/insert_experience', array('class' => 'parsley-examples')); ?>
+                                                        <div class="modal-header bg-info text-white">
+                                                            <h5 class="modal-title" id="addExperienceLabel"><i class="mdi mdi-briefcase-outline mr-1"></i> Add Work Experience</h5>
+                                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        </div>
 
-                                                    <input type="hidden" value="<?= $this->uri->segment(2); ?>" name="id_number">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" value="<?= $this->uri->segment(2); ?>" name="id_number">
 
-                                                        <input type="hidden" name="id" value="" id="id">
-                                                        <div class="form-group row">
-                                                            <label for="inputPassword5" class="col-md-5 col-form-label">Year</label>
-                                                            <div class="col-lg-7">
-                                                                <input name="ny" type="text" id="appid" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="assign" class="form-control" value="" required>
+                                                            <div class="form-group">
+                                                                <label class="font-weight-semibold">Company / Office Name <span class="text-danger">*</span></label>
+                                                                <textarea name="title" class="form-control" rows="3" placeholder="e.g. Department of Education - Davao Oriental" required></textarea>
+                                                            </div>
+
+                                                            <div class="form-row">
+                                                                <div class="form-group col-md-6">
+                                                                    <label class="font-weight-semibold">Inclusive Date &mdash; From <span class="text-danger">*</span></label>
+                                                                    <input name="date_from" type="date" class="form-control js-range-from js-xp-from" data-range="newxp" value="<?= set_value('date_from'); ?>" required>
+                                                                </div>
+                                                                <div class="form-group col-md-6">
+                                                                    <label class="font-weight-semibold">Inclusive Date &mdash; To <span class="text-danger">*</span></label>
+                                                                    <input name="date_to" type="date" class="form-control js-range-to js-xp-to" data-range="newxp" value="<?= set_value('date_to'); ?>" required>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="alert alert-secondary py-2 mb-3">
+                                                                <i class="mdi mdi-calendar-clock mr-1"></i>
+                                                                Length of service: <strong class="js-xp-preview" data-for="newxp">&mdash;</strong>
+                                                            </div>
+
+                                                            <div class="form-group mb-0">
+                                                                <label class="font-weight-semibold">Attachment <span class="text-danger">*</span></label>
+                                                                <input type="file" class="form-control" name="file" accept="application/pdf" required>
+                                                                <small class="form-text text-muted">Service record or certificate of employment, PDF file only.</small>
                                                             </div>
                                                         </div>
-                                                       
-                                                        <div class="form-group mb-0 justify-content-end row">
-                                                            <div class="col-md-7">
-                                                                <input type="submit" name="submit" value="Submit" class="btn btn-primary waves-effect waves-light">
-                                                                <!-- <button type="submit" class="btn btn-info waves-effect waves-light">Submit</button> -->
-                                                            </div>
+
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                                                            <button type="submit" name="submit" class="btn btn-primary waves-effect waves-light">Save Experience</button>
                                                         </div>
                                                     </form>
-
-                                                    </div>
                                                 </div>
                                                 <!-- /.modal-content -->
                                             </div>
@@ -955,40 +945,44 @@
                                         </div>
                                         <!-- /.modal -->
 
-
-                                        <div class="modal ic" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" style="display: none;" aria-hidden="true">
-                                            <div class="modal-dialog">
+                                        <div class="modal fade ivy" tabindex="-1" role="dialog" aria-labelledby="xpDatesLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
                                                 <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="myLargeModalLabel">UPDATE MONTH</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        
-                                                    <?php 
-                                                        $attributes = array('class' => 'parsley-examples');
-                                                        echo form_open('Page/update_experience', $attributes);
-                                                    ?>
+                                                    <?php echo form_open('Page/update_experience_dates', array('class' => 'parsley-examples')); ?>
+                                                        <div class="modal-header bg-info text-white">
+                                                            <h5 class="modal-title" id="xpDatesLabel"><i class="mdi mdi-calendar-range mr-1"></i> Update Inclusive Dates</h5>
+                                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        </div>
 
-                                                    <input type="hidden" value="<?= $this->uri->segment(2); ?>" name="id_number">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" value="<?= $this->uri->segment(2); ?>" name="id_number">
+                                                            <input type="hidden" name="id" value="" id="xp_dates_id">
 
-                                                        <input type="hidden" name="id" value="" id="id">
-                                                        <div class="form-group row">
-                                                            <label for="inputPassword5" class="col-md-5 col-form-label">Month</label>
-                                                            <div class="col-lg-7">
-                                                                <input name="nm" type="text" id="appid" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')" name="assign" class="form-control" value="" required>
+                                                            <p class="text-muted" id="xp_dates_title">&nbsp;</p>
+
+                                                            <div class="form-row">
+                                                                <div class="form-group col-md-6">
+                                                                    <label class="font-weight-semibold">From <span class="text-danger">*</span></label>
+                                                                    <input name="date_from" type="date" id="xp_date_from" class="form-control js-range-from js-xp-from" data-range="editxp" value="" required>
+                                                                </div>
+                                                                <div class="form-group col-md-6">
+                                                                    <label class="font-weight-semibold">To <span class="text-danger">*</span></label>
+                                                                    <input name="date_to" type="date" id="xp_date_to" class="form-control js-range-to js-xp-to" data-range="editxp" value="" required>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="alert alert-secondary py-2 mb-0">
+                                                                <i class="mdi mdi-calendar-clock mr-1"></i>
+                                                                Length of service: <strong class="js-xp-preview" data-for="editxp">&mdash;</strong>
+                                                                <br><small class="text-muted">This replaces the stored years and months for this record.</small>
                                                             </div>
                                                         </div>
-                                                       
-                                                        <div class="form-group mb-0 justify-content-end row">
-                                                            <div class="col-md-7">
-                                                                <input type="submit" name="submit" value="Submit" class="btn btn-primary waves-effect waves-light">
-                                                                <!-- <button type="submit" class="btn btn-info waves-effect waves-light">Submit</button> -->
-                                                            </div>
+
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                                                            <button type="submit" name="submit" class="btn btn-primary waves-effect waves-light">Save Dates</button>
                                                         </div>
                                                     </form>
-
-                                                    </div>
                                                 </div>
                                                 <!-- /.modal-content -->
                                             </div>
@@ -996,40 +990,33 @@
                                         </div>
                                         <!-- /.modal -->
 
-                                        <div class="modal ivan" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" style="display: none;" aria-hidden="true">
-                                            <div class="modal-dialog">
+
+                                        <div class="modal fade ivan" tabindex="-1" role="dialog" aria-labelledby="trainingHoursLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
                                                 <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="myLargeModalLabel">UPDATE</h5>
-                                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        
-                                                    <?php 
-                                                        $attributes = array('class' => 'parsley-examples');
-                                                        echo form_open('Page/update_trainings_staff', $attributes);
-                                                    ?>
+                                                    <?php echo form_open('Page/update_trainings_staff', array('class' => 'parsley-examples')); ?>
+                                                        <div class="modal-header bg-info text-white">
+                                                            <h5 class="modal-title" id="trainingHoursLabel"><i class="mdi mdi-clock-outline mr-1"></i> Update No. of Hours</h5>
+                                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        </div>
 
-                                                    <input type="hidden" value="<?= $this->uri->segment(2); ?>" name="id_number">
+                                                        <div class="modal-body">
+                                                            <input type="hidden" value="<?= $this->uri->segment(2); ?>" name="id_number">
+                                                            <!-- Both fields are filled by the shared footer handler. -->
+                                                            <input type="hidden" name="id" value="" id="id">
 
-                                                        <input type="hidden" name="id" value="" id="id">
-                                                        <div class="form-group row">
-                                                            <label class="col-md-5 col-form-label">No. of Hours</label>
-                                                            <div class="col-lg-7">
+                                                            <div class="form-group mb-0">
+                                                                <label class="font-weight-semibold">No. of Hours <span class="text-danger">*</span></label>
                                                                 <input name="nh" type="text" id="appid" maxlength="11" oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="form-control" value="" required>
-                                                                <small class="form-text text-muted">Enter total hours for this training.</small>
+                                                                <small class="form-text text-muted">Enter total hours credited for this training.</small>
                                                             </div>
                                                         </div>
-                                                       
-                                                        <div class="form-group mb-0 justify-content-end row">
-                                                            <div class="col-md-7">
-                                                                <input type="submit" name="submit" value="Submit" class="btn btn-primary waves-effect waves-light">
-                                                                <!-- <button type="submit" class="btn btn-info waves-effect waves-light">Submit</button> -->
-                                                            </div>
+
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                                                            <button type="submit" name="submit" class="btn btn-primary waves-effect waves-light">Save Hours</button>
                                                         </div>
                                                     </form>
-
-                                                    </div>
                                                 </div>
                                                 <!-- /.modal-content -->
                                             </div>
@@ -1037,6 +1024,81 @@
                                         </div>
                                         <!-- /.modal -->
 
+
+                                        <script type="text/javascript">
+                                            // Plain JS throughout: jQuery is not loaded until the footer runs.
+                                            (function () {
+
+                                                function parseDate(value) {
+                                                    var parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+                                                    if (!parts) return null;
+                                                    return new Date(+parts[1], parts[2] - 1, +parts[3]);
+                                                }
+
+                                                // Mirrors Reg::experience_duration() so the preview matches what the
+                                                // server will store. The server value stays authoritative on save.
+                                                function monthsBetween(from, to) {
+                                                    var months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+                                                    var days = to.getDate() - from.getDate();
+
+                                                    if (days < 0) {
+                                                        months--;
+                                                        var anniversary = new Date(to.getFullYear(), to.getMonth() - 1, from.getDate());
+                                                        days = Math.round((to - anniversary) / 86400000);
+                                                    }
+
+                                                    if (days >= 15) months++;
+                                                    return months;
+                                                }
+
+                                                function refreshRange(group) {
+                                                    var from = document.querySelector('.js-range-from[data-range="' + group + '"]');
+                                                    var to = document.querySelector('.js-range-to[data-range="' + group + '"]');
+                                                    var preview = document.querySelector('.js-xp-preview[data-for="' + group + '"]');
+                                                    if (!from || !to) return;
+
+                                                    // Stop the end date being set before the start date.
+                                                    to.min = from.value || '';
+                                                    if (from.value && to.value && to.value < from.value) {
+                                                        to.value = '';
+                                                    }
+
+                                                    if (!preview) return;
+
+                                                    var start = parseDate(from.value);
+                                                    var end = parseDate(to.value);
+                                                    if (!start || !end || end < start) {
+                                                        preview.textContent = '—';
+                                                        return;
+                                                    }
+
+                                                    var months = monthsBetween(start, end);
+                                                    preview.textContent = Math.floor(months / 12) + ' year(s) and ' + (months % 12) + ' month(s)';
+                                                }
+
+                                                document.addEventListener('change', function (e) {
+                                                    var field = e.target;
+                                                    if (!field || !field.classList) return;
+                                                    if (field.classList.contains('js-range-from') || field.classList.contains('js-range-to')) {
+                                                        refreshRange(field.getAttribute('data-range'));
+                                                    }
+                                                });
+
+                                                // The shared .open-AddBookDialog handler in the footer only knows about
+                                                // single-value modals, so the inclusive-dates modal fills itself.
+                                                document.addEventListener('click', function (e) {
+                                                    var trigger = e.target && e.target.closest ? e.target.closest('.open-xp-dates') : null;
+                                                    if (!trigger) return;
+
+                                                    document.getElementById('xp_dates_id').value = trigger.getAttribute('data-id') || '';
+                                                    document.getElementById('xp_date_from').value = trigger.getAttribute('data-from') || '';
+                                                    document.getElementById('xp_date_to').value = trigger.getAttribute('data-to') || '';
+                                                    document.getElementById('xp_dates_title').textContent = trigger.getAttribute('data-title') || '';
+
+                                                    refreshRange('editxp');
+                                                });
+                                            })();
+                                        </script>
 
                                         <script>
                                         document.addEventListener('DOMContentLoaded', function () {

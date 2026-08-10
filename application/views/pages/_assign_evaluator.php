@@ -14,21 +14,8 @@
 
 $ae_app_id = isset($ae_app_id) ? $ae_app_id : null;
 
-// Eligible assignees: Evaluators (egroup 1) plus ASDS users
-$ae_raters = $this->db
-    ->select('id,fname,mname,lname,username')
-    ->from('users')
-    ->group_start()
-        ->group_start()
-            ->where('position', 'Evaluator')
-            ->where('egroup', 1)
-        ->group_end()
-        ->or_where('position', 'asds')
-    ->group_end()
-    ->order_by('lname', 'asc')
-    ->order_by('fname', 'asc')
-    ->get()
-    ->result();
+// Eligible assignees: every Evaluator (any egroup) plus ASDS users.
+$ae_raters = $this->Reg->eligible_raters();
 
 // Current single-assignment info (latest)
 $ae_current = null;
@@ -46,7 +33,7 @@ if (!empty($ae_app_id)) {
 
 $ae_current_id = $ae_current ? (int) $ae_current->rater_user_id : null;
 
-// The assignee may no longer be an egroup 1 Evaluator. Keep them in the list so
+// The assignee may no longer hold an eligible position. Keep them in the list so
 // the browser cannot silently pre-select somebody else and reassign on submit.
 $ae_current_listed = false;
 foreach ($ae_raters as $r) {

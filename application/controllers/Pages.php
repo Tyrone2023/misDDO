@@ -2621,6 +2621,7 @@ class Pages extends CI_Controller
     {
 
         $this->Page_model->check_ownership($param);
+        $this->Reg->ensure_experience_columns();
 
         $page = "profile_reg";
 
@@ -9910,16 +9911,7 @@ public function rqa_municipality_print_shsv2()
         $assignmentFailed = false;
 
         if ($assignRater) {
-            $validRater = $this->db
-                ->where('id', $raterId)
-                ->group_start()
-                    ->group_start()
-                        ->where('position', 'Evaluator')
-                        ->where('egroup', 1)
-                    ->group_end()
-                    ->or_where('position', 'asds')
-                ->group_end()
-                ->count_all_results('users') > 0;
+            $validRater = $this->Reg->is_eligible_rater($raterId);
             if (!$validRater) {
                 $assignRater = false;
                 $assignmentMsg = ' Selected evaluator is not eligible; no assignment was made.';
@@ -10049,16 +10041,7 @@ public function rqa_municipality_print_shsv2()
         $assignmentStats = ['added' => 0, 'exists' => 0, 'failed' => 0, 'reassigned' => 0];
 
         if ($assignRater) {
-            $validRater = $this->db
-                ->where('id', $raterId)
-                ->group_start()
-                    ->group_start()
-                        ->where('position', 'Evaluator')
-                        ->where('egroup', 1)
-                    ->group_end()
-                    ->or_where('position', 'asds')
-                ->group_end()
-                ->count_all_results('users') > 0;
+            $validRater = $this->Reg->is_eligible_rater($raterId);
 
             if (!$validRater) {
                 $assignRater = false;
@@ -10246,16 +10229,7 @@ public function rqa_municipality_print_shsv2()
             return '';
         }
 
-        $validRater = $this->db
-            ->where('id', $raterId)
-            ->group_start()
-                ->group_start()
-                    ->where('position', 'Evaluator')
-                    ->where('egroup', 1)
-                ->group_end()
-                ->or_where('position', 'asds')
-            ->group_end()
-            ->count_all_results('users') > 0;
+        $validRater = $this->Reg->is_eligible_rater($raterId);
         if (!$validRater) {
             return ' Selected evaluator is not eligible; no assignment was made.';
         }
@@ -10370,16 +10344,7 @@ public function rqa_municipality_print_shsv2()
         $assignmentFailed = false;
 
         if ($assignRater) {
-            $validRater = $this->db
-                ->where('id', $raterId)
-                ->group_start()
-                    ->group_start()
-                        ->where('position', 'Evaluator')
-                        ->where('egroup', 1)
-                    ->group_end()
-                    ->or_where('position', 'asds')
-                ->group_end()
-                ->count_all_results('users') > 0;
+            $validRater = $this->Reg->is_eligible_rater($raterId);
             if (!$validRater) {
                 $assignRater = false;
                 $assignmentMsg = ' Selected evaluator is not eligible; no assignment was made.';

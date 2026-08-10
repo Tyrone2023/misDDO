@@ -162,9 +162,9 @@
                                                     <a class="btn btn-outline-info" href="<?= base_url('Pages/new_applicant'); ?>">
                                                         <i class="mdi mdi-account-plus mr-1"></i> Applicant
                                                     </a>
-                                                    <a class="btn btn-outline-purple" href="<?= base_url('private'); ?>">
+                                                    <!-- <a class="btn btn-outline-purple" href="<?= base_url('private'); ?>">
                                                         <i class="mdi mdi-school mr-1"></i> Private School
-                                                    </a>
+                                                    </a> -->
                                                 </div>
                                             </div>
                                             <?php } ?>
