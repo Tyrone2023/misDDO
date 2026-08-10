@@ -51,6 +51,17 @@ class Mailqueue extends CI_Controller
 
 		$started = microtime(TRUE);
 
+		// ?retry=1 resets available_at on all pending rows so they are picked
+		// up immediately, bypassing the backoff wait. Useful after fixing SMTP
+		// credentials so stuck messages go out right away instead of waiting.
+		if ((string) $this->input->get('retry') === '1')
+		{
+			$this->db->where('status', 'pending')
+				->update($this->Mail_queue_model::TABLE, array(
+					'available_at' => date('Y-m-d H:i:s'),
+				));
+		}
+
 		// Rows a previous worker claimed and never finished - it was killed
 		// mid-batch - would otherwise sit in 'sending' forever.
 		$released = $this->Mail_queue_model->release_stale_locks(
@@ -462,11 +473,11 @@ class Mailqueue extends CI_Controller
 	// ------------------------------------------------------------------
 
 	/**
-	 * Show the queue status and, for a logged-in admin, the cron URL + token.
+	 * Show the queue status and the cron URL + token.
 	 *
 	 * Accessible over HTTP (unlike the other commands) so it can be visited in
-	 * a browser. A non-logged-in visitor gets only the queue counts; a logged-in
-	 * admin who passes ?show_cron=1 also gets the ready-to-paste cron command.
+	 * a browser. The token itself is the secret; this page just displays it so
+	 * it can be copied into Hostinger's cron job setup.
 	 */
 	public function key()
 	{
@@ -480,22 +491,38 @@ class Mailqueue extends CI_Controller
 			."  failed=".$counts['failed']
 			."  bounced=".$counts['bounced']."\n";
 
-		// Only reveal the cron URL to a logged-in user.
-		$username = (string) $this->session->userdata('username');
-		$position = (string) $this->session->userdata('position');
+		$token    = mis_mailqueue_token();
+		$cron     = '*/2 * * * * curl -s "'.site_url('mailqueue/run').'?token='.$token.'" > /dev/null 2>&1';
+		$explicit = (string) $this->config->item('mail_queue_cron_token');
 
-		if ($username !== '' && ! in_array(strtolower($position), array('school', 'student', 'applicant'), TRUE))
+		$out .= "\nCron command (hPanel > Advanced > Cron Jobs, every 2 minutes):\n\n"
+			."  ".$cron."\n";
+
+		if ($explicit !== '')
 		{
-			$token  = mis_mailqueue_token();
-			$cron   = '*/2 * * * * curl -s "'.site_url('mailqueue/run').'?token='.$token.'" > /dev/null 2>&1';
-			$explicit = (string) $this->config->item('mail_queue_cron_token');
+			$out .= "\n(Note: SRMS_CRON_TOKEN is set in the environment and overrides the derived token.)\n";
+		}
 
-			$out .= "\nCron command (hPanel > Advanced > Cron Jobs, every 2 minutes):\n\n"
-				."  ".$cron."\n";
+		// Recent messages with their errors, so delivery problems can be
+		// diagnosed from a browser without needing SSH.
+		$recent = $this->Mail_queue_model->recent(15);
 
-			if ($explicit !== '')
+		if ($recent !== array())
+		{
+			$out .= "\nRecent messages:\n\n";
+			foreach ($recent as $row)
 			{
-				$out .= "\n(Note: SRMS_CRON_TOKEN is set in the environment and overrides the derived token.)\n";
+				$detail = ($row['status'] === 'sent')
+					? $row['sent_at']
+					: $this->_shorten((string) $row['last_error'], 500);
+
+				$out .= sprintf(
+					"#%-5s %-9s %-34s %s\n",
+					$row['id'],
+					$row['status'],
+					$this->_shorten($row['to_email'], 34),
+					$detail
+				);
 			}
 		}
 

@@ -21,7 +21,7 @@
 $config['protocol']     = 'smtp';
 $config['smtp_host']    = getenv('SRMS_SMTP_HOST') ?: 'mail.depedddo-mis.com';
 $config['smtp_user']    = getenv('SRMS_SMTP_USER') !== FALSE ? getenv('SRMS_SMTP_USER') : 'ddorecruitmentsystem@depedddo-mis.com';
-$config['smtp_pass']    = getenv('SRMS_SMTP_PASS') !== FALSE ? getenv('SRMS_SMTP_PASS') : '.P0liceReport';
+$config['smtp_pass']    = getenv('SRMS_SMTP_PASS') !== FALSE ? getenv('SRMS_SMTP_PASS') : '@Moth34board';
 $config['smtp_port']    = (int) (getenv('SRMS_SMTP_PORT') ?: 465);
 
 // '' for a plain connection, 'ssl' for port 465, 'tls' for port 587.
