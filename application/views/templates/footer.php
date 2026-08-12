@@ -297,5 +297,91 @@
                     });
                 </script>
 
+                <!--
+                    Upload guard.
+
+                    Scanned documents (education files above all) arrive named things like
+                    "TOR & Diploma (Bachelor's) #2.pdf". Those characters travel in the
+                    multipart headers, and the WAF in front of the live site reads them as an
+                    injection attempt and answers with a bare "403 Forbidden" page - before
+                    PHP ever runs, so nothing server-side can catch it. Rename the file to
+                    plain ASCII here, in the browser, so the request is clean on the wire.
+
+                    Oversized files are stopped here too, so the user gets a readable message
+                    instead of the web server's raw error page.
+                -->
+                <script>
+                    (function () {
+                        // PHP's real ceiling for this install; 0 means "no limit configured".
+                        var MAX_BYTES = window.MIS_UPLOAD_MAX_BYTES || <?= (int) max_upload_bytes(); ?>;
+
+                        function safeName(name) {
+                            var dot = name.lastIndexOf('.');
+                            var ext = dot > -1 ? name.slice(dot + 1).replace(/[^A-Za-z0-9]/g, '').toLowerCase() : '';
+                            var base = dot > -1 ? name.slice(0, dot) : name;
+
+                            base = base.normalize ? base.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : base;
+                            base = base.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80);
+
+                            if (!base) { base = 'file'; }
+                            return ext ? base + '.' + ext : base;
+                        }
+
+                        function humanSize(bytes) {
+                            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                        }
+
+                        document.addEventListener('submit', function (event) {
+                            var form = event.target;
+                            if (!form || (form.enctype || '').toLowerCase() !== 'multipart/form-data') { return; }
+
+                            var inputs = form.querySelectorAll('input[type="file"]');
+
+                            for (var i = 0; i < inputs.length; i++) {
+                                var input = inputs[i];
+                                if (!input.files || !input.files.length) { continue; }
+
+                                var total = 0;
+                                for (var j = 0; j < input.files.length; j++) { total += input.files[j].size; }
+
+                                if (MAX_BYTES && total > MAX_BYTES) {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    alert(
+                                        'That file is ' + humanSize(total) + ', which is larger than the ' +
+                                        humanSize(MAX_BYTES) + ' this site accepts.\n\n' +
+                                        'Please scan at a lower resolution, or compress/split the PDF, then try again.'
+                                    );
+                                    return;
+                                }
+
+                                // Rebuild the FileList with sanitised names. Unsupported on very
+                                // old browsers - there the original name simply goes through.
+                                if (typeof DataTransfer === 'undefined') { continue; }
+
+                                var needsRename = false;
+                                for (var k = 0; k < input.files.length; k++) {
+                                    if (input.files[k].name !== safeName(input.files[k].name)) { needsRename = true; }
+                                }
+                                if (!needsRename) { continue; }
+
+                                try {
+                                    var dt = new DataTransfer();
+                                    for (var m = 0; m < input.files.length; m++) {
+                                        var original = input.files[m];
+                                        dt.items.add(new File([original], safeName(original.name), {
+                                            type: original.type,
+                                            lastModified: original.lastModified
+                                        }));
+                                    }
+                                    input.files = dt.files;
+                                } catch (e) {
+                                    /* Leave the original files in place rather than blocking the upload. */
+                                }
+                            }
+                        }, true);
+                    })();
+                </script>
+
 </body>
 </html>

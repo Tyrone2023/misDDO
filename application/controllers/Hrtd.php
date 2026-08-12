@@ -190,7 +190,7 @@ class Hrtd extends CI_Controller
         public function update_wap_file() {
             $config['allowed_types'] = 'pdf';
             $config['upload_path'] = './uploads/hrdfile';
-            $new_name = $this->input->post('IDNumber').'-wap-'.time().$_FILES["file"]['name'];
+            $new_name = $this->input->post('IDNumber').'-wap-'.time().safe_upload_name($_FILES["file"]['name']);
             $config['file_name'] = $new_name;
             $this->load->library('upload', $config);
         
@@ -214,7 +214,7 @@ class Hrtd extends CI_Controller
         public function update_mov_file() {
             $config['allowed_types'] = 'pdf';
             $config['upload_path'] = './uploads/hrdfile';
-            $new_name = $this->input->post('IDNumber').'-mov-'.time().$_FILES["file"]['name'];
+            $new_name = $this->input->post('IDNumber').'-mov-'.time().safe_upload_name($_FILES["file"]['name']);
             $config['file_name'] = $new_name;
             $this->load->library('upload', $config);
         

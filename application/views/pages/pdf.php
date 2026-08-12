@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="shortcut icon" href="<?= base_url(); ?>assets/images/hris.ico">
-<title><?= $this->input->get('label'); ?></title>
+<title><?= htmlspecialchars((string) $this->input->get('label'), ENT_QUOTES, 'UTF-8'); ?></title>
 
 
 <!-- site analytics for pdfobject.com, do not copy into your code -->
@@ -20,13 +20,26 @@ body { font: 15px/120% sans-serif; color: #555; background: #fff; padding: 2rem;
 </head>
 
 <body>
-<h1><?= $this->input->get('label'); ?></h1>
+<h1><?= htmlspecialchars((string) $this->input->get('label'), ENT_QUOTES, 'UTF-8'); ?></h1>
 
 
 
 <script src="https://unpkg.com/pdfobject@2.3.0/pdfobject.min.js"></script>
-<?php $col = $this->uri->segment(4); ?>
-<script>PDFObject.embed("<?= base_url(); ?>uploads/regfile/<?= $data->$col; ?>", document.body);</script>
+<?php
+    $col  = $this->uri->segment(4);
+    $file = isset($data->$col) ? (string) $data->$col : '';
+?>
+<?php if ($file === ''): ?>
+<p>No file has been attached yet.</p>
+<?php else: ?>
+<?php
+    // Files uploaded before names were sanitised can still contain spaces, '&'
+    // or '#'. Left raw those truncate or corrupt the URL - and on the live host
+    // they make the request look hostile, which comes back as a bare 403.
+    $src = base_url() . 'uploads/regfile/' . rawurlencode($file);
+?>
+<script>PDFObject.embed(<?= json_encode($src, JSON_UNESCAPED_SLASHES); ?>, document.body);</script>
+<?php endif; ?>
 
 </body>
 </html>

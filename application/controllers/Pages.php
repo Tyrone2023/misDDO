@@ -2307,7 +2307,7 @@ class Pages extends CI_Controller
 
 			$config['allowed_types'] = 'pdf';
 			$config['upload_path'] = './uploads/trainings_staff';
-			$new_name = $this->input->post('id') . '-'. time() . $_FILES["file"]['name'];
+			$new_name = $this->input->post('id') . '-'. time() . safe_upload_name($_FILES["file"]['name']);
 			$config['file_name'] = $new_name;
 			$this->load->library('upload', $config);
 
@@ -7976,7 +7976,7 @@ public function rqa_municipality_print_shsv2()
     public function update_master_file() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'efile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'efile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8002,7 +8002,7 @@ public function rqa_municipality_print_shsv2()
     public function update_doctor_file() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = $this->input->post('id').'efile'.time().$_FILES["file"]['name'];
+        $new_name = $this->input->post('id').'efile'.time().safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8028,7 +8028,7 @@ public function rqa_municipality_print_shsv2()
     public function update_efile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'efile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'efile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8054,7 +8054,7 @@ public function rqa_municipality_print_shsv2()
     public function update_master_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'efile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'efile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8080,7 +8080,7 @@ public function rqa_municipality_print_shsv2()
     public function update_doctor_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'efile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'efile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8107,7 +8107,7 @@ public function rqa_municipality_print_shsv2()
       public function update_efile_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'efile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'efile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8134,7 +8134,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = $this->input->post('id') . 'outfile' . time() .  $_FILES["file"]['name'];
+        $new_name = $this->input->post('id') . 'outfile' . time() .  safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8159,7 +8159,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = $this->input->post('id'). 'aefile' . time()  .  $_FILES["file"]['name'];
+        $new_name = $this->input->post('id'). 'aefile' . time()  .  safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8186,7 +8186,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = $this->input->post('id') . 'aefile' . time() .  $_FILES["file"]['name'];
+        $new_name = $this->input->post('id') . 'aefile' . time() .  safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8211,7 +8211,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = $this->input->post('id') . 'aldfile' . time()   . $_FILES["file"]['name'];
+        $new_name = $this->input->post('id') . 'aldfile' . time()   . safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8236,7 +8236,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = $this->input->post('id') . 'aldfile'. time() . $_FILES["file"]['name'];
+        $new_name = $this->input->post('id') . 'aldfile'. time() . safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8261,7 +8261,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time() . 'torcav' . $this->input->post('id') . $_FILES["file"]['name'];
+        $new_name = time() . 'torcav' . $this->input->post('id') . safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8284,7 +8284,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time() . 'torcav' . $this->input->post('id') . $_FILES["file"]['name'];
+        $new_name = time() . 'torcav' . $this->input->post('id') . safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8308,7 +8308,7 @@ public function rqa_municipality_print_shsv2()
     public function update_wefile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'wefile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'wefile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8334,7 +8334,7 @@ public function rqa_municipality_print_shsv2()
      public function update_wefile_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'wefile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'wefile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8362,7 +8362,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time() . 'eligibility' . $this->input->post('id') . $_FILES["file"]['name'];
+        $new_name = time() . 'eligibility' . $this->input->post('id') . safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8388,7 +8388,7 @@ public function rqa_municipality_print_shsv2()
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
         
-        $new_name = time() . 'eligibility' . $this->input->post('id') . $_FILES["file"]['name'];
+        $new_name = time() . 'eligibility' . $this->input->post('id') . safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 
@@ -8413,7 +8413,7 @@ public function rqa_municipality_print_shsv2()
   public function update_letfile() {
     $config['allowed_types'] = 'pdf';
     $config['upload_path'] = './uploads/regfile';
-    $new_name = time().'letfile'.$this->input->post('id').$_FILES["file"]['name'];
+    $new_name = time().'letfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
     $config['file_name'] = $new_name;
     $this->load->library('upload', $config);
 
@@ -8438,7 +8438,7 @@ public function rqa_municipality_print_shsv2()
    public function update_letfile_staff() {
     $config['allowed_types'] = 'pdf';
     $config['upload_path'] = './uploads/regfile';
-    $new_name = time().'letfile'.$this->input->post('id').$_FILES["file"]['name'];
+    $new_name = time().'letfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
     $config['file_name'] = $new_name;
     $this->load->library('upload', $config);
 
@@ -8465,7 +8465,7 @@ public function rqa_municipality_print_shsv2()
     public function update_tscfile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'tscfile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'tscfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8491,7 +8491,7 @@ public function rqa_municipality_print_shsv2()
        public function update_tscfile_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'tscfile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'tscfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8517,7 +8517,7 @@ public function rqa_municipality_print_shsv2()
     public function update_tcfile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'tcfile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'tcfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8543,7 +8543,7 @@ public function rqa_municipality_print_shsv2()
       public function update_tcfile_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'tcfile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'tcfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8570,7 +8570,7 @@ public function rqa_municipality_print_shsv2()
     public function update_omni(){
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'omni'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'omni'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8600,7 +8600,7 @@ public function rqa_municipality_print_shsv2()
     // {
     //     $config['allowed_types'] = 'pdf';
     //     $config['upload_path'] = './uploads/regfile';
-    //     $new_name = time() . 'omni' . $this->input->post('id') . $_FILES["file_name"]['name'];
+    //     $new_name = time() . 'omni' . $this->input->post('id') . safe_upload_name($_FILES["file_name"]['name']);
     //     $config['file_name'] = $new_name;
     //     $this->load->library('upload', $config);
 
@@ -8622,7 +8622,7 @@ public function rqa_municipality_print_shsv2()
     public function update_apfile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'application'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'application'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8653,7 +8653,7 @@ public function rqa_municipality_print_shsv2()
     public function update_apfile_rploi() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'application'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'application'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8685,7 +8685,7 @@ public function rqa_municipality_print_shsv2()
         public function update_apfile_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = $this->input->post('id').'-'.time().'application'.$_FILES["file"]['name'];
+        $new_name = $this->input->post('id').'-'.time().'application'.safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8717,7 +8717,7 @@ public function rqa_municipality_print_shsv2()
        public function update_voters() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'voters'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'voters'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8748,7 +8748,7 @@ public function rqa_municipality_print_shsv2()
     public function update_omni_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'omni'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'omni'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8780,7 +8780,7 @@ public function rqa_municipality_print_shsv2()
     public function update_voters_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'voters'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'voters'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8810,7 +8810,7 @@ public function rqa_municipality_print_shsv2()
       public function update_pdsfile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'pdsfile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'pdsfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8837,7 +8837,7 @@ public function rqa_municipality_print_shsv2()
        public function update_pdsfile_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'pdsfile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'pdsfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8865,7 +8865,7 @@ public function rqa_municipality_print_shsv2()
       public function update_oafile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'oafile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'oafile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8891,7 +8891,7 @@ public function rqa_municipality_print_shsv2()
        public function update_oafile_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'oafile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'oafile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8918,7 +8918,7 @@ public function rqa_municipality_print_shsv2()
        public function update_outfile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'outfile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'outfile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8958,7 +8958,7 @@ public function rqa_municipality_print_shsv2()
     public function update_ipcrffile() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'ipcrffile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'ipcrffile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -8985,7 +8985,7 @@ public function rqa_municipality_print_shsv2()
     public function update_ipcrffile_staff() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'ipcrffile'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'ipcrffile'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -9011,7 +9011,7 @@ public function rqa_municipality_print_shsv2()
     public function update_ppstco() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'ppstco'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'ppstco'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -9037,7 +9037,7 @@ public function rqa_municipality_print_shsv2()
     public function update_ppstpa() {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time().'ppstpa'.$this->input->post('id').$_FILES["file"]['name'];
+        $new_name = time().'ppstpa'.$this->input->post('id').safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
     
@@ -11071,7 +11071,7 @@ public function rqa_municipality_print_shsv2()
     {
         $config['allowed_types'] = 'pdf';
         $config['upload_path'] = './uploads/regfile';
-        $new_name = time() . 'documents' . $this->input->post('jobID') . $_FILES["file_name"]['name'];
+        $new_name = time() . 'documents' . $this->input->post('jobID') . safe_upload_name($_FILES["file_name"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
 

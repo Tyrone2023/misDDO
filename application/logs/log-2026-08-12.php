@@ -331,3 +331,5 @@ ERROR - 2026-08-12 23:44:36 --> Severity: Warning --> Undefined variable $job /A
 ERROR - 2026-08-12 23:44:36 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
 ERROR - 2026-08-12 23:44:36 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
 ERROR - 2026-08-12 23:44:36 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-12 18:21:51 --> 404 Page Not Found: Pages/login
+ERROR - 2026-08-12 18:22:28 --> 404 Page Not Found: Pages/login_process

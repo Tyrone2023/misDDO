@@ -771,7 +771,7 @@ class Brigada extends CI_Controller
 
         $config['allowed_types'] = 'jpg|png';
         $config['upload_path'] = './uploads/brigada_partners_logo';
-        $new_name = $_FILES["file"]['name'];
+        $new_name = safe_upload_name($_FILES["file"]['name']);
         $config['file_name'] = $new_name;
         $this->load->library('upload', $config);
         

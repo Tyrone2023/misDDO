@@ -26,7 +26,7 @@ class FileUploader extends CI_Controller {
 					'upload_path'   => 'uploads/studeprofile/',
 					'allowed_types' => 'csv',
 					'max_size'      => '1000', // max_size in kb
-					'file_name'     => $_FILES['file']['name']
+					'file_name'     => safe_upload_name($_FILES['file']['name'])
 				];
 	
 				// Load upload library
@@ -78,7 +78,7 @@ public function teachers(){
 					'upload_path'   => 'upload/files/',
 					'allowed_types' => 'csv',
 					'max_size'      => '1000', // max_size in kb
-					'file_name'     => $_FILES['file']['name']
+					'file_name'     => safe_upload_name($_FILES['file']['name'])
 				];
 	
 				// Load upload library
@@ -128,7 +128,7 @@ public function Courses(){
     			$config['upload_path'] = 'upload/files/'; 
     			$config['allowed_types'] = 'csv'; 
     			$config['max_size'] = '1000'; // max_size in kb 
-    			$config['file_name'] = $_FILES['file']['name']; 
+    			$config['file_name'] = safe_upload_name($_FILES['file']['name']); 
 
     			// Load upload library 
     			$this->load->library('upload',$config); 
@@ -192,7 +192,7 @@ public function sections(){
     			$config['upload_path'] = 'upload/files/'; 
     			$config['allowed_types'] = 'csv'; 
     			$config['max_size'] = '1000'; // max_size in kb 
-    			$config['file_name'] = $_FILES['file']['name']; 
+    			$config['file_name'] = safe_upload_name($_FILES['file']['name']); 
 
     			// Load upload library 
     			$this->load->library('upload',$config); 
@@ -255,7 +255,7 @@ public function subjects(){
     			$config['upload_path'] = 'upload/files/'; 
     			$config['allowed_types'] = 'csv'; 
     			$config['max_size'] = '1000'; // max_size in kb 
-    			$config['file_name'] = $_FILES['file']['name']; 
+    			$config['file_name'] = safe_upload_name($_FILES['file']['name']); 
 
     			// Load upload library 
     			$this->load->library('upload',$config); 
@@ -317,7 +317,7 @@ public function courseFees(){
     			$config['upload_path'] = 'upload/files/'; 
     			$config['allowed_types'] = 'csv'; 
     			$config['max_size'] = '1000'; // max_size in kb 
-    			$config['file_name'] = $_FILES['file']['name']; 
+    			$config['file_name'] = safe_upload_name($_FILES['file']['name']); 
 
     			// Load upload library 
     			$this->load->library('upload',$config); 

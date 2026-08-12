@@ -3678,7 +3678,7 @@ class Page extends CI_Controller
 
 			$config['allowed_types'] = 'pdf';
 			$config['upload_path'] = './uploads/regfile';
-			$new_name = time() . 'job' . $_FILES["file"]['name'];
+			$new_name = time() . 'job' . safe_upload_name($_FILES["file"]['name']);
 			$config['file_name'] = $new_name;
 			$this->load->library('upload', $config);
 
@@ -4892,7 +4892,7 @@ class Page extends CI_Controller
 				$config['upload_path'] = 'uploads/leave_credits/';
 				$config['allowed_types'] = 'csv';
 				$config['max_size'] = '1000'; // max_size in kb 
-				$config['file_name'] = $_FILES['file']['name'];
+				$config['file_name'] = safe_upload_name($_FILES['file']['name']);
 
 				// Load upload library 
 				$this->load->library('upload', $config);
@@ -4955,7 +4955,7 @@ class Page extends CI_Controller
 				$config['upload_path'] = 'uploads/files/';
 				$config['allowed_types'] = 'csv';
 				$config['max_size'] = '1000'; // max_size in kb 
-				$config['file_name'] = $_FILES['file']['name'];
+				$config['file_name'] = safe_upload_name($_FILES['file']['name']);
 
 				// Load upload library 
 				$this->load->library('upload', $config);
@@ -5018,7 +5018,7 @@ class Page extends CI_Controller
 				$config['upload_path'] = 'uploads/service_record/';
 				$config['allowed_types'] = 'csv';
 				$config['max_size'] = '10000'; // max_size in kb 
-				$config['file_name'] = $_FILES['file']['name'];
+				$config['file_name'] = safe_upload_name($_FILES['file']['name']);
 
 				// Load upload library 
 				$this->load->library('upload', $config);
@@ -5090,7 +5090,7 @@ class Page extends CI_Controller
 					'upload_path'   => 'uploads/enrolees/',
 					'allowed_types' => 'csv',
 					'max_size'      => '10000', // in kb
-					'file_name'     => $_FILES['file']['name']
+					'file_name'     => safe_upload_name($_FILES['file']['name'])
 				);
 
 				// Load upload library
@@ -5147,7 +5147,7 @@ class Page extends CI_Controller
 				$config['upload_path'] = 'uploads/staff_profile/';
 				$config['allowed_types'] = 'csv';
 				$config['max_size'] = '10000'; // max_size in kb 
-				$config['file_name'] = $_FILES['file']['name'];
+				$config['file_name'] = safe_upload_name($_FILES['file']['name']);
 
 				// Load upload library 
 				$this->load->library('upload', $config);
@@ -12086,7 +12086,7 @@ class Page extends CI_Controller
 	{
 		$config['allowed_types'] = 'pdf';
 		$config['upload_path'] = './uploads/trainings';
-		$new_name = $this->input->post('id_number') . '-' . time() . $_FILES["file"]['name'];
+		$new_name = $this->input->post('id_number') . '-' . time() . safe_upload_name($_FILES["file"]['name']);
 		$config['file_name'] = $new_name;
 		$this->load->library('upload', $config);
 
@@ -12136,7 +12136,7 @@ class Page extends CI_Controller
 
 		$config['allowed_types'] = 'pdf';
 		$config['upload_path'] = './uploads/experience';
-		$new_name = $this->input->post('id_number') . '-' . time() . $_FILES["file"]['name'];
+		$new_name = $this->input->post('id_number') . '-' . time() . safe_upload_name($_FILES["file"]['name']);
 		$config['file_name'] = $new_name;
 		$this->load->library('upload', $config);
 
