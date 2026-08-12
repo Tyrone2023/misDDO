@@ -10658,6 +10658,33 @@ public function rqa_municipality_print_shsv2()
         }
     }
 
+    /**
+     * hris_applications columns a rating form is allowed to write its note to.
+     * `col` and `remark_col` arrive as hidden fields and are used as raw column
+     * names, so anything not on this list is ignored rather than trusted.
+     */
+    private function rating_remark_columns()
+    {
+        return array(
+            'educ_remarks', 'training_remarks', 'experience_remarks',
+            'performance_remarks', 'oa_remarks', 'ae_remarks', 'ald_remarks'
+        );
+    }
+
+    /**
+     * The four criteria that gained an "Applicants QS" picker need somewhere to
+     * keep their remarks; the three older ones already had a column.
+     */
+    private function ensure_rating_remark_columns()
+    {
+        $this->Common->ensure_columns('hris_applications', array(
+            'performance_remarks' => 'TEXT NULL DEFAULT NULL',
+            'oa_remarks'          => 'TEXT NULL DEFAULT NULL',
+            'ae_remarks'          => 'TEXT NULL DEFAULT NULL',
+            'ald_remarks'         => 'TEXT NULL DEFAULT NULL'
+        ));
+    }
+
     public function update_rate_none()
     {
 
@@ -10668,15 +10695,19 @@ public function rqa_municipality_print_shsv2()
         $message = $this->input->post('message');
         $maxpoint = $this->input->post('maxpoint');
 
+        $this->ensure_rating_remark_columns();
+
         $check = $this->Common->two_cond_row('hris_rating_none', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post($col) <= $maxpoint) {
 
-            if ($check->eval_id1 == 0) { 
+            if ($check->eval_id1 == 0) {
                 $this->Reg->update_eval_none('eval_id1');
             }
 
             $this->Reg->update_rate_none($col);
-            $this->Reg->update_remarks($remarks);
+            if (in_array($remarks, $this->rating_remark_columns(), true)) {
+                $this->Reg->update_remarks($remarks);
+            }
             $this->Reg->ap_track('The ' . $message . ' rating has been encoded.');
             $this->session->set_flashdata('success', 'Successfuly Saved');
             $this->redirect_back('#tsc', base_url() . 'pages/' . $this->input->post('page') . '/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->input->post('school_id') . '/' . $this->input->post('app_id') . '/' . $this->input->post('record_no') . '#tsc');

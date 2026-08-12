@@ -358,8 +358,7 @@ if (!function_exists('hrp_num')) {
                                                 </tbody>
                                             </table>
                                             <div class="hrc-empty-levels" data-key="<?= $key; ?>">
-                                                No increment levels &mdash; applicants are rated directly out of
-                                                <span class="hrc-crit-max" data-key="<?= $key; ?>"><?= hrp_num($c['max_points']); ?></span> points.
+                                                No increment levels 
                                             </div>
                                         </div>
 

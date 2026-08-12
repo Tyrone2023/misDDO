@@ -86,6 +86,65 @@
                 $score_training = $qs_options($score_training);
                 $score_ex       = $qs_options($score_ex);
 
+                /*
+                 * Performance, Outstanding Accomplishments, Application of
+                 * Education and Application of Learning & Development never had
+                 * an "Applicants QS" picker - they were typed in free-hand. They
+                 * get one now, built from the same per-position sheet, so a slot
+                 * only shows a picker when this position actually defines that
+                 * criterion. Positions with no sheet are left exactly as they were.
+                 */
+                $qs_extra = array(
+                    'per' => array(
+                        'class'      => 'perfqs',
+                        'title'      => 'Performance Rating',
+                        'bg'         => 'bg-warning',
+                        'btn'        => 'btn-warning',
+                        'col'        => 'performance',
+                        'remark_col' => 'performance_remarks',
+                        'value'      => (($rating->performance ?? 0) != 0.00001) ? ($rating->performance ?? '') : '',
+                        'remarks'    => $aa->performance_remarks ?? ''
+                    ),
+                    'oa' => array(
+                        'class'      => 'oaqs',
+                        'title'      => 'Outstanding Accomplishments',
+                        'bg'         => 'bg-purple',
+                        'btn'        => 'btn-purple',
+                        'col'        => 'oa',
+                        'remark_col' => 'oa_remarks',
+                        'value'      => (($rating->oa ?? 0) != 0.00001) ? ($rating->oa ?? '') : '',
+                        'remarks'    => $aa->oa_remarks ?? ''
+                    ),
+                    'ae' => array(
+                        'class'      => 'aeqs',
+                        'title'      => 'Application of Education',
+                        'bg'         => 'bg-purple',
+                        'btn'        => 'btn-purple',
+                        'col'        => 'ae',
+                        'remark_col' => 'ae_remarks',
+                        'value'      => (($rating->ae ?? 0) != 0.00001) ? ($rating->ae ?? '') : '',
+                        'remarks'    => $aa->ae_remarks ?? ''
+                    ),
+                    'ald' => array(
+                        'class'      => 'aldqs',
+                        'title'      => 'Application of Learning & Development',
+                        'bg'         => 'bg-purple',
+                        'btn'        => 'btn-purple',
+                        'col'        => 'ald',
+                        'remark_col' => 'ald_remarks',
+                        'value'      => (($rating->ald ?? 0) != 0.00001) ? ($rating->ald ?? '') : '',
+                        'remarks'    => $aa->ald_remarks ?? ''
+                    )
+                );
+
+                $qs_button = function ($slot) use ($qs_slots, $qs_extra) {
+                    if (!isset($qs_slots[$slot], $qs_extra[$slot])) {
+                        return '';
+                    }
+                    return '<a href="#" data-toggle="modal" data-target=".' . $qs_extra[$slot]['class']
+                         . '" class="btn btn-sm btn-primary">Applicants QS</a>';
+                };
+
                 $request_rp = $this->Common->one_cond_row('settings', 'id', 10);
                 
                 $training_sum = $this->Reg->gettotaltraining_staff('hris_trainings','noHours',$data->id);
@@ -733,11 +792,13 @@
                                                                                             
                                                             <?php if($rating->performance != 0.00001){echo $rating->performance; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".performancerating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->performance != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
+                                                            <?= $qs_button("per"); ?>
                                                             
                                                         <?php }else{ ?>
 
                                                             <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->performance != 0.00001){echo $rating->performance; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".performancerating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->performance != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
+                                                            <?= $qs_button("per"); ?>
                                                             <?php } ?>
                                                             
                                                             <?php } ?>
@@ -785,11 +846,13 @@
 
                                                             <?php if($rating->oa != 0.00001){echo $rating->oa; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".oa"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->oa != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
+                                                            <?= $qs_button("oa"); ?>
                                                             
                                                         <?php }else{ ?>
 
                                                             <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->oa != 0.00001){echo $rating->oa; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".oa"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->oa != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
+                                                            <?= $qs_button("oa"); ?>
                                                             <?php } ?>
                                                             
                                                             <?php } ?>
@@ -834,11 +897,13 @@
 
                                                             <?php if($rating->oa != 0.00001){echo $rating->ae; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".ae"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ae != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
+                                                            <?= $qs_button("ae"); ?>
                                                             
                                                         <?php }else{ ?>
 
                                                             <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->ae != 0.00001){echo $rating->ae; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".ae"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ae != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
+                                                            <?= $qs_button("ae"); ?>
                                                             <?php } ?>
                                                             
                                                             <?php } ?>
@@ -884,11 +949,13 @@
                                                                                             
                                                             <?php if($rating->ald != 0.00001){echo $rating->ald; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".aldrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ald != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
+                                                            <?= $qs_button("ald"); ?>
                                                             
                                                         <?php }else{ ?>
 
                                                             <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){if($rating->ald != 0.00001){echo $rating->ald; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".aldrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ald != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
+                                                            <?= $qs_button("ald"); ?>
                                                             <?php } ?>
                                                             
                                                             <?php } ?>
@@ -4349,6 +4416,36 @@
 
 
 
+                                        <?php
+                                        /*
+                                         * Applicants QS for Performance, Outstanding Accomplishments,
+                                         * Application of Education and Application of Learning &
+                                         * Development. Rendered only for the criteria this position's
+                                         * sheet defines - see $qs_extra at the top of this view.
+                                         */
+                                        foreach ($qs_extra as $qs_slot => $qs_cfg) :
+                                            if (!isset($qs_slots[$qs_slot])) {
+                                                continue;
+                                            }
+                                            $this->load->view('pages/partials/applicant_qs_modal', array(
+                                                'qs_class'        => $qs_cfg['class'],
+                                                'qs_title'        => $qs_cfg['title'],
+                                                'qs_header_bg'    => $qs_cfg['bg'],
+                                                'qs_button_class' => $qs_cfg['btn'],
+                                                'qs_col'          => $qs_cfg['col'],
+                                                'qs_remark_col'   => $qs_cfg['remark_col'],
+                                                'qs_message'      => $qs_cfg['title'],
+                                                'qs_max'          => $qs_slots[$qs_slot]['max_points'],
+                                                'qs_levels'       => $qs_options($qs_slots[$qs_slot]['levels']),
+                                                'qs_value'        => $qs_cfg['value'],
+                                                'qs_remarks'      => $qs_cfg['remarks'],
+                                                'qs_app_id'       => $aa->appID ?? '',
+                                                'qs_record_no'    => $staff->record_no ?? '',
+                                                'qs_emp_email'    => $staff->empEmail ?? ''
+                                            ));
+                                        endforeach;
+                                        ?>
+
                                         <script>
                                             document.addEventListener("DOMContentLoaded", function () {
                                                 const mappings = [
@@ -4362,6 +4459,18 @@
                                                     const input = document.getElementById(inputId);
 
                                                     if (select && input) {
+                                                        select.addEventListener('change', function () {
+                                                            input.value = select.value;
+                                                        });
+                                                    }
+                                                });
+
+                                                // the newer QS pickers name their rating box on the
+                                                // element itself, so they need no mapping table
+                                                document.querySelectorAll('.qs-select').forEach(function (select) {
+                                                    const input = document.getElementById(select.dataset.ratingInput);
+
+                                                    if (input) {
                                                         select.addEventListener('change', function () {
                                                             input.value = select.value;
                                                         });
