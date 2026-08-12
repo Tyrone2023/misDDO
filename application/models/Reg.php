@@ -1386,8 +1386,76 @@ class Reg extends CI_Model{
       return $this->db->insert('hris_applications_rating', $data);
     }
 
+    /**
+     * Guarantee the rating row exists before a score is written into it.
+     *
+     * The rating row is normally created when the Secretariat endorses the
+     * applicant (Pages::Unqualified_none -> insert_rate_none). Every update_rate*
+     * / update_eval* method below is an UPDATE with no insert fallback, so when
+     * that row is missing the write silently affects zero rows while the
+     * controller still flashes "Successfuly Saved" - the evaluator's score is
+     * lost with no error anywhere.
+     *
+     * Insert the same all-sentinel row insert_rate_* would have created, so the
+     * UPDATE that follows lands somewhere.
+     *
+     * @param  string $table
+     * @return bool TRUE when a row was created.
+     */
+    private function ensure_rate_row($table)
+    {
+      $appId  = $this->input->post('app_id');
+      $record = $this->input->post('record_no');
+
+      // Without both keys there is nothing to key a row on - let the UPDATE
+      // no-op exactly as it did before rather than inserting a stray row.
+      if (empty($appId) || $record === NULL || $record === '') {
+          return FALSE;
+      }
+
+      $exists = $this->db->get_where($table, array(
+          'appID'     => $appId,
+          'record_no' => $record,
+      ))->row();
+
+      if ($exists) {
+          return FALSE;
+      }
+
+      // NOT NULL columns without a database default first (total_points, skills,
+      // ...), so the insert also succeeds on a server running in STRICT mode.
+      $data = rating_required_defaults($table);
+
+      foreach (rating_score_fields($table) as $field) {
+          $data[$field] = .00001;
+      }
+
+      $data['appID']     = $appId;
+      $data['record_no'] = $record;
+
+      // job_type / fy come from the vacancy the application was filed against -
+      // the same values insert_rate_* record at endorsement time.
+      $app = $this->db->select('jobID')
+                      ->get_where('hris_applications', array('appID' => $appId))
+                      ->row();
+
+      if ($app) {
+          $job = $this->db->select('position, sy')
+                          ->get_where('hris_jobvacancy', array('jobID' => $app->jobID))
+                          ->row();
+
+          if ($job) {
+              $data['job_type'] = $job->position;
+              $data['fy']       = $job->sy;
+          }
+      }
+
+      return $this->db->insert($table, $data);
+    }
+
     public function update_rate($educ){
 
+      $this->ensure_rate_row('hris_applications_rating');
 
       $data = array(
           $educ => $this->input->post($educ)
@@ -1403,6 +1471,7 @@ class Reg extends CI_Model{
 
     public function update_rate_none($educ){
 
+      $this->ensure_rate_row('hris_rating_none');
 
       $data = array(
           $educ => $this->input->post($educ),
@@ -1418,6 +1487,7 @@ class Reg extends CI_Model{
 
     public function update_rate_promotion($educ){
 
+      $this->ensure_rate_row('hris_rating_promotion');
 
       $data = array(
           $educ => $this->input->post($educ),
@@ -1886,6 +1956,7 @@ class Reg extends CI_Model{
 
     public function update_eval($eval){
 
+      $this->ensure_rate_row('hris_applications_rating');
 
       $data = array(
           $eval => $this->session->id
@@ -1899,6 +1970,7 @@ class Reg extends CI_Model{
 
     public function update_eval_none($eval){
 
+      $this->ensure_rate_row('hris_rating_none');
 
       $data = array(
           $eval => $this->session->id
@@ -1912,6 +1984,7 @@ class Reg extends CI_Model{
 
      public function update_eval_promotion($eval){
 
+      $this->ensure_rate_row('hris_rating_promotion');
 
       $data = array(
           $eval => $this->session->id

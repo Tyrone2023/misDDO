@@ -6,7 +6,12 @@
                     $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID',$this->uri->segment(4));
                     $history = $this->Common->one_cond('hris_applications','empEmail',$data->empEmail); 
                     $aa = $this->Common->three_cond_row('hris_applications','empEmail',$data->empEmail,'jobID',$this->uri->segment(4),'pre_school',$this->uri->segment(5)); 
-                    $rating = $this->Common->two_cond_row('hris_rating_none','record_no',$data->empEmail,'appID',$aa->appID); 
+                    $rating = $this->Common->two_cond_row('hris_rating_none','record_no',$data->empEmail,'appID',$aa->appID ?? null);
+
+                    if (empty($rating)) {
+                        $rating = blank_rating_row('hris_rating_none');
+                    }
+
                     $pt = $this->Common->one_cond_row('hris_positions','title',$job->jobTitle);
                     $ptp = $this->Common->one_cond_row('hris_position_points','id',$pt->bracket);
                     $inquery = $this->Common->one_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID);
@@ -2734,7 +2739,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="let_rating"  value="<?php if($rating->let_rating != 0.00001){echo $rating->let_rating; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="let_rating"  value="<?php if(($rating->let_rating ?? null) != 0.00001){echo ($rating->let_rating ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         

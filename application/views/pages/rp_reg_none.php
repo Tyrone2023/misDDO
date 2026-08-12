@@ -26,7 +26,15 @@
                         ->row();
                 }
 
-                $rating = $this->Common->two_cond_row('hris_rating_none','record_no',$staff->record_no,'appID',$aa->appID ?? null); 
+                $rating = $this->Common->two_cond_row('hris_rating_none','record_no',$staff->record_no,'appID',$aa->appID ?? null);
+
+                // No row yet (applicant not endorsed, or copied from an application
+                // that had none). Render as an unrated applicant instead of letting
+                // ~125 property reads below warn on NULL.
+                if (empty($rating)) {
+                    $rating = blank_rating_row('hris_rating_none');
+                }
+
 
 
                 $inquery = $this->Common->one_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID);
@@ -2450,7 +2458,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="let_rating"  value="<?php if($rating->let_rating != 0.00001){echo $rating->let_rating; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="let_rating"  value="<?php if(($rating->let_rating ?? null) != 0.00001){echo ($rating->let_rating ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -2509,7 +2517,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="training"  value="<?php if($rating->training != 0.00001){echo $rating->training; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="training"  value="<?php if(($rating->training ?? null) != 0.00001){echo ($rating->training ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         

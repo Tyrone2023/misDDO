@@ -4,7 +4,13 @@
              
                 <?php $history = $this->Common->one_cond('hris_applications','empEmail',$data->empEmail); ?>
                 <?php $aa = $this->Common->three_cond_row('hris_applications','empEmail',$data->empEmail,'jobID',$this->uri->segment(4),'pre_school',$this->uri->segment(5)); ?>
-                <?php $rating = $this->Common->two_cond_row('hris_applications_rating','record_no',$data->empEmail,'appID',$aa->appID); ?>
+                <?php
+                    $rating = $this->Common->two_cond_row('hris_applications_rating','record_no',$data->empEmail,'appID',$aa->appID ?? null);
+
+                    if (empty($rating)) {
+                        $rating = blank_rating_row('hris_applications_rating');
+                    }
+                ?>
    
                 <?php $inquery = $this->Common->one_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID); ?>
                 <?php $applicantInquery = $this->Common->two_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID, 'res', $user->username ?? $this->session->username); ?>

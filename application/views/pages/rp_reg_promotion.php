@@ -27,7 +27,12 @@
                             ->row();
                     }
 
-                    $rating = $this->Common->one_cond_row('hris_rating_promotion','appID',$aa->appID ?? null); 
+                    $rating = $this->Common->one_cond_row('hris_rating_promotion','appID',$aa->appID ?? null);
+
+                    if (empty($rating)) {
+                        $rating = blank_rating_row('hris_rating_promotion');
+                    }
+
                     $pt = $this->Common->one_cond_row('hris_positions','title',$job->jobTitle);
                     $ptp = $this->Common->one_cond_row('hris_position_points','id',$pt->bracket);
                     $inquery = $this->Common->one_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID);
@@ -2567,7 +2572,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="let_rating"  value="<?php if($rating->let_rating != 0.00001){echo $rating->let_rating; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="let_rating"  value="<?php if(($rating->let_rating ?? null) != 0.00001){echo ($rating->let_rating ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -2693,7 +2698,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="oa"  value="<?php if($rating->oa != 0.00001){echo $rating->oa; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="oa"  value="<?php if(($rating->oa ?? null) != 0.00001){echo ($rating->oa ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -2756,7 +2761,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="ae"  value="<?php if($rating->ae != 0.00001){echo $rating->ae; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="ae"  value="<?php if(($rating->ae ?? null) != 0.00001){echo ($rating->ae ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -2819,7 +2824,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="ald"  value="<?php if($rating->ald != 0.00001){echo $rating->ald; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="ald"  value="<?php if(($rating->ald ?? null) != 0.00001){echo ($rating->ald ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -2882,7 +2887,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="interview"  value="<?php if($rating->interview != 0.00001){echo $rating->interview; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="interview"  value="<?php if(($rating->interview ?? null) != 0.00001){echo ($rating->interview ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -2945,7 +2950,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="written"  value="<?php if($rating->written != 0.00001){echo $rating->written; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="written"  value="<?php if(($rating->written ?? null) != 0.00001){echo ($rating->written ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -3008,7 +3013,7 @@
                                                                         <div class="col-lg-12">
                                                                                 <div class="form-group">
                                                                                     <label>Rating</label>
-                                                                                    <input type="text"  class="form-control" name="skills"  value="<?php if($rating->skills != 0.00001){echo $rating->skills; } ?>" >
+                                                                                    <input type="text"  class="form-control" name="skills"  value="<?php if(($rating->skills ?? null) != 0.00001){echo ($rating->skills ?? null); } ?>" >
                                                                                 </div>	
                                                                         </div>	
                                                                         

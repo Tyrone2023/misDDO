@@ -10483,7 +10483,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_applications_rating', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('education') <= 10) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval('eval_id1');
             }
 
@@ -10508,7 +10508,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_rating_none', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('educ') <= $this->input->post('max')) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval_none('eval_id1');
             }
 
@@ -10533,7 +10533,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_rating_promotion', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('educ') <= $this->input->post('max')) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval_promotion('eval_id1');
             }
 
@@ -10561,7 +10561,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_applications_rating', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('let_rating') <= 10) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval('eval_id1');
             }
 
@@ -10590,7 +10590,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_applications_rating', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('tr_rating') <= 25) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval('eval_id3');
             }
 
@@ -10619,7 +10619,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_applications_rating', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('demo_rating') <= 35) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval('eval_id2');
             }
 
@@ -10701,7 +10701,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_rating_none', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post($col) <= $maxpoint) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval_none('eval_id1');
             }
 
@@ -10731,7 +10731,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_rating_none', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post($col) <= $maxpoint) {
 
-            if ($check->eval_id1 == 0) { 
+            if (($check->eval_id1 ?? 0) == 0) { 
                 $this->Reg->update_eval_none('eval_id1');
             }
 
@@ -10757,7 +10757,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_rating_promotion', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post($col) <= $maxpoint) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval_none('eval_id1');
             }
 
@@ -10783,7 +10783,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_rating_none', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post($col) <= $maxpoint) {
 
-            if ($check->eval_id2 == 0) {
+            if (($check->eval_id2 ?? 0) == 0) {
                 $this->Reg->update_eval_none('eval_id2');
             }
 
@@ -10809,7 +10809,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_rating_none', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post($col) <= $maxpoint) {
 
-            if ($check->eval_id3 == 0) {
+            if (($check->eval_id3 ?? 0) == 0) {
                 $this->Reg->update_eval_none('eval_id3');
             }
 
@@ -10838,7 +10838,7 @@ public function rqa_municipality_print_shsv2()
         $check = $this->Common->two_cond_row('hris_applications_rating', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('training') <= 10) {
 
-            if ($check->eval_id1 == 0) {
+            if (($check->eval_id1 ?? 0) == 0) {
                 $this->Reg->update_eval('eval_id1');
             }
 
