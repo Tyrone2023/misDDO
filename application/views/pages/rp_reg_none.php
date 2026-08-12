@@ -36,6 +36,56 @@
                 $ptp = $this->Common->one_cond_row('hris_position_points','id',$pt->bracket);
                 $dq_hide = $this->Common->one_cond_row('settings', 'id', 10);
 
+                /*
+                 * Scoring criteria are maintained per position title under
+                 * Page/positionCriteria. Where this position has a sheet it
+                 * supplies both the point ceilings shown in the section headers
+                 * and the choices in the "Applicants QS" pickers below; where it
+                 * has none, everything falls back to the shared points bracket
+                 * and the old score_list rows exactly as before.
+                 */
+                // CI copies the controller's properties onto the loader before it
+                // includes a view, so a model loaded here lands on the controller
+                // and never on $this - hold it in a local instead.
+                $CI =& get_instance();
+                $CI->load->model('Position_criteria_model');
+                $criteria_model = $CI->Position_criteria_model;
+
+                $qs_position_id = (int)($job->position_id ?? 0);
+                if ($qs_position_id <= 0) {
+                    $qs_position_id = (int)($pt->id ?? 0);   // older postings matched by title only
+                }
+
+                $qs_slots = $criteria_model->slots($qs_position_id);
+                $ptp      = $criteria_model->points($qs_position_id, $ptp);
+
+                // legacy pickers: score_list keyed by hris_positions.g_score
+                $legacy_educ     = $this->Common->two_cond('score_list','group',(int)($pt->g_score ?? 0),'score_type',0);
+                $legacy_training = $this->Common->two_cond('score_list','group',(int)($pt->g_score ?? 0),'score_type',1);
+                $legacy_ex       = $this->Common->two_cond('score_list','group',(int)($pt->g_score ?? 0),'score_type',2);
+
+                $score_educ     = $criteria_model->levels_for_slot($qs_position_id, 'educ', $legacy_educ);
+                $score_training = $criteria_model->levels_for_slot($qs_position_id, 'tr',   $legacy_training);
+                $score_ex       = $criteria_model->levels_for_slot($qs_position_id, 'exp',  $legacy_ex);
+
+                // a score_list row calls its value "score", a criteria level calls
+                // it "points" - normalise so the pickers below read one shape
+                $qs_options = function ($rows) {
+                    $out = array();
+                    foreach ($rows as $row) {
+                        $out[] = (object) array(
+                            'description' => $row->description,
+                            'points'      => isset($row->points) ? (float) $row->points : (float) $row->score,
+                            'level'       => isset($row->increment_level) ? (int) $row->increment_level : null
+                        );
+                    }
+                    return $out;
+                };
+
+                $score_educ     = $qs_options($score_educ);
+                $score_training = $qs_options($score_training);
+                $score_ex       = $qs_options($score_ex);
+
                 $request_rp = $this->Common->one_cond_row('settings', 'id', 10);
                 
                 $training_sum = $this->Reg->gettotaltraining_staff('hris_trainings','noHours',$data->id);
@@ -3993,13 +4043,7 @@
                                                                     <input type="hidden" name="maxpoint" value="<?= $ptp->educ; ?>">
                                                                     <input type="hidden" name="remark_col" value="educ_remarks">
                                                                       
-                                                                    <?php 
-                                                                        $cur_pos = $this->Common->one_cond_row_select('hris_positions','id,g_score','id',$job->position_id); 
-                                                                        $score_educ = $this->Common->two_cond('score_list','group',$cur_pos->g_score,'score_type',0);
-                                                                        $score_training = $this->Common->two_cond('score_list','group',$cur_pos->g_score,'score_type',1);
-                                                                        $score_ex = $this->Common->two_cond('score_list','group',$cur_pos->g_score,'score_type',2);
-                                                                    ?>
-                                                                   
+                                                                    <?php /* pickers come from this position's criteria sheet - built at the top of this view */ ?>
 
                                                                     <div class="row">
                                                                         <div class="col-lg-12">
@@ -4008,9 +4052,12 @@
                                                                                     <select class="form-control" name="qs" id='qs'>
                                                                                     <option disabled selected></option>
                                                                                     <?php foreach($score_educ as $row){?>
-                                                                                    <option value="<?= $row->score; ?>"><?= $row->description; ?></option>
+                                                                                    <option value="<?= $row->points; ?>"><?= html_escape($row->description); ?> &mdash; <?= rtrim(rtrim(number_format($row->points, 2, '.', ''), '0'), '.'); ?> pt<?= $row->points == 1 ? '' : 's'; ?></option>
                                                                                     <?php } ?>
                                                                                 </select>
+                                                                                <?php if (empty($score_educ)) : ?>
+                                                                                    <small class="text-muted">No rating criteria set for this position yet &mdash; add them under Positions Settings &rarr; Scoring Criteria, or type the rating below.</small>
+                                                                                <?php endif; ?>
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -4093,9 +4140,12 @@
                                                                                     <select class="form-control" name="qs" id='certqs'>
                                                                                         <option disabled selected></option>
                                                                                         <?php foreach($score_training as $row){?>
-                                                                                            <option value="<?= $row->score; ?>"><?= $row->description; ?></option>
+                                                                                            <option value="<?= $row->points; ?>"><?= html_escape($row->description); ?> &mdash; <?= rtrim(rtrim(number_format($row->points, 2, '.', ''), '0'), '.'); ?> pt<?= $row->points == 1 ? '' : 's'; ?></option>
                                                                                         <?php } ?>
                                                                                 </select>
+                                                                                <?php if (empty($score_training)) : ?>
+                                                                                    <small class="text-muted">No rating criteria set for this position yet &mdash; add them under Positions Settings &rarr; Scoring Criteria, or type the rating below.</small>
+                                                                                <?php endif; ?>
                                                                                 </div>	
                                                                         </div>	
                                                                         
@@ -4177,9 +4227,12 @@
                                                                                     <select class="form-control" name="qs" id='xpqs'>
                                                                                         <option disabled selected></option>
                                                                                         <?php foreach($score_ex as $row){?>
-                                                                                            <option value="<?= $row->score; ?>"><?= $row->description; ?></option>
+                                                                                            <option value="<?= $row->points; ?>"><?= html_escape($row->description); ?> &mdash; <?= rtrim(rtrim(number_format($row->points, 2, '.', ''), '0'), '.'); ?> pt<?= $row->points == 1 ? '' : 's'; ?></option>
                                                                                         <?php } ?>
                                                                                 </select>
+                                                                                <?php if (empty($score_ex)) : ?>
+                                                                                    <small class="text-muted">No rating criteria set for this position yet &mdash; add them under Positions Settings &rarr; Scoring Criteria, or type the rating below.</small>
+                                                                                <?php endif; ?>
                                                                                 </div>	
                                                                         </div>	
                                                                         

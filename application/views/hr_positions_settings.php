@@ -189,15 +189,12 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                                                     <?php endif; ?>
                                                 </td>
                                                 <td data-order="<?= $sheet ? (int) round($total) : -1; ?>">
-                                                    <?php if ($sheet && round($total, 2) == 100) : ?>
+                                                    <?php if ($sheet) : ?>
                                                         <span class="hrp-chip hrp-chip-green">
-                                                            <i class="mdi mdi-check-circle-outline"></i> 100 pts
+                                                            <i class="mdi mdi-check-circle-outline"></i>
+                                                            <?= rtrim(rtrim(number_format($total, 2, '.', ''), '0'), '.'); ?> pts
                                                         </span>
                                                         <span class="hrp-title-sub" style="margin-left:.35rem;"><?= number_format($sheet['levels']); ?> level<?= $sheet['levels'] == 1 ? '' : 's'; ?></span>
-                                                    <?php elseif ($sheet) : ?>
-                                                        <span class="hrp-chip hrp-chip-amber">
-                                                            <i class="mdi mdi-alert-outline"></i> <?= rtrim(rtrim(number_format($total, 2, '.', ''), '0'), '.'); ?> pts
-                                                        </span>
                                                     <?php else : ?>
                                                         <span class="hrp-chip hrp-chip-grey">Not set</span>
                                                     <?php endif; ?>

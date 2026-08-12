@@ -3882,9 +3882,13 @@ class Page extends CI_Controller
 
 	/**
 	 * The sheet a position starts with the first time it is opened. It is the
-	 * standard DepEd/CSC breakdown, but nothing here is fixed - criteria can be
-	 * renamed, added and removed per position, because not every title is
-	 * rated on the same things.
+	 * standard DepEd/CSC breakdown minus Potential (Written Exam, BEI) - this
+	 * screen drives application encoding, and Potential is scored later from
+	 * the written exam and the BEI, not from the documents on file.
+	 *
+	 * Nothing here is fixed: criteria are renamed, added and removed per
+	 * position, because not every title is rated on the same things, and the
+	 * points do not have to add up to any particular figure.
 	 */
 	private function position_criteria_defaults()
 	{
@@ -3895,8 +3899,7 @@ class Page extends CI_Controller
 			array('label' => 'Performance',                            'points' => 20),
 			array('label' => 'Outstanding Accomplishments',            'points' => 10),
 			array('label' => 'Application of Education',               'points' => 10),
-			array('label' => 'Application of Learning and Development', 'points' => 10),
-			array('label' => 'Potential (Written Exam, BEI)',          'points' => 20)
+			array('label' => 'Application of Learning and Development', 'points' => 10)
 		);
 	}
 
@@ -4174,11 +4177,6 @@ class Page extends CI_Controller
 			redirect(base_url() . 'Page/positionCriteria/' . $id);
 		}
 
-		if (round($total, 2) != 100) {
-			$this->session->set_flashdata('danger', 'The criteria must add up to exactly 100 points - the sheet came to ' . rtrim(rtrim(number_format($total, 2, '.', ''), '0'), '.') . '.');
-			redirect(base_url() . 'Page/positionCriteria/' . $id);
-		}
-
 		// levels: description is what makes a row real, an empty one is dropped
 		$rows = array();
 		foreach ($levels as $key => $entries) {
@@ -4238,7 +4236,7 @@ class Page extends CI_Controller
 		}
 
 		$this->Page_model->insert_at('Updated scoring criteria for position: ' . $position->title, $id);
-		$this->session->set_flashdata('success', 'Scoring criteria saved for "' . $position->title . '" - ' . count($criteria) . ' criteria, 100 points across ' . count($rows) . ' increment level(s).');
+		$this->session->set_flashdata('success', 'Scoring criteria saved for "' . $position->title . '" - ' . count($criteria) . ' criteria worth ' . rtrim(rtrim(number_format($total, 2, '.', ''), '0'), '.') . ' points across ' . count($rows) . ' increment level(s).');
 		redirect(base_url() . 'Page/positionCriteria/' . $id);
 	}
 

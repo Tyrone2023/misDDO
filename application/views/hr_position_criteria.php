@@ -267,7 +267,7 @@ if (!function_exists('hrp_num')) {
                                     <tr>
                                         <td colspan="2" class="text-right">TOTAL</td>
                                         <td class="hrc-pts">
-                                            <span class="hrc-total-pill hrc-total-bad" id="hrc-total-pill">
+                                            <span class="hrc-total-pill" id="hrc-total-pill">
                                                 <i class="mdi mdi-sigma"></i> <span id="hrc-total">0</span>
                                             </span>
                                         </td>
@@ -377,10 +377,6 @@ if (!function_exists('hrp_num')) {
                         </div>
 
                         <div class="hrc-bar">
-                            <span class="hrc-total-pill hrc-total-bad" id="hrc-total-pill-2">
-                                <i class="mdi mdi-sigma"></i> Total: <span id="hrc-total-2">0</span> / 100
-                            </span>
-                            <span class="hrp-card-sub" id="hrc-total-msg" style="margin:0;"></span>
                             <span class="hrc-bar-spacer"></span>
                             <?php if (!$is_new) : ?>
                                 <a href="<?= base_url(); ?>Page/positionCriteria_clear/<?= $pid; ?>"
@@ -489,8 +485,7 @@ if (!function_exists('hrp_num')) {
                 { label: 'Performance', points: 20, levels: [] },
                 { label: 'Outstanding Accomplishments', points: 10, levels: [] },
                 { label: 'Application of Education', points: 10, levels: [] },
-                { label: 'Application of Learning and Development', points: 10, levels: [] },
-                { label: 'Potential (Written Exam, BEI)', points: 20, levels: [] }
+                { label: 'Application of Learning and Development', points: 10, levels: [] }
             ];
 
             // form keys for criteria added on screen, and a per-criterion counter
@@ -621,20 +616,12 @@ if (!function_exists('hrp_num')) {
                 total = trim(total);
 
                 var count = $('#hrc-alloc-body .hrc-alloc-row').length;
-                var ok = (total === 100 && count > 0);
-                var msg = total > 100 ? (trim(total - 100) + ' over') : (trim(100 - total) + ' short');
 
-                $('#hrc-total, #hrc-total-2').text(total);
+                // the sheet is whatever this position is worth - there is no
+                // target to hit, so the total is reported, never judged
+                $('#hrc-total').text(total);
                 $('#hrc-hero-total').text(total);
                 $('#hrc-hero-levels').text(levels);
-
-                $('#hrc-total-msg').text(count === 0
-                    ? 'Add at least one criterion.'
-                    : (ok ? 'Ready to save.' : 'The criteria must total exactly 100 points - currently ' + msg + '.'));
-
-                $('#hrc-total-pill, #hrc-total-pill-2')
-                    .toggleClass('hrc-total-ok', ok)
-                    .toggleClass('hrc-total-bad', !ok);
 
                 $('#hrc-no-crit, #hrc-no-crit-2').toggle(count === 0);
             }
@@ -753,25 +740,14 @@ if (!function_exists('hrp_num')) {
                     return;
                 }
 
-                var total = 0;
                 var unnamed = 0;
-
                 rows.each(function () {
-                    var points = parseFloat($(this).find('.hrc-max').val());
-                    if (!isNaN(points)) { total += points; }
                     if ($.trim($(this).find('.hrc-label').val()) === '') { unnamed++; }
                 });
-                total = trim(total);
 
                 if (unnamed > 0) {
                     e.preventDefault();
                     alert('Every criterion needs a name - ' + unnamed + ' row(s) are still blank. Name them or remove them.');
-                    return;
-                }
-
-                if (total !== 100) {
-                    e.preventDefault();
-                    alert('The criteria must add up to exactly 100 points. They currently total ' + total + '.');
                     return;
                 }
 
