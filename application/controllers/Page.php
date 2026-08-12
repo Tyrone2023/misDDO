@@ -3775,6 +3775,7 @@ class Page extends CI_Controller
 	{
 		$this->position_settings_access();
 		$this->ensure_position_id_width();
+		$this->ensure_position_criteria_tables();
 
 		$usage = array();
 		$q = $this->db->query("select position_id, count(*) as total from hris_jobvacancy where position_id is not null and position_id != 0 group by position_id");
@@ -3783,9 +3784,9 @@ class Page extends CI_Controller
 		}
 
 		$result['groups']   = $this->position_groups();
-		$result['brackets'] = $this->Common->no_cond('hris_position_points');
 		$result['data']     = $this->Common->no_cond_order_by('hris_positions', 'title', 'ASC');
 		$result['usage']    = $usage;
+		$result['criteria'] = $this->position_criteria_summary();
 
 		$this->load->view('hr_positions_settings', $result);
 	}
@@ -3794,11 +3795,10 @@ class Page extends CI_Controller
 	{
 		$this->position_settings_access();
 
-		$id      = (int) $this->input->post('id');
-		$title   = trim((string) $this->input->post('title'));
-		$pos_id  = (int) $this->input->post('pos_id');
-		$sg      = $this->input->post('sg');
-		$bracket = (int) $this->input->post('bracket');
+		$id     = (int) $this->input->post('id');
+		$title  = trim((string) $this->input->post('title'));
+		$pos_id = (int) $this->input->post('pos_id');
+		$sg     = $this->input->post('sg');
 
 		$groups = $this->position_groups();
 
@@ -3819,20 +3819,23 @@ class Page extends CI_Controller
 		}
 
 		$data = array(
-			'title'   => $title,
-			'pos_id'  => $pos_id,
-			'sg'      => ($sg === '' || $sg === null) ? null : (int) $sg,
-			'bracket' => $bracket
+			'title'  => $title,
+			'pos_id' => $pos_id,
+			'sg'     => ($sg === '' || $sg === null) ? null : (int) $sg
 		);
 
 		if ($id) {
-			// g_score is left untouched on edit - it is maintained elsewhere
+			// bracket and g_score are left untouched on edit - the point system is
+			// now maintained per position under Page/positionCriteria, but the two
+			// legacy columns still feed the older RQA/IES report views
 			$this->db->where('id', $id);
 			$this->db->update('hris_positions', $data);
 			$this->Page_model->insert_at('Updated position title: ' . $title, $id);
 			$this->session->set_flashdata('success', 'Position updated successfully.');
 		} else {
-			$data['g_score'] = 0; // column is NOT NULL without a default
+			// both columns are NOT NULL without a default
+			$data['bracket'] = 0;
+			$data['g_score'] = 0;
 			$this->db->insert('hris_positions', $data);
 			$this->Page_model->insert_at('Added position title: ' . $title, $this->db->insert_id());
 			$this->session->set_flashdata('success', 'Position added successfully.');
@@ -3861,10 +3864,449 @@ class Page extends CI_Controller
 			redirect(base_url() . 'Page/positionSettings');
 		}
 
+		$this->ensure_position_criteria_tables();
+		$this->db->delete('hris_position_criteria_level', array('position_id' => $id));
+		$this->db->delete('hris_position_criteria', array('position_id' => $id));
+
 		$this->Common->del('hris_positions', 'id', $id);
 		$this->Page_model->insert_at('Deleted position title: ' . $pos->title, $id);
 		$this->session->set_flashdata('success', 'Position deleted successfully.');
 		redirect(base_url() . 'Page/positionSettings');
+	}
+
+	/* ==================================================================
+	 * Scoring Criteria - the "Criteria and Point System for Hiring and
+	 * Promotion" sheet, kept per position title instead of per shared
+	 * points bracket.
+	 * ================================================================== */
+
+	/**
+	 * The sheet a position starts with the first time it is opened. It is the
+	 * standard DepEd/CSC breakdown, but nothing here is fixed - criteria can be
+	 * renamed, added and removed per position, because not every title is
+	 * rated on the same things.
+	 */
+	private function position_criteria_defaults()
+	{
+		return array(
+			array('label' => 'Education',                              'points' => 5),
+			array('label' => 'Training',                               'points' => 10),
+			array('label' => 'Experience',                             'points' => 15),
+			array('label' => 'Performance',                            'points' => 20),
+			array('label' => 'Outstanding Accomplishments',            'points' => 10),
+			array('label' => 'Application of Education',               'points' => 10),
+			array('label' => 'Application of Learning and Development', 'points' => 10),
+			array('label' => 'Potential (Written Exam, BEI)',          'points' => 20)
+		);
+	}
+
+	private function ensure_position_criteria_tables()
+	{
+		// `criterion` is the row's place in the sheet (0, 1, 2 ...) and is what
+		// the level table joins on; the whole sheet is rewritten on every save,
+		// so the numbering is always rebuilt from the order on screen.
+		$this->db->query("
+			CREATE TABLE IF NOT EXISTS `hris_position_criteria` (
+			  `id`          INT(11)      NOT NULL AUTO_INCREMENT,
+			  `position_id` INT(11)      NOT NULL,
+			  `criterion`   TINYINT(4)   NOT NULL,
+			  `label`       VARCHAR(150) NOT NULL DEFAULT '',
+			  `max_points`  DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+			  `updated_by`  VARCHAR(100) DEFAULT NULL,
+			  `updated_at`  DATETIME     DEFAULT NULL,
+			  PRIMARY KEY (`id`),
+			  UNIQUE KEY `uq_position_criterion` (`position_id`, `criterion`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8
+		");
+
+		// installs created before criteria carried their own name
+		$this->Common->ensure_columns('hris_position_criteria', array(
+			'label' => "VARCHAR(150) NOT NULL DEFAULT '' AFTER `criterion`"
+		));
+
+		$this->db->query("
+			CREATE TABLE IF NOT EXISTS `hris_position_criteria_level` (
+			  `id`              INT(11)      NOT NULL AUTO_INCREMENT,
+			  `position_id`     INT(11)      NOT NULL,
+			  `criterion`       TINYINT(4)   NOT NULL,
+			  `increment_level` INT(11)      NOT NULL DEFAULT 0,
+			  `description`     VARCHAR(255) NOT NULL,
+			  `points`          DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+			  PRIMARY KEY (`id`),
+			  KEY `idx_position_criterion` (`position_id`, `criterion`, `increment_level`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8
+		");
+	}
+
+	/**
+	 * position_id => array(total points, criteria rows, increment levels)
+	 * for the badge on the positions list.
+	 */
+	private function position_criteria_summary()
+	{
+		$summary = array();
+
+		$q = $this->db->query(
+			"select position_id, sum(max_points) as total, count(*) as rows_set
+			   from hris_position_criteria
+			  group by position_id"
+		);
+		if ($q) {
+			foreach ($q->result() as $row) {
+				$summary[(int) $row->position_id] = array(
+					'total'  => (float) $row->total,
+					'rows'   => (int) $row->rows_set,
+					'levels' => 0
+				);
+			}
+		}
+
+		$q = $this->db->query(
+			"select position_id, count(*) as levels
+			   from hris_position_criteria_level
+			  group by position_id"
+		);
+		if ($q) {
+			foreach ($q->result() as $row) {
+				$pid = (int) $row->position_id;
+				if (!isset($summary[$pid])) {
+					$summary[$pid] = array('total' => 0, 'rows' => 0, 'levels' => 0);
+				}
+				$summary[$pid]['levels'] = (int) $row->levels;
+			}
+		}
+
+		return $summary;
+	}
+
+	public function positionCriteria($id = 0)
+	{
+		$this->position_settings_access();
+		$this->ensure_position_criteria_tables();
+
+		$id       = (int) $id;
+		$position = $this->Common->one_cond_row('hris_positions', 'id', $id);
+
+		if (!$position) {
+			$this->session->set_flashdata('danger', 'Position not found.');
+			redirect(base_url() . 'Page/positionSettings');
+		}
+
+		$criteria = $this->position_criteria_sheet($id);
+
+		// who touched the sheet last, for the byline above the table
+		$this->db->where('position_id', $id);
+		$this->db->where('updated_at is not null', null, false);
+		$this->db->order_by('updated_at', 'DESC');
+		$this->db->limit(1);
+		$meta = $this->db->get('hris_position_criteria')->row();
+
+		// NOT "position" - templates/header.php overwrites that with the logged
+		// in user's own position and the view would read a string
+		$result['position_row'] = $position;
+		$result['groups']       = $this->position_groups();
+		$result['criteria']     = $criteria;
+		$result['is_new']       = ($meta === null);
+		$result['meta']         = $meta;
+		$result['copy_source']  = $this->positions_for_copy($id);
+
+		$this->load->view('hr_position_criteria', $result);
+	}
+
+	/**
+	 * The criteria of one position, in sheet order, each with its increment
+	 * levels attached. A position that has never been saved comes back with
+	 * the standard sheet so there is something to edit rather than a blank
+	 * page - which is also what makes it copyable straight away.
+	 *
+	 * Returns a list of array('key', 'label', 'max_points', 'levels').
+	 */
+	private function position_criteria_sheet($id)
+	{
+		$id = (int) $id;
+
+		$this->db->where('position_id', $id);
+		$this->db->order_by('criterion', 'ASC');
+		$rows = $this->db->get('hris_position_criteria')->result();
+
+		$criteria = array();
+
+		if (empty($rows)) {
+			foreach ($this->position_criteria_defaults() as $i => $default) {
+				$criteria[$i] = array(
+					'key'        => 'c' . $i,
+					'label'      => $default['label'],
+					'max_points' => (float) $default['points'],
+					'levels'     => array()
+				);
+			}
+
+			return array_values($criteria);
+		}
+
+		$index = array();
+		foreach ($rows as $i => $row) {
+			$criteria[$i] = array(
+				'key'        => 'c' . $i,
+				'label'      => (string) $row->label,
+				'max_points' => (float) $row->max_points,
+				'levels'     => array()
+			);
+			$index[(int) $row->criterion] = $i;
+		}
+
+		$this->db->where('position_id', $id);
+		$this->db->order_by('criterion', 'ASC');
+		$this->db->order_by('increment_level', 'ASC');
+		$this->db->order_by('id', 'ASC');
+		foreach ($this->db->get('hris_position_criteria_level')->result() as $row) {
+			$code = (int) $row->criterion;
+			if (isset($index[$code])) {
+				$criteria[$index[$code]]['levels'][] = $row;
+			}
+		}
+
+		return array_values($criteria);
+	}
+
+	/**
+	 * Every other position title, for the "copy from another position" picker.
+	 * Titles without a saved sheet are listed too - they still hand over the
+	 * standard breakdown, which is exactly what their own screen shows.
+	 */
+	private function positions_for_copy($exclude_id = 0)
+	{
+		$q = $this->db->query(
+			"select p.id, p.title, p.pos_id,
+			        coalesce(sum(c.max_points), 0) as total,
+			        count(c.id) as criteria_count
+			   from hris_positions p
+			   left join hris_position_criteria c on c.position_id = p.id
+			  where p.id != ?
+			  group by p.id, p.title, p.pos_id
+			  order by p.title asc",
+			array((int) $exclude_id)
+		);
+
+		return $q ? $q->result() : array();
+	}
+
+	public function positionCriteria_save()
+	{
+		$this->position_settings_access();
+		$this->ensure_position_criteria_tables();
+
+		$id       = (int) $this->input->post('position_id');
+		$position = $this->Common->one_cond_row('hris_positions', 'id', $id);
+
+		if (!$position) {
+			$this->session->set_flashdata('danger', 'Position not found.');
+			redirect(base_url() . 'Page/positionSettings');
+		}
+
+		// the browser posts the criteria in the order they sit on screen, and
+		// each one carries a form key ("c3", "n7") that its increment levels
+		// are filed under; `criterion` is renumbered from that order on save
+		$posted = (array) $this->input->post('criteria');
+		$levels = (array) $this->input->post('level');
+
+		date_default_timezone_set('Asia/Manila');
+		$now  = date('Y-m-d H:i:s');
+		$user = (string) $this->session->userdata('username');
+
+		$total    = 0;
+		$criteria = array();
+		$order    = 0;
+
+		foreach ($posted as $key => $entry) {
+			if (!is_array($entry)) {
+				continue;
+			}
+
+			// an unnamed criterion is a leftover blank row, not a criterion
+			$label = isset($entry['label']) ? trim((string) $entry['label']) : '';
+			if ($label === '') {
+				continue;
+			}
+
+			$max = isset($entry['points']) && $entry['points'] !== '' ? (float) $entry['points'] : 0;
+			if ($max < 0) {
+				$max = 0;
+			}
+			$total += $max;
+
+			$criteria[$key] = array(
+				'position_id' => $id,
+				'criterion'   => $order++,
+				'label'       => mb_substr($label, 0, 150),
+				'max_points'  => $max,
+				'updated_by'  => $user,
+				'updated_at'  => $now
+			);
+		}
+
+		if (empty($criteria)) {
+			$this->session->set_flashdata('danger', 'Add at least one criterion before saving.');
+			redirect(base_url() . 'Page/positionCriteria/' . $id);
+		}
+
+		if (round($total, 2) != 100) {
+			$this->session->set_flashdata('danger', 'The criteria must add up to exactly 100 points - the sheet came to ' . rtrim(rtrim(number_format($total, 2, '.', ''), '0'), '.') . '.');
+			redirect(base_url() . 'Page/positionCriteria/' . $id);
+		}
+
+		// levels: description is what makes a row real, an empty one is dropped
+		$rows = array();
+		foreach ($levels as $key => $entries) {
+			// levels whose criterion was deleted or left unnamed go with it
+			if (!isset($criteria[$key]) || !is_array($entries)) {
+				continue;
+			}
+
+			$n = 0;
+			foreach ($entries as $entry) {
+				$description = isset($entry['description']) ? trim((string) $entry['description']) : '';
+				if ($description === '') {
+					continue;
+				}
+				$n++;
+
+				// the CSC sheet does not always start a criterion at level 1
+				// (Education on the AO II sheet opens at 6), so an explicitly
+				// typed level wins over the row's position in the table
+				$level = isset($entry['increment_level']) && trim((string) $entry['increment_level']) !== ''
+					? (int) $entry['increment_level']
+					: $n;
+
+				$points = isset($entry['points']) && $entry['points'] !== '' ? (float) $entry['points'] : 0;
+
+				// a level may never award more than the criterion it sits under
+				if ($points > $criteria[$key]['max_points']) {
+					$this->session->set_flashdata('danger', $criteria[$key]['label'] . ': increment level ' . $level . ' gives ' . $points . ' points but the criterion is only worth ' . $criteria[$key]['max_points'] . '.');
+					redirect(base_url() . 'Page/positionCriteria/' . $id);
+				}
+
+				$rows[] = array(
+					'position_id'     => $id,
+					'criterion'       => $criteria[$key]['criterion'],
+					'increment_level' => $level,
+					'description'     => mb_substr($description, 0, 255),
+					'points'          => $points
+				);
+			}
+		}
+
+		$this->db->trans_start();
+
+		$this->db->delete('hris_position_criteria', array('position_id' => $id));
+		$this->db->delete('hris_position_criteria_level', array('position_id' => $id));
+
+		$this->db->insert_batch('hris_position_criteria', array_values($criteria));
+		if (!empty($rows)) {
+			$this->db->insert_batch('hris_position_criteria_level', $rows);
+		}
+
+		$this->db->trans_complete();
+
+		if ($this->db->trans_status() === false) {
+			$this->session->set_flashdata('danger', 'Could not save the scoring criteria. Nothing was changed.');
+			redirect(base_url() . 'Page/positionCriteria/' . $id);
+		}
+
+		$this->Page_model->insert_at('Updated scoring criteria for position: ' . $position->title, $id);
+		$this->session->set_flashdata('success', 'Scoring criteria saved for "' . $position->title . '" - ' . count($criteria) . ' criteria, 100 points across ' . count($rows) . ' increment level(s).');
+		redirect(base_url() . 'Page/positionCriteria/' . $id);
+	}
+
+	public function positionCriteria_copy()
+	{
+		$this->position_settings_access();
+		$this->ensure_position_criteria_tables();
+
+		$id     = (int) $this->input->post('position_id');
+		$source = (int) $this->input->post('source_id');
+
+		$position = $this->Common->one_cond_row('hris_positions', 'id', $id);
+		$from     = $this->Common->one_cond_row('hris_positions', 'id', $source);
+
+		if (!$position || !$from || $id === $source) {
+			$this->session->set_flashdata('danger', 'Pick a different position to copy the criteria from.');
+			redirect(base_url() . 'Page/positionCriteria/' . $id);
+		}
+
+		date_default_timezone_set('Asia/Manila');
+		$now  = date('Y-m-d H:i:s');
+		$user = (string) $this->session->userdata('username');
+
+		// any title can be a source: one that was never set up hands over the
+		// standard sheet, which is exactly what its own screen shows
+		$sheet = $this->position_criteria_sheet($source);
+
+		$criteria = array();
+		$levels   = array();
+
+		foreach ($sheet as $order => $entry) {
+			$criteria[] = array(
+				'position_id' => $id,
+				'criterion'   => $order,
+				'label'       => (string) $entry['label'],
+				'max_points'  => (float) $entry['max_points'],
+				'updated_by'  => $user,
+				'updated_at'  => $now
+			);
+
+			foreach ($entry['levels'] as $row) {
+				$levels[] = array(
+					'position_id'     => $id,
+					'criterion'       => $order,
+					'increment_level' => (int) $row->increment_level,
+					'description'     => (string) $row->description,
+					'points'          => (float) $row->points
+				);
+			}
+		}
+
+		$this->db->trans_start();
+
+		$this->db->delete('hris_position_criteria', array('position_id' => $id));
+		$this->db->delete('hris_position_criteria_level', array('position_id' => $id));
+
+		$this->db->insert_batch('hris_position_criteria', $criteria);
+		if (!empty($levels)) {
+			$this->db->insert_batch('hris_position_criteria_level', $levels);
+		}
+
+		$this->db->trans_complete();
+
+		if ($this->db->trans_status() === false) {
+			$this->session->set_flashdata('danger', 'Could not copy the scoring criteria. Nothing was changed.');
+			redirect(base_url() . 'Page/positionCriteria/' . $id);
+		}
+
+		$this->Page_model->insert_at('Copied scoring criteria from "' . $from->title . '" to position: ' . $position->title, $id);
+		$this->session->set_flashdata('success', 'Copied ' . count($criteria) . ' criteria and ' . count($levels) . ' increment level(s) from "' . $from->title . '". Review the sheet below and save.');
+		redirect(base_url() . 'Page/positionCriteria/' . $id);
+	}
+
+	public function positionCriteria_clear($id = 0)
+	{
+		$this->position_settings_access();
+		$this->ensure_position_criteria_tables();
+
+		$id       = (int) $id;
+		$position = $this->Common->one_cond_row('hris_positions', 'id', $id);
+
+		if (!$position) {
+			$this->session->set_flashdata('danger', 'Position not found.');
+			redirect(base_url() . 'Page/positionSettings');
+		}
+
+		$this->db->delete('hris_position_criteria_level', array('position_id' => $id));
+		$this->db->delete('hris_position_criteria', array('position_id' => $id));
+
+		$this->Page_model->insert_at('Cleared scoring criteria for position: ' . $position->title, $id);
+		$this->session->set_flashdata('success', 'Scoring criteria cleared for "' . $position->title . '".');
+		redirect(base_url() . 'Page/positionCriteria/' . $id);
 	}
 
 	public function rqa()

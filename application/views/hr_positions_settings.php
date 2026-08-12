@@ -8,14 +8,10 @@
  * added here immediately becomes available when posting a new job vacancy.
  */
 
-$bracket_names = array();
-foreach ($brackets as $b) {
-    $bracket_names[(int) $b->id] = $b->position;
-}
-
 $group_counts = array_fill_keys(array_keys($groups), 0);
 $ungrouped    = 0;
 $in_use       = 0;
+$scored       = 0;
 
 foreach ($data as $p) {
     $gid = (int) $p->pos_id;
@@ -26,6 +22,9 @@ foreach ($data as $p) {
     }
     if (!empty($usage[(int) $p->id])) {
         $in_use++;
+    }
+    if (!empty($criteria[(int) $p->id])) {
+        $scored++;
     }
 }
 
@@ -53,7 +52,8 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                                 Maintain the master list of position titles. Every entry here shows up in the
                                 <strong>Position Title</strong> dropdown when posting a
                                 <a href="<?= base_url(); ?>Page/jobVacancy" style="color:#fff;text-decoration:underline;">job vacancy</a>,
-                                filtered by its position group.
+                                filtered by its position group. Each title also carries its own
+                                <strong>scoring criteria</strong> &mdash; the 100-point sheet applicants are rated against.
                             </p>
                         </div>
                         <div class="hrp-hero-stats">
@@ -64,6 +64,10 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                             <div class="hrp-stat">
                                 <span class="hrp-stat-value"><?= number_format(count($groups)); ?></span>
                                 <span class="hrp-stat-label">Groups</span>
+                            </div>
+                            <div class="hrp-stat">
+                                <span class="hrp-stat-value"><?= number_format($scored); ?></span>
+                                <span class="hrp-stat-label">Scored</span>
                             </div>
                             <div class="hrp-stat">
                                 <span class="hrp-stat-value"><?= number_format($in_use); ?></span>
@@ -100,6 +104,8 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                                 <h4 class="hrp-card-title">Position Titles</h4>
                                 <p class="hrp-card-sub">
                                     <?= number_format(count($data)); ?> position<?= count($data) == 1 ? '' : 's'; ?> on file
+                                    <span class="hrp-dotsep">&bull;</span>
+                                    <?= number_format($scored); ?> with scoring criteria set
                                     <span class="hrp-dotsep">&bull;</span>
                                     <?= number_format($in_use); ?> already used in a posting
                                     <?php if ($ungrouped > 0) : ?>
@@ -143,19 +149,20 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                                             <th>Position Title</th>
                                             <th>Position Group</th>
                                             <th class="text-center">Salary Grade</th>
-                                            <th>Points Bracket</th>
+                                            <th>Scoring Criteria</th>
                                             <th class="text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($data as $p) : ?>
                                             <?php
-                                            $pid       = (int) $p->id;
-                                            $gid       = (int) $p->pos_id;
-                                            $gname     = isset($groups[$gid]) ? $groups[$gid] : '';
-                                            $posts     = isset($usage[$pid]) ? (int) $usage[$pid] : 0;
-                                            $bracketId = (int) $p->bracket;
-                                            $initials  = strtoupper(mb_substr(trim((string) $p->title), 0, 2));
+                                            $pid      = (int) $p->id;
+                                            $gid      = (int) $p->pos_id;
+                                            $gname    = isset($groups[$gid]) ? $groups[$gid] : '';
+                                            $posts    = isset($usage[$pid]) ? (int) $usage[$pid] : 0;
+                                            $initials = strtoupper(mb_substr(trim((string) $p->title), 0, 2));
+                                            $sheet    = isset($criteria[$pid]) ? $criteria[$pid] : null;
+                                            $total    = $sheet ? (float) $sheet['total'] : 0;
                                             ?>
                                             <tr data-group="<?= html_escape($gname); ?>">
                                                 <td data-order="<?= html_escape($p->title); ?>">
@@ -181,23 +188,34 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                                                         <span class="hrp-muted">&mdash;</span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td>
-                                                    <?php if ($bracketId > 0 && isset($bracket_names[$bracketId])) : ?>
-                                                        <span class="hrp-chip hrp-chip-grey"><?= html_escape($bracket_names[$bracketId]); ?></span>
+                                                <td data-order="<?= $sheet ? (int) round($total) : -1; ?>">
+                                                    <?php if ($sheet && round($total, 2) == 100) : ?>
+                                                        <span class="hrp-chip hrp-chip-green">
+                                                            <i class="mdi mdi-check-circle-outline"></i> 100 pts
+                                                        </span>
+                                                        <span class="hrp-title-sub" style="margin-left:.35rem;"><?= number_format($sheet['levels']); ?> level<?= $sheet['levels'] == 1 ? '' : 's'; ?></span>
+                                                    <?php elseif ($sheet) : ?>
+                                                        <span class="hrp-chip hrp-chip-amber">
+                                                            <i class="mdi mdi-alert-outline"></i> <?= rtrim(rtrim(number_format($total, 2, '.', ''), '0'), '.'); ?> pts
+                                                        </span>
                                                     <?php else : ?>
-                                                        <span class="hrp-muted">&mdash;</span>
+                                                        <span class="hrp-chip hrp-chip-grey">Not set</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td class="text-right">
                                                     <div class="hrp-actions">
+                                                        <a href="<?= base_url(); ?>Page/positionCriteria/<?= $pid; ?>"
+                                                           class="hrp-ico hrp-ico-purple"
+                                                           title="Scoring criteria">
+                                                            <i class="mdi mdi-clipboard-check-outline"></i>
+                                                        </a>
                                                         <a href="javascript:void(0);"
                                                            class="hrp-ico hrp-ico-blue hrp-edit-btn"
                                                            title="Edit position"
                                                            data-id="<?= $pid; ?>"
                                                            data-title="<?= html_escape($p->title); ?>"
                                                            data-pos_id="<?= $gid; ?>"
-                                                           data-sg="<?= ($p->sg === null ? '' : (int) $p->sg); ?>"
-                                                           data-bracket="<?= $bracketId; ?>">
+                                                           data-sg="<?= ($p->sg === null ? '' : (int) $p->sg); ?>">
                                                             <i class="mdi mdi-pencil-outline"></i>
                                                         </a>
                                                         <?php if ($posts > 0) : ?>
@@ -260,24 +278,12 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                         </select>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="hrp-field mb-0">
-                                <label class="hrp-label" for="hrp-sg">Salary Grade</label>
-                                <input type="number" class="form-control" name="sg" id="hrp-sg" min="1" max="33">
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="hrp-field mb-0">
-                                <label class="hrp-label" for="hrp-bracket">Points Bracket</label>
-                                <select class="form-control" name="bracket" id="hrp-bracket">
-                                    <option value="0">Not set</option>
-                                    <?php foreach ($brackets as $b) : ?>
-                                        <option value="<?= (int) $b->id; ?>"><?= html_escape($b->position); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
+                    <div class="hrp-field mb-0">
+                        <label class="hrp-label" for="hrp-sg">Salary Grade</label>
+                        <input type="number" class="form-control" name="sg" id="hrp-sg" min="1" max="33">
+                        <span class="hrp-help" id="hrp-criteria-help">
+                            How applicants are scored for this title is set separately, under <strong>Scoring Criteria</strong>.
+                        </span>
                     </div>
 
                 </div>
@@ -325,7 +331,7 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                 if (dt) { dt.draw(); }
             });
 
-            $('#hrp-pos_id, #hrp-bracket').select2({
+            $('#hrp-pos_id').select2({
                 dropdownParent: $('#hrp-position-modal'),
                 minimumResultsForSearch: 8,
                 width: '100%'
@@ -336,18 +342,20 @@ $group_chip = array(1 => 'hrp-chip-blue', 2 => 'hrp-chip-purple', 3 => 'hrp-chip
                 $('#hrp-position-form')[0].reset();
                 $('#hrp-id').val('');
                 $('#hrp-pos_id').val('').trigger('change');
-                $('#hrp-bracket').val('0').trigger('change');
                 $('#hrp-position-modal').modal('show');
             });
 
-            $('.hrp-edit-btn').on('click', function () {
+            // delegated: DataTables keeps rows for pages 2+ out of the DOM, so a
+            // direct .on() only ever reached the first page of positions and the
+            // pencil did nothing everywhere else.  .attr() rather than .data() so
+            // titles that look numeric ("2024") stay strings.
+            $(document).on('click', '.hrp-edit-btn', function () {
                 var $b = $(this);
                 $('#hrp-modal-title').text('Edit Position');
-                $('#hrp-id').val($b.data('id'));
-                $('#hrp-title').val($b.data('title'));
-                $('#hrp-sg').val($b.data('sg'));
-                $('#hrp-pos_id').val(String($b.data('pos_id'))).trigger('change');
-                $('#hrp-bracket').val(String($b.data('bracket'))).trigger('change');
+                $('#hrp-id').val($b.attr('data-id'));
+                $('#hrp-title').val($b.attr('data-title'));
+                $('#hrp-sg').val($b.attr('data-sg'));
+                $('#hrp-pos_id').val($b.attr('data-pos_id')).trigger('change');
                 $('#hrp-position-modal').modal('show');
             });
 
