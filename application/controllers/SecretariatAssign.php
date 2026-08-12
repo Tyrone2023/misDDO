@@ -30,11 +30,13 @@ class SecretariatAssign extends CI_Controller
         }
 
         $data = [
-            'title'        => 'Assign Secretariat Levels',
-            'secretariats' => $secretariats,
-            'assignments'  => $this->secretariat->assignments_indexed(),
-            'job_types'    => $this->secretariat->job_types_map(),
-            'selected_id'  => $selectedId,
+            'title'           => 'Assign Secretariat Coverage',
+            'secretariats'    => $secretariats,
+            'assignments'     => $this->secretariat->assignments_indexed(),
+            'job_types'       => $this->secretariat->job_types_map(),
+            'scope_catalog'   => $this->secretariat->scope_catalog(),
+            'vacancy_counts'  => $this->secretariat->open_vacancy_counts(),
+            'selected_id'     => $selectedId,
         ];
 
         $this->load->view('templates/head');
@@ -47,17 +49,21 @@ class SecretariatAssign extends CI_Controller
     {
         $this->guard();
 
-        $userId   = (int) $this->input->post('secretariat_id');
-        $jobTypes = $this->input->post('job_types');
+        $userId = (int) $this->input->post('secretariat_id');
+        $scopes = $this->input->post('scopes');
 
-        if (!is_array($jobTypes)) {
-            $jobTypes = [];
+        // pre-position-group forms posted job_types[]; keep accepting them
+        if (!is_array($scopes)) {
+            $scopes = $this->input->post('job_types');
+        }
+        if (!is_array($scopes)) {
+            $scopes = [];
         }
 
         $creatorId = $this->session->id ?? $this->session->userdata('id');
-        $this->secretariat->save_assignments($userId, $jobTypes, $creatorId);
+        $this->secretariat->save_assignments($userId, $scopes, $creatorId);
 
-        $this->session->set_flashdata('success', 'Secretariat assignment updated.');
+        $this->session->set_flashdata('success', 'Secretariat coverage updated.');
         redirect(base_url('SecretariatAssign?id=' . $userId));
     }
 }

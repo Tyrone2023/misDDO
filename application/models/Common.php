@@ -1257,8 +1257,14 @@ public function no_cond_except($table, $col, $val)
     if ($excludeDq2) {
         $this->db->where('a.dq !=', 2);
     }
+        // $jobTypes carries Secretariat coverage: "positionGroup:jobType" scope keys,
+        // or a legacy flat job_type list. Secretariat_model turns both into SQL.
         if (!empty($jobTypes)) {
-            $this->db->where_in('j.job_type', $jobTypes);
+            $this->load->model('Secretariat_model');
+            $scopeSql = $this->Secretariat_model->scope_where_sql($jobTypes, 'j.position', 'j.job_type');
+            if ($scopeSql !== '') {
+                $this->db->where($scopeSql, null, false);
+            }
         }
     $this->db->order_by('j.jvStatus', 'asc');
 

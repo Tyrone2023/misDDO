@@ -580,12 +580,13 @@ class Pages extends CI_Controller
             $page = "dashboard_secretariat";
 
             $userId = $this->session->id ?? $this->session->userdata('id');
-            $jobTypes = $this->secretariat->user_job_types((int) $userId);
+            $jobTypes = $this->secretariat->user_scopes((int) $userId);
             $jobTypeLabels = $this->secretariat->job_types_map();
             $fy = (int) date('Y');
 
             $result['title'] = "Secretariat Dashboard";
-            $result['jobTypes'] = $jobTypes;
+            // already-readable "Group - Level" strings, so the badge needs no lookup
+            $result['jobTypes'] = $this->secretariat->user_scope_labels((int) $userId);
             $result['jobTypeLabels'] = $jobTypeLabels;
             $result['counts'] = [
                 'validated' => $this->secretariat->count_by_status($jobTypes, 'Validated'),
@@ -1147,7 +1148,7 @@ class Pages extends CI_Controller
         }
 
         $userId = $this->session->id ?? $this->session->userdata('id');
-        $jobTypes = $this->secretariat->user_job_types((int) $userId);
+        $jobTypes = $this->secretariat->user_scopes((int) $userId);
         $fy = (int) date('Y');
 
         // Clean duplicates before loading lists
@@ -1180,7 +1181,7 @@ class Pages extends CI_Controller
         }
 
         $userId = $this->session->id ?? $this->session->userdata('id');
-        $jobTypes = $this->secretariat->user_job_types((int) $userId);
+        $jobTypes = $this->secretariat->user_scopes((int) $userId);
         $fy = (int) date('Y');
 
         $data = [
@@ -1209,7 +1210,7 @@ class Pages extends CI_Controller
         }
 
         $userId = $this->session->id ?? $this->session->userdata('id');
-        $jobTypes = $this->secretariat->user_job_types((int) $userId);
+        $jobTypes = $this->secretariat->user_scopes((int) $userId);
         $jobTypeLabels = $this->secretariat->job_types_map();
         $jobOptions = $this->secretariat->scores_report_job_options([]);
         $jobOptionMap = [];
@@ -1290,7 +1291,7 @@ class Pages extends CI_Controller
         }
 
         $userId = $this->session->id ?? $this->session->userdata('id');
-        $jobTypes = $this->secretariat->user_job_types((int) $userId);
+        $jobTypes = $this->secretariat->user_scopes((int) $userId);
         $jobTypeLabels = $this->secretariat->job_types_map();
         $jobOptions = $this->secretariat->scores_report_job_options([]);
         $jobOptionMap = [];
@@ -1383,7 +1384,7 @@ class Pages extends CI_Controller
         }
 
         $userId = $this->session->id ?? $this->session->userdata('id');
-        $jobTypes = $this->secretariat->user_job_types((int) $userId);
+        $jobTypes = $this->secretariat->user_scopes((int) $userId);
         $jobTypeLabels = $this->secretariat->job_types_map();
         $jobOptions = $this->secretariat->scores_report_job_options([]);
         $jobOptionMap = [];
@@ -1494,7 +1495,7 @@ class Pages extends CI_Controller
         }
 
         $userId = $this->session->id ?? $this->session->userdata('id');
-        $jobTypes = $this->secretariat->user_job_types((int) $userId);
+        $jobTypes = $this->secretariat->user_scopes((int) $userId);
         $jobTypeLabels = $this->secretariat->job_types_map();
         $jobOptions = $this->secretariat->scores_report_job_options([]);
         $jobOptionMap = [];
@@ -11431,7 +11432,7 @@ public function rqa_municipality_print_shsv2()
         $data['district'] = $this->Common->one_cond_row('district', 'id', $this->session->c_id);
         $data['title'] = 'Validated Applicant';
         if ($this->session->position === 'Secretariat') {
-            $jobTypes = $this->secretariat->user_job_types((int) ($this->session->id ?? $this->session->userdata('id')));
+            $jobTypes = $this->secretariat->user_scopes((int) ($this->session->id ?? $this->session->userdata('id')));
             if (empty($jobTypes)) {
                 $this->session->set_flashdata('danger', 'No level assignment found for your account. Please contact a Super Admin.');
             }
@@ -11562,7 +11563,7 @@ public function rqa_municipality_print_shsv2()
         $data['title'] = 'Validated Applicant';
 
         if ($this->session->position === 'Secretariat') {
-            $jobTypes = $this->secretariat->user_job_types((int) ($this->session->id ?? $this->session->userdata('id')));
+            $jobTypes = $this->secretariat->user_scopes((int) ($this->session->id ?? $this->session->userdata('id')));
             if (empty($jobTypes)) {
                 $this->session->set_flashdata('danger', 'No level assignment found for your account. Please contact a Super Admin.');
             }
@@ -11595,7 +11596,7 @@ public function rqa_municipality_print_shsv2()
         $data['district'] = $this->Common->one_cond_row('district', 'id', $this->session->c_id);
         $data['title'] = 'Validated Applicant';
         if ($this->session->position === 'Secretariat') {
-            $jobTypes = $this->secretariat->user_job_types((int) ($this->session->id ?? $this->session->userdata('id')));
+            $jobTypes = $this->secretariat->user_scopes((int) ($this->session->id ?? $this->session->userdata('id')));
             if (empty($jobTypes)) {
                 $this->session->set_flashdata('danger', 'No level assignment found for your account. Please contact a Super Admin.');
             }
@@ -11625,7 +11626,7 @@ public function rqa_municipality_print_shsv2()
         $jobTypes = [];
         $enforceJobTypes = false;
         if ($this->session->position === 'Secretariat') {
-            $jobTypes = $this->secretariat->user_job_types((int) ($this->session->id ?? $this->session->userdata('id')));
+            $jobTypes = $this->secretariat->user_scopes((int) ($this->session->id ?? $this->session->userdata('id')));
             $enforceJobTypes = true;
             if (empty($jobTypes)) {
                 $this->session->set_flashdata('danger', 'No level assignment found for your account. Please contact a Super Admin.');
@@ -11657,7 +11658,10 @@ public function rqa_municipality_print_shsv2()
                 ->order_by('app.appID', 'asc');
 
             if (!empty($jobTypes)) {
-                $builder->where_in('jv.job_type', $jobTypes);
+                $scopeSql = $this->secretariat->scope_where_sql($jobTypes);
+                if ($scopeSql !== '') {
+                    $builder->where($scopeSql, null, false);
+                }
             }
 
             $rows = $builder->get()->result();
@@ -11695,7 +11699,7 @@ public function rqa_municipality_print_shsv2()
         $data['title'] = 'Validated Applicant';
         //$data['data'] = $this->Common->two_cond('hris_applications', 'appStatus', 'Rated', 'app_year', $fy);
         if ($this->session->position === 'Secretariat') {
-            $jobTypes = $this->secretariat->user_job_types((int) ($this->session->id ?? $this->session->userdata('id')));
+            $jobTypes = $this->secretariat->user_scopes((int) ($this->session->id ?? $this->session->userdata('id')));
             $data['assigned_job_types'] = $jobTypes;
             $data['data'] = empty($jobTypes) ? [] : $this->Common->get_applicant_staff_validated('Open','Rated', $jobTypes);
         } else {
@@ -11724,7 +11728,7 @@ public function rqa_municipality_print_shsv2()
         $data['title'] = 'Validated Applicant';
         //$data['data'] = $this->Common->two_cond('hris_applications', 'appStatus', 'Confirmed', 'app_year', $fy);
         if ($this->session->position === 'Secretariat') {
-            $jobTypes = $this->secretariat->user_job_types((int) ($this->session->id ?? $this->session->userdata('id')));
+            $jobTypes = $this->secretariat->user_scopes((int) ($this->session->id ?? $this->session->userdata('id')));
             $data['assigned_job_types'] = $jobTypes;
             $data['data'] = empty($jobTypes) ? [] : $this->Common->get_applicant_staff_validated('Open','Confirmed', $jobTypes);
         } else {
