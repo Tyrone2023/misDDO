@@ -135,12 +135,12 @@ if (!function_exists('hrp_num')) {
                         <div class="hrp-hero-text">
                             <span class="hrp-hero-eyebrow"><i class="mdi mdi-clipboard-check-outline"></i> Scoring Criteria</span>
                             <h3 class="hrp-hero-title"><i class="mdi mdi-briefcase-account-outline"></i> <?= html_escape($position_row->title); ?></h3>
-                            <p class="hrp-hero-sub">
+                            <!-- <p class="hrp-hero-sub">
                                 Criteria and point system used when rating applicants for this position title.
                                 Set whichever criteria this title is actually rated on &mdash; they only have to add up to
                                 <strong>100 points</strong>. The increment levels below each one convert an applicant's
                                 qualification into a score.
-                            </p>
+                            </p> -->
                         </div>
                         <div class="hrp-hero-stats">
                             <div class="hrp-stat">

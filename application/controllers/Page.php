@@ -3936,6 +3936,30 @@ class Page extends CI_Controller
 			  KEY `idx_position_criterion` (`position_id`, `criterion`, `increment_level`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8
 		");
+
+		$this->backfill_position_criteria_labels();
+	}
+
+	/**
+	 * Sheets saved before criteria were nameable are always the standard eight
+	 * in standard order, so their `criterion` ordinal is enough to recover the
+	 * name. Guarded by a count so this costs one cheap query once everything
+	 * is named.
+	 */
+	private function backfill_position_criteria_labels()
+	{
+		$blank = $this->db->query("select count(*) as total from hris_position_criteria where label = ''")->row();
+
+		if (!$blank || (int) $blank->total === 0) {
+			return;
+		}
+
+		foreach ($this->position_criteria_defaults() as $ordinal => $default) {
+			$this->db->query(
+				"update hris_position_criteria set label = ? where label = '' and criterion = ?",
+				array($default['label'], $ordinal)
+			);
+		}
 	}
 
 	/**
