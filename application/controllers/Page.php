@@ -5771,6 +5771,13 @@ class Page extends CI_Controller
 
 	function aip()
 	{
+		// Everything on this page hangs off the selected allocation batch, so send the
+		// user to the batch picker instead of rendering a page full of PHP notices.
+		if (empty($_SESSION['fy']) || empty($_SESSION['aip'])) {
+			redirect(base_url() . 'Page/implementation_plans');
+			return;
+		}
+
 		$result['title'] = "ANNUAL IMPLEMENTATION PLAN";
 		$result['b_label'] = "+ Add New";
 		$result['b_link'] = "aip_new";
@@ -5879,7 +5886,15 @@ class Page extends CI_Controller
 		$this->SGODModel->aip_open();
 		$this->SGODModel->update_aip_open();
 		$this->SGODModel->request_update();
-		redirect(base_url() . 'Page/aip_sub');
+
+		// The unlock action is reachable from several worklists now, so come back to
+		// the one it was fired from. Whitelisted because it lands in a redirect().
+		$from = $this->input->post('from');
+		$allowed = array('aip_sub', 'aip_requested', 'aip_sub_review', 'aip_sub_funds', 'aip_sub_sgod_chief');
+
+		$this->session->set_flashdata('success', 'The plan has been unlocked. The school can edit and re-submit it.');
+
+		redirect(base_url() . 'Page/' . (in_array($from, $allowed, true) ? $from : 'aip_sub'));
 	}
 
 	function submit_aip()
@@ -6153,8 +6168,18 @@ class Page extends CI_Controller
 
 		$id = $this->uri->segment(3);
 
+		$aip = $this->SGODModel->one_cond_row('sgod_aip_submit', 'id', $id);
+
+		// School accounts open this from their own AIP page, so they may only read the
+		// history of a plan they own.
+		if ($this->session->position == 'School'
+			&& (empty($aip) || (string) $aip->school_id !== (string) $this->session->username)) {
+			show_error('Not authorised.', 403);
+			return;
+		}
+
+		$result['aip'] = $aip;
 		$result['data'] = $this->SGODModel->one_cond_orderby('sgod_aip_track', 'submit_id', $id, 'id', 'desc');
-		$result['aip'] = $this->SGODModel->one_cond_row('sgod_aip_submit', 'id', $id);
 
 		$this->load->view('aip_track_modal', $result);
 	}
@@ -6210,13 +6235,22 @@ class Page extends CI_Controller
 
 
 
+	// Queue of schools asking to have an already-submitted plan unlocked for editing.
+	// Worked by the Plan Review, Funds and SGOD Chief accounts as well as Admin/SMME,
+	// so the "Open" action in aip_request.php is gated on this same role list.
 	function aip_requested()
 	{
-		$result['title'] = "SUBMITTED PLANS";
-
 		$fys = $this->session->cur_fy;
 
-		$result['data'] = $this->SGODModel->two_cond('sgod_aip_request', 'fy', $this->session->cur_fy, 'stat', 0);
+		$result['title'] = "AIP UNLOCK REQUESTS";
+		$result['fy'] = $fys;
+		$result['data'] = $this->SGODModel->aip_request_list($fys, 0);
+		$result['opened'] = $this->SGODModel->aip_request_list($fys, 1);
+		$result['counts'] = $this->SGODModel->aip_request_counts($fys);
+		$result['can_open'] = in_array(
+			$this->session->position,
+			array('Admin', 'Super Admin', 'smme', 'review', 'funds', 'sgod')
+		);
 
 		$this->load->view('templates/head');
 		$this->load->view('templates/header');

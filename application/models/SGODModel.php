@@ -1422,9 +1422,13 @@ class SGODModel extends CI_Model
 
 		$id = $this->input->post('id');
 
+		// sgod_aip_submit.remarks carries the stage label ("Submitted", "AIP Reviewed",
+		// ...), not free text - the approver's reason is kept on the sgod_aip_track row
+		// aip_open() writes. This used to read post('reason'), a field no form posts, so
+		// every unlocked plan ended up with a blank stage label.
 		$data = array(
 			'status' => 0,
-			'remarks' => $this->input->post('reason')
+			'remarks' => 'Unlocked for Editing'
 		);
 
 		$this->db->where('id', $id);
@@ -2956,6 +2960,77 @@ class SGODModel extends CI_Model
 		$this->db->order_by('sc.schoolName', 'ASC');
 
 		return $this->db->get()->result();
+	}
+
+	// Unlock ("open AIP") requests for a fiscal year, joined in one pass so the
+	// Requested page does not re-query schools/allocation/submission per row.
+	// $stat = 0 is the open queue, 1 the already-opened ones, null for both.
+	//
+	// sgod_aip_request.school_id/b_code are INT while schools.schoolID and
+	// sgod_school_allocation.schoolID/alloc_batch are varchar, so the int side is
+	// cast to CHAR: a CAST result is coercible to the column's collation, whereas
+	// comparing the columns directly forces a numeric conversion of every school
+	// row. No GROUP BY is needed - sgod_aip_submit joins on its primary key and
+	// (schoolID, alloc_batch) is unique in sgod_school_allocation. sgod_app_percentage
+	// is NOT unique per (b_code, fy), so it is read as a scalar subquery instead of a
+	// join, which would otherwise multiply the request rows.
+	public function aip_request_list($fy, $stat = 0)
+	{
+		$fy_escaped = $this->db->escape($fy);
+
+		$this->db->select('r.id, r.fy, r.b_code, r.school_id, r.tdate, r.ttime, r.remarks, r.stat, r.s_id,
+			sc.schoolName, sc.district, sc.course,
+			alloc.alloc_group, alloc.alloc_amount, alloc.alloc_type,
+			sub.id AS submit_id, sub.status AS submit_status, sub.remarks AS submit_remarks, sub.date AS submit_date,
+			(SELECT MIN(app.id) FROM sgod_app_percentage app
+				WHERE app.b_code = r.b_code AND app.fy = ' . $fy_escaped . ') AS app_id', false);
+		$this->db->from('sgod_aip_request r');
+		$this->db->join(
+			'schools sc',
+			'sc.schoolID = CAST(r.school_id AS CHAR)',
+			'left',
+			false
+		);
+		$this->db->join(
+			'sgod_school_allocation alloc',
+			'alloc.schoolID = CAST(r.school_id AS CHAR)
+				AND alloc.alloc_batch = CAST(r.b_code AS CHAR)',
+			'left',
+			false
+		);
+		$this->db->join('sgod_aip_submit sub', 'sub.id = r.s_id', 'left');
+		$this->db->where('r.fy', $fy);
+		if ($stat !== null) {
+			$this->db->where('r.stat', $stat);
+		}
+		$this->db->order_by('r.id', 'DESC');
+
+		return $this->db->get()->result();
+	}
+
+	// Open vs. already-opened unlock request totals for a fiscal year, for the
+	// "Requested" card the review / funds / SGOD Chief dashboards share.
+	public function aip_request_counts($fy)
+	{
+		$counts = array('open' => 0, 'opened' => 0, 'total' => 0);
+
+		$this->db->select('stat, COUNT(*) AS total', false);
+		$this->db->from('sgod_aip_request');
+		$this->db->where('fy', $fy);
+		$this->db->group_by('stat');
+
+		foreach ($this->db->get()->result() as $row) {
+			$total = (int) $row->total;
+			$counts['total'] += $total;
+
+			if ((int) $row->stat === 0) {
+				$counts['open'] += $total;
+			} else {
+				$counts['opened'] += $total;
+			}
+		}
+
+		return $counts;
 	}
 
 	// Per-stage plan counts for a fiscal year in a single grouped query, for the

@@ -642,6 +642,24 @@ a.mis-pill:hover {
     .mis-grid-2 { grid-template-columns: 1fr; }
 }
 
+/* Boards with five stat cards. Without this the fifth card drops onto a second
+   row of the fixed 4-column grid at a quarter width, which reads as a mistake.
+   The ranges are explicit so they beat the .mis-grid rules above regardless of
+   which one also matches. */
+.mis-grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+@media (max-width: 1399.98px) and (min-width: 1200px) {
+    .mis-grid-5 { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1199.98px) {
+    .mis-grid-5 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 575.98px) {
+    .mis-grid-5 { grid-template-columns: 1fr; }
+}
+
 .mis-card {
     display: block;
     background: var(--mis-surface);

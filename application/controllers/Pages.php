@@ -313,6 +313,7 @@ class Pages extends CI_Controller
             // are real and follow the selected fiscal year.
             $result['fy'] = $this->session->cur_fy;
             $result['counts'] = $this->SGODModel->aip_stage_counts($this->session->cur_fy);
+            $result['requests'] = $this->SGODModel->aip_request_counts($this->session->cur_fy);
             $result['district'] = $this->Common->no_cond_count_row('district');
 
             $this->load->view('templates/head');
@@ -355,6 +356,7 @@ class Pages extends CI_Controller
             // hardcoded figures this view used to render.
             $result['fy'] = $this->session->cur_fy;
             $result['counts'] = $this->SGODModel->aip_stage_counts($this->session->cur_fy);
+            $result['requests'] = $this->SGODModel->aip_request_counts($this->session->cur_fy);
             $result['district'] = $this->Common->no_cond_count_row('district');
 
             $this->load->view('templates/head');
@@ -550,6 +552,8 @@ class Pages extends CI_Controller
             $data['section'] = $this->Common->no_cond_count_row('sgod_sections');
             // The Users card used to render a hardcoded 55.
             $data['district'] = $this->Common->no_cond_count_row('district');
+            // Open unlock requests, so the chief sees the same queue as review/funds.
+            $data['requests'] = $this->SGODModel->aip_request_counts($this->session->cur_fy);
 
 
 
@@ -7807,6 +7811,41 @@ public function rqa_municipality_print_shsv2()
         redirect($fallback !== null ? $fallback : base_url());
     }
 
+    /**
+     * Delete the file currently stored in $row->$column, if any.
+     *
+     * Upload handlers replace a document by saving the new file and then
+     * removing the old one. Several of them named the wrong column on that
+     * second step - deleting another section's document (the education file was
+     * a repeat casualty) while the database kept pointing at it. The viewer then
+     * requests a file that is not on disk; because .htaccess rewrites anything
+     * that is not a real file into index.php, the browser gets CodeIgniter's
+     * "404 Page Not Found" page rendered inside the PDF frame.
+     *
+     * Always pass the same column the matching Reg::*_update() writes.
+     *
+     * @param  object|null $row    Row holding the current filename.
+     * @param  string      $column Column being replaced.
+     * @return bool TRUE when a file was deleted.
+     */
+    private function remove_stored_file($row, $column)
+    {
+        if (empty($row) || empty($row->$column)) {
+            return FALSE;
+        }
+
+        // Filenames come from our own upload handling, but never let a stored
+        // value climb out of the uploads directory.
+        $name = basename((string) $row->$column);
+        $path = FCPATH . 'uploads/regfile/' . $name;
+
+        if ($name === '' || !is_file($path)) {
+            return FALSE;
+        }
+
+        return @unlink($path);
+    }
+
     public function update_educ()
     {
         $this->Reg->educ_update();
@@ -8143,9 +8182,13 @@ public function rqa_municipality_print_shsv2()
             $empEmail = $this->input->post('empEmail');
             $jobID = $this->input->post('jobID');
             $reg = $this->Common->one_cond_row('hris_staff', 'IDNumber', $id);
-            if (!empty($reg->efile)) {
-            unlink("uploads/regfile/" . $reg->efile);
-            }
+
+            // Replace the outstanding-accomplishment file, not the education
+            // file: outfile_update_staff() writes hris_staff.oa. Deleting efile
+            // here destroyed the education document while hris_staff.efile kept
+            // pointing at it, which is what makes the viewer 404.
+            $this->remove_stored_file($reg, 'oa');
+
             $this->Reg->outfile_update_staff();
             $this->session->set_flashdata('success', 'Successfully updated.');
             redirect(base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#lr');
@@ -8169,10 +8212,10 @@ public function rqa_municipality_print_shsv2()
             $jobID = $this->input->post('jobID');
             $reg = $this->Common->one_cond_row('hris_staff', 'IDNumber', $id);
 
-            if (!empty($reg->eafile)) {
-            unlink("uploads/regfile/" . $reg->eafile);
-            }
-            
+            // aefile_update_staff() writes hris_staff.ae - there is no "eafile"
+            // column, so the old file was never cleaned up.
+            $this->remove_stored_file($reg, 'ae');
+
             $this->Reg->aefile_update_staff();
             $this->session->set_flashdata('success', 'Successfully updated.');
             redirect(base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#lr');
@@ -8220,9 +8263,11 @@ public function rqa_municipality_print_shsv2()
             $empEmail = $this->input->post('empEmail');
             $jobID = $this->input->post('jobID');
             $reg = $this->Common->one_cond_row('hris_staff', 'IDNumber', $id);
-            if (!empty($reg->aldfile)) {
-            unlink("uploads/regfile/" . $reg->aldfile);
-            }
+
+            // aldfile_update_staff() writes hris_staff.ald - there is no
+            // "aldfile" column, so the old file was never cleaned up.
+            $this->remove_stored_file($reg, 'ald');
+
             $this->Reg->aldfile_update_staff();
             $this->session->set_flashdata('success', 'Successfully updated.');
             redirect(base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#lr');
@@ -8244,10 +8289,12 @@ public function rqa_municipality_print_shsv2()
             $id = $this->input->post('id');
             $empEmail = $this->input->post('empEmail');
             $jobID = $this->input->post('jobID');
-            $reg = $this->Common->one_cond_row('hris_staff', 'IDNumber', $id);
-            if (!empty($reg->efile)) {
-            unlink("uploads/regfile/" . $reg->efile);
-            }
+            // aldfile_update() writes hris_applicant.ald keyed on empEmail, so
+            // the file being replaced belongs to the applicant row - not to
+            // hris_staff, and not to the education file this used to delete.
+            $reg = $this->Common->one_cond_row('hris_applicant', 'empEmail', $empEmail);
+            $this->remove_stored_file($reg, 'ald');
+
             $this->Reg->aldfile_update();
             $this->session->set_flashdata('success', 'Successfully updated.');
             redirect(base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#er');
@@ -8397,9 +8444,12 @@ public function rqa_municipality_print_shsv2()
             $empEmail = $this->input->post('empEmail');
             $jobID = $this->input->post('jobID');
             $reg = $this->Common->one_cond_row('hris_applicant', 'empEmail', $empEmail);
-            if (!empty($reg->wefile)) {
-            unlink("uploads/regfile/" . $reg->wefile);
-            }
+
+            // eligibility_update() writes hris_applicant.eligibility. Deleting
+            // wefile here destroyed the work-experience document while
+            // hris_applicant.wefile kept pointing at it.
+            $this->remove_stored_file($reg, 'eligibility');
+
             $this->Reg->eligibility_update();
             $this->session->set_flashdata('success', 'Successfully updated.');
             redirect(base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#lr');
@@ -8633,13 +8683,10 @@ public function rqa_municipality_print_shsv2()
             $school_id = $this->input->post('school_id');
             $reg = $this->Common->three_cond_row('hris_applications', 'empEmail', $empEmail, 'jobID', $jobID, 'pre_school', $school_id);
             
-            // Unlink old file if exists
-            if (!empty($reg->Application)) {
-                $file_path = "uploads/regfile/" . $reg->Application;
-                if (file_exists($file_path) && is_file($file_path)) {
-                    unlink($file_path);
-                }
-            }
+            // The column is "application" - PHP property access is
+            // case-sensitive, so $reg->Application was always empty and the
+            // replaced file was never cleaned up.
+            $this->remove_stored_file($reg, 'application');
             
             $this->Reg->apfile_update();
             $this->session->set_flashdata('success', 'Successfully updated.');
@@ -8697,13 +8744,10 @@ public function rqa_municipality_print_shsv2()
             $appid = $this->input->post('appid');
             $reg = $this->Common->one_cond_row('hris_applications', 'appID', $appid);
             
-            // Unlink old file if exists
-            if (!empty($reg->Application)) {
-                $file_path = "uploads/regfile/" . $reg->Application;
-                if (file_exists($file_path) && is_file($file_path)) {
-                    unlink($file_path);
-                }
-            }
+            // The column is "application" - PHP property access is
+            // case-sensitive, so $reg->Application was always empty and the
+            // replaced file was never cleaned up.
+            $this->remove_stored_file($reg, 'application');
             
             $this->Reg->apfile_update_staff();
             $this->session->set_flashdata('success', 'Successfully updated.');

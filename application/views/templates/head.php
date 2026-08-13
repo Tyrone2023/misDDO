@@ -58,6 +58,10 @@ if ($this->session->logged_in == false && !$is_public_research) {
   <link href="<?= base_url(); ?>assets/libs/bootstrap-colorpicker/bootstrap-colorpicker.min.css" rel="stylesheet">
   <link href="<?= base_url(); ?>assets/libs/bootstrap-datepicker/bootstrap-datepicker.css" rel="stylesheet">
 
+  <!-- AIP plan pages (approved list, unlock requests, the school's plan page and
+       the tracking modal they all share). -->
+  <link href="<?= base_url(); ?>assets/css/aip-plans.css?v=1" rel="stylesheet" type="text/css" />
+
   <!-- Shared modern theme layer. Must stay LAST so it wins over app.min.css,
        which is vendor-minified and should not be edited directly. -->
   <link href="<?= base_url(); ?>assets/css/mis-modern.css?v=1" rel="stylesheet" type="text/css" />

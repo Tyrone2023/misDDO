@@ -10,6 +10,11 @@ $counts = isset($counts) && is_array($counts)
 $fy = isset($fy) ? $fy : $this->session->cur_fy;
 $districts = (isset($district) && is_object($district)) ? $district->num_rows() : 0;
 
+// Open unlock requests from schools. This queue used to be visible only to SMME;
+// review / funds / SGOD Chief work it too, so the card lives on their dashboards.
+$requests    = (isset($requests) && is_array($requests)) ? $requests : array('open' => 0, 'opened' => 0, 'total' => 0);
+$openRequests = (int) $requests['open'];
+
 $isFunds = ($this->session->position == 'funds');
 
 // The stage this role acts on gets the emphasis treatment.
@@ -52,6 +57,15 @@ $cards = array(
         'icon'  => 'mdi-check-decagram',
         'tone'  => 'mis-t-green',
     ),
+    array(
+        'key'   => 'requested',
+        'value' => $openRequests,
+        'label' => 'Requested',
+        'sub'   => 'Open unlock requests',
+        'link'  => 'Page/aip_requested',
+        'icon'  => 'mdi-lock-open-variant-outline',
+        'tone'  => 'mis-t-red',
+    ),
 );
 ?>
 
@@ -90,7 +104,7 @@ $cards = array(
                 </div>
             </div>
 
-            <div class="mis-grid">
+            <div class="mis-grid mis-grid-5">
                 <?php foreach ($cards as $card) : ?>
                     <a href="<?= base_url() . $card['link']; ?>" class="mis-card <?= $card['tone']; ?>">
                         <div class="mis-card-top">

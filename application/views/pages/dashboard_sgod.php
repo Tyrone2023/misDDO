@@ -6,7 +6,20 @@ $sections  = is_object($section)  ? $section->num_rows()  : 0;
 // Replaces the "Users: 55" card, which was a hardcoded literal.
 $districts = (isset($district) && is_object($district)) ? $district->num_rows() : 0;
 
+// Open unlock requests from schools. Page/sgodDashboard renders this view without
+// the counts, so fall back to zero rather than warning.
+$requests     = (isset($requests) && is_array($requests)) ? $requests : array('open' => 0, 'opened' => 0, 'total' => 0);
+$openRequests = (int) $requests['open'];
+
 $cards = array(
+    array(
+        'value' => $openRequests,
+        'label' => 'Requested',
+        'sub'   => 'Open AIP unlock requests',
+        'link'  => 'Page/aip_requested',
+        'icon'  => 'mdi-lock-open-variant-outline',
+        'tone'  => 'mis-t-red',
+    ),
     array(
         'value' => $schools,
         'label' => 'Schools',
@@ -43,6 +56,7 @@ $cards = array(
 
 $quickLinks = array(
     array('link' => 'Page/aip_sub_sgod_chief', 'icon' => 'mdi-notebook-multiple',    'label' => 'Implementation Plans', 'sub' => 'Plans awaiting the chief'),
+    array('link' => 'Page/aip_requested',      'icon' => 'mdi-lock-open-variant-outline', 'label' => 'Unlock Requests', 'sub' => 'Schools asking to edit a plan'),
     array('link' => 'Page/aip_sub_approved',   'icon' => 'mdi-check-decagram',       'label' => 'Approved Plans',       'sub' => 'Reached final approval'),
     array('link' => 'Page/sbm_list',           'icon' => 'mdi-clipboard-list-outline','label' => 'SBM',                 'sub' => 'Self-assessment checklist'),
     array('link' => 'Page/memo',               'icon' => 'mdi-file-document-outline','label' => 'Memo',                 'sub' => 'Issued memoranda'),
@@ -76,7 +90,7 @@ $quickLinks = array(
                 </div>
             </div>
 
-            <div class="mis-grid">
+            <div class="mis-grid mis-grid-5">
                 <?php foreach ($cards as $card) : ?>
                     <a href="<?= base_url() . $card['link']; ?>" class="mis-card <?= $card['tone']; ?>">
                         <div class="mis-card-top">
