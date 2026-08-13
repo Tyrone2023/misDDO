@@ -585,7 +585,7 @@ class Secretariat_model extends CI_Model
     }
 
     /**
-     * Evaluators available for inline tagging, including their current load so
+     * All users whose position is Evaluator, including their current load so
      * Secretariats can distribute applicants without leaving the table.
      */
     public function eligible_evaluators(?int $fy = null): array
@@ -598,7 +598,6 @@ class Secretariat_model extends CI_Model
             ->from('users u')
             ->join('hris_rater_assignments ra', 'ra.rater_user_id = u.id AND ra.fy = ' . $this->db->escape($fy), 'left', false)
             ->where('u.position', 'Evaluator')
-            ->where('u.egroup', 1)
             ->group_by(['u.id', 'u.fname', 'u.mname', 'u.lname', 'u.username'])
             ->order_by('u.lname', 'asc')
             ->order_by('u.fname', 'asc')
@@ -635,7 +634,6 @@ class Secretariat_model extends CI_Model
             ->from('users')
             ->where('id', $raterId)
             ->where('position', 'Evaluator')
-            ->where('egroup', 1)
             ->get()
             ->row();
 

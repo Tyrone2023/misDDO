@@ -15,6 +15,57 @@ $applicants = $applicants ?? [];
 $evaluators = $evaluators ?? [];
 $selectedJobId = (int) ($selectedJobId ?? 0);
 $selectedVacancy = $selectedVacancy ?? null;
+
+$untaggedApplicants = [];
+$taggedApplicants = [];
+foreach ($applicants as $applicant) {
+    if (!empty($applicant->assignment_id)) {
+        $taggedApplicants[] = $applicant;
+    } else {
+        $untaggedApplicants[] = $applicant;
+    }
+}
+
+$evaluatorOptions = [];
+foreach ($evaluators as $evaluator) {
+    $evaluatorName = trim(implode(' ', array_filter([
+        trim((string) ($evaluator->fname ?? '')),
+        trim((string) ($evaluator->mname ?? '')),
+        trim((string) ($evaluator->lname ?? '')),
+    ], static function ($part) { return trim((string) $part) !== ''; })));
+    $evaluatorUsername = trim((string) ($evaluator->username ?? ''));
+
+    $evaluatorOptions[] = [
+        'id' => (int) $evaluator->id,
+        'name' => $evaluatorName,
+        'label' => $evaluatorName . ($evaluatorUsername !== '' ? ' — ' . $evaluatorUsername : ''),
+        'assigned_total' => (int) $evaluator->assigned_total,
+    ];
+}
+
+$applicantName = static function ($applicant) {
+    $name = trim(implode(' ', array_filter([
+        trim((string) ($applicant->FirstName ?? '')),
+        trim((string) ($applicant->MiddleName ?? '')),
+        trim((string) ($applicant->LastName ?? '')),
+        trim((string) ($applicant->NameExtn ?? '')),
+    ], static function ($part) { return trim((string) $part) !== ''; })));
+
+    return $name !== '' ? $name : 'Applicant #' . $applicant->appID;
+};
+
+$applicantProfileUrl = static function ($applicant) {
+    if (empty($applicant->profile_route)) {
+        return '';
+    }
+
+    return base_url('Pages/' . $applicant->profile_route . '/'
+        . rawurlencode((string) $applicant->profile_id) . '/'
+        . (int) $applicant->jobID . '/'
+        . rawurlencode((string) $applicant->pre_school) . '/'
+        . (int) $applicant->appID . '/'
+        . rawurlencode((string) $applicant->record_no));
+};
 ?>
 
 <style>
@@ -31,14 +82,9 @@ $selectedVacancy = $selectedVacancy ?? null;
     .sat-page .sat-metric { background:#fff; border:1px solid var(--sat-line); border-radius:12px; padding:15px 17px; height:100%; }
     .sat-page .sat-metric-label { color:var(--sat-muted); font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
     .sat-page .sat-metric-value { color:var(--sat-ink); font-size:25px; font-weight:800; line-height:1.2; margin-top:3px; }
-    .sat-page .sat-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .sat-page .sat-search { position:relative; min-width:260px; flex:1; }
-    .sat-page .sat-search i { color:#8492a6; left:13px; position:absolute; top:12px; }
-    .sat-page .sat-search input { border-color:#d8e0eb; border-radius:9px; height:40px; padding-left:36px; }
-    .sat-page .sat-filter { border-color:#d8e0eb; border-radius:9px; height:40px; min-width:185px; }
-    .sat-page .sat-table-wrap { border:1px solid var(--sat-line); border-radius:12px; overflow:auto; }
-    .sat-page .sat-table { min-width:1120px; margin:0; }
-    .sat-page .sat-table thead th { background:var(--sat-soft); border-bottom:1px solid #dfe6ef; color:#506176; font-size:11px; letter-spacing:.04em; padding:12px; position:sticky; text-transform:uppercase; top:0; z-index:2; }
+    .sat-page .sat-table-wrap { border:1px solid var(--sat-line); border-radius:12px; padding:14px 14px 2px; }
+    .sat-page .sat-table { margin:0; width:100% !important; }
+    .sat-page .sat-table thead th { background:var(--sat-soft); border-bottom:1px solid #dfe6ef; color:#506176; font-size:11px; letter-spacing:.04em; padding:12px; text-transform:uppercase; }
     .sat-page .sat-table td { border-top:1px solid #edf1f6; padding:13px 12px; vertical-align:middle; }
     .sat-page .sat-name { color:var(--sat-ink); font-weight:700; line-height:1.25; }
     .sat-page .sat-sub { color:var(--sat-muted); font-size:12px; margin-top:3px; }
@@ -48,12 +94,25 @@ $selectedVacancy = $selectedVacancy ?? null;
     .sat-page .sat-assignee { min-width:160px; }
     .sat-page .sat-assignee-name { color:#243b5a; font-size:13px; font-weight:700; }
     .sat-page .sat-unassigned { color:#9a6b13; font-weight:600; }
-    .sat-page .sat-tag-form { display:flex; align-items:center; gap:7px; min-width:340px; }
-    .sat-page .sat-tag-form select { border-color:#ced7e5; border-radius:8px; height:36px; min-width:225px; }
+    .sat-page .sat-tag-form { display:flex; align-items:center; gap:7px; min-width:260px; }
+    .sat-page .sat-tag-form select { border-color:#ced7e5; border-radius:8px; height:36px; min-width:165px; }
     .sat-page .sat-tag-form button { border-radius:8px; font-weight:700; min-width:82px; }
+    .sat-page .sat-tag-form .select2-container { flex:1 1 auto; min-width:0; }
+    .sat-page .sat-tag-form .select2-container .select2-selection--single { border-color:#ced7e5; border-radius:8px; height:36px; }
+    .sat-page .sat-tag-form .select2-container .select2-selection--single .select2-selection__rendered { line-height:34px; padding-left:10px; }
+    .sat-page .sat-tag-form .select2-container .select2-selection--single .select2-selection__arrow { height:34px; }
+    .sat-page .sat-tag-form.sat-form-unsaved { background:#fff8e8; border:1px solid #f2ce7b; border-radius:9px; padding:5px; }
+    .sat-page .sat-unsaved-warning { align-items:center; background:#fff6dc; border:1px solid #f0cf77; border-radius:10px; color:#76530a; display:flex; gap:10px; padding:11px 14px; }
+    .sat-page .sat-table-title { color:var(--sat-ink); font-size:17px; font-weight:800; }
+    .sat-page .dataTables_wrapper .dataTables_filter input { border:1px solid #d8e0eb; border-radius:8px; margin-left:7px; padding:6px 10px; }
+    .sat-page .dataTables_wrapper .dataTables_length select { border:1px solid #d8e0eb; border-radius:7px; padding:4px 22px 4px 8px; }
+    .sat-page .dataTables_wrapper .dataTables_info,
+    .sat-page .dataTables_wrapper .dataTables_length,
+    .sat-page .dataTables_wrapper .dataTables_filter { color:var(--sat-muted); font-size:12px; }
+    .sat-page .page-item.active .page-link { background-color:var(--sat-blue); border-color:var(--sat-blue); }
     .sat-page .sat-empty { padding:52px 20px; text-align:center; }
     .sat-page .sat-empty-icon { align-items:center; background:#edf3ff; border-radius:16px; color:var(--sat-blue); display:inline-flex; font-size:26px; height:58px; justify-content:center; width:58px; }
-    @media (max-width:767px) { .sat-page .sat-hero { padding:22px 20px; } .sat-page .sat-toolbar > * { width:100%; } .sat-page .sat-search { min-width:100%; } }
+    @media (max-width:767px) { .sat-page .sat-hero { padding:22px 20px; } .sat-page .sat-table-wrap { padding:10px 8px 1px; } .sat-page .sat-tag-form { min-width:220px; } }
 </style>
 
 <div class="content-page sat-page">
@@ -64,7 +123,7 @@ $selectedVacancy = $selectedVacancy ?? null;
                     <div class="sat-hero">
                         <div class="sat-eyebrow">Secretariat recruitment workspace</div>
                         <h2>Applicant Evaluator Tagging</h2>
-                        <p>Select one of your tagged vacancies, review all submitted and validated applicants, then assign an evaluator directly from the same table.</p>
+                        <!-- <p>Select one of your tagged vacancies, review all submitted and validated applicants, then assign an evaluator directly from the same table.</p> -->
                     </div>
                 </div>
             </div>
@@ -153,6 +212,11 @@ $selectedVacancy = $selectedVacancy ?? null;
                             <div><strong>Tagging only.</strong> Assigning an evaluator here does not mark an applicant qualified or disqualified and does not change the application status.</div>
                         </div>
 
+                        <div id="unsaved-evaluator-warning" class="sat-unsaved-warning d-none mb-3" role="alert" aria-live="assertive">
+                            <i class="mdi mdi-alert-outline font-20"></i>
+                            <div><strong>Save the selected evaluator first.</strong> Click <span class="unsaved-action-label">Save tag</span> on the highlighted row before selecting an evaluator for another applicant.</div>
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-xl-3 col-sm-6 mb-2">
                                 <div class="sat-metric"><div class="sat-metric-label">Applicants</div><div class="sat-metric-value"><?= (int) $selectedVacancy->applicant_total; ?></div></div>
@@ -168,133 +232,127 @@ $selectedVacancy = $selectedVacancy ?? null;
                             </div>
                         </div>
 
-                        <div class="sat-toolbar mb-3">
-                            <div class="sat-search">
-                                <i class="mdi mdi-magnify"></i>
-                                <input type="search" id="applicant-search" class="form-control" placeholder="Search applicant, number, district, or school..." autocomplete="off">
+                        <div class="d-flex align-items-start justify-content-between flex-wrap mb-2">
+                            <div>
+                                <div class="sat-table-title">Applicants for tagging</div>
+                                <p class="text-muted mb-0">Select an evaluator and tag the applicant directly from this table.</p>
                             </div>
-                            <select id="applicant-filter" class="form-control sat-filter" aria-label="Filter applicants">
-                                <option value="all">All applicants</option>
-                                <option value="Application Submitted">Submitted only</option>
-                                <option value="Validated">Validated only</option>
-                                <option value="tagged">Tagged only</option>
-                                <option value="untagged">Untagged only</option>
-                            </select>
-                            <span class="text-muted small"><strong id="visible-count"><?= count($applicants); ?></strong> shown</span>
+                            <span class="badge badge-warning p-2"><span id="untagged-table-count"><?= count($untaggedApplicants); ?></span> untagged</span>
                         </div>
 
-                        <?php if (empty($applicants)) : ?>
-                            <div class="sat-empty">
-                                <span class="sat-empty-icon"><i class="mdi mdi-account-search-outline"></i></span>
-                                <h4 class="mt-3 mb-1">No submitted or validated applicants</h4>
-                                <p class="text-muted mb-0">Applicants will appear here once they submit an application for this vacancy.</p>
-                            </div>
-                        <?php else : ?>
-                            <div class="sat-table-wrap">
-                                <table class="table sat-table" id="applicant-table">
-                                    <thead>
+                        <div class="sat-table-wrap mb-4">
+                            <table class="table table-bordered dt-responsive sat-table" id="untagged-datatable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:30%">Applicant</th>
+                                        <th style="width:12%">Status</th>
+                                        <th style="width:28%">School / district</th>
+                                        <th style="width:30%">Tag to evaluator</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($untaggedApplicants as $applicant) : ?>
+                                        <?php $fullName = $applicantName($applicant); $profileUrl = $applicantProfileUrl($applicant); ?>
                                         <tr>
-                                            <th style="width:23%">Applicant</th>
-                                            <th style="width:11%">Status</th>
-                                            <th style="width:18%">School / district</th>
-                                            <th style="width:10%">Submitted</th>
-                                            <th style="width:16%">Assigned evaluator</th>
-                                            <th style="width:22%">Tag to evaluator</th>
+                                            <td>
+                                                <div class="sat-name"><?= $tagging_h($fullName); ?></div>
+                                                <div class="sat-sub">
+                                                    No. <?= $tagging_h($applicant->record_no); ?>
+                                                    <?php if ($profileUrl !== '') : ?>&middot; <a href="<?= $tagging_h($profileUrl); ?>" target="_blank" rel="noopener">View application</a><?php endif; ?>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="sat-status <?= $applicant->appStatus === 'Validated' ? 'sat-status-validated' : 'sat-status-submitted'; ?>">
+                                                    <?= $applicant->appStatus === 'Validated' ? 'Validated' : 'Submitted'; ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div><?= $tagging_h($applicant->schoolName ?: 'School not specified'); ?></div>
+                                                <div class="sat-sub"><?= $tagging_h($applicant->district ?: 'District not specified'); ?></div>
+                                            </td>
+                                            <td>
+                                                <form class="sat-tag-form" data-mode="tag" method="post" action="<?= base_url('secretariat/applicant-tagging/tag'); ?>">
+                                                    <input type="hidden" name="app_id" value="<?= (int) $applicant->appID; ?>">
+                                                    <input type="hidden" name="job_id" value="<?= (int) $selectedVacancy->jobID; ?>">
+                                                    <select name="rater_id" class="form-control form-control-sm sat-evaluator-select" data-placeholder="Select evaluator..." data-saved-value="" required aria-label="Evaluator for <?= $tagging_h($fullName); ?>" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>
+                                                        <option value="">Select evaluator...</option>
+                                                        <?php foreach ($evaluatorOptions as $evaluator) : ?>
+                                                            <option value="<?= $evaluator['id']; ?>"><?= $tagging_h($evaluator['label']); ?> (<?= $evaluator['assigned_total']; ?>)</option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                    <button type="submit" class="btn btn-sm btn-primary" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>Save tag</button>
+                                                </form>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($applicants as $applicant) : ?>
-                                            <?php
-                                            $fullName = trim(implode(' ', array_filter([
-                                                trim((string) ($applicant->FirstName ?? '')),
-                                                trim((string) ($applicant->MiddleName ?? '')),
-                                                trim((string) ($applicant->LastName ?? '')),
-                                                trim((string) ($applicant->NameExtn ?? '')),
-                                            ], static function ($part) { return trim((string) $part) !== ''; })));
-                                            $fullName = $fullName !== '' ? $fullName : 'Applicant #' . $applicant->appID;
-                                            $isTagged = !empty($applicant->assignment_id);
-                                            $searchText = strtolower(implode(' ', [
-                                                $fullName,
-                                                $applicant->record_no ?? '',
-                                                $applicant->empEmail ?? '',
-                                                $applicant->district ?? '',
-                                                $applicant->schoolName ?? '',
-                                            ]));
-                                            $profileUrl = '';
-                                            if (!empty($applicant->profile_route)) {
-                                                $profileUrl = base_url('Pages/' . $applicant->profile_route . '/'
-                                                    . rawurlencode((string) $applicant->profile_id) . '/'
-                                                    . (int) $applicant->jobID . '/'
-                                                    . rawurlencode((string) $applicant->pre_school) . '/'
-                                                    . (int) $applicant->appID . '/'
-                                                    . rawurlencode((string) $applicant->record_no));
-                                            }
-                                            ?>
-                                            <tr data-search="<?= $tagging_h($searchText); ?>" data-status="<?= $tagging_h($applicant->appStatus); ?>" data-tagged="<?= $isTagged ? 'tagged' : 'untagged'; ?>">
-                                                <td>
-                                                    <div class="sat-name"><?= $tagging_h($fullName); ?></div>
-                                                    <div class="sat-sub">
-                                                        No. <?= $tagging_h($applicant->record_no); ?>
-                                                        <?php if ($profileUrl !== '') : ?>
-                                                            &middot; <a href="<?= $tagging_h($profileUrl); ?>" target="_blank" rel="noopener">View application</a>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <?php if ($applicant->appStatus === 'Validated') : ?>
-                                                        <span class="sat-status sat-status-validated">Validated</span>
-                                                    <?php else : ?>
-                                                        <span class="sat-status sat-status-submitted">Submitted</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <div><?= $tagging_h($applicant->schoolName ?: 'School not specified'); ?></div>
-                                                    <div class="sat-sub"><?= $tagging_h($applicant->district ?: 'District not specified'); ?></div>
-                                                </td>
-                                                <td>
-                                                    <?= $tagging_h(date('M d, Y', strtotime((string) $applicant->dateSubmitted))); ?>
-                                                </td>
-                                                <td class="sat-assignee">
-                                                    <div class="sat-assignee-name <?= $isTagged ? '' : 'sat-unassigned'; ?>">
-                                                        <?= $tagging_h($isTagged ? $applicant->evaluator_name : 'Not tagged yet'); ?>
-                                                    </div>
-                                                    <div class="sat-sub assignment-date">
-                                                        <?= $isTagged && !empty($applicant->assigned_at) ? 'Tagged ' . $tagging_h(date('M d, Y', strtotime($applicant->assigned_at))) : 'Waiting for evaluator'; ?>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <form class="sat-tag-form" method="post" action="<?= base_url('secretariat/applicant-tagging/tag'); ?>">
-                                                        <input type="hidden" name="app_id" value="<?= (int) $applicant->appID; ?>">
-                                                        <input type="hidden" name="job_id" value="<?= (int) $selectedVacancy->jobID; ?>">
-                                                        <select name="rater_id" class="form-control form-control-sm" required aria-label="Evaluator for <?= $tagging_h($fullName); ?>" <?= empty($evaluators) ? 'disabled' : ''; ?>>
-                                                            <option value="">Select evaluator...</option>
-                                                            <?php foreach ($evaluators as $evaluator) : ?>
-                                                                <?php
-                                                                $evaluatorName = trim(implode(' ', array_filter([
-                                                                    trim((string) ($evaluator->fname ?? '')),
-                                                                    trim((string) ($evaluator->mname ?? '')),
-                                                                    trim((string) ($evaluator->lname ?? '')),
-                                                                ], static function ($part) { return trim((string) $part) !== ''; })));
-                                                                ?>
-                                                                <option value="<?= (int) $evaluator->id; ?>" <?= (int) $applicant->rater_user_id === (int) $evaluator->id ? 'selected' : ''; ?>>
-                                                                    <?= $tagging_h($evaluatorName); ?> (<?= (int) $evaluator->assigned_total; ?>)
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                        <button type="submit" class="btn btn-sm <?= $isTagged ? 'btn-outline-primary' : 'btn-primary'; ?>" <?= empty($evaluators) ? 'disabled' : ''; ?>>
-                                                            <?= $isTagged ? 'Reassign' : 'Tag'; ?>
-                                                        </button>
-                                                    </form>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
 
-                            <?php if (empty($evaluators)) : ?>
-                                <div class="alert alert-warning mt-3 mb-0">No eligible Evaluator account (Evaluator, group 1) is currently available.</div>
-                            <?php endif; ?>
+                        <div class="d-flex align-items-start justify-content-between flex-wrap mb-2 pt-2">
+                            <div>
+                                <div class="sat-table-title">Tagged applicants</div>
+                                <p class="text-muted mb-0">View the assigned evaluator or select another evaluator to reassign an applicant.</p>
+                            </div>
+                            <span class="badge badge-success p-2"><span id="tagged-table-count"><?= count($taggedApplicants); ?></span> tagged</span>
+                        </div>
+
+                        <div class="sat-table-wrap">
+                            <table class="table table-bordered dt-responsive sat-table" id="tagged-datatable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:25%">Applicant</th>
+                                        <th style="width:11%">Status</th>
+                                        <th style="width:22%">School / district</th>
+                                        <th style="width:17%">Evaluator</th>
+                                        <th style="width:25%">Reassign evaluator</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($taggedApplicants as $applicant) : ?>
+                                        <?php $fullName = $applicantName($applicant); $profileUrl = $applicantProfileUrl($applicant); ?>
+                                        <tr>
+                                            <td>
+                                                <div class="sat-name"><?= $tagging_h($fullName); ?></div>
+                                                <div class="sat-sub">
+                                                    No. <?= $tagging_h($applicant->record_no); ?>
+                                                    <?php if ($profileUrl !== '') : ?>&middot; <a href="<?= $tagging_h($profileUrl); ?>" target="_blank" rel="noopener">View application</a><?php endif; ?>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="sat-status <?= $applicant->appStatus === 'Validated' ? 'sat-status-validated' : 'sat-status-submitted'; ?>">
+                                                    <?= $applicant->appStatus === 'Validated' ? 'Validated' : 'Submitted'; ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div><?= $tagging_h($applicant->schoolName ?: 'School not specified'); ?></div>
+                                                <div class="sat-sub"><?= $tagging_h($applicant->district ?: 'District not specified'); ?></div>
+                                            </td>
+                                            <td class="sat-assignee">
+                                                <div class="sat-assignee-name"><?= $tagging_h($applicant->evaluator_name); ?></div>
+                                                <div class="sat-sub assignment-date"><?= !empty($applicant->assigned_at) ? 'Tagged ' . $tagging_h(date('M d, Y', strtotime($applicant->assigned_at))) : ''; ?></div>
+                                            </td>
+                                            <td>
+                                                <form class="sat-tag-form" data-mode="reassign" method="post" action="<?= base_url('secretariat/applicant-tagging/tag'); ?>">
+                                                    <input type="hidden" name="app_id" value="<?= (int) $applicant->appID; ?>">
+                                                    <input type="hidden" name="job_id" value="<?= (int) $selectedVacancy->jobID; ?>">
+                                                    <select name="rater_id" class="form-control form-control-sm sat-evaluator-select" data-placeholder="Select evaluator..." data-saved-value="<?= (int) $applicant->rater_user_id; ?>" required aria-label="Reassign evaluator for <?= $tagging_h($fullName); ?>" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>
+                                                        <option value="">Select evaluator...</option>
+                                                        <?php foreach ($evaluatorOptions as $evaluator) : ?>
+                                                            <option value="<?= $evaluator['id']; ?>" <?= (int) $applicant->rater_user_id === $evaluator['id'] ? 'selected' : ''; ?>><?= $tagging_h($evaluator['label']); ?> (<?= $evaluator['assigned_total']; ?>)</option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>Save change</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <?php if (empty($evaluatorOptions)) : ?>
+                            <div class="alert alert-warning mt-3 mb-0">No user account with the Evaluator position is currently available.</div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -305,32 +363,11 @@ $selectedVacancy = $selectedVacancy ?? null;
 
 <script>
 (function () {
-    var table = document.getElementById('applicant-table');
-    if (!table) return;
-
-    var rows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
-    var search = document.getElementById('applicant-search');
-    var filter = document.getElementById('applicant-filter');
-    var visibleCount = document.getElementById('visible-count');
     var message = document.getElementById('tagging-message');
-
-    function filterRows() {
-        var term = (search.value || '').toLowerCase().trim();
-        var selected = filter.value;
-        var visible = 0;
-
-        rows.forEach(function (row) {
-            var matchesText = term === '' || (row.getAttribute('data-search') || '').indexOf(term) !== -1;
-            var matchesFilter = selected === 'all'
-                || row.getAttribute('data-status') === selected
-                || row.getAttribute('data-tagged') === selected;
-            var show = matchesText && matchesFilter;
-            row.style.display = show ? '' : 'none';
-            if (show) visible++;
-        });
-
-        visibleCount.textContent = visible;
-    }
+    var unsavedWarning = document.getElementById('unsaved-evaluator-warning');
+    var untaggedDataTable = null;
+    var taggedDataTable = null;
+    var activeDirtyForm = null;
 
     function showMessage(ok, text) {
         message.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
@@ -340,17 +377,154 @@ $selectedVacancy = $selectedVacancy ?? null;
         showMessage.timer = window.setTimeout(function () { message.classList.add('d-none'); }, 5000);
     }
 
-    search.addEventListener('input', filterRows);
-    filter.addEventListener('change', filterRows);
+    function showUnsavedWarning(form, bringIntoView) {
+        if (!unsavedWarning || !form) return;
 
-    table.addEventListener('submit', function (event) {
+        var actionLabel = form.getAttribute('data-mode') === 'tag' ? 'Save tag' : 'Save change';
+        var label = unsavedWarning.querySelector('.unsaved-action-label');
+        if (label) label.textContent = actionLabel;
+        unsavedWarning.classList.remove('d-none');
+
+        if (bringIntoView) {
+            var button = form.querySelector('button[type="submit"]');
+            if (button && form.getClientRects().length) {
+                form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                window.setTimeout(function () { button.focus(); }, 250);
+            }
+        }
+    }
+
+    function clearDirtyForm(form, commitSelection) {
+        if (!form) return;
+
+        var select = form.querySelector('select.sat-evaluator-select');
+        if (commitSelection && select) {
+            select.setAttribute('data-saved-value', select.value);
+        }
+        form.classList.remove('sat-form-unsaved');
+
+        if (activeDirtyForm === form) {
+            activeDirtyForm = null;
+            if (unsavedWarning) unsavedWarning.classList.add('d-none');
+        }
+    }
+
+    function evaluatorChanged(select) {
+        var form = select.closest('form.sat-tag-form');
+        if (!form) return;
+
+        if (activeDirtyForm && activeDirtyForm !== form) {
+            select.value = select.getAttribute('data-saved-value') || '';
+            if (window.jQuery && jQuery.fn && jQuery.fn.select2) {
+                jQuery(select).trigger('change.select2');
+            }
+            showUnsavedWarning(activeDirtyForm, true);
+            return;
+        }
+
+        if (select.value !== (select.getAttribute('data-saved-value') || '')) {
+            activeDirtyForm = form;
+            form.classList.add('sat-form-unsaved');
+            showUnsavedWarning(form, false);
+        } else {
+            clearDirtyForm(form, false);
+        }
+    }
+
+    function initEvaluatorSelects() {
+        if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+
+        jQuery('select.sat-evaluator-select:visible').each(function () {
+            var select = jQuery(this);
+            if (select.data('select2')) return;
+
+            select.select2({
+                width: '100%',
+                placeholder: select.data('placeholder') || 'Select evaluator...',
+                dropdownParent: jQuery(document.body)
+            });
+        });
+    }
+
+    function initDataTables() {
+        if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) return;
+
+        var untaggedTable = jQuery('#untagged-datatable');
+        var taggedTable = jQuery('#tagged-datatable');
+
+        untaggedDataTable = untaggedTable.DataTable({
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'All']],
+            order: [[0, 'asc']],
+            responsive: true,
+            autoWidth: false,
+            columnDefs: [
+                { targets: 0, responsivePriority: 2 },
+                { targets: 3, responsivePriority: 1, orderable: false }
+            ],
+            language: { emptyTable: 'No applicants are waiting to be tagged.' }
+        });
+
+        taggedDataTable = taggedTable.DataTable({
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'All']],
+            order: [[0, 'asc']],
+            responsive: true,
+            autoWidth: false,
+            columnDefs: [
+                { targets: 0, responsivePriority: 2 },
+                { targets: 3, responsivePriority: 3 },
+                { targets: 4, responsivePriority: 1, orderable: false }
+            ],
+            language: { emptyTable: 'No applicants have been tagged yet.' }
+        });
+
+        untaggedTable.on('draw.dt', initEvaluatorSelects);
+        taggedTable.on('draw.dt', initEvaluatorSelects);
+
+        jQuery(document)
+            .off('select2:opening.satUnsavedEvaluator')
+            .on('select2:opening.satUnsavedEvaluator', 'select.sat-evaluator-select', function (event) {
+                var form = this.closest('form.sat-tag-form');
+                if (activeDirtyForm && activeDirtyForm !== form) {
+                    event.preventDefault();
+                    showUnsavedWarning(activeDirtyForm, true);
+                }
+            })
+            .off('change.satUnsavedEvaluator', 'select.sat-evaluator-select')
+            .on('change.satUnsavedEvaluator', 'select.sat-evaluator-select', function () {
+                evaluatorChanged(this);
+            });
+
+        initEvaluatorSelects();
+    }
+
+    if (document.readyState === 'complete') {
+        window.setTimeout(initDataTables, 0);
+    } else {
+        window.addEventListener('load', initDataTables);
+    }
+
+    document.addEventListener('change', function (event) {
+        if (event.target.matches && event.target.matches('select.sat-evaluator-select')) {
+            evaluatorChanged(event.target);
+        }
+    });
+
+    window.addEventListener('beforeunload', function (event) {
+        if (!activeDirtyForm) return;
+        event.preventDefault();
+        event.returnValue = '';
+    });
+
+    document.addEventListener('submit', function (event) {
         var form = event.target;
         if (!form.classList.contains('sat-tag-form') || !window.fetch) return;
 
         event.preventDefault();
         var button = form.querySelector('button[type="submit"]');
         var row = form.closest('tr');
-        var wasTagged = row.getAttribute('data-tagged') === 'tagged';
+        var mode = form.getAttribute('data-mode');
         var originalText = button.textContent;
         button.disabled = true;
         button.textContent = 'Saving...';
@@ -368,25 +542,70 @@ $selectedVacancy = $selectedVacancy ?? null;
             });
         })
         .then(function (body) {
-            var assignee = row.querySelector('.sat-assignee-name');
-            var date = row.querySelector('.assignment-date');
-            assignee.textContent = body.evaluator_name;
-            assignee.classList.remove('sat-unassigned');
-            date.textContent = 'Tagged just now';
-            row.setAttribute('data-tagged', 'tagged');
-            button.textContent = 'Reassign';
-            button.classList.remove('btn-primary');
-            button.classList.add('btn-outline-primary');
-
-            if (!wasTagged) {
+            if (mode === 'tag') {
+                clearDirtyForm(form, true);
                 var taggedCount = document.getElementById('tagged-count');
                 var untaggedCount = document.getElementById('untagged-count');
+                var taggedTableCount = document.getElementById('tagged-table-count');
+                var untaggedTableCount = document.getElementById('untagged-table-count');
                 taggedCount.textContent = parseInt(taggedCount.textContent || '0', 10) + 1;
                 untaggedCount.textContent = Math.max(0, parseInt(untaggedCount.textContent || '0', 10) - 1);
+                taggedTableCount.textContent = parseInt(taggedTableCount.textContent || '0', 10) + 1;
+                untaggedTableCount.textContent = Math.max(0, parseInt(untaggedTableCount.textContent || '0', 10) - 1);
+
+                if (untaggedDataTable && taggedDataTable && row && row.cells.length >= 4) {
+                    var applicantCell = row.cells[0].innerHTML;
+                    var statusCell = row.cells[1].innerHTML;
+                    var schoolCell = row.cells[2].innerHTML;
+                    var evaluatorSelect = form.querySelector('select.sat-evaluator-select');
+
+                    if (window.jQuery && evaluatorSelect && jQuery(evaluatorSelect).data('select2')) {
+                        jQuery(evaluatorSelect).select2('destroy');
+                    }
+
+                    form.setAttribute('data-mode', 'reassign');
+                    evaluatorSelect.setAttribute('data-saved-value', evaluatorSelect.value);
+                    evaluatorSelect.setAttribute('aria-label', 'Reassign evaluator');
+                    Array.prototype.forEach.call(evaluatorSelect.options, function (option) {
+                        if (option.value === evaluatorSelect.value) {
+                            option.setAttribute('selected', 'selected');
+                        } else {
+                            option.removeAttribute('selected');
+                        }
+                    });
+                    button.disabled = false;
+                    button.textContent = 'Save change';
+                    button.classList.remove('btn-primary');
+                    button.classList.add('btn-outline-primary');
+
+                    var evaluatorCell = '<div class="sat-assignee-name"></div><div class="sat-sub assignment-date">Tagged just now</div>';
+                    var evaluatorWrapper = document.createElement('div');
+                    evaluatorWrapper.innerHTML = evaluatorCell;
+                    evaluatorWrapper.querySelector('.sat-assignee-name').textContent = body.evaluator_name;
+
+                    var reassignForm = form.outerHTML;
+                    untaggedDataTable.row(row).remove().draw(false);
+                    taggedDataTable.row.add([
+                        applicantCell,
+                        statusCell,
+                        schoolCell,
+                        evaluatorWrapper.innerHTML,
+                        reassignForm
+                    ]).draw(false);
+                    initEvaluatorSelects();
+                } else {
+                    window.location.reload();
+                }
+
+                showMessage(true, body.message + ' You can tag the next applicant now.');
+                return;
             }
 
+            row.querySelector('.sat-assignee-name').textContent = body.evaluator_name;
+            row.querySelector('.assignment-date').textContent = 'Tagged just now';
+            clearDirtyForm(form, true);
+            button.textContent = 'Save change';
             showMessage(true, body.message);
-            filterRows();
         })
         .catch(function (error) {
             button.textContent = originalText;
