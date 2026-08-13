@@ -1261,7 +1261,7 @@ public function no_cond_except($table, $col, $val)
         // or a legacy flat job_type list. Secretariat_model turns both into SQL.
         if (!empty($jobTypes)) {
             $this->load->model('Secretariat_model');
-            $scopeSql = $this->Secretariat_model->scope_where_sql($jobTypes, 'j.position', 'j.job_type');
+            $scopeSql = $this->Secretariat_model->scope_where_sql($jobTypes, 'j.position', 'j.job_type', 'j.jobID');
             if ($scopeSql !== '') {
                 $this->db->where($scopeSql, null, false);
             }

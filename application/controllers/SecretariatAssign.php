@@ -50,18 +50,13 @@ class SecretariatAssign extends CI_Controller
         $this->guard();
 
         $userId = (int) $this->input->post('secretariat_id');
-        $scopes = $this->input->post('scopes');
-
-        // pre-position-group forms posted job_types[]; keep accepting them
-        if (!is_array($scopes)) {
-            $scopes = $this->input->post('job_types');
-        }
-        if (!is_array($scopes)) {
-            $scopes = [];
+        $jobIds = $this->input->post('job_ids');
+        if (!is_array($jobIds)) {
+            $jobIds = [];
         }
 
         $creatorId = $this->session->id ?? $this->session->userdata('id');
-        $this->secretariat->save_assignments($userId, $scopes, $creatorId);
+        $this->secretariat->save_assignments($userId, $jobIds, $creatorId);
 
         $this->session->set_flashdata('success', 'Secretariat coverage updated.');
         redirect(base_url('SecretariatAssign?id=' . $userId));

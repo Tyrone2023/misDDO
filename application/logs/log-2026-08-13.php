@@ -162,3 +162,5 @@ ERROR - 2026-08-13 15:21:05 --> Severity: Warning --> Undefined variable $distri
 ERROR - 2026-08-13 15:21:05 --> Severity: Warning --> foreach() argument must be of type array|object, null given /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
 ERROR - 2026-08-13 09:21:05 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-13 09:23:29 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 22:11:19 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 22:11:19 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342

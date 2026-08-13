@@ -8,6 +8,7 @@ class Secretariat_model extends CI_Model
         parent::__construct();
         $this->load->database();
         $this->ensure_table();
+        $this->ensure_vacancy_table();
     }
 
     public function ensure_table(): void
@@ -60,6 +61,26 @@ class Secretariat_model extends CI_Model
         }
 
         $this->db->db_debug = $debug;
+    }
+
+    /**
+     * New table for per-vacancy secretariat coverage. The assignment page lets
+     * admins tag a secretariat to an open job vacancy. Archived (Closed) jobs
+     * are removed from here via remove_vacancy_assignments().
+     */
+    public function ensure_vacancy_table(): void
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS hris_secretariat_vacancies (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                secretariat_user_id INT UNSIGNED NOT NULL,
+                job_id INT UNSIGNED NOT NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_secretariat_vacancy (secretariat_user_id, job_id),
+                KEY idx_job_id (job_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
     }
 
     /**
@@ -177,8 +198,22 @@ class Secretariat_model extends CI_Model
     }
 
     /**
-     * Accepts either the new "positionGroup:jobType" scope keys / assoc rows or
-     * the legacy flat job_type list, so existing callers keep working unchanged.
+     * Eligible job vacancies for secretariat tagging. Archived (Closed)
+     * vacancies are excluded; all other status values remain taggable.
+     */
+    public function open_vacancy_list(): array
+    {
+        return $this->db
+            ->from('hris_jobvacancy')
+            ->where('jvStatus !=', 'Closed')
+            ->order_by('jobID', 'desc')
+            ->get()
+            ->result();
+    }
+
+    /**
+     * Accepts "positionGroup:jobType" scope keys, a job_id row, or the legacy
+     * flat job_type list.
      */
     public function normalize_scopes(array $input): array
     {
@@ -189,18 +224,20 @@ class Secretariat_model extends CI_Model
                 $out[] = [
                     'position_group' => isset($item['position_group']) ? (int) $item['position_group'] : null,
                     'job_type'       => (int) ($item['job_type'] ?? 0),
+                    'job_id'         => isset($item['job_id']) ? (int) $item['job_id'] : null,
                 ];
             } elseif (is_object($item)) {
                 $out[] = [
                     'position_group' => isset($item->position_group) ? (int) $item->position_group : null,
                     'job_type'       => (int) ($item->job_type ?? 0),
+                    'job_id'         => isset($item->job_id) ? (int) $item->job_id : null,
                 ];
             } elseif (is_string($item) && strpos($item, ':') !== false) {
                 [$group, $type] = explode(':', $item, 2);
-                $out[] = ['position_group' => (int) $group, 'job_type' => (int) $type];
+                $out[] = ['position_group' => (int) $group, 'job_type' => (int) $type, 'job_id' => null];
             } else {
                 // legacy: job_type with no position group, matched across all groups
-                $out[] = ['position_group' => null, 'job_type' => (int) $item];
+                $out[] = ['position_group' => null, 'job_type' => (int) $item, 'job_id' => null];
             }
         }
 
@@ -213,7 +250,7 @@ class Secretariat_model extends CI_Model
      *
      * @return string '' when there is nothing to filter on.
      */
-    public function scope_where_sql(array $scopes, string $positionCol = 'jv.position', string $jobTypeCol = 'jv.job_type'): string
+    public function scope_where_sql(array $scopes, string $positionCol = 'jv.position', string $jobTypeCol = 'jv.job_type', string $jobIdCol = 'jv.jobID'): string
     {
         $scopes = $this->normalize_scopes($scopes);
         if (empty($scopes)) {
@@ -222,7 +259,12 @@ class Secretariat_model extends CI_Model
 
         $byGroup = [];
         $legacy  = [];
+        $jobIds  = [];
         foreach ($scopes as $scope) {
+            if (!empty($scope['job_id'])) {
+                $jobIds[] = $scope['job_id'];
+                continue;
+            }
             if ($scope['position_group'] === null) {
                 $legacy[] = $scope['job_type'];
                 continue;
@@ -249,15 +291,20 @@ class Secretariat_model extends CI_Model
             $parts[] = '(' . $jobTypeCol . ' IN (' . implode(',', $legacy) . '))';
         }
 
+        if (!empty($jobIds)) {
+            $jobIds = array_values(array_unique(array_map('intval', $jobIds)));
+            $parts[] = '(' . $jobIdCol . ' IN (' . implode(',', $jobIds) . '))';
+        }
+
         return '(' . implode(' OR ', $parts) . ')';
     }
 
     /**
      * Applies the assigned scopes to the pending query on the joined vacancy.
      */
-    private function apply_scopes(array $scopes, string $positionCol = 'jv.position', string $jobTypeCol = 'jv.job_type'): void
+    private function apply_scopes(array $scopes, string $positionCol = 'jv.position', string $jobTypeCol = 'jv.job_type', string $jobIdCol = 'jv.jobID'): void
     {
-        $sql = $this->scope_where_sql($scopes, $positionCol, $jobTypeCol);
+        $sql = $this->scope_where_sql($scopes, $positionCol, $jobTypeCol, $jobIdCol);
         if ($sql !== '') {
             $this->db->where($sql, null, false);
         }
@@ -348,23 +395,22 @@ class Secretariat_model extends CI_Model
     }
 
     /**
-     * map[userId] => ['1:3', '4:0', ...] scope keys, ready for the assign screen.
+     * map[userId] => [jobID, ...] for the vacancy-based assign screen.
      */
     public function assignments_indexed(): array
     {
         $rows = $this->db
-            ->select('secretariat_user_id, position_group, job_type')
-            ->from('hris_secretariat_levels')
+            ->select('secretariat_user_id, job_id')
+            ->from('hris_secretariat_vacancies')
             ->order_by('secretariat_user_id', 'asc')
-            ->order_by('position_group', 'asc')
-            ->order_by('job_type', 'asc')
+            ->order_by('job_id', 'asc')
             ->get()
             ->result();
 
         $map = [];
         foreach ($rows as $row) {
             $uid = (int) $row->secretariat_user_id;
-            $map[$uid][] = (int) $row->position_group . ':' . (int) $row->job_type;
+            $map[$uid][] = (int) $row->job_id;
         }
         return $map;
     }
@@ -391,70 +437,103 @@ class Secretariat_model extends CI_Model
     }
 
     /**
-     * The assigned scopes as ['position_group' => int, 'job_type' => int] rows.
+     * The assigned scopes for a secretariat user. Only per-vacancy assignments
+     * are returned, as ['job_id' => int].
      */
     public function user_scopes(int $userId): array
     {
+        $out = [];
+
         $rows = $this->db
-            ->select('position_group, job_type')
-            ->from('hris_secretariat_levels')
-            ->where('secretariat_user_id', $userId)
-            ->order_by('position_group', 'asc')
-            ->order_by('job_type', 'asc')
+            ->select('sv.job_id')
+            ->from('hris_secretariat_vacancies sv')
+            ->join('hris_jobvacancy j', 'j.jobID = sv.job_id AND j.jvStatus != "Closed"')
+            ->where('sv.secretariat_user_id', $userId)
+            ->order_by('sv.job_id', 'asc')
             ->get()
             ->result();
 
-        $out = [];
         foreach ($rows as $row) {
-            $out[] = [
-                'position_group' => (int) $row->position_group,
-                'job_type'       => (int) $row->job_type,
-            ];
+            $out[] = ['job_id' => (int) $row->job_id];
         }
+
         return $out;
     }
 
     public function user_scope_labels(int $userId): array
     {
         $labels = [];
-        foreach ($this->user_scopes($userId) as $scope) {
-            $labels[] = $this->scope_label($scope['position_group'], $scope['job_type']);
+
+        $vacancyRows = $this->db
+            ->select('j.jobTitle')
+            ->from('hris_secretariat_vacancies sv')
+            ->join('hris_jobvacancy j', 'j.jobID = sv.job_id AND j.jvStatus != "Closed"')
+            ->where('sv.secretariat_user_id', $userId)
+            ->order_by('j.jobTitle', 'asc')
+            ->get()
+            ->result();
+
+        foreach ($vacancyRows as $row) {
+            $labels[] = (string) $row->jobTitle;
         }
-        return $labels;
+
+        return array_values(array_unique($labels));
     }
 
     /**
-     * @param array $scopes "positionGroup:jobType" keys, or a legacy job_type list
-     *                      which is stored against the Teaching group.
+     * Save per-vacancy coverage for a secretariat. $jobIds is an array of open
+     * hris_jobvacancy.jobID values.
      */
-    public function save_assignments(int $userId, array $scopes, ?int $createdBy = null): void
+    public function save_assignments(int $userId, array $jobIds, ?int $createdBy = null): void
     {
-        $catalog = $this->scope_catalog();
-        $rows    = [];
+        if (!is_array($jobIds)) {
+            $jobIds = [];
+        }
 
-        foreach ($this->normalize_scopes($scopes) as $scope) {
-            $group = $scope['position_group'] ?? 1;
-            $type  = $scope['job_type'];
+        // Only link to real, open vacancies.
+        $jobIds = array_values(array_filter(array_map('intval', $jobIds)));
 
-            // only persist scopes the posting form can actually produce
-            if (!isset($catalog[$group]) || !in_array($type, $catalog[$group]['job_types'], true)) {
-                continue;
+        $rows = [];
+        if (!empty($jobIds)) {
+            $open = $this->db
+                ->select('jobID')
+                ->from('hris_jobvacancy')
+                ->where('jvStatus !=', 'Closed')
+                ->where_in('jobID', $jobIds)
+                ->get()
+                ->result();
+
+            foreach ($open as $row) {
+                $rows[] = [
+                    'secretariat_user_id' => $userId,
+                    'job_id'              => (int) $row->jobID,
+                    'created_by'          => $createdBy,
+                ];
             }
-            $rows[$group . ':' . $type] = [
-                'secretariat_user_id' => $userId,
-                'position_group'      => $group,
-                'job_type'            => $type,
-                'created_by'          => $createdBy,
-            ];
         }
 
         $this->db->trans_start();
+        $this->db->where('secretariat_user_id', $userId)->delete('hris_secretariat_vacancies');
+
+        // Also wipe legacy group/type assignments for this user so the switch is
+        // clean; any vacancies not in the new table will no longer show.
         $this->db->where('secretariat_user_id', $userId)->delete('hris_secretariat_levels');
 
         foreach ($rows as $row) {
-            $this->db->insert('hris_secretariat_levels', $row);
+            $this->db->insert('hris_secretariat_vacancies', $row);
         }
         $this->db->trans_complete();
+    }
+
+    /**
+     * Remove all secretariat coverage tied to a single job vacancy. Called when
+     * a vacancy is archived (closed) so assignments do not linger.
+     */
+    public function remove_vacancy_assignments(int $jobId): void
+    {
+        $this->db
+            ->where('job_id', $jobId)
+            ->delete('hris_secretariat_vacancies');
     }
 
     public function count_by_status(array $jobTypes, string $status): int

@@ -3716,6 +3716,10 @@ class Page extends CI_Controller
 	{
 		$id = $this->input->get('jobID');
 		$this->db->query("update hris_jobvacancy set jvStatus='Closed' where jobID='" . $id . "'");
+
+		$this->load->model('Secretariat_model', 'secretariat');
+		$this->secretariat->remove_vacancy_assignments((int) $id);
+
 		$this->Page_model->insert_at('Archieved Job Vacancy.', $id);
 		$this->session->set_flashdata('success', 'Archieved successfully!');
 		redirect('Page/jobVacancy');

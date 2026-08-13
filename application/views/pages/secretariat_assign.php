@@ -1,12 +1,12 @@
 <?php
 function h($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); }
 
-$selectedId    = (int) ($selected_id ?? 0);
-$assignments   = $assignments ?? [];
-$catalog       = $scope_catalog ?? [];
-$levelLabels   = $job_types ?? [];
-$openCounts    = $vacancy_counts ?? [];
-$active        = $assignments[$selectedId] ?? [];
+$selectedId     = (int) ($selected_id ?? 0);
+$assignments    = $assignments ?? [];
+$vacancies      = $vacancies ?? [];
+$jobTypeLabels  = $job_types ?? [];
+$positionGroups = $position_groups ?? [];
+$active         = $assignments[$selectedId] ?? [];
 
 $selected = null;
 foreach ($secretariats as $sec) {
@@ -16,7 +16,6 @@ foreach ($secretariats as $sec) {
     }
 }
 
-// hero counters
 $totalSecretariats = count($secretariats);
 $withCoverage      = 0;
 foreach ($secretariats as $sec) {
@@ -25,103 +24,37 @@ foreach ($secretariats as $sec) {
     }
 }
 $withoutCoverage = $totalSecretariats - $withCoverage;
-$openVacancies   = array_sum($openCounts);
+$openVacancies   = count($vacancies);
 
-// open vacancies per position group, for the group headers
-$groupOpenCounts = [];
-foreach ($openCounts as $key => $total) {
-    [$g] = explode(':', $key, 2);
-    $groupOpenCounts[(int) $g] = ($groupOpenCounts[(int) $g] ?? 0) + $total;
+$jobTitleMap = [];
+foreach ($vacancies as $job) {
+    $jobTitleMap[(int) $job->jobID] = $job->jobTitle;
 }
 
-$scopeText = function ($group, $type) use ($catalog, $levelLabels) {
-    $groupName = $catalog[$group]['label'] ?? ('Group ' . $group);
-    if ((int) $type === 0) {
-        return $groupName;
-    }
-    return $groupName . ' - ' . ($levelLabels[$type] ?? ('Level ' . $type));
-};
+// Group open vacancies by position group and job type for display headers
+$grouped = [];
+foreach ($vacancies as $job) {
+    $g = (int) $job->position;
+    $t = (int) $job->job_type;
+    $grouped[$g][$t][] = $job;
+}
 ?>
 
 <?php $this->load->view('includes/hr_recruitment_styles'); ?>
 <style>
-    /* scope picker ------------------------------------------------------- */
-    .sa-group { border: 1px solid #e9edf2; border-radius: 12px; margin-bottom: .85rem; background: #fff; overflow: hidden; }
-    .sa-group-head {
-        display: flex;
-        align-items: center;
-        gap: .7rem;
-        padding: .7rem .9rem;
-        background: #f8fafc;
-        border-bottom: 1px solid #eef1f6;
+    .sa-person {
+        display: flex; align-items: center; gap: .6rem;
+        padding: .55rem .7rem;
+        border: 1px solid #e9edf2; border-radius: 10px;
+        background: #f8fafc; margin-bottom: .9rem;
     }
-    .sa-group-icon {
-        width: 34px; height: 34px;
-        border-radius: 9px;
-        display: inline-flex; align-items: center; justify-content: center;
-        font-size: 1.15rem;
-        flex: 0 0 auto;
-    }
-    .sa-icon-blue   { background: #e8f0fb; color: #2c5282; }
-    .sa-icon-purple { background: #f0ebfb; color: #5b3fb0; }
-    .sa-icon-teal   { background: #e3f4f2; color: #0f766e; }
-    .sa-icon-amber  { background: #fdf3e2; color: #a86c14; }
-    .sa-group-text { min-width: 0; flex: 1 1 auto; line-height: 1.3; }
-    .sa-group-name { font-weight: 600; color: #313a46; font-size: .92rem; }
-    .sa-group-sub  { font-size: .73rem; color: #98a6ad; }
-    .sa-group-tools { display: flex; align-items: center; gap: .35rem; flex: 0 0 auto; }
+    .sa-person .hrp-avatar { flex: 0 0 auto; }
     .sa-count-pill {
         background: #eef2f8; color: #5c6873;
         border-radius: 999px; padding: .1rem .5rem;
         font-size: .7rem; font-weight: 600; white-space: nowrap;
     }
     .sa-count-pill.is-on { background: #2c5282; color: #fff; }
-
-    .sa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: .4rem; padding: .7rem .9rem .9rem; }
-    .sa-grid.is-single { grid-template-columns: 1fr; }
-
-    .sa-tile { position: relative; margin: 0; }
-    .sa-tile input { position: absolute; opacity: 0; width: 0; height: 0; }
-    .sa-tile-face {
-        display: flex; align-items: center; gap: .55rem;
-        border: 1px solid #e9edf2; border-radius: 9px;
-        padding: .48rem .6rem;
-        cursor: pointer;
-        transition: all .12s ease-in-out;
-        background: #fff;
-        height: 100%;
-    }
-    .sa-tile-face:hover { border-color: #cfdcee; background: #f8fafd; }
-    .sa-tile-box {
-        width: 17px; height: 17px; flex: 0 0 auto;
-        border: 1.5px solid #cbd4df; border-radius: 5px;
-        display: inline-flex; align-items: center; justify-content: center;
-        color: transparent; font-size: .8rem; line-height: 1;
-        background: #fff;
-    }
-    .sa-tile-label { font-size: .82rem; color: #5c6873; line-height: 1.25; min-width: 0; }
-    .sa-tile-jobs { display: block; font-size: .68rem; color: #b0bac4; }
-    .sa-tile input:checked + .sa-tile-face { border-color: #2c5282; background: #eff5fc; box-shadow: inset 0 0 0 1px #2c5282; }
-    .sa-tile input:checked + .sa-tile-face .sa-tile-box { background: #2c5282; border-color: #2c5282; color: #fff; }
-    .sa-tile input:checked + .sa-tile-face .sa-tile-label { color: #22405f; font-weight: 600; }
-    .sa-tile input:focus-visible + .sa-tile-face { border-color: #2c5282; }
-    .sa-tile.is-hidden { display: none; }
-    .sa-tile-face .sa-tile-open {
-        margin-left: auto; flex: 0 0 auto;
-        background: #e6f4ec; color: #1e7d44;
-        border-radius: 999px; padding: .05rem .42rem;
-        font-size: .66rem; font-weight: 600;
-    }
-
-    .sa-savebar {
-        position: sticky; bottom: 0;
-        display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
-        background: #fff;
-        border-top: 1px solid #eef1f6;
-        padding: .8rem 0 .2rem;
-        margin-top: .2rem;
-    }
-    .sa-savebar-note { font-size: .8rem; color: #98a6ad; margin-left: auto; }
 
     .sa-search { position: relative; flex: 1 1 200px; min-width: 180px; }
     .sa-search i { position: absolute; left: .6rem; top: 50%; transform: translateY(-50%); color: #b0bac4; font-size: .95rem; }
@@ -133,25 +66,34 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
     }
     .sa-search input:focus { outline: none; border-color: #2c5282; box-shadow: 0 0 0 3px rgba(44,82,130,.08); }
 
-    .sa-person {
-        display: flex; align-items: center; gap: .6rem;
-        padding: .55rem .7rem;
-        border: 1px solid #e9edf2; border-radius: 10px;
-        background: #f8fafc; margin-bottom: .9rem;
+    .sa-savebar {
+        position: sticky; bottom: 0;
+        display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+        background: #fff;
+        border-top: 1px solid #eef1f6;
+        padding: .8rem 0 .2rem;
+        margin-top: .2rem;
     }
-    .sa-person .hrp-avatar { flex: 0 0 auto; }
-    .sa-chips { display: flex; flex-wrap: wrap; gap: .25rem; }
+    .sa-savebar-note { font-size: .8rem; color: #98a6ad; margin-left: auto; }
+
+    .sa-group-h { background: #f8fafc; padding: .55rem .75rem; font-weight: 600; color: #313a46; border-radius: 8px 8px 0 0; border: 1px solid #e9edf2; border-bottom: 0; }
+    .sa-type-h { background: #fff; padding: .4rem .75rem; font-size: .82rem; color: #5c6873; border-left: 1px solid #e9edf2; border-right: 1px solid #e9edf2; }
+    .sa-table-wrap { border: 1px solid #e9edf2; border-radius: 0 0 8px 8px; overflow: hidden; }
+    .sa-table-wrap table { margin-bottom: 0; }
+    .sa-table-wrap th { background: #f8fafc; font-size: .78rem; color: #5c6873; font-weight: 600; white-space: nowrap; }
+    .sa-table-wrap td { font-size: .82rem; color: #313a46; vertical-align: middle; }
+    .sa-table-wrap tr.is-hidden { display: none; }
+    .sa-empty { display: none; text-align: center; color: #98a6ad; font-size: .84rem; padding: 1rem; }
     .sa-row-unassigned td { background: #fffdf6; }
+    .sa-chips { display: flex; flex-wrap: wrap; gap: .25rem; }
     .sa-name-link { color: #313a46; font-weight: 600; }
     .sa-name-link:hover { color: #2c5282; text-decoration: none; }
-    .sa-empty-groups { display: none; text-align: center; color: #98a6ad; font-size: .84rem; padding: .8rem 0; }
 </style>
 
 <div class="content-page">
     <div class="content">
         <div class="container-fluid">
 
-            <!-- start page header -->
             <div class="row">
                 <div class="col-12">
                     <div class="hrp-hero">
@@ -159,10 +101,9 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                             <span class="hrp-hero-eyebrow"><i class="mdi mdi-account-key-outline"></i> Recruitment</span>
                             <h3 class="hrp-hero-title"><i class="mdi mdi-account-multiple-check-outline"></i> <?= h($title ?? 'Assign Secretariat Coverage'); ?></h3>
                             <p class="hrp-hero-sub">
-                                Coverage follows how a vacancy is posted on
-                                <a href="<?= base_url(); ?>Page/jobVacancy" style="color:#fff;text-decoration:underline;">Job Vacancies</a>
-                                &mdash; position group first, then group type. Related Teaching and Non-Teaching are posted
-                                without a group type, so they are assigned as a whole group.
+                                Coverage is tagged to any available job vacancy from
+                                <a href="<?= base_url(); ?>Page/jobVacancy" style="color:#fff;text-decoration:underline;">Job Vacancies</a>.
+                                Archived (Closed) vacancies are removed automatically.
                             </p>
                         </div>
                         <div class="hrp-hero-stats">
@@ -180,13 +121,12 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                             </div>
                             <div class="hrp-stat">
                                 <span class="hrp-stat-value"><?= number_format($openVacancies); ?></span>
-                                <span class="hrp-stat-label">Open Posts</span>
+                                <span class="hrp-stat-label">Available Posts</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- end page header -->
 
             <?php if ($this->session->flashdata('success')) : ?>
                 <div class="hrp-alert hrp-alert-success">
@@ -205,7 +145,6 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
             <?php endif; ?>
 
             <?php if (empty($secretariats)) : ?>
-
                 <div class="hrp-card">
                     <div class="hrp-empty">
                         <i class="mdi mdi-account-off-outline"></i>
@@ -213,7 +152,6 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                         <span class="hrp-muted">Create one under Manage Users, then come back to set its coverage.</span>
                     </div>
                 </div>
-
             <?php else : ?>
 
             <div class="row">
@@ -222,7 +160,7 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                         <div class="hrp-card-head">
                             <div>
                                 <h5 class="hrp-card-title">Coverage for this Secretariat</h5>
-                                <p class="hrp-card-sub">Tick every position group and group type this account should handle.</p>
+                                <p class="hrp-card-sub">Tick the available vacancies this account should handle.</p>
                             </div>
                         </div>
 
@@ -237,7 +175,7 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                                     <?php $count = count($assignments[(int) $sec->id] ?? []); ?>
                                     <option value="<?= (int) $sec->id; ?>" <?= (int) $sec->id === $selectedId ? 'selected' : ''; ?>>
                                         <?= h("{$sec->lname}, {$sec->fname}"); ?> (<?= h($sec->username); ?>)
-                                        &mdash; <?= $count ? $count . ' assigned' : 'no coverage'; ?>
+                                        &mdash; <?= $count ? $count . ' tagged' : 'no coverage'; ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -250,8 +188,8 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                                     <span class="hrp-title-name"><?= h("{$selected->fname} {$selected->lname}"); ?></span>
                                     <span class="hrp-title-sub"><i class="mdi mdi-account-outline"></i> <?= h($selected->username); ?></span>
                                 </div>
-                                <span class="sa-count-pill <?= !empty($active) ? 'is-on' : ''; ?>" id="sa-total-pill">
-                                    <?= count($active); ?> selected
+                                <span class="sa-count-pill" id="sa-total-pill" title="Open vacancies assigned to this account">
+                                    0 tagged
                                 </span>
                             </div>
                         <?php endif; ?>
@@ -259,7 +197,7 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                         <div class="hrp-toolbar mb-2">
                             <div class="sa-search">
                                 <i class="mdi mdi-magnify"></i>
-                                <input type="text" id="sa-filter" placeholder="Filter group types..." autocomplete="off">
+                                <input type="text" id="sa-filter" placeholder="Filter job titles, groups or types..." autocomplete="off">
                             </div>
                             <button type="button" class="hrp-btn hrp-btn-sm" data-sa-all="1">
                                 <i class="mdi mdi-checkbox-multiple-marked-outline"></i> Select all
@@ -269,77 +207,66 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                             </button>
                         </div>
 
-                        <?php foreach ($catalog as $groupId => $group) : ?>
-                            <?php
-                                $groupTypes    = $group['job_types'];
-                                $groupSelected = 0;
-                                foreach ($groupTypes as $type) {
-                                    if (in_array($groupId . ':' . $type, $active, true)) {
-                                        $groupSelected++;
-                                    }
-                                }
-                                $isWholeGroup = (count($groupTypes) === 1 && (int) $groupTypes[0] === 0);
-                            ?>
-                            <div class="sa-group" data-sa-group="<?= (int) $groupId; ?>">
-                                <div class="sa-group-head">
-                                    <span class="sa-group-icon sa-icon-<?= h($group['tone']); ?>"><i class="mdi <?= h($group['icon']); ?>"></i></span>
-                                    <div class="sa-group-text">
-                                        <div class="sa-group-name"><?= h($group['label']); ?></div>
-                                        <div class="sa-group-sub"><?= h($group['sub']); ?></div>
-                                    </div>
-                                    <div class="sa-group-tools">
-                                        <span class="sa-count-pill" title="Open vacancies posted under this group">
-                                            <i class="mdi mdi-briefcase-outline"></i> <?= number_format($groupOpenCounts[$groupId] ?? 0); ?> open
-                                        </span>
-                                        <span class="sa-count-pill sa-group-pill <?= $groupSelected ? 'is-on' : ''; ?>">
-                                            <?= $groupSelected; ?>/<?= count($groupTypes); ?>
-                                        </span>
-                                        <?php if (!$isWholeGroup) : ?>
-                                            <button type="button" class="hrp-btn hrp-btn-sm" data-sa-group-all="1" title="Select all in this group">
-                                                <i class="mdi mdi-check-all"></i>
-                                            </button>
-                                            <button type="button" class="hrp-btn hrp-btn-sm" data-sa-group-all="0" title="Clear this group">
-                                                <i class="mdi mdi-close"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-
-                                <div class="sa-grid <?= $isWholeGroup ? 'is-single' : ''; ?>">
-                                    <?php foreach ($groupTypes as $type) : ?>
-                                        <?php
-                                            $key    = $groupId . ':' . $type;
-                                            $domId  = 'sc-' . $groupId . '-' . $type;
-                                            $label  = ((int) $type === 0)
-                                                ? 'All ' . $group['label'] . ' vacancies'
-                                                : ($levelLabels[$type] ?? ('Level ' . $type));
-                                            $isOn   = in_array($key, $active, true);
-                                            $nOpen  = $openCounts[$key] ?? 0;
-                                        ?>
-                                        <label class="sa-tile" data-sa-text="<?= h(strtolower($label)); ?>">
-                                            <input type="checkbox" name="scopes[]" id="<?= h($domId); ?>"
-                                                   value="<?= h($key); ?>" <?= $isOn ? 'checked' : ''; ?>>
-                                            <span class="sa-tile-face">
-                                                <span class="sa-tile-box"><i class="mdi mdi-check"></i></span>
-                                                <span class="sa-tile-label">
-                                                    <?= h($label); ?>
-                                                    <?php if ((int) $type !== 0) : ?>
-                                                        <span class="sa-tile-jobs">Group type <?= (int) $type; ?></span>
-                                                    <?php endif; ?>
-                                                </span>
-                                                <?php if ($nOpen > 0) : ?>
-                                                    <span class="sa-tile-open" title="<?= (int) $nOpen; ?> open vacancy(ies)"><?= (int) $nOpen; ?></span>
-                                                <?php endif; ?>
-                                            </span>
-                                        </label>
-                                    <?php endforeach; ?>
+                        <?php if (empty($vacancies)) : ?>
+                            <div class="alert alert-light text-center text-muted" role="alert">
+                                <i class="mdi mdi-briefcase-off-outline"></i> No available job vacancies at the moment.
+                            </div>
+                        <?php else : ?>
+                            <div class="sa-table-wrap">
+                                <table class="table table-sm" id="sa-vacancy-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-center" style="width:45px;">Tag</th>
+                                            <th>Group</th>
+                                            <th>Job Type</th>
+                                            <th>Job Title</th>
+                                            <th>Emp. Type</th>
+                                            <th>S.Y.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($grouped as $groupId => $types) : ?>
+                                            <tr>
+                                                <td class="sa-group-h" colspan="6">
+                                                    <?= h($positionGroups[$groupId] ?? ('Group ' . $groupId)); ?>
+                                                </td>
+                                            </tr>
+                                            <?php foreach ($types as $typeId => $jobs) : ?>
+                                                <tr>
+                                                    <td class="sa-type-h" colspan="6">
+                                                        <?= h($jobTypeLabels[$typeId] ?? ('Level ' . $typeId)); ?> (<?= count($jobs); ?>)
+                                                    </td>
+                                                </tr>
+                                                <?php foreach ($jobs as $job) : ?>
+                                                    <?php
+                                                        $isOn = in_array((int) $job->jobID, $active, true);
+                                                        $searchText = strtolower(
+                                                            ($job->jobTitle ?? '') . ' ' .
+                                                            ($positionGroups[$groupId] ?? '') . ' ' .
+                                                            ($jobTypeLabels[$typeId] ?? '') . ' ' .
+                                                            ($job->empType ?? '')
+                                                        );
+                                                    ?>
+                                                    <tr data-sa-text="<?= h($searchText); ?>">
+                                                        <td class="text-center">
+                                                            <input type="checkbox" name="job_ids[]" value="<?= (int) $job->jobID; ?>" <?= $isOn ? 'checked' : ''; ?>>
+                                                        </td>
+                                                        <td><?= h($positionGroups[$groupId] ?? ('Group ' . $groupId)); ?></td>
+                                                        <td><?= h($jobTypeLabels[$typeId] ?? ('Level ' . $typeId)); ?></td>
+                                                        <td><?= h($job->jobTitle); ?></td>
+                                                        <td><?= h($job->empType); ?></td>
+                                                        <td><?= h($job->sy); ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            <?php endforeach; ?>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                                <div class="sa-empty" id="sa-no-match">
+                                    <i class="mdi mdi-magnify-close"></i> No vacancy matches that filter.
                                 </div>
                             </div>
-                        <?php endforeach; ?>
-
-                        <div class="sa-empty-groups" id="sa-no-match">
-                            <i class="mdi mdi-magnify-close"></i> No group type matches that filter.
-                        </div>
+                        <?php endif; ?>
 
                         <div class="sa-savebar">
                             <button type="submit" class="hrp-btn hrp-btn-primary">
@@ -371,17 +298,16 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                                 <thead>
                                     <tr>
                                         <th>Secretariat</th>
-                                        <th>Covers</th>
+                                        <th>Tagged</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($secretariats as $sec) : ?>
                                         <?php
                                             $keys = $assignments[(int) $sec->id] ?? [];
-                                            $byGroup = [];
-                                            foreach ($keys as $key) {
-                                                [$g, $t] = array_map('intval', explode(':', $key, 2));
-                                                $byGroup[$g][] = $t;
+                                            $titles = [];
+                                            foreach ($keys as $jid) {
+                                                $titles[] = $jobTitleMap[$jid] ?? ('Vacancy ' . $jid);
                                             }
                                         ?>
                                         <tr class="<?= empty($keys) ? 'sa-row-unassigned' : ''; ?>">
@@ -395,31 +321,12 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                                                 </div>
                                             </td>
                                             <td>
-                                                <?php if (empty($byGroup)) : ?>
+                                                <?php if (empty($keys)) : ?>
                                                     <span class="hrp-chip hrp-chip-amber"><i class="mdi mdi-alert-outline"></i> Not assigned</span>
                                                 <?php else : ?>
-                                                    <div class="sa-chips">
-                                                        <?php foreach ($byGroup as $g => $types) : ?>
-                                                            <?php
-                                                                $tone      = $catalog[$g]['tone'] ?? 'grey';
-                                                                $groupName = $catalog[$g]['label'] ?? ('Group ' . $g);
-                                                                $whole     = in_array(0, $types, true);
-                                                                $names     = [];
-                                                                foreach ($types as $t) {
-                                                                    if ($t === 0) { continue; }
-                                                                    $names[] = $levelLabels[$t] ?? ('Level ' . $t);
-                                                                }
-                                                                $tip = $whole ? $groupName . ' (all)' : $groupName . ': ' . implode(', ', $names);
-                                                            ?>
-                                                            <span class="hrp-chip hrp-chip-<?= h($tone); ?>" title="<?= h($tip); ?>">
-                                                                <i class="mdi <?= h($catalog[$g]['icon'] ?? 'mdi-tag-outline'); ?>"></i>
-                                                                <?= h($groupName); ?>
-                                                                <?php if (!$whole) : ?>
-                                                                    <span style="opacity:.7">&middot; <?= count($names); ?></span>
-                                                                <?php endif; ?>
-                                                            </span>
-                                                        <?php endforeach; ?>
-                                                    </div>
+                                                    <span class="hrp-chip hrp-chip-blue" title="<?= h(implode(', ', $titles)); ?>">
+                                                        <i class="mdi mdi-tag-outline"></i> <?= count($keys); ?> tagged
+                                                    </span>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
@@ -438,9 +345,8 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
                                 </div>
                             </div>
                             <div class="sa-chips">
-                                <?php foreach ($active as $key) : ?>
-                                    <?php [$g, $t] = array_map('intval', explode(':', $key, 2)); ?>
-                                    <span class="hrp-chip hrp-chip-<?= h($catalog[$g]['tone'] ?? 'grey'); ?>"><?= h($scopeText($g, $t)); ?></span>
+                                <?php foreach ($active as $jid) : ?>
+                                    <span class="hrp-chip hrp-chip-blue"><?= h($jobTitleMap[$jid] ?? ('Vacancy ' . $jid)); ?></span>
                                 <?php endforeach; ?>
                             </div>
                         </div>
@@ -463,63 +369,38 @@ $scopeText = function ($group, $type) use ($catalog, $levelLabels) {
             $('#sa-secretariat').select2({ width: '100%' });
         }
 
-        function refreshCounts() {
-            var total = 0;
-
-            $form.find('.sa-group').each(function () {
-                var $group = $(this),
-                    $boxes = $group.find('input[name="scopes[]"]'),
-                    on     = $boxes.filter(':checked').length;
-
-                total += on;
-                $group.find('.sa-group-pill')
-                    .text(on + '/' + $boxes.length)
-                    .toggleClass('is-on', on > 0);
-            });
-
-            $('#sa-total-pill').text(total + ' selected').toggleClass('is-on', total > 0);
+        function refreshCount() {
+            var total = $form.find('input[name="job_ids[]"]:checked').length;
+            $('#sa-total-pill')
+                .text(total + ' tagged')
+                .toggleClass('is-on', total > 0);
         }
 
-        $form.on('change', 'input[name="scopes[]"]', refreshCounts);
+        $form.on('change', 'input[name="job_ids[]"]', refreshCount);
 
-        // global select / clear all - only touches rows the filter left visible
         $form.on('click', '[data-sa-all]', function () {
             var on = $(this).data('sa-all') === 1;
-            $form.find('.sa-tile:not(.is-hidden) input[name="scopes[]"]').prop('checked', on);
-            refreshCounts();
+            $form.find('#sa-vacancy-table tbody tr:not(.is-hidden) input[name="job_ids[]"]').prop('checked', on);
+            refreshCount();
         });
 
-        // per group select / clear
-        $form.on('click', '[data-sa-group-all]', function () {
-            var on = $(this).data('sa-group-all') === 1;
-            $(this).closest('.sa-group')
-                .find('.sa-tile:not(.is-hidden) input[name="scopes[]"]')
-                .prop('checked', on);
-            refreshCounts();
-        });
-
-        // filter group types by name
         $('#sa-filter').on('input', function () {
             var q = $.trim(this.value).toLowerCase(),
-                anyVisible = false;
+                any = false;
 
-            $form.find('.sa-group').each(function () {
-                var $group = $(this),
-                    shown  = 0;
-
-                $group.find('.sa-tile').each(function () {
-                    var match = q === '' || String($(this).data('sa-text')).indexOf(q) !== -1;
-                    $(this).toggleClass('is-hidden', !match);
-                    if (match) { shown++; }
-                });
-
-                $group.toggle(shown > 0);
-                if (shown > 0) { anyVisible = true; }
+            $('#sa-vacancy-table tbody tr').each(function () {
+                if ($(this).has('td.sa-group-h, td.sa-type-h').length) {
+                    return;
+                }
+                var match = q === '' || String($(this).data('sa-text')).indexOf(q) !== -1;
+                $(this).toggleClass('is-hidden', !match);
+                if (match) { any = true; }
             });
 
-            $('#sa-no-match').toggle(!anyVisible);
+            $('#sa-no-match').toggle(!any);
+            refreshCount();
         });
 
-        refreshCounts();
+        refreshCount();
     });
 </script>
