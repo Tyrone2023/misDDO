@@ -20,9 +20,10 @@ $bcode   = isset($bcode) ? $bcode : (isset($_SESSION['aip']) ? $_SESSION['aip'] 
 $submitted = !empty($aip_s);
 $status    = $submitted ? (int) $aip_s->status : null;
 
-// A plan is editable before it is submitted and while it sits at status 0 - which is
-// also where an approved unlock request puts it back.
-$canEdit = !$submitted || $status === 0;
+// A plan is editable before it is submitted, and after an approved unlock sets
+// remarks to "Unlocked for Editing". Once resubmitted (remarks = "Submitted") the
+// plan is locked again and the school must request a new unlock to edit it.
+$canEdit = !$submitted || trim($aip_s->remarks) === 'Unlocked for Editing';
 
 // Pipeline stages in order, with the sgod_aip_submit.status each one corresponds to.
 $pipeline = array(
@@ -71,7 +72,7 @@ if (!empty($aip_r) && !$requestPending) {
         ->num_rows();
 }
 $requestCapReached = !empty($aip_r) && !$requestPending && $grantedRequests > 2;
-$canRequestUnlock  = $submitted && !$requestPending && !$requestCapReached;
+$canRequestUnlock  = $submitted && !$canEdit && !$requestPending && !$requestCapReached;
 
 // Which submit action applies depends on the fund the batch was allocated from.
 $allocType  = isset($alloc->alloc_type) ? $alloc->alloc_type : '';
@@ -272,18 +273,20 @@ foreach ($data as $row) {
                                         <i class="mdi mdi-file-document-outline"></i> Generate AIP
                                     </a>
 
-                                    <?php if (!$submitted) : ?>
+                                    <?php if (!$submitted || $canEdit) : ?>
                                         <?php if (empty($data)) : ?>
                                             <span class="ap-btn disabled" title="Add at least one activity before submitting">
-                                                <i class="mdi mdi-send-outline"></i> Submit for Evaluation
+                                                <i class="mdi mdi-send-outline"></i> <?= $submitted ? 'Resubmit' : 'Submit'; ?> for Evaluation
                                             </span>
                                         <?php else : ?>
                                             <a class="ap-btn ap-btn-success" onclick="return confirm('Submit this plan for evaluation? You will not be able to edit it afterwards without an approved unlock request.')"
                                                href="<?= base_url() . $submitLink; ?>">
-                                                <i class="mdi mdi-send-outline"></i> Submit for Evaluation
+                                                <i class="mdi mdi-send-outline"></i> <?= $submitted ? 'Resubmit' : 'Submit'; ?> for Evaluation
                                             </a>
                                         <?php endif; ?>
-                                    <?php else : ?>
+                                    <?php endif; ?>
+
+                                    <?php if ($submitted) : ?>
                                         <a class="ap-btn" href="<?= base_url(); ?>Page/aip_action_list">
                                             <i class="mdi mdi-clipboard-check-outline"></i> Submitted AIP
                                         </a>

@@ -126,3 +126,39 @@ ERROR - 2026-08-13 09:10:04 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-13 09:10:10 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-13 09:10:16 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-13 09:10:17 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:17:12 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 15:17:19 --> Severity: Warning --> Undefined variable $district /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-13 15:17:19 --> Severity: Warning --> foreach() argument must be of type array|object, null given /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-13 09:17:19 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:17:24 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:17:25 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:18:03 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:18:06 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:18:11 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:18:12 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 15:18:26 --> Severity: Warning --> Undefined variable $district /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-13 15:18:26 --> Severity: Warning --> foreach() argument must be of type array|object, null given /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-13 09:18:26 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:18:31 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:08 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:11 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:14 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:15 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:43 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:51 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:53 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:56 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:19:58 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:20:32 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:20:35 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:20:40 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:20:42 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 15:20:58 --> Severity: Warning --> Undefined variable $district /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-13 15:20:58 --> Severity: Warning --> foreach() argument must be of type array|object, null given /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-13 09:20:58 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:21:01 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:21:02 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 15:21:05 --> Severity: Warning --> Undefined variable $district /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-13 15:21:05 --> Severity: Warning --> foreach() argument must be of type array|object, null given /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/aip_action_view.php 276
+ERROR - 2026-08-13 09:21:05 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-13 09:23:29 --> 404 Page Not Found: Uploads/profile

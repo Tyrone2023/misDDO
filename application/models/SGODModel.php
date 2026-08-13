@@ -1466,6 +1466,22 @@ class SGODModel extends CI_Model
 		return $this->db->insert('sgod_aip_submit', $data);
 	}
 
+	public function aip_resubmit($submit_id, $status = 0)
+	{
+		date_default_timezone_set('Asia/Manila');
+		$date = date('Y-m-d', time());
+
+		$data = array(
+			'status' => $status,
+			'remarks' => 'Submitted',
+			'date' => $date,
+			'res' => $this->session->username
+		);
+
+		$this->db->where('id', $submit_id);
+		return $this->db->update('sgod_aip_submit', $data);
+	}
+
 	public function aip_submit_sned($fy, $id, $bcode)
 	{
 		date_default_timezone_set('Asia/Manila');

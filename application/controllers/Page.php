@@ -5903,8 +5903,15 @@ class Page extends CI_Controller
 		$id = $this->session->username;
 		$bcode = $_SESSION['aip'];
 
-		$this->SGODModel->aip_submit($fy, $id, $bcode);
-		$this->SGODModel->aip_track($this->db->insert_id());
+		$existing = $this->SGODModel->two_cond_row('sgod_aip_submit', 'school_id', $id, 'b_code', $bcode);
+
+		if ($existing) {
+			$this->SGODModel->aip_resubmit($existing->id, 0);
+			$this->SGODModel->aip_track($existing->id);
+		} else {
+			$this->SGODModel->aip_submit($fy, $id, $bcode);
+			$this->SGODModel->aip_track($this->db->insert_id());
+		}
 		redirect(base_url() . 'Page/aip_action_list');
 	}
 
@@ -5914,8 +5921,15 @@ class Page extends CI_Controller
 		$id = $this->session->username;
 		$bcode = $_SESSION['aip'];
 
-		$this->SGODModel->aip_submit_sned($fy, $id, $bcode);
-		$this->SGODModel->aip_track($this->db->insert_id());
+		$existing = $this->SGODModel->two_cond_row('sgod_aip_submit', 'school_id', $id, 'b_code', $bcode);
+
+		if ($existing) {
+			$this->SGODModel->aip_resubmit($existing->id, 2);
+			$this->SGODModel->aip_track($existing->id);
+		} else {
+			$this->SGODModel->aip_submit_sned($fy, $id, $bcode);
+			$this->SGODModel->aip_track($this->db->insert_id());
+		}
 		redirect(base_url() . 'Page/aip_action_list');
 	}
 
@@ -5925,8 +5939,15 @@ class Page extends CI_Controller
 		$id = $this->session->username;
 		$bcode = $_SESSION['aip'];
 
-		$this->SGODModel->aip_submit_sbfp($fy, $id, $bcode);
-		$this->SGODModel->aip_track($this->db->insert_id());
+		$existing = $this->SGODModel->two_cond_row('sgod_aip_submit', 'school_id', $id, 'b_code', $bcode);
+
+		if ($existing) {
+			$this->SGODModel->aip_resubmit($existing->id, 6);
+			$this->SGODModel->aip_track($existing->id);
+		} else {
+			$this->SGODModel->aip_submit_sbfp($fy, $id, $bcode);
+			$this->SGODModel->aip_track($this->db->insert_id());
+		}
 		redirect(base_url() . 'Page/aip_action_list');
 	}
 
