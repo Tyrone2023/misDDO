@@ -33,9 +33,9 @@ class SecretariatAssign extends CI_Controller
             'title'           => 'Assign Secretariat Coverage',
             'secretariats'    => $secretariats,
             'assignments'     => $this->secretariat->assignments_indexed(),
+            'vacancies'       => $this->secretariat->open_vacancy_list(),
+            'position_groups' => $this->secretariat->position_groups(),
             'job_types'       => $this->secretariat->job_types_map(),
-            'scope_catalog'   => $this->secretariat->scope_catalog(),
-            'vacancy_counts'  => $this->secretariat->open_vacancy_counts(),
             'selected_id'     => $selectedId,
         ];
 
