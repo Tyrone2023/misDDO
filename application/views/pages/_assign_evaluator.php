@@ -12,6 +12,13 @@
  * @var mixed $ae_app_id application appID the assignment is tied to
  */
 
+// Evaluators only record the qualification decision. Assignment and
+// reassignment remain a Secretariat responsibility and must not appear here.
+$ae_session_position = (string)$this->session->userdata('position');
+if (in_array($ae_session_position, ['Evaluator', 'rater', 'raters'], true)) {
+    return;
+}
+
 $ae_app_id = isset($ae_app_id) ? $ae_app_id : null;
 
 // Eligible assignees: every Evaluator (any egroup) plus ASDS users.

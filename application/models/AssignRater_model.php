@@ -239,7 +239,7 @@ class AssignRater_model extends CI_Model
     $rows = $this->db
         ->select("
             ra.*,
-            app.appID, app.appStatus, app.pre_school, app.app_year, app.applicant_id, app.jobID,
+            app.appID, app.appStatus, app.dq, app.pre_school, app.app_year, app.applicant_id, app.jobID,
             jv.job_type, jv.jobTitle,
             COALESCE(ha_id.record_no, ha_rec.record_no) AS record_no,
             COALESCE(ha_id.FirstName,  ha_rec.FirstName)  AS FirstName,
@@ -264,6 +264,7 @@ class AssignRater_model extends CI_Model
         ->join('hris_applicant ha_rec', 'ha_rec.record_no = app.applicant_id AND ha_id.id IS NULL', 'left')
         ->join("($rarSub) rar", 'rar.appID = ra.app_id', 'left')
         ->where('ra.rater_user_id', $raterId)
+        ->where('(app.dq IS NULL OR app.dq != 2)', null, false)
         // Do not return assignments for vacancies that are closed.
         // jvStatus may be NULL when the job record is missing; allow those through.
         ->where(' (jv.jvStatus IS NULL OR jv.jvStatus != ' . $this->db->escape('Closed') . ') ', null, false)

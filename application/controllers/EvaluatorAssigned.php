@@ -10,6 +10,7 @@ class EvaluatorAssigned extends CI_Controller
         $this->load->helper('url');
         $this->load->model('AssignRater_model', 'assignRater');
         $this->load->model('Common');
+        $this->load->model('Reg');
     }
 
     private function guard()
@@ -19,6 +20,118 @@ class EvaluatorAssigned extends CI_Controller
             show_error('Forbidden', 403);
             exit;
         }
+    }
+
+    private function currentEvaluatorId()
+    {
+        return (int)($this->session->id ?? $this->session->userdata('id'));
+    }
+
+    private function isAssignedToCurrentEvaluator($appID)
+    {
+        $evaluatorId = $this->currentEvaluatorId();
+        if ($evaluatorId <= 0 || (int)$appID <= 0) {
+            return false;
+        }
+
+        return (bool)$this->db
+            ->from('hris_rater_assignments')
+            ->where('app_id', (int)$appID)
+            ->where('rater_user_id', $evaluatorId)
+            ->count_all_results();
+    }
+
+    private function safeQualificationReturnUrl()
+    {
+        $returnUrl = trim((string)$this->input->post('return_url'));
+        if ($returnUrl !== ''
+            && strpos($returnUrl, base_url()) === 0
+            && strpos($returnUrl, "\r") === false
+            && strpos($returnUrl, "\n") === false) {
+            return $returnUrl;
+        }
+
+        return base_url('EvaluatorAssigned');
+    }
+
+    private function ensureRatingRecord($application, $job, $recordNo)
+    {
+        $appID = (int)$application->appID;
+        $jobPosition = (int)($job->position ?? 0);
+        $isPromotion = (int)($job->promotion ?? 0) === 1 || $jobPosition === 5;
+        $fy = trim((string)($application->app_year ?? $job->sy ?? date('Y')));
+        $jobType = (int)($job->job_type ?? 0);
+
+        if ($jobPosition === 1 && !$isPromotion) {
+            if ($this->db->where('appID', $appID)->count_all_results('hris_applications_rating') > 0) {
+                return true;
+            }
+
+            return $this->db->insert('hris_applications_rating', [
+                'record_no' => $recordNo,
+                'appID' => $appID,
+                'education' => 0.00001,
+                'training' => 0.00001,
+                'experience' => 0.00001,
+                'let_rating' => 0.00001,
+                'demo_rating' => 0.00001,
+                'tr_rating' => 0.00001,
+                'total_points' => 0.00006,
+                'eval_id1' => 0,
+                'eval_id2' => 0,
+                'eval_id3' => 0,
+                'job_type' => $jobType,
+                'fy' => $fy,
+            ]);
+        }
+
+        if ($isPromotion) {
+            if ($this->db->where('appID', $appID)->count_all_results('hris_rating_promotion') > 0) {
+                return true;
+            }
+
+            return $this->db->insert('hris_rating_promotion', [
+                'record_no' => $recordNo,
+                'appID' => $appID,
+                'educ' => 0.00001,
+                'trainings' => 0.00001,
+                'experience' => 0.00001,
+                'performance' => 0.00001,
+                'ppstco' => 0.00001,
+                'ppstpa' => 0.00001,
+                'total_points' => 0.00006,
+                'eval_id1' => 0,
+                'eval_id2' => 0,
+                'eval_id3' => 0,
+                'job_type' => $jobType,
+                'fy' => $fy,
+            ]);
+        }
+
+        if ($this->db->where('appID', $appID)->count_all_results('hris_rating_none') > 0) {
+            return true;
+        }
+
+        return $this->db->insert('hris_rating_none', [
+            'record_no' => $recordNo,
+            'appID' => $appID,
+            'educ' => 0.00001,
+            'trainings' => 0.00001,
+            'experience' => 0.00001,
+            'performance' => 0.00001,
+            'oa' => 0.00001,
+            'ae' => 0.00001,
+            'ald' => 0.00001,
+            'interview' => 0.00001,
+            'written' => 0.00001,
+            'skills' => 0.00001,
+            'total_points' => 0.00010,
+            'eval_id1' => 0,
+            'eval_id2' => 0,
+            'eval_id3' => 0,
+            'job_type' => $jobType,
+            'fy' => $fy,
+        ]);
     }
 
     public function index()
@@ -98,6 +211,11 @@ class EvaluatorAssigned extends CI_Controller
 
     if (!$app) {
         show_error('Application not found.', 404);
+        return;
+    }
+
+    if (!$this->isAssignedToCurrentEvaluator($appID)) {
+        show_error('This application is not assigned to your evaluator account.', 403);
         return;
     }
 
@@ -253,6 +371,138 @@ class EvaluatorAssigned extends CI_Controller
         rawurlencode($cleanRecordNo)
     ));
 }
+
+    public function qualification()
+    {
+        $this->guard();
+        date_default_timezone_set('Asia/Manila');
+
+        $returnUrl = $this->safeQualificationReturnUrl();
+        $position = (string)$this->session->userdata('position');
+        if (!in_array($position, ['Evaluator', 'rater', 'raters'], true)) {
+            show_error('Only an assigned evaluator may submit this qualification review.', 403);
+            return;
+        }
+
+        if (strtoupper((string)$this->input->server('REQUEST_METHOD')) !== 'POST') {
+            show_error('Method Not Allowed', 405);
+            return;
+        }
+
+        $appID = (int)$this->input->post('appID');
+        if ($appID <= 0 || !$this->isAssignedToCurrentEvaluator($appID)) {
+            show_error('This application is not assigned to your evaluator account.', 403);
+            return;
+        }
+
+        $application = $this->db
+            ->where('appID', $appID)
+            ->get('hris_applications')
+            ->row();
+
+        if (!$application) {
+            show_error('Application not found.', 404);
+            return;
+        }
+
+        $allowedStatuses = ['Application Submitted', 'Validated'];
+        if (!in_array((string)$application->appStatus, $allowedStatuses, true) || (int)$application->dq === 2) {
+            $this->session->set_flashdata('danger', 'This qualification review has already been completed or is no longer available.');
+            redirect($returnUrl);
+            return;
+        }
+
+        $decision = (int)$this->input->post('remarks');
+        $reason = trim((string)$this->input->post('reason'));
+        $documentsReviewed = (int)$this->input->post('documents_reviewed') === 1;
+
+        if (!in_array($decision, [1, 2], true)) {
+            $this->session->set_flashdata('danger', 'Select whether the applicant is Qualified or Disqualified.');
+            redirect($returnUrl);
+            return;
+        }
+
+        if (!$documentsReviewed) {
+            $this->session->set_flashdata('danger', 'Confirm that the mandatory documents were reviewed before saving the decision.');
+            redirect($returnUrl);
+            return;
+        }
+
+        if ($decision === 2 && $reason === '') {
+            $this->session->set_flashdata('danger', 'A reason is required when an applicant is disqualified.');
+            redirect($returnUrl);
+            return;
+        }
+
+        $job = $this->db
+            ->where('jobID', (int)$application->jobID)
+            ->get('hris_jobvacancy')
+            ->row();
+
+        if (!$job) {
+            show_error('Job vacancy not found.', 404);
+            return;
+        }
+
+        if (isset($job->jvStatus) && strcasecmp(trim((string)$job->jvStatus), 'Closed') === 0) {
+            $this->session->set_flashdata('danger', 'This vacancy is closed. Qualification decisions can no longer be changed.');
+            redirect($returnUrl);
+            return;
+        }
+
+        $recordNo = trim((string)$this->input->post('record_no'));
+        if ($recordNo === '') {
+            $recordNo = trim((string)$application->applicant_id);
+        }
+        $applicantIdForTracking = (int)$this->input->post('id');
+        if ($applicantIdForTracking <= 0 && is_numeric($application->applicant_id)) {
+            $applicantIdForTracking = (int)$application->applicant_id;
+        }
+
+        $this->db->trans_begin();
+
+        $decisionSaved = $this->Reg->update_dq($decision);
+        $remarksSaved = $this->Reg->insert_dq();
+        $ratingReady = true;
+        $statusSaved = true;
+        $trackingSaved = true;
+
+        if ($decision === 1) {
+            $statusSaved = $this->db
+                ->where('appID', $appID)
+                ->update('hris_applications', ['appStatus' => 'Endorsed for Rating']);
+            $trackingSaved = $this->db->insert('hris_applications_track', [
+                'jobID' => (int)$application->jobID,
+                'empEmail' => (string)($application->empEmail ?? ''),
+                'dateSubmitted' => date('Y-m-d'),
+                'appStatus' => 'Endorsed for Rating.',
+                'note' => '',
+                'timeSubmitted' => date('h:i:s a'),
+                'applicant_id' => $applicantIdForTracking,
+                'res' => (string)$this->session->userdata('username'),
+                'nstat' => 0,
+                'app_id' => $appID,
+            ]);
+            $ratingReady = $this->ensureRatingRecord($application, $job, $recordNo);
+        }
+
+        if (!$decisionSaved || !$remarksSaved || !$statusSaved || !$trackingSaved || !$ratingReady || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            $this->session->set_flashdata('danger', 'The qualification review could not be saved. Please try again.');
+            redirect($returnUrl);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        if ($decision === 1) {
+            $this->session->set_flashdata('success', 'Applicant marked Qualified and endorsed for rating. You may now start rating.');
+        } else {
+            $this->session->set_flashdata('success', 'Applicant marked Disqualified. The reason and document review were saved.');
+        }
+
+        redirect($returnUrl);
+    }
 
 
 

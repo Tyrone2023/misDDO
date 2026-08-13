@@ -26,6 +26,36 @@ foreach ($applicants as $applicant) {
     }
 }
 
+$evaluatorTagCounts = [];
+foreach ($taggedApplicants as $applicant) {
+    $evaluatorId = (int) ($applicant->rater_user_id ?? 0);
+    if ($evaluatorId <= 0) {
+        continue;
+    }
+
+    if (!isset($evaluatorTagCounts[$evaluatorId])) {
+        $evaluatorName = trim((string) ($applicant->evaluator_name ?? ''));
+        $evaluatorTagCounts[$evaluatorId] = [
+            'id' => $evaluatorId,
+            'name' => $evaluatorName !== '' ? $evaluatorName : 'Evaluator #' . $evaluatorId,
+            'count' => 0,
+        ];
+    }
+
+    $evaluatorTagCounts[$evaluatorId]['count']++;
+}
+
+uasort($evaluatorTagCounts, static function ($left, $right) {
+    if ($left['count'] === $right['count']) {
+        return strcasecmp($left['name'], $right['name']);
+    }
+    return $right['count'] <=> $left['count'];
+});
+
+$taggingProgress = ($selectedVacancy && (int) $selectedVacancy->applicant_total > 0)
+    ? (int) round(((int) $selectedVacancy->tagged_total / (int) $selectedVacancy->applicant_total) * 100)
+    : 0;
+
 $evaluatorOptions = [];
 foreach ($evaluators as $evaluator) {
     $evaluatorName = trim(implode(' ', array_filter([
@@ -69,23 +99,46 @@ $applicantProfileUrl = static function ($applicant) {
 ?>
 
 <style>
-    .sat-page { --sat-ink:#183153; --sat-muted:#6b7a90; --sat-line:#e6ebf2; --sat-blue:#2457d6; --sat-soft:#f5f8fc; }
-    .sat-page .sat-hero { background:linear-gradient(125deg,#123b70 0%,#2457d6 65%,#3f78e8 100%); border-radius:16px; color:#fff; padding:26px 28px; box-shadow:0 14px 32px rgba(24,49,83,.16); }
+    .sat-page { --sat-ink:#183153; --sat-muted:#6b7a90; --sat-line:#e6ebf2; --sat-blue:#2457d6; --sat-soft:#f5f8fc; padding-bottom:28px; }
+    .sat-page .container-fluid { max-width:1540px; }
+    .sat-page .sat-hero { align-items:center; background:linear-gradient(125deg,#102f59 0%,#2457d6 68%,#5688ef 100%); border-radius:18px; box-shadow:0 16px 36px rgba(24,49,83,.18); color:#fff; display:flex; justify-content:space-between; overflow:hidden; padding:27px 30px; position:relative; }
+    .sat-page .sat-hero:after { border:30px solid rgba(255,255,255,.08); border-radius:50%; content:""; height:205px; position:absolute; right:-45px; top:-75px; width:205px; }
+    .sat-page .sat-hero-copy { position:relative; z-index:1; }
+    .sat-page .sat-hero-icon { align-items:center; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); border-radius:16px; display:flex; flex:0 0 62px; font-size:30px; height:62px; justify-content:center; position:relative; z-index:1; }
     .sat-page .sat-eyebrow { color:#cfe0ff; font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
     .sat-page .sat-hero h2 { color:#fff; font-size:25px; margin:7px 0 5px; }
     .sat-page .sat-hero p { color:#dce8ff; max-width:720px; margin:0; }
-    .sat-page .sat-step { display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:10px; background:#eaf0ff; color:var(--sat-blue); font-weight:800; flex:0 0 34px; }
-    .sat-page .sat-card { border:1px solid var(--sat-line); border-radius:14px; box-shadow:0 6px 22px rgba(24,49,83,.06); }
-    .sat-page .sat-card .card-body { padding:22px; }
-    .sat-page .sat-select { min-height:46px; border-color:#ced7e5; }
+    .sat-page .sat-step { align-items:center; background:#eaf0ff; border-radius:11px; color:var(--sat-blue); display:flex; flex:0 0 38px; font-weight:800; height:38px; justify-content:center; width:38px; }
+    .sat-page .sat-card { border:0; border-radius:16px; box-shadow:0 7px 24px rgba(24,49,83,.075); }
+    .sat-page .sat-card .card-body { padding:22px 24px; }
+    .sat-page .sat-picker-card { border-left:4px solid var(--sat-blue); }
+    .sat-page .sat-select { border-color:#ced7e5; border-radius:9px; min-height:46px; }
+    .sat-page .sat-selected-icon { align-items:center; background:linear-gradient(145deg,#e8efff,#f2f6ff); border-radius:13px; color:var(--sat-blue); display:flex; flex:0 0 46px; font-size:23px; height:46px; justify-content:center; width:46px; }
     .sat-page .sat-note { display:flex; gap:10px; align-items:flex-start; background:#eef6ff; border:1px solid #d9eaff; border-radius:10px; color:#31577d; padding:12px 14px; }
-    .sat-page .sat-metric { background:#fff; border:1px solid var(--sat-line); border-radius:12px; padding:15px 17px; height:100%; }
+    .sat-page .sat-metric { align-items:center; background:#f8fafc; border:1px solid var(--sat-line); border-radius:13px; display:flex; gap:12px; height:100%; padding:13px 15px; }
+    .sat-page .sat-metric-icon { align-items:center; border-radius:11px; display:flex; flex:0 0 38px; font-size:18px; height:38px; justify-content:center; width:38px; }
+    .sat-page .sat-icon-blue { background:#e7efff; color:#2457d6; }
+    .sat-page .sat-icon-amber { background:#fff1d1; color:#9d6500; }
+    .sat-page .sat-icon-green { background:#def5e8; color:#187247; }
+    .sat-page .sat-icon-red { background:#fde8e8; color:#b44040; }
     .sat-page .sat-metric-label { color:var(--sat-muted); font-size:12px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
-    .sat-page .sat-metric-value { color:var(--sat-ink); font-size:25px; font-weight:800; line-height:1.2; margin-top:3px; }
-    .sat-page .sat-table-wrap { border:1px solid var(--sat-line); border-radius:12px; padding:14px 14px 2px; }
+    .sat-page .sat-metric-value { color:var(--sat-ink); font-size:23px; font-weight:800; line-height:1.05; margin-top:3px; }
+    .sat-page .sat-progress-track { background:#e7edf5; border-radius:20px; height:7px; overflow:hidden; }
+    .sat-page .sat-progress-track span { background:linear-gradient(90deg,#2ca66e,#56ce91); display:block; height:100%; transition:width .25s ease; }
+    .sat-page .sat-evaluator-summary { background:#f8fafc; border:1px solid var(--sat-line); border-radius:13px; padding:14px 15px; }
+    .sat-page .sat-evaluator-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .sat-page .sat-evaluator-chip { align-items:center; background:#fff; border:1px solid #dfe6ef; border-radius:22px; box-shadow:0 2px 7px rgba(24,49,83,.04); display:inline-flex; gap:7px; max-width:260px; padding:5px 7px 5px 5px; }
+    .sat-page .sat-evaluator-chip-icon { align-items:center; background:#e8f0ff; border-radius:50%; color:var(--sat-blue); display:flex; flex:0 0 28px; font-size:15px; height:28px; justify-content:center; width:28px; }
+    .sat-page .sat-evaluator-chip-name { color:#304b6d; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sat-page .sat-evaluator-chip-count { align-items:center; background:#2457d6; border-radius:12px; color:#fff; display:flex; flex:0 0 auto; font-size:11px; font-weight:800; height:22px; justify-content:center; min-width:22px; padding:0 6px; }
+    .sat-page .sat-table-card { overflow:visible; }
+    .sat-page .sat-table-head { align-items:center; border-bottom:1px solid #edf1f6; display:flex; justify-content:space-between; padding:19px 24px 15px; }
+    .sat-page .sat-table-head-icon { align-items:center; border-radius:11px; display:flex; flex:0 0 39px; font-size:19px; height:39px; justify-content:center; width:39px; }
+    .sat-page .sat-table-wrap { padding:4px 24px 18px; }
     .sat-page .sat-table { margin:0; width:100% !important; }
-    .sat-page .sat-table thead th { background:var(--sat-soft); border-bottom:1px solid #dfe6ef; color:#506176; font-size:11px; letter-spacing:.04em; padding:12px; text-transform:uppercase; }
-    .sat-page .sat-table td { border-top:1px solid #edf1f6; padding:13px 12px; vertical-align:middle; }
+    .sat-page .sat-table thead th { background:var(--sat-soft); border-color:#e4eaf2; color:#506176; font-size:11px; letter-spacing:.04em; padding:12px; text-transform:uppercase; }
+    .sat-page .sat-table td { border-color:#edf1f6; padding:13px 12px; vertical-align:middle; }
+    .sat-page .sat-table tbody tr:hover { background:#f8fbff; }
     .sat-page .sat-name { color:var(--sat-ink); font-weight:700; line-height:1.25; }
     .sat-page .sat-sub { color:var(--sat-muted); font-size:12px; margin-top:3px; }
     .sat-page .sat-status { border-radius:20px; display:inline-flex; font-size:11px; font-weight:700; padding:5px 9px; white-space:nowrap; }
@@ -104,6 +157,8 @@ $applicantProfileUrl = static function ($applicant) {
     .sat-page .sat-tag-form.sat-form-unsaved { background:#fff8e8; border:1px solid #f2ce7b; border-radius:9px; padding:5px; }
     .sat-page .sat-unsaved-warning { align-items:center; background:#fff6dc; border:1px solid #f0cf77; border-radius:10px; color:#76530a; display:flex; gap:10px; padding:11px 14px; }
     .sat-page .sat-table-title { color:var(--sat-ink); font-size:17px; font-weight:800; }
+    .sat-page .sat-count-badge { align-items:center; border-radius:20px; display:inline-flex; font-size:12px; font-weight:800; gap:5px; padding:7px 11px; }
+    .sat-page #tagging-message { border:0; border-radius:11px; box-shadow:0 12px 30px rgba(24,49,83,.2); max-width:430px; position:fixed; right:24px; top:82px; z-index:1080; }
     .sat-page .dataTables_wrapper .dataTables_filter input { border:1px solid #d8e0eb; border-radius:8px; margin-left:7px; padding:6px 10px; }
     .sat-page .dataTables_wrapper .dataTables_length select { border:1px solid #d8e0eb; border-radius:7px; padding:4px 22px 4px 8px; }
     .sat-page .dataTables_wrapper .dataTables_info,
@@ -112,7 +167,7 @@ $applicantProfileUrl = static function ($applicant) {
     .sat-page .page-item.active .page-link { background-color:var(--sat-blue); border-color:var(--sat-blue); }
     .sat-page .sat-empty { padding:52px 20px; text-align:center; }
     .sat-page .sat-empty-icon { align-items:center; background:#edf3ff; border-radius:16px; color:var(--sat-blue); display:inline-flex; font-size:26px; height:58px; justify-content:center; width:58px; }
-    @media (max-width:767px) { .sat-page .sat-hero { padding:22px 20px; } .sat-page .sat-table-wrap { padding:10px 8px 1px; } .sat-page .sat-tag-form { min-width:220px; } }
+    @media (max-width:767px) { .sat-page .sat-hero { padding:22px 20px; } .sat-page .sat-hero-icon { display:none; } .sat-page .sat-card .card-body { padding:18px; } .sat-page .sat-table-head { padding:17px 18px 13px; } .sat-page .sat-table-wrap { padding:4px 12px 14px; } .sat-page .sat-tag-form { min-width:220px; } .sat-page #tagging-message { left:15px; max-width:none; right:15px; top:72px; } }
 </style>
 
 <div class="content-page sat-page">
@@ -121,9 +176,12 @@ $applicantProfileUrl = static function ($applicant) {
             <div class="row mb-3">
                 <div class="col-12">
                     <div class="sat-hero">
-                        <div class="sat-eyebrow">Secretariat recruitment workspace</div>
-                        <h2>Applicant Evaluator Tagging</h2>
-                        <!-- <p>Select one of your tagged vacancies, review all submitted and validated applicants, then assign an evaluator directly from the same table.</p> -->
+                        <div class="sat-hero-copy">
+                            <div class="sat-eyebrow">Secretariat recruitment workspace</div>
+                            <h2>Applicant Evaluator Tagging</h2>
+                            <p>Choose a vacancy, assign evaluators, and monitor the distribution from one simple workspace.</p>
+                        </div>
+                        <div class="sat-hero-icon"><i class="mdi mdi-account-multiple-check"></i></div>
                     </div>
                 </div>
             </div>
@@ -144,7 +202,7 @@ $applicantProfileUrl = static function ($applicant) {
 
             <div id="tagging-message" class="alert d-none" role="status" aria-live="polite"></div>
 
-            <div class="card sat-card mb-3">
+            <div class="card sat-card sat-picker-card mb-3">
                 <div class="card-body">
                     <div class="d-flex align-items-start mb-3">
                         <span class="sat-step">1</span>
@@ -188,11 +246,11 @@ $applicantProfileUrl = static function ($applicant) {
             </div>
 
             <?php if ($selectedVacancy) : ?>
-                <div class="card sat-card">
+                <div class="card sat-card mb-3">
                     <div class="card-body">
                         <div class="d-flex align-items-start justify-content-between flex-wrap mb-3">
                             <div class="d-flex align-items-start mb-2">
-                                <span class="sat-step">2</span>
+                                <span class="sat-selected-icon"><i class="mdi mdi-briefcase-check"></i></span>
                                 <div class="ml-3">
                                     <h4 class="mb-1"><?= $tagging_h($selectedVacancy->jobTitle); ?></h4>
                                     <div class="text-muted">
@@ -219,29 +277,70 @@ $applicantProfileUrl = static function ($applicant) {
 
                         <div class="row mb-3">
                             <div class="col-xl-3 col-sm-6 mb-2">
-                                <div class="sat-metric"><div class="sat-metric-label">Applicants</div><div class="sat-metric-value"><?= (int) $selectedVacancy->applicant_total; ?></div></div>
+                                <div class="sat-metric">
+                                    <span class="sat-metric-icon sat-icon-blue"><i class="mdi mdi-account-group-outline"></i></span>
+                                    <div><div class="sat-metric-label">Applicants</div><div id="applicant-count" class="sat-metric-value"><?= (int) $selectedVacancy->applicant_total; ?></div></div>
+                                </div>
                             </div>
                             <div class="col-xl-3 col-sm-6 mb-2">
-                                <div class="sat-metric"><div class="sat-metric-label">Submitted</div><div class="sat-metric-value text-warning"><?= (int) $selectedVacancy->submitted_total; ?></div></div>
+                                <div class="sat-metric">
+                                    <span class="sat-metric-icon sat-icon-amber"><i class="mdi mdi-file-send-outline"></i></span>
+                                    <div><div class="sat-metric-label">Submitted</div><div class="sat-metric-value"><?= (int) $selectedVacancy->submitted_total; ?></div></div>
+                                </div>
                             </div>
                             <div class="col-xl-3 col-sm-6 mb-2">
-                                <div class="sat-metric"><div class="sat-metric-label">Tagged</div><div id="tagged-count" class="sat-metric-value text-success"><?= (int) $selectedVacancy->tagged_total; ?></div></div>
+                                <div class="sat-metric">
+                                    <span class="sat-metric-icon sat-icon-green"><i class="mdi mdi-account-check-outline"></i></span>
+                                    <div><div class="sat-metric-label">Tagged</div><div id="tagged-count" class="sat-metric-value"><?= (int) $selectedVacancy->tagged_total; ?></div></div>
+                                </div>
                             </div>
                             <div class="col-xl-3 col-sm-6 mb-2">
-                                <div class="sat-metric"><div class="sat-metric-label">Still untagged</div><div id="untagged-count" class="sat-metric-value text-danger"><?= (int) $selectedVacancy->untagged_total; ?></div></div>
+                                <div class="sat-metric">
+                                    <span class="sat-metric-icon sat-icon-red"><i class="mdi mdi-account-clock-outline"></i></span>
+                                    <div><div class="sat-metric-label">Still untagged</div><div id="untagged-count" class="sat-metric-value"><?= (int) $selectedVacancy->untagged_total; ?></div></div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="d-flex align-items-start justify-content-between flex-wrap mb-2">
-                            <div>
-                                <div class="sat-table-title">Applicants for tagging</div>
-                                <p class="text-muted mb-0">Select an evaluator and tag the applicant directly from this table.</p>
+                        <div class="sat-evaluator-summary">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap">
+                                <div>
+                                    <div class="font-weight-bold text-dark"><i class="mdi mdi-chart-donut text-primary mr-1"></i> Evaluator distribution</div>
+                                    <div class="sat-sub mt-1">Tagged applicants for this vacancy, grouped by evaluator.</div>
+                                </div>
+                                <span class="small font-weight-bold text-success"><span id="tagging-progress-label"><?= $taggingProgress; ?></span>% tagged</span>
                             </div>
-                            <span class="badge badge-warning p-2"><span id="untagged-table-count"><?= count($untaggedApplicants); ?></span> untagged</span>
+                            <div class="sat-progress-track mt-2"><span id="tagging-progress-bar" style="width:<?= $taggingProgress; ?>%"></span></div>
+                            <div class="sat-evaluator-list" id="evaluator-count-list">
+                                <?php foreach ($evaluatorTagCounts as $evaluatorCount) : ?>
+                                    <div class="sat-evaluator-chip" data-evaluator-id="<?= (int) $evaluatorCount['id']; ?>">
+                                        <span class="sat-evaluator-chip-icon"><i class="mdi mdi-account-check-outline"></i></span>
+                                        <span class="sat-evaluator-chip-name" title="<?= $tagging_h($evaluatorCount['name']); ?>"><?= $tagging_h($evaluatorCount['name']); ?></span>
+                                        <span class="sat-evaluator-chip-count"><?= (int) $evaluatorCount['count']; ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                                <span id="evaluator-count-empty" class="text-muted small <?= empty($evaluatorTagCounts) ? '' : 'd-none'; ?>">No evaluator assignments yet.</span>
+                            </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="sat-table-wrap mb-4">
-                            <table class="table table-bordered dt-responsive sat-table" id="untagged-datatable">
+                <div class="card sat-card sat-table-card mb-3">
+                    <div class="sat-table-head">
+                        <div class="d-flex align-items-center">
+                            <span class="sat-table-head-icon sat-icon-amber"><i class="mdi mdi-account-clock-outline"></i></span>
+                            <div class="ml-3">
+                                <div>
+                                    <div class="sat-table-title">Applicants for tagging</div>
+                                    <p class="text-muted mb-0">Choose an evaluator, then save. The applicant moves below immediately.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="sat-count-badge badge-warning"><i class="mdi mdi-account-clock-outline"></i><span id="untagged-table-count"><?= count($untaggedApplicants); ?></span> waiting</span>
+                    </div>
+
+                    <div class="sat-table-wrap">
+                            <table class="table table-bordered table-hover dt-responsive sat-table" id="untagged-datatable">
                                 <thead>
                                     <tr>
                                         <th style="width:30%">Applicant</th>
@@ -287,18 +386,23 @@ $applicantProfileUrl = static function ($applicant) {
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
-                        </div>
+                    </div>
+                </div>
 
-                        <div class="d-flex align-items-start justify-content-between flex-wrap mb-2 pt-2">
-                            <div>
+                <div class="card sat-card sat-table-card">
+                    <div class="sat-table-head">
+                        <div class="d-flex align-items-center">
+                            <span class="sat-table-head-icon sat-icon-green"><i class="mdi mdi-account-check-outline"></i></span>
+                            <div class="ml-3">
                                 <div class="sat-table-title">Tagged applicants</div>
-                                <p class="text-muted mb-0">View the assigned evaluator or select another evaluator to reassign an applicant.</p>
+                                <p class="text-muted mb-0">See each evaluator assignment or save a reassignment in place.</p>
                             </div>
-                            <span class="badge badge-success p-2"><span id="tagged-table-count"><?= count($taggedApplicants); ?></span> tagged</span>
                         </div>
+                        <span class="sat-count-badge badge-success"><i class="mdi mdi-account-check-outline"></i><span id="tagged-table-count"><?= count($taggedApplicants); ?></span> tagged</span>
+                    </div>
 
-                        <div class="sat-table-wrap">
-                            <table class="table table-bordered dt-responsive sat-table" id="tagged-datatable">
+                    <div class="sat-table-wrap">
+                            <table class="table table-bordered table-hover dt-responsive sat-table" id="tagged-datatable">
                                 <thead>
                                     <tr>
                                         <th style="width:25%">Applicant</th>
@@ -351,10 +455,9 @@ $applicantProfileUrl = static function ($applicant) {
                             </table>
                         </div>
 
-                        <?php if (empty($evaluatorOptions)) : ?>
-                            <div class="alert alert-warning mt-3 mb-0">No user account with the Evaluator position is currently available.</div>
-                        <?php endif; ?>
-                    </div>
+                    <?php if (empty($evaluatorOptions)) : ?>
+                        <div class="px-4 pb-3"><div class="alert alert-warning mb-0">No user account with the Evaluator position is currently available.</div></div>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
         </div>
@@ -407,6 +510,64 @@ $applicantProfileUrl = static function ($applicant) {
             activeDirtyForm = null;
             if (unsavedWarning) unsavedWarning.classList.add('d-none');
         }
+    }
+
+    function updateTaggingProgress() {
+        var tagged = parseInt((document.getElementById('tagged-count') || {}).textContent || '0', 10);
+        var total = parseInt((document.getElementById('applicant-count') || {}).textContent || '0', 10);
+        var percent = total > 0 ? Math.round((tagged / total) * 100) : 0;
+        var label = document.getElementById('tagging-progress-label');
+        var bar = document.getElementById('tagging-progress-bar');
+
+        if (label) label.textContent = percent;
+        if (bar) bar.style.width = percent + '%';
+    }
+
+    function adjustEvaluatorCount(evaluatorId, evaluatorName, adjustment) {
+        evaluatorId = String(evaluatorId || '');
+        if (!evaluatorId || !adjustment) return;
+
+        var list = document.getElementById('evaluator-count-list');
+        var empty = document.getElementById('evaluator-count-empty');
+        if (!list) return;
+
+        var chip = list.querySelector('[data-evaluator-id="' + evaluatorId.replace(/"/g, '') + '"]');
+        if (!chip && adjustment > 0) {
+            chip = document.createElement('div');
+            chip.className = 'sat-evaluator-chip';
+            chip.setAttribute('data-evaluator-id', evaluatorId);
+
+            var icon = document.createElement('span');
+            icon.className = 'sat-evaluator-chip-icon';
+            icon.innerHTML = '<i class="mdi mdi-account-check-outline"></i>';
+
+            var name = document.createElement('span');
+            name.className = 'sat-evaluator-chip-name';
+            name.textContent = evaluatorName || ('Evaluator #' + evaluatorId);
+            name.title = name.textContent;
+
+            var count = document.createElement('span');
+            count.className = 'sat-evaluator-chip-count';
+            count.textContent = '0';
+
+            chip.appendChild(icon);
+            chip.appendChild(name);
+            chip.appendChild(count);
+            list.insertBefore(chip, empty || null);
+        }
+
+        if (!chip) return;
+        var countElement = chip.querySelector('.sat-evaluator-chip-count');
+        var nextCount = Math.max(0, parseInt(countElement.textContent || '0', 10) + adjustment);
+
+        if (nextCount === 0) {
+            chip.parentNode.removeChild(chip);
+        } else {
+            countElement.textContent = nextCount;
+        }
+
+        var remainingChips = list.querySelectorAll('.sat-evaluator-chip').length;
+        if (empty) empty.classList.toggle('d-none', remainingChips > 0);
     }
 
     function evaluatorChanged(select) {
@@ -525,6 +686,9 @@ $applicantProfileUrl = static function ($applicant) {
         var button = form.querySelector('button[type="submit"]');
         var row = form.closest('tr');
         var mode = form.getAttribute('data-mode');
+        var selectedEvaluator = form.querySelector('select.sat-evaluator-select');
+        var previousEvaluatorId = selectedEvaluator ? (selectedEvaluator.getAttribute('data-saved-value') || '') : '';
+        var selectedEvaluatorId = selectedEvaluator ? selectedEvaluator.value : '';
         var originalText = button.textContent;
         button.disabled = true;
         button.textContent = 'Saving...';
@@ -552,6 +716,8 @@ $applicantProfileUrl = static function ($applicant) {
                 untaggedCount.textContent = Math.max(0, parseInt(untaggedCount.textContent || '0', 10) - 1);
                 taggedTableCount.textContent = parseInt(taggedTableCount.textContent || '0', 10) + 1;
                 untaggedTableCount.textContent = Math.max(0, parseInt(untaggedTableCount.textContent || '0', 10) - 1);
+                adjustEvaluatorCount(selectedEvaluatorId, body.evaluator_name, 1);
+                updateTaggingProgress();
 
                 if (untaggedDataTable && taggedDataTable && row && row.cells.length >= 4) {
                     var applicantCell = row.cells[0].innerHTML;
@@ -603,6 +769,10 @@ $applicantProfileUrl = static function ($applicant) {
 
             row.querySelector('.sat-assignee-name').textContent = body.evaluator_name;
             row.querySelector('.assignment-date').textContent = 'Tagged just now';
+            if (previousEvaluatorId !== selectedEvaluatorId) {
+                adjustEvaluatorCount(previousEvaluatorId, '', -1);
+                adjustEvaluatorCount(selectedEvaluatorId, body.evaluator_name, 1);
+            }
             clearDirtyForm(form, true);
             button.textContent = 'Save change';
             showMessage(true, body.message);

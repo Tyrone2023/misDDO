@@ -1632,6 +1632,7 @@ class Reg extends CI_Model{
               'exp' => $exp,
               'tr' => $tr,
               'eli' => $eli,
+              'fy' => $this->input->post('job_fy') ?: date('Y'),
 
 
       );

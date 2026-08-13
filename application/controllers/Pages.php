@@ -7717,6 +7717,32 @@ public function rqa_municipality_print_shsv2()
 
         // Consolidate duplicate ratings and auto-mark as Rated when complete
         $appIdForRating = $this->uri->segment(6);
+        $data['evaluator_qualification_gate'] = null;
+
+        $sessionPosition = (string)$this->session->userdata('position');
+        if (in_array($sessionPosition, ['Evaluator', 'rater', 'raters'], true) && !empty($appIdForRating)) {
+            $applicationForEvaluator = $this->Common->one_cond_row('hris_applications', 'appID', (int)$appIdForRating);
+            $evaluatorId = (int)($this->session->id ?? $this->session->userdata('id'));
+            $isAssigned = $applicationForEvaluator && $evaluatorId > 0 && (bool)$this->db
+                ->from('hris_rater_assignments')
+                ->where('app_id', (int)$appIdForRating)
+                ->where('rater_user_id', $evaluatorId)
+                ->count_all_results();
+
+            if (!$isAssigned) {
+                show_error('This application is not assigned to your evaluator account.', 403);
+                return;
+            }
+
+            if (in_array((string)$applicationForEvaluator->appStatus, ['Application Submitted', 'Validated'], true)) {
+                $data['evaluator_qualification_gate'] = [
+                    'application' => $applicationForEvaluator,
+                    'applicant' => $applicant,
+                    'job' => $jobvacancy,
+                ];
+            }
+        }
+
         if (!empty($appIdForRating)) {
             $this->Reg->consolidate_rating_single($appIdForRating);
             $this->Reg->auto_mark_rated($appIdForRating);
@@ -7731,6 +7757,9 @@ public function rqa_municipality_print_shsv2()
         $this->load->view('templates/head');
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
+        if (!empty($data['evaluator_qualification_gate'])) {
+            $this->load->view('pages/_evaluator_qualification_gate', $data);
+        }
         if ($ratingLocked) {
             $this->load->view('pages/_rating_locked');
         }
@@ -7825,6 +7854,34 @@ public function rqa_municipality_print_shsv2()
             return;
         }
         redirect($fallback !== null ? $fallback : base_url());
+    }
+
+    private function evaluator_rating_stage_guard($appID)
+    {
+        $position = (string)$this->session->userdata('position');
+        if (!in_array($position, ['Evaluator', 'rater', 'raters'], true)) {
+            return;
+        }
+
+        $appID = (int)$appID;
+        $evaluatorId = (int)($this->session->id ?? $this->session->userdata('id'));
+        $assigned = $appID > 0 && $evaluatorId > 0 && (bool)$this->db
+            ->from('hris_rater_assignments')
+            ->where('app_id', $appID)
+            ->where('rater_user_id', $evaluatorId)
+            ->count_all_results();
+
+        if (!$assigned) {
+            show_error('This application is not assigned to your evaluator account.', 403);
+            exit;
+        }
+
+        $application = $this->Common->one_cond_row('hris_applications', 'appID', $appID);
+        $ratingStatuses = ['Endorsed for Rating', 'Rated'];
+        if (!$application || !in_array((string)$application->appStatus, $ratingStatuses, true) || (int)$application->dq === 2) {
+            show_error('Complete the qualification review before entering applicant ratings.', 409);
+            exit;
+        }
     }
 
     /**
@@ -10533,6 +10590,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $user = $this->input->post('page');
         if (empty($user)) {
             $page = 'ma';
@@ -10564,6 +10622,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
 
         $check = $this->Common->two_cond_row('hris_rating_none', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('educ') <= $this->input->post('max')) {
@@ -10589,6 +10648,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
 
         $check = $this->Common->two_cond_row('hris_rating_promotion', 'record_no', $rn, 'appId', $appID);
         if ($this->input->post('educ') <= $this->input->post('max')) {
@@ -10611,6 +10671,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $user = $this->input->post('page');
         if (empty($user)) {
             $page = 'ma';
@@ -10640,6 +10701,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $user = $this->input->post('page');
         if (empty($user)) {
             $page = 'ma';
@@ -10669,6 +10731,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $user = $this->input->post('page');
         if (empty($user)) {
             $page = 'ma';
@@ -10696,6 +10759,7 @@ public function rqa_municipality_print_shsv2()
     public function update_training_rate(){
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $user = $this->input->post('page');
         if (empty($user)) {
             $page = 'ma';
@@ -10751,6 +10815,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $col = $this->input->post('col');
         $remarks = $this->input->post('remark_col');
         $message = $this->input->post('message');
@@ -10783,6 +10848,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $col = $this->input->post('col');
         $remarks = $this->input->post('remark_col');
         $message = $this->input->post('message');
@@ -10810,6 +10876,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $col = $this->input->post('col');
         $message = $this->input->post('message');
         $maxpoint = $this->input->post('maxpoint');
@@ -10836,6 +10903,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $col = $this->input->post('col');
         $message = $this->input->post('message');
         $maxpoint = $this->input->post('maxpoint');
@@ -10862,6 +10930,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $col = $this->input->post('col');
         $message = $this->input->post('message');
         $maxpoint = $this->input->post('maxpoint');
@@ -10888,6 +10957,7 @@ public function rqa_municipality_print_shsv2()
 
         $rn = $this->input->post('record_no');
         $appID = $this->input->post('app_id');
+        $this->evaluator_rating_stage_guard($appID);
         $user = $this->input->post('page');
         if (empty($user)) {
             $page = 'ma';
@@ -10916,6 +10986,7 @@ public function rqa_municipality_print_shsv2()
 
     public function update_dm_rate()
     {
+        $this->evaluator_rating_stage_guard($this->input->post('app_id'));
         if ($this->input->post('demo_rating') <= 35) {
 
             $this->Reg->update_rate('demo_rating');
@@ -10934,6 +11005,7 @@ public function rqa_municipality_print_shsv2()
 
     public function update_cdm_rate()
     {
+        $this->evaluator_rating_stage_guard($this->input->post('app_id'));
         if ($this->input->post('demo_rating') <= 35) {
             $this->Reg->update_rate('demo_rating');
             $this->Reg->ap_track_apply('The demo rating has been encoded.', $this->input->post('app_id'));
@@ -10947,6 +11019,7 @@ public function rqa_municipality_print_shsv2()
 
     public function update_tr_rate()
     {
+        $this->evaluator_rating_stage_guard($this->input->post('app_id'));
         if ($this->input->post('tr_rating') <= 25) {
             $this->Reg->update_rate('tr_rating');
             $this->Reg->update_eval('eval_id3');
@@ -10964,6 +11037,7 @@ public function rqa_municipality_print_shsv2()
 
     public function update_trc_rate()
     {
+        $this->evaluator_rating_stage_guard($this->input->post('app_id'));
         if ($this->input->post('tr_rating') <= 25) {
             $this->Reg->ap_track_apply("The teacher's reflection rating has been encoded.", $this->input->post('app_id'));
             $this->session->set_flashdata('success', 'Successfuly Saved');
