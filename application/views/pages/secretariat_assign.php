@@ -220,7 +220,8 @@ foreach ($vacancies as $job) {
 
                             <div class="hrp-field sa-position-picker">
                                 <label class="hrp-label" for="sa-vacancies">Job Vacancies</label>
-                                <select class="form-control" id="sa-vacancies" name="job_ids[]" multiple>
+                                <select class="form-control" id="sa-vacancies" name="job_ids[]" multiple
+                                        aria-label="Search and select job vacancies">
                                     <?php
                                     $grouped = [];
                                     foreach ($vacancies as $job) {
@@ -346,32 +347,52 @@ foreach ($vacancies as $job) {
 </div>
 
 <script>
-    jQuery(function ($) {
-        var $form = $('#sa-form');
-        if (!$form.length) { return; }
+    (function () {
+        function initSecretariatAssignment() {
+            var $ = window.jQuery;
+            if (!$) { return; }
 
-        if ($.fn.select2) {
-            $('#sa-secretariat').select2({ width: '100%' });
-            $('#sa-vacancies').select2({
-                width: '100%',
-                placeholder: 'Search and select job vacancies...',
-                closeOnSelect: false,
-                language: {
-                    noResults: function () {
-                        return 'No matching vacancy found.';
+            var $form = $('#sa-form');
+            if (!$form.length) { return; }
+
+            if ($.fn.select2) {
+                $('#sa-secretariat').select2({ width: '100%' });
+                $('#sa-vacancies').select2({
+                    width: '100%',
+                    placeholder: 'Search and select job vacancies...',
+                    closeOnSelect: false,
+                    language: {
+                        noResults: function () {
+                            return 'No matching vacancy found.';
+                        }
                     }
-                }
-            });
+                });
+
+                $('#sa-vacancies').on('select2:open', function () {
+                    window.setTimeout(function () {
+                        $('.select2-container--open .select2-search__field').last().trigger('focus');
+                    }, 0);
+                });
+            }
+
+            function refreshCount() {
+                var total = ($('#sa-vacancies').val() || []).length;
+                $('#sa-total-pill')
+                    .text(total + ' tagged')
+                    .toggleClass('is-on', total > 0);
+            }
+
+            $form.on('change', '#sa-vacancies', refreshCount);
+            refreshCount();
         }
 
-        function refreshCount() {
-            var total = ($('#sa-vacancies').val() || []).length;
-            $('#sa-total-pill')
-                .text(total + ' tagged')
-                .toggleClass('is-on', total > 0);
+        // jQuery and Select2 are loaded by the shared footer, after this view.
+        // Waiting for the document prevents this picker from falling back to a
+        // native multi-select before those dependencies are available.
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSecretariatAssignment);
+        } else {
+            initSecretariatAssignment();
         }
-
-        $form.on('change', '#sa-vacancies', refreshCount);
-        refreshCount();
-    });
+    }());
 </script>

@@ -481,6 +481,250 @@ class Secretariat_model extends CI_Model
     }
 
     /**
+     * Open vacancies explicitly tagged to a Secretariat account, together with
+     * the applicant workload used by the dashboard and tagging screen.
+     *
+     * Only Application Submitted and Validated applications are part of this
+     * workflow. Disqualified records remain available in their dedicated view.
+     */
+    public function tagging_vacancies(int $userId): array
+    {
+        return $this->db
+            ->select("j.jobID, j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.department,
+                COUNT(DISTINCT CASE
+                    WHEN a.appStatus = 'Application Submitted' AND a.dq != 2 THEN a.appID
+                END) AS submitted_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.appStatus = 'Validated' AND a.dq != 2 THEN a.appID
+                END) AS validated_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.appStatus IN ('Application Submitted', 'Validated') AND a.dq != 2 THEN a.appID
+                END) AS applicant_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.appStatus IN ('Application Submitted', 'Validated') AND a.dq != 2 AND ra.id IS NOT NULL THEN a.appID
+                END) AS tagged_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.appStatus IN ('Application Submitted', 'Validated') AND a.dq != 2 AND ra.id IS NULL THEN a.appID
+                END) AS untagged_total", false)
+            ->from('hris_secretariat_vacancies sv')
+            ->join('hris_jobvacancy j', 'j.jobID = sv.job_id')
+            ->join('hris_applications a', 'a.jobID = j.jobID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.app_id = a.appID', 'left')
+            ->where('sv.secretariat_user_id', $userId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->group_by(['j.jobID', 'j.jobTitle', 'j.position', 'j.job_type', 'j.sy', 'j.itemNo', 'j.department'])
+            ->order_by('j.sy', 'desc')
+            ->order_by('j.jobTitle', 'asc')
+            ->get()
+            ->result();
+    }
+
+    public function secretariat_has_vacancy(int $userId, int $jobId): bool
+    {
+        return (bool) $this->db
+            ->from('hris_secretariat_vacancies sv')
+            ->join('hris_jobvacancy j', 'j.jobID = sv.job_id')
+            ->where('sv.secretariat_user_id', $userId)
+            ->where('sv.job_id', $jobId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->count_all_results();
+    }
+
+    /**
+     * Submitted and validated applicants for one vacancy assigned to the
+     * current Secretariat user. The latest evaluator tag is joined per row.
+     */
+    public function applicants_for_tagging(int $userId, int $jobId): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $latestAssignment = $this->db
+            ->select('app_id, MAX(id) AS assignment_id', false)
+            ->from('hris_rater_assignments')
+            ->group_by('app_id')
+            ->get_compiled_select();
+
+        return $this->db
+            ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
+                a.app_year, a.district, a.pre_school,
+                j.jobTitle, j.position, j.job_type, j.sy,
+                COALESCE(ha.record_no, ha2.record_no, hs.IDNumber, a.applicant_id) AS record_no,
+                COALESCE(ha.id, ha2.id, hs.IDNumber, a.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, ha2.NameExtn, hs.NameExtn, '') AS NameExtn,
+                COALESCE(ha.specialization, ha2.specialization, '') AS specialization,
+                CASE
+                    WHEN ha.id IS NOT NULL OR ha2.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                s.schoolName,
+                ra.id AS assignment_id, ra.rater_user_id, ra.assigned_at,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name", false)
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CAST(a.applicant_id AS CHAR) AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->join('schools s', 's.schoolID = CONVERT(CAST(a.pre_school AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci', 'left', false)
+            ->join("($latestAssignment) latest_ra", 'latest_ra.app_id = a.appID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.id = latest_ra.assignment_id', 'left')
+            ->join('users u', 'u.id = ra.rater_user_id', 'left')
+            ->where('a.jobID', $jobId)
+            ->where_in('a.appStatus', ['Application Submitted', 'Validated'])
+            ->where('a.dq !=', 2)
+            ->order_by('a.appStatus', 'desc')
+            ->order_by('a.dateSubmitted', 'desc')
+            ->order_by('ha.LastName', 'asc')
+            ->get()
+            ->result();
+    }
+
+    /**
+     * Evaluators available for inline tagging, including their current load so
+     * Secretariats can distribute applicants without leaving the table.
+     */
+    public function eligible_evaluators(?int $fy = null): array
+    {
+        $fy = $fy ?: (int) date('Y');
+
+        return $this->db
+            ->select("u.id, u.fname, u.mname, u.lname, u.username,
+                COUNT(DISTINCT ra.app_id) AS assigned_total", false)
+            ->from('users u')
+            ->join('hris_rater_assignments ra', 'ra.rater_user_id = u.id AND ra.fy = ' . $this->db->escape($fy), 'left', false)
+            ->where('u.position', 'Evaluator')
+            ->where('u.egroup', 1)
+            ->group_by(['u.id', 'u.fname', 'u.mname', 'u.lname', 'u.username'])
+            ->order_by('u.lname', 'asc')
+            ->order_by('u.fname', 'asc')
+            ->get()
+            ->result();
+    }
+
+    /**
+     * Assign or reassign one eligible application to an evaluator. This method
+     * deliberately does not change appStatus, dq, or create a rating row.
+     */
+    public function tag_applicant_to_evaluator(int $userId, int $appId, int $jobId, int $raterId, ?int $assignedBy): array
+    {
+        $application = $this->db
+            ->select('a.appID, a.applicant_id, a.app_year, a.jobID, j.job_type')
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_secretariat_vacancies sv', 'sv.job_id = j.jobID')
+            ->where('sv.secretariat_user_id', $userId)
+            ->where('a.appID', $appId)
+            ->where('a.jobID', $jobId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->where_in('a.appStatus', ['Application Submitted', 'Validated'])
+            ->where('a.dq !=', 2)
+            ->get()
+            ->row();
+
+        if (!$application) {
+            return ['ok' => false, 'message' => 'This applicant is not available in your assigned vacancy.'];
+        }
+
+        $evaluator = $this->db
+            ->select('id, fname, mname, lname')
+            ->from('users')
+            ->where('id', $raterId)
+            ->where('position', 'Evaluator')
+            ->where('egroup', 1)
+            ->get()
+            ->row();
+
+        if (!$evaluator) {
+            return ['ok' => false, 'message' => 'Please select an eligible evaluator.'];
+        }
+
+        $evaluatorName = trim(implode(' ', array_filter([
+            trim((string) ($evaluator->fname ?? '')),
+            trim((string) ($evaluator->mname ?? '')),
+            trim((string) ($evaluator->lname ?? '')),
+        ], static function ($value) {
+            return trim((string) $value) !== '';
+        })));
+
+        $existing = $this->db
+            ->from('hris_rater_assignments')
+            ->where('app_id', $application->appID)
+            ->order_by('id', 'desc')
+            ->get()
+            ->row();
+
+        if ($existing && (int) $existing->rater_user_id === $raterId) {
+            return [
+                'ok' => true,
+                'changed' => false,
+                'message' => $evaluatorName . ' is already assigned to this applicant.',
+                'evaluator_name' => $evaluatorName,
+                'rater_id' => $raterId,
+                'assigned_at' => $existing->assigned_at,
+            ];
+        }
+
+        $specialization = $this->db
+            ->select('specialization')
+            ->from('hris_applicant')
+            ->where('id', $application->applicant_id)
+            ->get()
+            ->row();
+
+        $fy = (int) $application->app_year;
+        if ($fy <= 0) {
+            $fy = (int) date('Y');
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $this->db->trans_start();
+
+        if ($existing) {
+            $this->db
+                ->where('id', $existing->id)
+                ->update('hris_rater_assignments', [
+                    'rater_user_id' => $raterId,
+                    'assigned_by' => $assignedBy,
+                    'assigned_at' => $now,
+                ]);
+            $action = 'reassigned';
+        } else {
+            $this->db->insert('hris_rater_assignments', [
+                'fy' => $fy,
+                'applicant_id' => (string) $application->applicant_id,
+                'app_id' => (int) $application->appID,
+                'job_id' => (int) $application->jobID,
+                'job_type' => (int) $application->job_type,
+                'specialization' => $specialization->specialization ?? '',
+                'rater_user_id' => $raterId,
+                'assigned_by' => $assignedBy,
+                'assigned_at' => $now,
+            ]);
+            $action = 'assigned';
+        }
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            return ['ok' => false, 'message' => 'The evaluator tag could not be saved. Please try again.'];
+        }
+
+        return [
+            'ok' => true,
+            'changed' => true,
+            'message' => 'Applicant ' . $action . ' to ' . $evaluatorName . '.',
+            'evaluator_name' => $evaluatorName,
+            'rater_id' => $raterId,
+            'assigned_at' => $now,
+        ];
+    }
+
+    /**
      * Save per-vacancy coverage for a secretariat. $jobIds is an array of open
      * hris_jobvacancy.jobID values.
      */

@@ -50,6 +50,8 @@ $route['lock_user_screen'] = 'pages/lock_user_screen';
 $route['profile/(:any)'] = 'pages/profile/$1';
 $route['new_applicant'] = 'pages/new_applicant';
 $route['secretariat'] = 'pages/secretariat';
+$route['secretariat/applicant-tagging'] = 'SecretariatTagging/index';
+$route['secretariat/applicant-tagging/tag'] = 'SecretariatTagging/tag';
 
 $route['davor_confession'] = 'pages/davor_confession';
 $route['private'] = 'Ps/private';

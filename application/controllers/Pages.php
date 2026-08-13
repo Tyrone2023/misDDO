@@ -588,16 +588,32 @@ class Pages extends CI_Controller
             $jobTypeLabels = $this->secretariat->job_types_map();
             $fy = (int) date('Y');
 
+            $taggingVacancies = $this->secretariat->tagging_vacancies((int) $userId);
+            $taggingTotals = [
+                'submitted' => 0,
+                'tagged' => 0,
+                'untagged' => 0,
+            ];
+            foreach ($taggingVacancies as $vacancy) {
+                $taggingTotals['submitted'] += (int) $vacancy->submitted_total;
+                $taggingTotals['tagged'] += (int) $vacancy->tagged_total;
+                $taggingTotals['untagged'] += (int) $vacancy->untagged_total;
+            }
+
             $result['title'] = "Secretariat Dashboard";
             // already-readable "Group - Level" strings, so the badge needs no lookup
             $result['jobTypes'] = $this->secretariat->user_scope_labels((int) $userId);
             $result['jobTypeLabels'] = $jobTypeLabels;
+            $result['vacancies'] = $taggingVacancies;
             $result['counts'] = [
+                'submitted' => $taggingTotals['submitted'],
                 'validated' => $this->secretariat->count_by_status($jobTypes, 'Validated'),
                 'endorsed'  => $this->secretariat->count_by_status($jobTypes, 'Endorsed for Rating'),
                 'rated'     => $this->secretariat->count_by_status($jobTypes, 'Rated'),
                 'no_rater'  => $this->secretariat->count_endorsed_without_rater($jobTypes, $fy),
                 'dq'        => $this->secretariat->count_dq_applicants($jobTypes, $fy),
+                'tagged'    => $taggingTotals['tagged'],
+                'untagged'  => $taggingTotals['untagged'],
             ];
 
             $this->load->view('templates/head');

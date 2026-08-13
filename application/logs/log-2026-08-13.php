@@ -172,3 +172,33 @@ ERROR - 2026-08-13 23:28:06 --> Severity: Warning --> Undefined variable $openVa
 ERROR - 2026-08-13 23:28:06 --> Severity: 8192 --> number_format(): Passing null to parameter #1 ($num) of type float is deprecated /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/secretariat_assign.php 148
 ERROR - 2026-08-13 23:28:06 --> Severity: Warning --> Undefined variable $catalog /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/secretariat_assign.php 224
 ERROR - 2026-08-13 23:28:06 --> Severity: Warning --> foreach() argument must be of type array|object, null given /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/secretariat_assign.php 224
+ERROR - 2026-08-13 23:31:15 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:31:15 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:31:18 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:31:18 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:31:50 --> Severity: Warning --> Attempt to read property "LastName" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 83
+ERROR - 2026-08-13 23:31:50 --> Severity: Warning --> Attempt to read property "MiddleName" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 84
+ERROR - 2026-08-13 23:31:50 --> Severity: Warning --> Attempt to read property "FirstName" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 85
+ERROR - 2026-08-13 23:31:50 --> Severity: Warning --> Attempt to read property "IDNumber" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 86
+ERROR - 2026-08-13 23:31:50 --> Severity: 8192 --> strtoupper(): Passing null to parameter #1 ($string) of type string is deprecated /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 86
+ERROR - 2026-08-13 23:31:50 --> Severity: Warning --> Attempt to read property "IDNumber" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 90
+ERROR - 2026-08-13 23:31:50 --> Severity: 8192 --> strtoupper(): Passing null to parameter #1 ($string) of type string is deprecated /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 90
+ERROR - 2026-08-13 23:31:50 --> Severity: Warning --> Attempt to read property "IDNumber" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 90
+ERROR - 2026-08-13 23:31:50 --> Severity: 8192 --> strtoupper(): Passing null to parameter #1 ($string) of type string is deprecated /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 90
+ERROR - 2026-08-13 23:31:50 --> Severity: Warning --> Attempt to read property "IDNumber" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 93
+ERROR - 2026-08-13 23:34:30 --> Severity: Warning --> Attempt to read property "LastName" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 83
+ERROR - 2026-08-13 23:34:30 --> Severity: Warning --> Attempt to read property "MiddleName" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 84
+ERROR - 2026-08-13 23:34:30 --> Severity: Warning --> Attempt to read property "FirstName" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 85
+ERROR - 2026-08-13 23:34:30 --> Severity: Warning --> Attempt to read property "IDNumber" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 86
+ERROR - 2026-08-13 23:34:30 --> Severity: 8192 --> strtoupper(): Passing null to parameter #1 ($string) of type string is deprecated /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 86
+ERROR - 2026-08-13 23:34:30 --> Severity: Warning --> Attempt to read property "IDNumber" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 90
+ERROR - 2026-08-13 23:34:30 --> Severity: 8192 --> strtoupper(): Passing null to parameter #1 ($string) of type string is deprecated /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 90
+ERROR - 2026-08-13 23:34:30 --> Severity: Warning --> Attempt to read property "IDNumber" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 90
+ERROR - 2026-08-13 23:34:30 --> Severity: 8192 --> strtoupper(): Passing null to parameter #1 ($string) of type string is deprecated /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 90
+ERROR - 2026-08-13 23:34:30 --> Severity: Warning --> Attempt to read property "IDNumber" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated_none.php 93
+ERROR - 2026-08-13 23:35:55 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:35:55 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:35:57 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:35:57 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:37:10 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-13 23:37:10 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342

@@ -908,6 +908,7 @@
                                         <span class="menu-arrow"></span>
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
+                                        <li><a href="<?= base_url(); ?>secretariat/applicant-tagging">Applicant Evaluator Tagging</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/validated_applicant">Validated Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants">Endorse Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants_unassigned">Endorsed (No Evaluator)</a></li>
