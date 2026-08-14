@@ -2061,6 +2061,9 @@
                                     <?php if ($hasAssigned) { ?>
                                         <li><a href="<?= base_url(); ?>ApplicantQueryAssigned" class="waves-effect"><i class="far fa-comment-dots"></i><span>My Applicant Queries</span></a></li>
                                     <?php } ?>
+                                    <?php if ($this->session->position === 'Evaluator' || $this->session->position === 'rater' || $this->session->position === 'raters') { ?>
+                                        <li><a href="<?= base_url(); ?>EvaluatorAssigned/disqualified" class="waves-effect"><i class="mdi mdi-account-remove-outline"></i><span>Disqualified Applicants</span></a></li>
+                                    <?php } ?>
                                 <?php } ?>
                                 <!-- <li><a href="<?= base_url(); ?>Page/sbm_district_list"><i class="fas fa-user-plus"></i><span>SBM</span></a></li> -->
 

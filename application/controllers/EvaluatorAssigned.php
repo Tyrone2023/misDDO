@@ -507,6 +507,38 @@ class EvaluatorAssigned extends CI_Controller
 
 
 
+    /**
+     * Disqualified applicants assigned to the current evaluator/rater.
+     * Renders a dedicated list with a per-row "Reason" button that opens a
+     * modal showing the disqualification reason recorded in hris_app_dq.
+     */
+    public function disqualified()
+    {
+        $this->guard();
+
+        $raterId = (int)($this->session->id ?? $this->session->userdata('id'));
+        if (!$raterId) {
+            redirect(base_url());
+            return;
+        }
+
+        $page = 'evaluator_disqualified';
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $data = [
+            'title'           => 'Disqualified Applicants',
+            'disqualified'    => $this->assignRater->get_disqualified_applicants($raterId),
+            'jobTypes'        => $this->assignRater->job_types_map(),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
     public function check_updates()
     {
         $this->guard();

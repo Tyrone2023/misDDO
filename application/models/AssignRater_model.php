@@ -332,6 +332,47 @@ class AssignRater_model extends CI_Model
     return compact('pending', 'scored', 'counts');
 }
 
+  /**
+   * Disqualified applicants assigned to a given evaluator/rater.
+   * Mirrors get_assigned_applicants() but filters on app.dq = 2 and joins
+   * hris_app_dq to surface the recorded disqualification reason.
+   */
+  public function get_disqualified_applicants(int $raterId): array
+  {
+    if ($raterId <= 0) {
+        return [];
+    }
+
+    return $this->db
+        ->select("
+            ra.app_id,
+            ra.job_id,
+            app.appID, app.appStatus, app.dq, app.pre_school, app.app_year, app.applicant_id, app.jobID,
+            jv.job_type, jv.jobTitle,
+            COALESCE(ha_id.record_no, ha_rec.record_no) AS record_no,
+            COALESCE(ha_id.FirstName,  ha_rec.FirstName)  AS FirstName,
+            COALESCE(ha_id.LastName,   ha_rec.LastName)   AS LastName,
+            COALESCE(ha_id.MiddleName, ha_rec.MiddleName) AS MiddleName,
+            COALESCE(ha_id.specialization, ha_rec.specialization) AS specialization,
+            dq.reason AS dq_reason,
+            dq.vdate  AS dq_vdate,
+            dq.res    AS dq_res
+        ", false)
+        ->from('hris_rater_assignments ra')
+        ->join('hris_applications app', 'app.appID = ra.app_id', 'left')
+        ->join('hris_jobvacancy jv', 'jv.jobID = ra.job_id', 'left')
+        ->join('hris_applicant ha_id', 'ha_id.id = app.applicant_id', 'left')
+        ->join('hris_applicant ha_rec', 'ha_rec.record_no = app.applicant_id AND ha_id.id IS NULL', 'left')
+        ->join('hris_app_dq dq', 'dq.appID = app.appID', 'left')
+        ->where('ra.rater_user_id', $raterId)
+        ->where('app.dq', 2)
+        ->group_by('ra.app_id')
+        ->order_by('dq.vdate', 'desc')
+        ->order_by('ra.app_id', 'desc')
+        ->get()
+        ->result();
+  }
+
     public function get_recent_assignments(int $fy, int $limit = 20): array
     {
         return $this->db

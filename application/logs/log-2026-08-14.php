@@ -35,3 +35,11 @@ ERROR - 2026-08-14 08:22:09 --> Severity: Warning --> Undefined property: stdCla
 ERROR - 2026-08-14 08:23:15 --> Severity: Warning --> Undefined property: stdClass::$id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2729
 ERROR - 2026-08-14 08:24:51 --> Severity: Warning --> Undefined property: stdClass::$id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2729
 ERROR - 2026-08-14 08:25:00 --> Severity: Warning --> Undefined property: stdClass::$id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2729
+ERROR - 2026-08-14 08:52:38 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-14 08:52:38 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-14 02:54:12 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-14 02:54:12 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-14 02:54:12 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-14 02:54:12 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-14 02:54:12 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-14 02:54:12 --> 404 Page Not Found: Assets/libs

@@ -568,7 +568,7 @@ class Secretariat_model extends CI_Model
             ->from('hris_applications a')
             ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
             ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
-            ->join('hris_applicant ha2', 'ha2.record_no = CAST(a.applicant_id AS CHAR) AND ha.id IS NULL', 'left', false)
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(a.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
             ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
             ->join('schools s', 's.schoolID = CONVERT(CAST(a.pre_school AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci', 'left', false)
             ->join("($latestAssignment) latest_ra", 'latest_ra.app_id = a.appID', 'left')

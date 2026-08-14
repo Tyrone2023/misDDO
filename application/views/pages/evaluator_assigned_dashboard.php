@@ -609,6 +609,9 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                                         <span class="badge badge-light ml-2" id="hero-query-count"><?= $pendingQueryCount ?></span>
                                     <?php endif; ?>
                                 </a>
+                                <a class="btn ead-btn-ghost" href="<?= eh(base_url('EvaluatorAssigned/disqualified')) ?>">
+                                    <i class="mdi mdi-account-remove-outline mr-1"></i> Disqualified applicants
+                                </a>
                             </div>
                         </div>
                     </div>
