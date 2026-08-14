@@ -71,7 +71,7 @@
 
                                     <div class="clearfix"></div>
                                     
-                                    <?php if($this->session->position != "reg"){ ?>
+                                    <?php if($this->session->position != "reg" && !in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true)){ ?>
                                     <div class="page-title-right">
                                         <ol class="breadcrumb p-0 m-0">
                                             <li class="breadcrumb-item"><a href="<?= base_url(); ?>Pages/evaluator_applicant/<?= $this->uri->segment(4); ?>">List of Applicants</a></li>

@@ -426,7 +426,13 @@ $applicantName = trim(implode(' ', array_filter([
         var pageContainer = document.querySelector('.content-page .content .container-fluid');
 
         if (gate && pageContainer) {
-            pageContainer.insertBefore(gate, pageContainer.firstChild);
+            var detailCard = pageContainer.querySelector('.row .col-lg-12 .card');
+            if (detailCard) {
+                var detailRow = detailCard.closest('.row');
+                detailRow.parentNode.insertBefore(gate, detailRow);
+            } else {
+                pageContainer.insertBefore(gate, pageContainer.firstChild);
+            }
         }
 
         // Rating controls stay unavailable until the server changes the status

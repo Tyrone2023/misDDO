@@ -183,7 +183,7 @@
                                         if($job->sy == date('Y')){
                                         if($check->num_rows() == 0){
                                         if($pangit->num_rows() > 1 ){
-                                            if($job->a_stat == 0 ){
+                                            if($job->a_stat == 0 && !in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true)){
                                     ?>
                                             
                                             <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_all/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/1/<?= $this->uri->segment(2); ?>/<?= $this->uri->segment(5); ?>/1" class="btn btn-info">Request for Retention of Ratings (All Criteria)</a>
@@ -207,7 +207,7 @@
 
                                     <div class="clearfix"></div>
                                     
-                                    <?php if($this->session->position != "reg"){ ?>
+                                    <?php if($this->session->position != "reg" && !in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true)){ ?>
                                     <div class="page-title-right">
                                         <ol class="breadcrumb p-0 m-0">
                                             <li class="breadcrumb-item"><a href="<?= base_url(); ?>Pages/evaluator_applicant/<?= $this->uri->segment(4); ?>">List of Applicants</a></li>

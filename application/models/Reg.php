@@ -1607,6 +1607,7 @@ class Reg extends CI_Model{
       $prc = ($this->input->post('prc') == '') ? 0 : 1;
       $trbd = ($this->input->post('trbd') == '') ? 0 : 1;
       $omni = ($this->input->post('omni') == '') ? 0 : 1;
+      $local = ($this->input->post('local') == '') ? 0 : 1;
 
       $educ = ($this->input->post('educ') == '') ? 0 : 1;
       $exp = ($this->input->post('exp') == '') ? 0 : 1;
@@ -1622,7 +1623,7 @@ class Reg extends CI_Model{
               'prc' => $prc, 
               'trbd' => $trbd, 
               'omni' => $omni, 
-              'local' => $this->input->post('local'), 
+              'local' => $local, 
               'remarks' => $this->input->post('remarks'), 
               'reason' => $this->input->post('reason'), 
               'vdate' => $date,
@@ -1670,6 +1671,7 @@ class Reg extends CI_Model{
       $prc = ($this->input->post('prc') == '') ? 0 : 1;
       $trbd = ($this->input->post('trbd') == '') ? 0 : 1;
       $omni = ($this->input->post('omni') == '') ? 0 : 1;
+      $local = ($this->input->post('local') == '') ? 0 : 1;
 
       $data = array( 
               'jobID' => $this->input->post('jobID'), 
@@ -1680,7 +1682,7 @@ class Reg extends CI_Model{
               'prc' => $prc, 
               'trbd' => $trbd, 
               'omni' => $omni, 
-              'local' => $this->input->post('local'), 
+              'local' => $local, 
               'remarks' => $this->input->post('remarks'), 
               'reason' => $this->input->post('reason'), 
               'vdate' => $date,
