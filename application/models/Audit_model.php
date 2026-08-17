@@ -228,7 +228,7 @@ class Audit_model extends CI_Model
         $entries = [];
 
         $entries = array_merge($entries, $this->track_entries($app_id, $applicant_id, $job_id));
-        $entries = array_merge($entries, $this->audit_entries($app_id));
+        $entries = array_merge($entries, $this->audit_entries($app_id, $applicant_id));
 
         $this->attach_actor_names($entries);
 
@@ -296,20 +296,32 @@ class Audit_model extends CI_Model
         return $entries;
     }
 
-    /** Normalised rows from the detailed audit trail. */
-    private function audit_entries($app_id)
+    /**
+     * Normalised rows from the detailed audit trail.
+     *
+     * Picks up two kinds of row: those tied to this application, and the
+     * applicant-level ones written without an app_id — trainings, work
+     * experience and profile attachments belong to the applicant rather than
+     * to a single application, but they are what every application of theirs
+     * is evaluated on, so they belong in this log too.
+     */
+    private function audit_entries($app_id, $applicant_id = null)
     {
         $app_id = (int) $app_id;
         if ($app_id <= 0) {
             return [];
         }
 
-        $rows = $this->db
-            ->from('hris_audit_trail')
-            ->where('app_id', $app_id)
-            ->order_by('id', 'desc')
-            ->get()
-            ->result();
+        $this->db->from('hris_audit_trail')->group_start()->where('app_id', $app_id);
+
+        if (!empty($applicant_id)) {
+            $this->db->or_group_start()
+                ->where('app_id IS NULL', null, false)
+                ->where('applicant_id', (string) $applicant_id)
+                ->group_end();
+        }
+
+        $rows = $this->db->group_end()->order_by('id', 'desc')->get()->result();
 
         $entries = [];
         foreach ($rows as $r) {
@@ -422,6 +434,12 @@ class Audit_model extends CI_Model
             'retention_deny'       => ['Retention Denied', 'mdi-close-circle-outline', 'danger'],
             'retention_release'    => ['Retained Scores Released', 'mdi-lock-open-variant-outline', 'warning'],
             'retention_delete'     => ['Retention Request Deleted', 'mdi-delete-outline', 'danger'],
+            'add_training'         => ['Training Added', 'mdi-school-outline', 'info'],
+            'update_training'      => ['Training Updated', 'mdi-pencil-outline', 'warning'],
+            'delete_training'      => ['Training Removed', 'mdi-delete-outline', 'danger'],
+            'add_experience'       => ['Work Experience Added', 'mdi-briefcase-outline', 'info'],
+            'update_experience'    => ['Work Experience Updated', 'mdi-pencil-outline', 'warning'],
+            'delete_experience'    => ['Work Experience Removed', 'mdi-delete-outline', 'danger'],
         ];
 
         $key = strtolower(trim((string) $action));

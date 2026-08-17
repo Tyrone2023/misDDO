@@ -62,6 +62,9 @@ class SecretariatTagging extends CI_Controller
             'selectedVacancy' => $selectedVacancy,
             'selectedJobId' => $jobId,
             'applicants' => $applicants,
+            'evaluatorTagCounts' => $selectedVacancy
+                ? $this->secretariat->evaluator_tag_counts($userId, $jobId)
+                : [],
             'evaluators' => $this->secretariat->eligible_evaluators(
                 $selectedVacancy ? (int) $selectedVacancy->sy : (int) date('Y')
             ),

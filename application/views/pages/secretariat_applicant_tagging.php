@@ -16,45 +16,66 @@ $evaluators = $evaluators ?? [];
 $selectedJobId = (int) ($selectedJobId ?? 0);
 $selectedVacancy = $selectedVacancy ?? null;
 
+// Waiting = no evaluator yet AND still taggable. Applicants past the tagging
+// stage without an evaluator are neither waiting nor tagged, so they are only
+// reported as a footnote instead of padding an actionable queue.
 $untaggedApplicants = [];
 $taggedApplicants = [];
+$closedUntaggedTotal = 0;
 foreach ($applicants as $applicant) {
     if (!empty($applicant->assignment_id)) {
         $taggedApplicants[] = $applicant;
-    } else {
+    } elseif ((int) ($applicant->is_taggable ?? 0) === 1) {
         $untaggedApplicants[] = $applicant;
+    } else {
+        $closedUntaggedTotal++;
     }
 }
 
+// Counted in SQL over every application for the vacancy, so an evaluator's
+// number never drops when their applicants get rated or disqualified.
+$evaluatorCountRows = $evaluatorTagCounts ?? [];
 $evaluatorTagCounts = [];
-foreach ($taggedApplicants as $applicant) {
-    $evaluatorId = (int) ($applicant->rater_user_id ?? 0);
+foreach ($evaluatorCountRows as $row) {
+    $evaluatorId = (int) ($row->rater_user_id ?? 0);
     if ($evaluatorId <= 0) {
         continue;
     }
 
-    if (!isset($evaluatorTagCounts[$evaluatorId])) {
-        $evaluatorName = trim((string) ($applicant->evaluator_name ?? ''));
-        $evaluatorTagCounts[$evaluatorId] = [
-            'id' => $evaluatorId,
-            'name' => $evaluatorName !== '' ? $evaluatorName : 'Evaluator #' . $evaluatorId,
-            'count' => 0,
-        ];
-    }
-
-    $evaluatorTagCounts[$evaluatorId]['count']++;
+    $evaluatorName = trim((string) ($row->evaluator_name ?? ''));
+    $evaluatorTagCounts[$evaluatorId] = [
+        'id' => $evaluatorId,
+        'name' => $evaluatorName !== '' ? $evaluatorName : 'Evaluator #' . $evaluatorId,
+        'count' => (int) $row->tagged_total,
+        'pending' => (int) $row->pending_total,
+        'evaluated' => (int) $row->evaluated_total,
+        'dq' => (int) $row->dq_total,
+    ];
 }
 
-uasort($evaluatorTagCounts, static function ($left, $right) {
-    if ($left['count'] === $right['count']) {
-        return strcasecmp($left['name'], $right['name']);
-    }
-    return $right['count'] <=> $left['count'];
-});
-
-$taggingProgress = ($selectedVacancy && (int) $selectedVacancy->applicant_total > 0)
-    ? (int) round(((int) $selectedVacancy->tagged_total / (int) $selectedVacancy->applicant_total) * 100)
+$vacancyTotal = $selectedVacancy ? (int) $selectedVacancy->applicant_total : 0;
+$taggingProgress = $vacancyTotal > 0
+    ? (int) round(((int) $selectedVacancy->tagged_total / $vacancyTotal) * 100)
     : 0;
+
+$statusChip = static function ($applicant) {
+    if ((int) ($applicant->dq ?? 0) === 2) {
+        return ['Disqualified', 'sat-status-dq'];
+    }
+
+    switch ((string) $applicant->appStatus) {
+        case 'Validated':
+            return ['Validated', 'sat-status-validated'];
+        case 'Endorsed for Rating':
+            return ['Endorsed', 'sat-status-endorsed'];
+        case 'Rated':
+            return ['Rated', 'sat-status-rated'];
+        case 'Confirmed':
+            return ['Confirmed', 'sat-status-rated'];
+        default:
+            return ['Submitted', 'sat-status-submitted'];
+    }
+};
 
 $evaluatorOptions = [];
 foreach ($evaluators as $evaluator) {
@@ -144,6 +165,11 @@ $applicantProfileUrl = static function ($applicant) {
     .sat-page .sat-status { border-radius:20px; display:inline-flex; font-size:11px; font-weight:700; padding:5px 9px; white-space:nowrap; }
     .sat-page .sat-status-submitted { background:#fff3d8; color:#8a5b00; }
     .sat-page .sat-status-validated { background:#e2f6eb; color:#197447; }
+    .sat-page .sat-status-endorsed { background:#e8efff; color:#2457d6; }
+    .sat-page .sat-status-rated { background:#efe9ff; color:#6e43c0; }
+    .sat-page .sat-status-dq { background:#fdeaea; color:#a52c2c; }
+    .sat-page .sat-metric-note { color:var(--sat-muted); font-size:11px; margin-top:3px; }
+    .sat-page .sat-locked { color:var(--sat-muted); font-size:12px; }
     .sat-page .sat-assignee { min-width:160px; }
     .sat-page .sat-assignee-name { color:#243b5a; font-size:13px; font-weight:700; }
     .sat-page .sat-unassigned { color:#9a6b13; font-weight:600; }
@@ -229,7 +255,7 @@ $applicantProfileUrl = static function ($applicant) {
                                             $vacancyLabel = $vacancy->jobTitle . ' — ' . $group . ' — FY ' . $vacancy->sy;
                                             ?>
                                             <option value="<?= (int) $vacancy->jobID; ?>" <?= (int) $vacancy->jobID === $selectedJobId ? 'selected' : ''; ?>>
-                                                <?= $tagging_h($vacancyLabel); ?> (<?= (int) $vacancy->applicant_total; ?> applicants)
+                                                <?= $tagging_h($vacancyLabel); ?> (<?= (int) $vacancy->applicant_total; ?> applicants, <?= (int) $vacancy->pending_total; ?> waiting)
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -279,43 +305,75 @@ $applicantProfileUrl = static function ($applicant) {
                             <div class="col-xl-3 col-sm-6 mb-2">
                                 <div class="sat-metric">
                                     <span class="sat-metric-icon sat-icon-blue"><i class="mdi mdi-account-group-outline"></i></span>
-                                    <div><div class="sat-metric-label">Applicants</div><div id="applicant-count" class="sat-metric-value"><?= (int) $selectedVacancy->applicant_total; ?></div></div>
-                                </div>
-                            </div>
-                            <div class="col-xl-3 col-sm-6 mb-2">
-                                <div class="sat-metric">
-                                    <span class="sat-metric-icon sat-icon-amber"><i class="mdi mdi-file-send-outline"></i></span>
-                                    <div><div class="sat-metric-label">Submitted</div><div class="sat-metric-value"><?= (int) $selectedVacancy->submitted_total; ?></div></div>
+                                    <div>
+                                        <div class="sat-metric-label">Total applicants</div>
+                                        <div id="applicant-count" class="sat-metric-value"><?= (int) $selectedVacancy->applicant_total; ?></div>
+                                        <div class="sat-metric-note">All applications received</div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-xl-3 col-sm-6 mb-2">
                                 <div class="sat-metric">
                                     <span class="sat-metric-icon sat-icon-green"><i class="mdi mdi-account-check-outline"></i></span>
-                                    <div><div class="sat-metric-label">Tagged</div><div id="tagged-count" class="sat-metric-value"><?= (int) $selectedVacancy->tagged_total; ?></div></div>
+                                    <div>
+                                        <div class="sat-metric-label">Tagged</div>
+                                        <div id="tagged-count" class="sat-metric-value"><?= (int) $selectedVacancy->tagged_total; ?></div>
+                                        <div class="sat-metric-note">Given an evaluator, at any stage</div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-xl-3 col-sm-6 mb-2">
                                 <div class="sat-metric">
                                     <span class="sat-metric-icon sat-icon-red"><i class="mdi mdi-account-clock-outline"></i></span>
-                                    <div><div class="sat-metric-label">Still untagged</div><div id="untagged-count" class="sat-metric-value"><?= (int) $selectedVacancy->untagged_total; ?></div></div>
+                                    <div>
+                                        <div class="sat-metric-label">Waiting</div>
+                                        <div id="untagged-count" class="sat-metric-value"><?= (int) $selectedVacancy->pending_total; ?></div>
+                                        <div class="sat-metric-note">Still needs an evaluator</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-3 col-sm-6 mb-2">
+                                <div class="sat-metric">
+                                    <span class="sat-metric-icon sat-icon-amber"><i class="mdi mdi-progress-check"></i></span>
+                                    <div>
+                                        <div class="sat-metric-label">Past tagging</div>
+                                        <div class="sat-metric-value"><?= (int) $selectedVacancy->evaluated_total + (int) $selectedVacancy->dq_total; ?></div>
+                                        <div class="sat-metric-note"><?= (int) $selectedVacancy->evaluated_total; ?> endorsed or rated &middot; <?= (int) $selectedVacancy->dq_total; ?> disqualified</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <p class="sat-sub mb-3">
+                            Total applicants counts every application this vacancy received and never goes down.
+                            Tagged and Past tagging keep counting applicants after they are endorsed, rated, or disqualified &mdash;
+                            only <strong>Waiting</strong> falls as you work through the queue.
+                        </p>
 
                         <div class="sat-evaluator-summary">
                             <div class="d-flex align-items-center justify-content-between flex-wrap">
                                 <div>
                                     <div class="font-weight-bold text-dark"><i class="mdi mdi-chart-donut text-primary mr-1"></i> Evaluator distribution</div>
-                                    <div class="sat-sub mt-1">Tagged applicants for this vacancy, grouped by evaluator.</div>
+                                    <div class="sat-sub mt-1">Every applicant tagged to each evaluator for this vacancy, including the ones already rated or disqualified. Hover a name for the breakdown.</div>
                                 </div>
                                 <span class="small font-weight-bold text-success"><span id="tagging-progress-label"><?= $taggingProgress; ?></span>% tagged</span>
                             </div>
                             <div class="sat-progress-track mt-2"><span id="tagging-progress-bar" style="width:<?= $taggingProgress; ?>%"></span></div>
                             <div class="sat-evaluator-list" id="evaluator-count-list">
                                 <?php foreach ($evaluatorTagCounts as $evaluatorCount) : ?>
-                                    <div class="sat-evaluator-chip" data-evaluator-id="<?= (int) $evaluatorCount['id']; ?>">
+                                    <?php
+                                    $chipTitle = sprintf(
+                                        '%s — %d tagged in total: %d still to rate, %d endorsed or rated, %d disqualified',
+                                        $evaluatorCount['name'],
+                                        $evaluatorCount['count'],
+                                        $evaluatorCount['pending'],
+                                        $evaluatorCount['evaluated'],
+                                        $evaluatorCount['dq']
+                                    );
+                                    ?>
+                                    <div class="sat-evaluator-chip" data-evaluator-id="<?= (int) $evaluatorCount['id']; ?>" title="<?= $tagging_h($chipTitle); ?>">
                                         <span class="sat-evaluator-chip-icon"><i class="mdi mdi-account-check-outline"></i></span>
-                                        <span class="sat-evaluator-chip-name" title="<?= $tagging_h($evaluatorCount['name']); ?>"><?= $tagging_h($evaluatorCount['name']); ?></span>
+                                        <span class="sat-evaluator-chip-name"><?= $tagging_h($evaluatorCount['name']); ?></span>
                                         <span class="sat-evaluator-chip-count"><?= (int) $evaluatorCount['count']; ?></span>
                                     </div>
                                 <?php endforeach; ?>
@@ -332,7 +390,12 @@ $applicantProfileUrl = static function ($applicant) {
                             <div class="ml-3">
                                 <div>
                                     <div class="sat-table-title">Applicants for tagging</div>
-                                    <p class="text-muted mb-0">Choose an evaluator, then save. The applicant moves below immediately.</p>
+                                    <p class="text-muted mb-0">
+                                        Choose an evaluator, then save. The applicant moves below immediately.
+                                        <?php if ($closedUntaggedTotal > 0) : ?>
+                                            <br><small><?= (int) $closedUntaggedTotal; ?> applicant<?= $closedUntaggedTotal === 1 ? '' : 's'; ?> left the tagging stage without an evaluator and cannot be tagged here.</small>
+                                        <?php endif; ?>
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -346,12 +409,16 @@ $applicantProfileUrl = static function ($applicant) {
                                         <th style="width:30%">Applicant</th>
                                         <th style="width:12%">Status</th>
                                         <th style="width:28%">School / district</th>
-                                        <th style="width:30%">Tag to evaluator</th>
+                                        <th style="width:30%">Tag to evaluator <span class="font-weight-normal text-muted">(number = applicants tagged to them this FY, all vacancies)</span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($untaggedApplicants as $applicant) : ?>
-                                        <?php $fullName = $applicantName($applicant); $profileUrl = $applicantProfileUrl($applicant); ?>
+                                        <?php
+                                        $fullName = $applicantName($applicant);
+                                        $profileUrl = $applicantProfileUrl($applicant);
+                                        [$statusLabel, $statusClass] = $statusChip($applicant);
+                                        ?>
                                         <tr>
                                             <td>
                                                 <div class="sat-name"><?= $tagging_h($fullName); ?></div>
@@ -361,9 +428,7 @@ $applicantProfileUrl = static function ($applicant) {
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="sat-status <?= $applicant->appStatus === 'Validated' ? 'sat-status-validated' : 'sat-status-submitted'; ?>">
-                                                    <?= $applicant->appStatus === 'Validated' ? 'Validated' : 'Submitted'; ?>
-                                                </span>
+                                                <span class="sat-status <?= $statusClass; ?>"><?= $tagging_h($statusLabel); ?></span>
                                             </td>
                                             <td>
                                                 <div><?= $tagging_h($applicant->schoolName ?: 'School not specified'); ?></div>
@@ -395,7 +460,7 @@ $applicantProfileUrl = static function ($applicant) {
                             <span class="sat-table-head-icon sat-icon-green"><i class="mdi mdi-account-check-outline"></i></span>
                             <div class="ml-3">
                                 <div class="sat-table-title">Tagged applicants</div>
-                                <p class="text-muted mb-0">See each evaluator assignment or save a reassignment in place.</p>
+                                <p class="text-muted mb-0">Every applicant already given an evaluator, including those endorsed, rated, or disqualified. Reassignment stays open only while an applicant is still in the tagging stage.</p>
                             </div>
                         </div>
                         <span class="sat-count-badge badge-success"><i class="mdi mdi-account-check-outline"></i><span id="tagged-table-count"><?= count($taggedApplicants); ?></span> tagged</span>
@@ -409,12 +474,17 @@ $applicantProfileUrl = static function ($applicant) {
                                         <th style="width:11%">Status</th>
                                         <th style="width:22%">School / district</th>
                                         <th style="width:17%">Evaluator</th>
-                                        <th style="width:25%">Reassign evaluator</th>
+                                        <th style="width:25%">Reassign evaluator <span class="font-weight-normal text-muted">(number = applicants tagged to them this FY, all vacancies)</span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($taggedApplicants as $applicant) : ?>
-                                        <?php $fullName = $applicantName($applicant); $profileUrl = $applicantProfileUrl($applicant); ?>
+                                        <?php
+                                        $fullName = $applicantName($applicant);
+                                        $profileUrl = $applicantProfileUrl($applicant);
+                                        [$statusLabel, $statusClass] = $statusChip($applicant);
+                                        $canReassign = (int) ($applicant->is_taggable ?? 0) === 1;
+                                        ?>
                                         <tr>
                                             <td>
                                                 <div class="sat-name"><?= $tagging_h($fullName); ?></div>
@@ -424,9 +494,7 @@ $applicantProfileUrl = static function ($applicant) {
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="sat-status <?= $applicant->appStatus === 'Validated' ? 'sat-status-validated' : 'sat-status-submitted'; ?>">
-                                                    <?= $applicant->appStatus === 'Validated' ? 'Validated' : 'Submitted'; ?>
-                                                </span>
+                                                <span class="sat-status <?= $statusClass; ?>"><?= $tagging_h($statusLabel); ?></span>
                                             </td>
                                             <td>
                                                 <div><?= $tagging_h($applicant->schoolName ?: 'School not specified'); ?></div>
@@ -437,17 +505,26 @@ $applicantProfileUrl = static function ($applicant) {
                                                 <div class="sat-sub assignment-date"><?= !empty($applicant->assigned_at) ? 'Tagged ' . $tagging_h(date('M d, Y', strtotime($applicant->assigned_at))) : ''; ?></div>
                                             </td>
                                             <td>
-                                                <form class="sat-tag-form" data-mode="reassign" method="post" action="<?= base_url('secretariat/applicant-tagging/tag'); ?>">
-                                                    <input type="hidden" name="app_id" value="<?= (int) $applicant->appID; ?>">
-                                                    <input type="hidden" name="job_id" value="<?= (int) $selectedVacancy->jobID; ?>">
-                                                    <select name="rater_id" class="form-control form-control-sm sat-evaluator-select" data-placeholder="Select evaluator..." data-saved-value="<?= (int) $applicant->rater_user_id; ?>" required aria-label="Reassign evaluator for <?= $tagging_h($fullName); ?>" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>
-                                                        <option value="">Select evaluator...</option>
-                                                        <?php foreach ($evaluatorOptions as $evaluator) : ?>
-                                                            <option value="<?= $evaluator['id']; ?>" <?= (int) $applicant->rater_user_id === $evaluator['id'] ? 'selected' : ''; ?>><?= $tagging_h($evaluator['label']); ?> (<?= $evaluator['assigned_total']; ?>)</option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                    <button type="submit" class="btn btn-sm btn-outline-primary" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>Save change</button>
-                                                </form>
+                                                <?php if (!$canReassign) : ?>
+                                                    <span class="sat-locked">
+                                                        <i class="mdi mdi-lock-outline mr-1"></i>
+                                                        <?= (int) ($applicant->dq ?? 0) === 2
+                                                            ? 'Disqualified — evaluator kept for the record.'
+                                                            : 'Already past tagging — evaluator can no longer be changed.'; ?>
+                                                    </span>
+                                                <?php else : ?>
+                                                    <form class="sat-tag-form" data-mode="reassign" method="post" action="<?= base_url('secretariat/applicant-tagging/tag'); ?>">
+                                                        <input type="hidden" name="app_id" value="<?= (int) $applicant->appID; ?>">
+                                                        <input type="hidden" name="job_id" value="<?= (int) $selectedVacancy->jobID; ?>">
+                                                        <select name="rater_id" class="form-control form-control-sm sat-evaluator-select" data-placeholder="Select evaluator..." data-saved-value="<?= (int) $applicant->rater_user_id; ?>" required aria-label="Reassign evaluator for <?= $tagging_h($fullName); ?>" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>
+                                                            <option value="">Select evaluator...</option>
+                                                            <?php foreach ($evaluatorOptions as $evaluator) : ?>
+                                                                <option value="<?= $evaluator['id']; ?>" <?= (int) $applicant->rater_user_id === $evaluator['id'] ? 'selected' : ''; ?>><?= $tagging_h($evaluator['label']); ?> (<?= $evaluator['assigned_total']; ?>)</option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>Save change</button>
+                                                    </form>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -544,7 +621,6 @@ $applicantProfileUrl = static function ($applicant) {
             var name = document.createElement('span');
             name.className = 'sat-evaluator-chip-name';
             name.textContent = evaluatorName || ('Evaluator #' + evaluatorId);
-            name.title = name.textContent;
 
             var count = document.createElement('span');
             count.className = 'sat-evaluator-chip-count';
@@ -564,6 +640,11 @@ $applicantProfileUrl = static function ($applicant) {
             chip.parentNode.removeChild(chip);
         } else {
             countElement.textContent = nextCount;
+            // The server-rendered tooltip carries a stage breakdown we cannot
+            // recompute here, so fall back to the plain total once it moves.
+            var chipName = chip.querySelector('.sat-evaluator-chip-name');
+            chip.title = (chipName ? chipName.textContent : 'Evaluator #' + evaluatorId)
+                + ' — ' + nextCount + ' tagged in total (reload for the stage breakdown)';
         }
 
         var remainingChips = list.querySelectorAll('.sat-evaluator-chip').length;

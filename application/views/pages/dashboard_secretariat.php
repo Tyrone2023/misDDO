@@ -6,9 +6,11 @@ $dashboard_h = static function ($value) {
 $assigned = $jobTypes ?? [];
 $vacancies = $vacancies ?? [];
 $counts = array_merge([
+    'applicants' => 0,
     'submitted' => 0,
     'validated' => 0,
     'endorsed' => 0,
+    'evaluated' => 0,
     'rated' => 0,
     'no_rater' => 0,
     'dq' => 0,
@@ -23,8 +25,10 @@ $positionGroups = [
     4 => 'Non-Teaching',
 ];
 
-$taggableTotal = (int) $counts['tagged'] + (int) $counts['untagged'];
-$taggedPercent = $taggableTotal > 0 ? round(((int) $counts['tagged'] / $taggableTotal) * 100) : 0;
+// Percent of every applicant received, not of the shrinking tagging queue --
+// dividing by the queue made the figure jump around as applicants were rated.
+$applicantTotal = (int) $counts['applicants'];
+$taggedPercent = $applicantTotal > 0 ? round(((int) $counts['tagged'] / $applicantTotal) * 100) : 0;
 ?>
 
 <style>
@@ -95,6 +99,24 @@ $taggedPercent = $taggableTotal > 0 ? round(((int) $counts['tagged'] / $taggable
                 <div class="col-xl-3 col-sm-6 mb-3">
                     <div class="sd-stat">
                         <div class="d-flex align-items-start justify-content-between">
+                            <div><div class="sd-stat-label">Total applicants</div><div class="sd-stat-value"><?= $applicantTotal; ?></div></div>
+                            <span class="sd-stat-icon sd-blue"><i class="mdi mdi-account-group-outline"></i></span>
+                        </div>
+                        <div class="sd-stat-note">Every application received in your vacancies</div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-sm-6 mb-3">
+                    <div class="sd-stat">
+                        <div class="d-flex align-items-start justify-content-between">
+                            <div><div class="sd-stat-label">Tagged applicants</div><div class="sd-stat-value"><?= (int) $counts['tagged']; ?></div></div>
+                            <span class="sd-stat-icon sd-green"><i class="mdi mdi-account-check-outline"></i></span>
+                        </div>
+                        <div class="sd-stat-note"><?= (int) $taggedPercent; ?>% of all applicants &middot; stays counted after rating</div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-sm-6 mb-3">
+                    <div class="sd-stat">
+                        <div class="d-flex align-items-start justify-content-between">
                             <div><div class="sd-stat-label">Awaiting evaluator</div><div class="sd-stat-value"><?= (int) $counts['untagged']; ?></div></div>
                             <span class="sd-stat-icon sd-amber"><i class="mdi mdi-account-clock-outline"></i></span>
                         </div>
@@ -104,28 +126,10 @@ $taggedPercent = $taggableTotal > 0 ? round(((int) $counts['tagged'] / $taggable
                 <div class="col-xl-3 col-sm-6 mb-3">
                     <div class="sd-stat">
                         <div class="d-flex align-items-start justify-content-between">
-                            <div><div class="sd-stat-label">Tagged applicants</div><div class="sd-stat-value"><?= (int) $counts['tagged']; ?></div></div>
-                            <span class="sd-stat-icon sd-green"><i class="mdi mdi-account-check-outline"></i></span>
+                            <div><div class="sd-stat-label">Past tagging</div><div class="sd-stat-value"><?= (int) $counts['evaluated'] + (int) $counts['dq']; ?></div></div>
+                            <span class="sd-stat-icon sd-purple"><i class="mdi mdi-progress-check"></i></span>
                         </div>
-                        <div class="sd-stat-note"><?= (int) $taggedPercent; ?>% of the current tagging queue</div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-sm-6 mb-3">
-                    <div class="sd-stat">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div><div class="sd-stat-label">Submitted</div><div class="sd-stat-value"><?= (int) $counts['submitted']; ?></div></div>
-                            <span class="sd-stat-icon sd-blue"><i class="mdi mdi-file-send-outline"></i></span>
-                        </div>
-                        <div class="sd-stat-note">Applications ready for Secretariat review</div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-sm-6 mb-3">
-                    <div class="sd-stat">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div><div class="sd-stat-label">Validated</div><div class="sd-stat-value"><?= (int) $counts['validated']; ?></div></div>
-                            <span class="sd-stat-icon sd-purple"><i class="mdi mdi-shield-check-outline"></i></span>
-                        </div>
-                        <div class="sd-stat-note">Validated applications in your vacancies</div>
+                        <div class="sd-stat-note"><?= (int) $counts['evaluated']; ?> endorsed or rated &middot; <?= (int) $counts['dq']; ?> disqualified</div>
                     </div>
                 </div>
             </div>
@@ -137,7 +141,7 @@ $taggedPercent = $taggableTotal > 0 ? round(((int) $counts['tagged'] / $taggable
                             <div class="d-flex align-items-start justify-content-between mb-2">
                                 <div>
                                     <div class="sd-section-title">Assigned vacancy workload</div>
-                                    <p class="text-muted mb-0">Open a position to view and tag its applicants.</p>
+                                    <p class="text-muted mb-0">Open a position to view and tag its applicants. Applicants and Tagged count every applicant at every stage &mdash; only Waiting falls as you tag.</p>
                                 </div>
                                 <span class="badge badge-light p-2"><?= count($vacancies); ?> position<?= count($vacancies) === 1 ? '' : 's'; ?></span>
                             </div>
@@ -153,6 +157,7 @@ $taggedPercent = $taggableTotal > 0 ? round(((int) $counts['tagged'] / $taggable
                                     <?php
                                     $vacancyTotal = (int) $vacancy->applicant_total;
                                     $vacancyProgress = $vacancyTotal > 0 ? round(((int) $vacancy->tagged_total / $vacancyTotal) * 100) : 0;
+                                    $vacancyPastTagging = (int) $vacancy->evaluated_total + (int) $vacancy->dq_total;
                                     ?>
                                     <div class="sd-position">
                                         <div class="sd-position-main">
@@ -160,12 +165,16 @@ $taggedPercent = $taggableTotal > 0 ? round(((int) $counts['tagged'] / $taggable
                                             <div class="sd-position-sub">
                                                 <?= $dashboard_h($positionGroups[(int) $vacancy->position] ?? 'Vacancy'); ?>
                                                 &middot; FY <?= $dashboard_h($vacancy->sy); ?>
+                                                <?php if ($vacancyPastTagging > 0) : ?>
+                                                    &middot; <?= $vacancyPastTagging; ?> past tagging
+                                                    (<?= (int) $vacancy->evaluated_total; ?> endorsed/rated, <?= (int) $vacancy->dq_total; ?> DQ)
+                                                <?php endif; ?>
                                             </div>
-                                            <div class="sd-progress mt-2" title="<?= (int) $vacancyProgress; ?>% tagged"><span style="width:<?= (int) $vacancyProgress; ?>%"></span></div>
+                                            <div class="sd-progress mt-2" title="<?= (int) $vacancyProgress; ?>% of all applicants tagged"><span style="width:<?= (int) $vacancyProgress; ?>%"></span></div>
                                         </div>
                                         <div class="sd-number"><strong><?= (int) $vacancy->applicant_total; ?></strong><span>Applicants</span></div>
                                         <div class="sd-number"><strong class="text-success"><?= (int) $vacancy->tagged_total; ?></strong><span>Tagged</span></div>
-                                        <div class="sd-number"><strong class="text-danger"><?= (int) $vacancy->untagged_total; ?></strong><span>Waiting</span></div>
+                                        <div class="sd-number"><strong class="text-danger"><?= (int) $vacancy->pending_total; ?></strong><span>Waiting</span></div>
                                         <a href="<?= base_url('secretariat/applicant-tagging?job_id=' . (int) $vacancy->jobID); ?>" class="btn btn-outline-primary btn-sm">Manage</a>
                                     </div>
                                 <?php endforeach; ?>

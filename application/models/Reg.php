@@ -3306,9 +3306,124 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
     public function ensure_experience_columns(){
 
       $this->Common->ensure_columns('hris_experience', array(
-          'date_from' => 'date null',
-          'date_to'   => 'date null'
+          'date_from'  => 'date null',
+          'date_to'    => 'date null',
+          'created_at' => 'datetime null',
+          'updated_at' => 'datetime null'
           ));
+    }
+
+    /**
+     * Trainings carry the same "saved on" stamp as work experience, so the
+     * profile can show when a record was encoded and when it was last touched.
+     * Rows kept from before the columns existed simply have none.
+     */
+    public function ensure_training_columns(){
+
+      $this->Common->ensure_columns('hris_trainings', array(
+          'created_at' => 'datetime null',
+          'updated_at' => 'datetime null'
+          ));
+    }
+
+    /**
+     * Trainings and work experience are the applicant's own supporting records
+     * for a vacancy, so they stay editable only while a vacancy they applied
+     * to is still open.  Once every applied vacancy is closed both sections
+     * freeze - nothing may be added, corrected, re-rated or removed, and what
+     * was evaluated at closing time stands.
+     *
+     * Scoped to one application when the profile is opened from a specific
+     * vacancy (?appID / ?jobID); otherwise every application of the applicant
+     * is weighed, and a single open vacancy keeps the sections editable.
+     *
+     * Applications whose vacancy row cannot be read are treated as open, so a
+     * missing reference never locks an applicant out.
+     *
+     * @return array locked, reason, closed (vacancy titles), open (count)
+     */
+    public function applicant_record_lock($applicant_id, $appID = null, $jobID = null){
+
+      $unlocked = array('locked' => false, 'reason' => '', 'closed' => array(), 'open' => 0);
+
+      $applicant_id = trim((string) $applicant_id);
+      if ($applicant_id === '') {
+        return $unlocked;
+      }
+
+      // Staff 201 profiles share these tables but live in a different id
+      // space; without an applicant row there is no vacancy to close against.
+      $this->db->where('id', $applicant_id);
+      if ($this->db->count_all_results('hris_applicant') < 1) {
+        return $unlocked;
+      }
+
+      $this->db->select('a.appID, a.jobID, j.jobTitle, j.jvStatus');
+      $this->db->from('hris_applications a');
+      $this->db->join('hris_jobvacancy j', 'j.jobID = a.jobID', 'left');
+      $this->db->where('a.applicant_id', $applicant_id);
+
+      if ((int) $appID > 0) {
+        $this->db->where('a.appID', (int) $appID);
+      }
+      if ((int) $jobID > 0) {
+        $this->db->where('a.jobID', (int) $jobID);
+      }
+
+      $rows = $this->db->get()->result();
+
+      if (empty($rows)) {
+        return $unlocked;
+      }
+
+      $open   = 0;
+      $closed = array();
+
+      foreach ($rows as $row) {
+        if (strcasecmp(trim((string) $row->jvStatus), 'Closed') === 0) {
+          $title = trim((string) $row->jobTitle);
+          $closed[$title !== '' ? $title : 'Vacancy #' . (int) $row->jobID] = true;
+        } else {
+          $open++;
+        }
+      }
+
+      if ($open > 0 || empty($closed)) {
+        $unlocked['open'] = $open;
+        return $unlocked;
+      }
+
+      $closed = array_keys($closed);
+
+      return array(
+          'locked' => true,
+          'reason' => (count($closed) === 1)
+              ? 'The vacancy applied for (' . $closed[0] . ') is already closed.'
+              : 'Every vacancy applied for is already closed.',
+          'closed' => $closed,
+          'open'   => 0,
+          );
+    }
+
+    /**
+     * Server-side half of applicant_record_lock(): the encoding endpoints must
+     * refuse a write once the vacancy closed, not merely hide the buttons.
+     * Bounces back to the referring page with a message when locked.
+     */
+    public function block_when_records_locked($applicant_id, $anchor = ''){
+
+      $lock = $this->applicant_record_lock($applicant_id);
+
+      if (empty($lock['locked'])) {
+        return false;
+      }
+
+      $this->session->set_flashdata('danger',
+          'This section is closed. ' . $lock['reason']);
+
+      redirect(($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor);
+
+      return true;
     }
 
     /**
@@ -3416,8 +3531,29 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           'ny' => $span['ny'],
           'stat' => 0,
           'id_number' => $this->input->post('id_number'),
+          'created_at' => $this->record_stamp(),
           );
-        return $this->db->insert('hris_experience', $data);
+        $res = $this->db->insert('hris_experience', $data);
+
+        $this->Audit->log('add_experience', [
+            'entity_type'  => 'experience',
+            'entity_id'    => $this->db->insert_id(),
+            'applicant_id' => $this->input->post('id_number'),
+            'field'        => 'experience',
+            'description'  => 'Added work experience "' . $data['title'] . '"'
+                . ($from && $to ? ' (' . $from . ' to ' . $to . ')' : '')
+                . ', saved ' . $data['created_at'] . '.',
+        ]);
+
+        return $res;
+    }
+
+    /** Local "saved on" stamp; the encoding screens all read Manila time. */
+    public function record_stamp(){
+
+      date_default_timezone_set('Asia/Manila');
+
+      return date('Y-m-d H:i:s');
     }
 
     public function update_experience($col){
@@ -3441,10 +3577,26 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           'date_to' => $to ?: null,
           'ny' => $span['ny'],
           'nm' => $span['nm'],
+          'updated_at' => $this->record_stamp(),
           );
 
-        $this->db->where('id', $this->input->post('id'));
-        return $this->db->update('hris_experience', $data);
+        $id  = $this->input->post('id');
+        $row = $this->Common->one_cond_row('hris_experience', 'id', $id);
+
+        $this->db->where('id', $id);
+        $res = $this->db->update('hris_experience', $data);
+
+        $this->Audit->log('update_experience', [
+            'entity_type'  => 'experience',
+            'entity_id'    => $id,
+            'applicant_id' => $row->id_number ?? $this->input->post('id_number'),
+            'field'        => 'experience_dates',
+            'description'  => 'Updated inclusive dates of "' . ($row->title ?? '') . '" to '
+                . $from . ' - ' . $to . ' (' . $span['ny'] . ' yr ' . $span['nm'] . ' mo),'
+                . ' saved ' . $data['updated_at'] . '.',
+        ]);
+
+        return $res;
     }
 
     public function update_trainings(){
@@ -3460,21 +3612,70 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
     public function update_training_staff(){
 
       $data = array(
-          'noHours' => $this->input->post('nh'), 
+          'noHours' => $this->input->post('nh'),
+          'updated_at' => $this->record_stamp(),
           );
 
-        $this->db->where('trainingID', $this->input->post('id'));
-        return $this->db->update('hris_trainings', $data);
+        $id  = $this->input->post('id');
+        $row = $this->Common->one_cond_row('hris_trainings', 'trainingID', $id);
+
+        $this->db->where('trainingID', $id);
+        $res = $this->db->update('hris_trainings', $data);
+
+        $this->Audit->log('update_training', [
+            'entity_type'  => 'training',
+            'entity_id'    => $id,
+            'applicant_id' => $row->IDNumber ?? $this->input->post('id_number'),
+            'field'        => 'training_hours',
+            'description'  => 'Set no. of hours of "' . ($row->trainingTitle ?? '') . '" from '
+                . (float) ($row->noHours ?? 0) . ' to ' . (float) $data['noHours']
+                . ', saved ' . $data['updated_at'] . '.',
+        ]);
+
+        return $res;
     }
 
     public function update_cert_stat($table){
 
+      $stat = $this->uri->segment(4);
+      $id   = $this->uri->segment(3);
+
       $data = array(
-          'stat' => $this->uri->segment(4), 
+          'stat' => $stat,
           );
 
-        $this->db->where('id', $this->uri->segment(3));
-        return $this->db->update($table, $data);
+        // Only the applicant-facing experience table carries the saved stamps.
+        if ($table === 'hris_experience') {
+          $data['updated_at'] = $this->record_stamp();
+        }
+
+        $row = $this->Common->one_cond_row($table, 'id', $id);
+
+        $this->db->where('id', $id);
+        $res = $this->db->update($table, $data);
+
+        if ($table === 'hris_experience') {
+          $this->Audit->log('update_experience', [
+              'entity_type'  => 'experience',
+              'entity_id'    => $id,
+              'applicant_id' => $row->id_number ?? null,
+              'field'        => 'experience_relevance',
+              'description'  => 'Marked work experience "' . ($row->title ?? '') . '" as '
+                  . $this->relevance_label($stat) . ', saved ' . $this->record_stamp() . '.',
+          ]);
+        }
+
+        return $res;
+    }
+
+    /** Wording for the stat column shared by the training / experience tables. */
+    public function relevance_label($stat){
+
+      if ((int) $stat === 1) {
+        return 'Relevant';
+      }
+
+      return ((int) $stat === 2) ? 'Not Relevant' : 'No Action';
     }
 
     public function gettotaltraining($table,$col,$id_number)
@@ -3512,12 +3713,29 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
 
     public function update_cert_stat_staff($table){
 
+      $stat = $this->uri->segment(4);
+      $id   = $this->uri->segment(3);
+
       $data = array(
-          'stat' => $this->uri->segment(4), 
+          'stat' => $stat,
+          'updated_at' => $this->record_stamp(),
           );
 
-        $this->db->where('trainingID', $this->uri->segment(3));
-        return $this->db->update($table, $data);
+        $row = $this->Common->one_cond_row($table, 'trainingID', $id);
+
+        $this->db->where('trainingID', $id);
+        $res = $this->db->update($table, $data);
+
+        $this->Audit->log('update_training', [
+            'entity_type'  => 'training',
+            'entity_id'    => $id,
+            'applicant_id' => $row->IDNumber ?? null,
+            'field'        => 'training_relevance',
+            'description'  => 'Marked training "' . ($row->trainingTitle ?? '') . '" as '
+                . $this->relevance_label($stat) . ', saved ' . $data['updated_at'] . '.',
+        ]);
+
+        return $res;
     }
 
     public function update_remarks($col){

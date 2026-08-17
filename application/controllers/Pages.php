@@ -590,14 +590,20 @@ class Pages extends CI_Controller
 
             $taggingVacancies = $this->secretariat->tagging_vacancies((int) $userId);
             $taggingTotals = [
+                'applicants' => 0,
                 'submitted' => 0,
                 'tagged' => 0,
                 'untagged' => 0,
+                'evaluated' => 0,
             ];
             foreach ($taggingVacancies as $vacancy) {
+                $taggingTotals['applicants'] += (int) $vacancy->applicant_total;
                 $taggingTotals['submitted'] += (int) $vacancy->submitted_total;
                 $taggingTotals['tagged'] += (int) $vacancy->tagged_total;
-                $taggingTotals['untagged'] += (int) $vacancy->untagged_total;
+                // "Waiting" is the actionable queue only, so it is the one
+                // figure that is meant to fall as tagging progresses.
+                $taggingTotals['untagged'] += (int) $vacancy->pending_total;
+                $taggingTotals['evaluated'] += (int) $vacancy->evaluated_total;
             }
 
             $result['title'] = "Secretariat Dashboard";
@@ -606,6 +612,8 @@ class Pages extends CI_Controller
             $result['jobTypeLabels'] = $jobTypeLabels;
             $result['vacancies'] = $taggingVacancies;
             $result['counts'] = [
+                'applicants' => $taggingTotals['applicants'],
+                'evaluated'  => $taggingTotals['evaluated'],
                 'submitted' => $taggingTotals['submitted'],
                 'validated' => $this->secretariat->count_by_status($jobTypes, 'Validated'),
                 'endorsed'  => $this->secretariat->count_by_status($jobTypes, 'Endorsed for Rating'),
@@ -2315,6 +2323,11 @@ class Pages extends CI_Controller
         // redirect(base_url() . 'personnel_profile/' . $id);
 
 			$this->Reg->ensure_training_datetime();
+			$this->Reg->ensure_training_columns();
+
+			if ($this->Reg->block_when_records_locked($this->input->post('id'), '#trainings')) {
+				return;
+			}
 
 			$started  = $this->input->post('dateStarted');
 			$finished = $this->input->post('dateFinished');
@@ -2655,6 +2668,7 @@ class Pages extends CI_Controller
         $this->Page_model->check_ownership($param);
         $this->Reg->ensure_experience_columns();
         $this->Reg->ensure_training_datetime();
+        $this->Reg->ensure_training_columns();
 
         $page = "profile_reg";
 
@@ -2698,6 +2712,11 @@ class Pages extends CI_Controller
         $data['profile_lock_context_query'] = !empty($profileApplication)
             ? '?jobID=' . (int) $profileApplication->jobID . '&appID=' . (int) $profileApplication->appID
             : '';
+
+        // Trainings and work experience close together with the vacancy applied
+        // for; scoped to the one application when the profile was opened from a
+        // vacancy, otherwise weighed across every application of the applicant.
+        $data['record_lock'] = $this->Reg->applicant_record_lock($param, $profileAppID, $profileJobID);
 
         $data['awards'] = $this->Page_model->get_posts_by_col('hris_awards', 'IDNumber', $param);
         $data['files'] = $this->Page_model->get_posts_by_col('hris_files', 'IDNumber', $param);

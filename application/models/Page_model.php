@@ -1252,11 +1252,24 @@ public function count_for_approval_leave4($table, $approver_username)
             'noHours' => $hours,
             'sponsor' => $this->input->post('sponsor'),
             'IDNumber' => $this->input->post('id'),
-            'file' => $filename
+            'file' => $filename,
+            'created_at' => $date . ' ' . date('H:i:s')
 
         );
 
-        return $this->db->insert('hris_trainings', $data);
+        $res = $this->db->insert('hris_trainings', $data);
+
+        $this->Audit->log('add_training', [
+            'entity_type'  => 'training',
+            'entity_id'    => $this->db->insert_id(),
+            'applicant_id' => $this->input->post('id'),
+            'field'        => 'training',
+            'description'  => 'Added training "' . $data['trainingTitle'] . '"'
+                . ($started && $finished ? ' (' . $started . ' to ' . $finished . ')' : '')
+                . ', ' . (float) $hours . ' hour(s), saved ' . $data['created_at'] . '.',
+        ]);
+
+        return $res;
     }
 
     public function insert_awards()

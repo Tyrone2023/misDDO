@@ -1,7 +1,45 @@
 <!-- ============================================================== -->
             <!-- Start Page Content here -->
             <!-- ============================================================== -->
-             <?php $setting = $this->Common->one_cond_row('settings','id',11); ?>
+             <?php
+                $setting = $this->Common->one_cond_row('settings','id',11);
+
+                // Trainings and work experience close with the vacancy applied for.
+                // Once closed the two sections are read-only for everyone - nothing
+                // is added, re-dated, re-rated or deleted, so what stood at closing
+                // time is what the ranking was built on.
+                $recordLock   = !empty($record_lock['locked']);
+                $lockReason   = $recordLock ? (string) $record_lock['reason'] : '';
+                $recordsOpen  = ($setting->status == 0) && !$recordLock;
+
+                // "Saved on" stamp for a record. Rows encoded before the column
+                // existed carry none, so those read as a dash.
+                $saved_stamp = function ($created, $updated = null) {
+                    $out = '<span class="text-muted">&mdash;</span>';
+
+                    $c = !empty($created) ? strtotime($created) : false;
+                    if ($c) {
+                        $out = date('M d, Y', $c) . '<br><small class="text-muted">' . date('g:i A', $c) . '</small>';
+                    }
+
+                    $u = !empty($updated) ? strtotime($updated) : false;
+                    if ($u && (!$c || date('Y-m-d H:i', $u) !== date('Y-m-d H:i', $c))) {
+                        $out .= '<br><small class="text-info" title="Last change to this record">edited '
+                            . date('M d, Y g:i A', $u) . '</small>';
+                    }
+
+                    return $out;
+                };
+
+                // Shown at the top of both closed sections.
+                $lock_notice = function ($what) use ($lockReason) {
+                    return '<div class="alert alert-warning d-flex align-items-center mb-3" role="alert">'
+                        . '<i class="mdi mdi-lock-outline mr-2 font-18"></i>'
+                        . '<div><strong>' . $what . ' is closed.</strong> ' . html_escape($lockReason)
+                        . ' Records are shown for reference only and can no longer be added, edited or deleted.</div>'
+                        . '</div>';
+                };
+             ?>
 
             <style>
                 .profile-record-table th,
@@ -457,17 +495,22 @@
                                                                     <h4 class="page-title">TRAININGS AND SEMINARS ATTENDED</h4>
                                                                     <div class="page-title-right">
                                                                         <ol class="breadcrumb p-0 m-0">
-                                                                        <?php if($setting->status == 0): ?>
-                                                                        <li><a data-toggle="modal" data-id="<?= $a_user->id; ?>" class="open-AddBookDialog btn btn-info waves-effect width-md waves-light" href=".bs-example-modal-lg">Add New</a></li> 
+                                                                        <?php if($recordsOpen): ?>
+                                                                        <li><a data-toggle="modal" data-id="<?= $a_user->id; ?>" class="open-AddBookDialog btn btn-info waves-effect width-md waves-light" href=".bs-example-modal-lg">Add New</a></li>
+                                                                        <?php elseif($recordLock): ?>
+                                                                        <li><span class="badge badge-warning"><i class="mdi mdi-lock-outline mr-1"></i>Closed</span></li>
                                                                         <?php endif; ?>
                                                                     </ol>
                                                                     </div>
                                                                     <div class="clearfix"></div>
                                                                     <br />
-                                                                    <?php 
-                                                                        $canDeleteTrainings = ($setting->status == 0) && !in_array($this->session->position, ['Evaluator','rater','raters']);
+                                                                    <?php if($recordLock): ?>
+                                                                        <?= $lock_notice('Trainings and seminars'); ?>
+                                                                    <?php endif; ?>
+                                                                    <?php
+                                                                        $canDeleteTrainings = $recordsOpen && !in_array($this->session->position, ['Evaluator','rater','raters']);
                                                                         $canManageTrainings = $canDeleteTrainings;
-                                                                        $canRateTrainings = ($this->session->position == 'asds' || $this->session->position == 'raters' || ($this->session->position == 'Evaluator' && !empty($isAssignedEvaluator)));
+                                                                        $canRateTrainings = !$recordLock && ($this->session->position == 'asds' || $this->session->position == 'raters' || ($this->session->position == 'Evaluator' && !empty($isAssignedEvaluator)));
                                                                     ?>
                                                                     <?php if($canRateTrainings): ?>
                                                                         <p class="text-muted mb-2">Tip: Click the badge under <strong>No. of Hours</strong> to update the value.</p>
@@ -482,6 +525,7 @@
                                                                                     <th class="text-center">Attachment</th>
                                                                                     <th class="text-center text-nowrap">No. of Hours</th>
                                                                                     <th class="text-center">Status</th>
+                                                                                    <th class="text-center text-nowrap">Date &amp; Time Saved</th>
                                                                                     <th class="text-center"><?= $canDeleteTrainings ? 'Manage' : '&nbsp;' ?></th>
                                                                                 </tr>
                                                                             </thead>
@@ -518,7 +562,7 @@
                                                                                         <?php if ($canRateTrainings){ ?>
                                                                                             <a data-toggle="modal" data-id="<?= $row->trainingID; ?>" data-appid="<?= $row->noHours; ?>" class="open-AddBookDialog badge badge-primary" href=".ivan"><?= $row->noHours; ?></a>
                                                                                         <?php }else{ ?>
-                                                                                            <?php if ($setting->status == 0 || !empty($isAssignedEvaluator)){ ?>
+                                                                                            <?php if (!$recordLock && ($setting->status == 0 || !empty($isAssignedEvaluator))){ ?>
                                                                                                 <a data-toggle="modal" data-id="<?= $row->trainingID; ?>" data-appid="<?= $row->noHours; ?>" class="open-AddBookDialog badge badge-primary" href=".ivan"><?= $row->noHours; ?></a>
                                                                                             <?php }else{ ?>
                                                                                                 <span class="badge badge-success"><?= $row->noHours; ?></span>
@@ -526,7 +570,7 @@
                                                                                         <?php } ?>
                                                                                     </td>
                                                                                     <td class="text-center">
-                                                                                        <?php if ($canRateTrainings || $this->session->position == 'Evaluator'): ?>
+                                                                                        <?php if (!$recordLock && ($canRateTrainings || $this->session->position == 'Evaluator')): ?>
                                                                                             <?php if ($row->stat == 1): ?>
                                                                                                 <span class="badge badge-success mr-1">Relevant</span>
                                                                                                 <a class="btn btn-sm btn-outline-secondary" href="<?= base_url(); ?>Page/update_cert_training_stat_staff/<?= $row->trainingID; ?>/2">Mark Not Relevant</a>
@@ -548,16 +592,19 @@
                                                                                             <?php endif; ?>
                                                                                         <?php endif; ?>
                                                                                     </td>
+                                                                                    <td class="text-center text-nowrap"><?= $saved_stamp($row->created_at ?? null, $row->updated_at ?? null); ?></td>
                                                                                     <td class="text-center">
                                                                                         <?php if($canDeleteTrainings): ?>
                                                                                             <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Page/training_delete_staff/<?= $row->trainingID; ?>" class="btn btn-sm btn-outline-danger"><i class="mdi mdi-trash-can-outline"></i> Delete</a>
+                                                                                        <?php elseif($recordLock): ?>
+                                                                                            <span class="text-muted" title="<?= html_escape($lockReason); ?>"><i class="mdi mdi-lock-outline"></i></span>
                                                                                         <?php endif; ?>
                                                                                     </td>
                                                                                 </tr>
                                                                                 <?php } ?>
                                                                                 <?php if(empty($training)){ ?>
                                                                                 <tr>
-                                                                                    <td colspan="7" class="text-center text-muted py-4">No trainings or seminars recorded yet.</td>
+                                                                                    <td colspan="8" class="text-center text-muted py-4">No trainings or seminars recorded yet.</td>
                                                                                 </tr>
                                                                                 <?php } ?>
                                                                             </tbody>
@@ -565,7 +612,7 @@
                                                                                 <tr class="bg-light">
                                                                                     <th colspan="4" class="text-right">Total Relevant Hours</th>
                                                                                     <th class="text-center"><span class="badge badge-purple"><?= (float) ($training_sum ?? 0); ?></span></th>
-                                                                                    <th colspan="2"></th>
+                                                                                    <th colspan="3"></th>
                                                                                 </tr>
                                                                             </tfoot>
                                                                         </table>
@@ -590,17 +637,22 @@
                                                                     <div class="page-title-right">
                                                                         <ol class="breadcrumb p-0 m-0">
                                                                         <li>
-                                                                            <?php if($setting->status == 0): ?>
+                                                                            <?php if($recordsOpen): ?>
                                                                                 <a data-toggle="modal" data-id="<?= $user->id; ?>" class="open-AddBookDialog btn btn-info waves-effect width-md waves-light" href=".renrenguapo">Add New</a>
+                                                                            <?php elseif($recordLock): ?>
+                                                                                <span class="badge badge-warning"><i class="mdi mdi-lock-outline mr-1"></i>Closed</span>
                                                                             <?php endif; ?>
-                                                                        </li> 
+                                                                        </li>
                                                                         </ol>
                                                                     </div>
                                                                     <div class="clearfix"></div>
                                                                     <br />
+                                                                    <?php if($recordLock): ?>
+                                                                        <?= $lock_notice('Work experience'); ?>
+                                                                    <?php endif; ?>
                                                                     <?php
-                                                                        $canRateExperience = ($this->session->position == 'asds' || $this->session->position == 'raters' || ($this->session->position == 'Evaluator' && !empty($isAssignedEvaluator)));
-                                                                        $canEditExperienceDates = ($this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Evaluator' || $setting->status == 0);
+                                                                        $canRateExperience = !$recordLock && ($this->session->position == 'asds' || $this->session->position == 'raters' || ($this->session->position == 'Evaluator' && !empty($isAssignedEvaluator)));
+                                                                        $canEditExperienceDates = !$recordLock && ($this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Evaluator' || $setting->status == 0);
                                                                     ?>
                                                                     <?php if($canEditExperienceDates): ?>
                                                                         <p class="text-muted mb-2">Tip: Click the <strong>inclusive dates</strong> of a row to correct them. The length of service is computed from the range.</p>
@@ -615,6 +667,7 @@
                                                                                     <th class="text-center text-nowrap">Length of Service</th>
                                                                                     <th class="text-center">Attachment</th>
                                                                                     <th class="text-center">Status</th>
+                                                                                    <th class="text-center text-nowrap">Date &amp; Time Saved</th>
                                                                                     <th class="text-center">Manage</th>
                                                                                 </tr>
                                                                             </thead>
@@ -666,7 +719,7 @@
                                                                                     </td>
                                                                                     <td class="text-center"><a  href="<?= base_url().'uploads/experience/'.$row->file; ?>" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg text-primary"></i></a></td>
                                                                                     <td class="text-center">
-                                                                                        <?php if ($canRateExperience || $this->session->position == 'Evaluator'): ?>
+                                                                                        <?php if (!$recordLock && ($canRateExperience || $this->session->position == 'Evaluator')): ?>
                                                                                             <?php if ($row->stat == 1): ?>
                                                                                                 <span class="badge badge-success mr-1">Relevant</span>
                                                                                                 <a class="btn btn-sm btn-outline-secondary" href="<?= base_url(); ?>Page/update_cert_xp_stat/<?= $row->id; ?>/2">Mark Not Relevant</a>
@@ -688,16 +741,19 @@
                                                                                             <?php endif; ?>
                                                                                         <?php endif; ?>
                                                                                     </td>
+                                                                                    <td class="text-center text-nowrap"><?= $saved_stamp($row->created_at ?? null, $row->updated_at ?? null); ?></td>
                                                                                     <td class="text-center">
-                                                                                        <?php if($setting->status == 0): ?>
+                                                                                        <?php if($recordsOpen): ?>
                                                                                         <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Page/experience_delete/<?= $row->id; ?>" class="btn btn-sm btn-outline-danger"><i class="mdi mdi-trash-can-outline"></i> Delete</a>
+                                                                                        <?php elseif($recordLock): ?>
+                                                                                        <span class="text-muted" title="<?= html_escape($lockReason); ?>"><i class="mdi mdi-lock-outline"></i></span>
                                                                                         <?php endif; ?>
                                                                                     </td>
                                                                                 </tr>
                                                                                 <?php } ?>
                                                                                 <?php if(empty($experience)){ ?>
                                                                                 <tr>
-                                                                                    <td colspan="7" class="text-center text-muted py-4">No work experience recorded yet.</td>
+                                                                                    <td colspan="8" class="text-center text-muted py-4">No work experience recorded yet.</td>
                                                                                 </tr>
                                                                                 <?php } ?>
                                                                             </tbody>
@@ -707,7 +763,7 @@
                                                                                     <th class="text-center text-nowrap">
                                                                                         <span class="badge badge-purple"><?= intdiv($xpTotalMonths, 12); ?> yr <?= $xpTotalMonths % 12; ?> mo</span>
                                                                                     </th>
-                                                                                    <th colspan="3"></th>
+                                                                                    <th colspan="4"></th>
                                                                                 </tr>
                                                                             </tfoot>
                                                                         </table>

@@ -484,13 +484,21 @@ class Secretariat_model extends CI_Model
      * Open vacancies explicitly tagged to a Secretariat account, together with
      * the applicant workload used by the dashboard and tagging screen.
      *
-     * Only Application Submitted and Validated applications are part of this
-     * workflow. Disqualified records remain available in their dedicated view.
+     * The headline figures (applicant_total, tagged_total) deliberately cover
+     * every application received for the vacancy, whatever happened to it
+     * afterwards. Filtering them down to the still-taggable statuses made the
+     * totals shrink as soon as an applicant was endorsed, rated, or
+     * disqualified, so a vacancy appeared to lose applicants and an evaluator
+     * appeared to lose work they had already done.
+     *
+     * applicant_total = tagged_total + untagged_total, always. pending_total is
+     * the slice of untagged_total that can still be acted on today.
      */
     public function tagging_vacancies(int $userId): array
     {
         return $this->db
             ->select("j.jobID, j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.department,
+                COUNT(DISTINCT a.appID) AS applicant_total,
                 COUNT(DISTINCT CASE
                     WHEN a.appStatus = 'Application Submitted' AND a.dq != 2 THEN a.appID
                 END) AS submitted_total,
@@ -498,14 +506,14 @@ class Secretariat_model extends CI_Model
                     WHEN a.appStatus = 'Validated' AND a.dq != 2 THEN a.appID
                 END) AS validated_total,
                 COUNT(DISTINCT CASE
-                    WHEN a.appStatus IN ('Application Submitted', 'Validated') AND a.dq != 2 THEN a.appID
-                END) AS applicant_total,
+                    WHEN a.appStatus IN ('Endorsed for Rating', 'Rated', 'Confirmed') AND a.dq != 2 THEN a.appID
+                END) AS evaluated_total,
+                COUNT(DISTINCT CASE WHEN a.dq = 2 THEN a.appID END) AS dq_total,
+                COUNT(DISTINCT CASE WHEN ra.id IS NOT NULL THEN a.appID END) AS tagged_total,
+                COUNT(DISTINCT CASE WHEN a.appID IS NOT NULL AND ra.id IS NULL THEN a.appID END) AS untagged_total,
                 COUNT(DISTINCT CASE
-                    WHEN a.appStatus IN ('Application Submitted', 'Validated') AND a.dq != 2 AND ra.id IS NOT NULL THEN a.appID
-                END) AS tagged_total,
-                COUNT(DISTINCT CASE
-                    WHEN a.appStatus IN ('Application Submitted', 'Validated') AND a.dq != 2 AND ra.id IS NULL THEN a.appID
-                END) AS untagged_total", false)
+                    WHEN ra.id IS NULL AND a.dq != 2 AND a.appStatus IN ('Application Submitted', 'Validated') THEN a.appID
+                END) AS pending_total", false)
             ->from('hris_secretariat_vacancies sv')
             ->join('hris_jobvacancy j', 'j.jobID = sv.job_id')
             ->join('hris_applications a', 'a.jobID = j.jobID', 'left')
@@ -531,8 +539,13 @@ class Secretariat_model extends CI_Model
     }
 
     /**
-     * Submitted and validated applicants for one vacancy assigned to the
-     * current Secretariat user. The latest evaluator tag is joined per row.
+     * Every applicant for one vacancy assigned to the current Secretariat user,
+     * with the latest evaluator tag joined per row.
+     *
+     * Rows past the tagging stage (endorsed, rated, confirmed, disqualified)
+     * are returned too, flagged with is_taggable = 0, so the tagged list and
+     * the evaluator distribution keep showing work that is already done. Only
+     * is_taggable rows can be tagged or reassigned.
      */
     public function applicants_for_tagging(int $userId, int $jobId): array
     {
@@ -548,7 +561,11 @@ class Secretariat_model extends CI_Model
 
         return $this->db
             ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
-                a.app_year, a.district, a.pre_school,
+                a.app_year, a.district, a.pre_school, a.dq,
+                CASE
+                    WHEN a.dq != 2 AND a.appStatus IN ('Application Submitted', 'Validated') THEN 1
+                    ELSE 0
+                END AS is_taggable,
                 j.jobTitle, j.position, j.job_type, j.sy,
                 COALESCE(ha.record_no, ha2.record_no, hs.IDNumber, a.applicant_id) AS record_no,
                 COALESCE(ha.id, ha2.id, hs.IDNumber, a.applicant_id) AS profile_id,
@@ -575,11 +592,43 @@ class Secretariat_model extends CI_Model
             ->join('hris_rater_assignments ra', 'ra.id = latest_ra.assignment_id', 'left')
             ->join('users u', 'u.id = ra.rater_user_id', 'left')
             ->where('a.jobID', $jobId)
-            ->where_in('a.appStatus', ['Application Submitted', 'Validated'])
-            ->where('a.dq !=', 2)
+            ->order_by('is_taggable', 'desc')
             ->order_by('a.appStatus', 'desc')
             ->order_by('a.dateSubmitted', 'desc')
             ->order_by('ha.LastName', 'asc')
+            ->get()
+            ->result();
+    }
+
+    /**
+     * Tagged applicants per evaluator for one vacancy. Counts every applicant
+     * an evaluator was given, plus the breakdown that explains where they are
+     * now, so the distribution never drops work that has already been rated.
+     */
+    public function evaluator_tag_counts(int $userId, int $jobId): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        return $this->db
+            ->select("ra.rater_user_id,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name,
+                COUNT(DISTINCT a.appID) AS tagged_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.dq != 2 AND a.appStatus IN ('Application Submitted', 'Validated') THEN a.appID
+                END) AS pending_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.dq != 2 AND a.appStatus IN ('Endorsed for Rating', 'Rated', 'Confirmed') THEN a.appID
+                END) AS evaluated_total,
+                COUNT(DISTINCT CASE WHEN a.dq = 2 THEN a.appID END) AS dq_total", false)
+            ->from('hris_rater_assignments ra')
+            ->join('hris_applications a', 'a.appID = ra.app_id')
+            ->join('users u', 'u.id = ra.rater_user_id', 'left')
+            ->where('a.jobID', $jobId)
+            ->group_by(['ra.rater_user_id', 'u.fname', 'u.mname', 'u.lname'])
+            ->order_by('tagged_total', 'desc')
+            ->order_by('evaluator_name', 'asc')
             ->get()
             ->result();
     }

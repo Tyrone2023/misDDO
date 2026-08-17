@@ -12168,6 +12168,13 @@ class Page extends CI_Controller
 
 	public function update_trainings_staff()
 	{
+		$this->Reg->ensure_training_columns();
+
+		$row = $this->Common->one_cond_row('hris_trainings', 'trainingID', $this->input->post('id'));
+		if ($this->Reg->block_when_records_locked($row->IDNumber ?? $this->input->post('id_number'), '#trainings')) {
+			return;
+		}
+
 		$this->Reg->update_training_staff();
 		$this->session->set_flashdata('success', 'Successfully updated');
 		redirect($_SERVER['HTTP_REFERER'] . '#trainings');
@@ -12184,7 +12191,22 @@ class Page extends CI_Controller
 	public function training_delete_staff()
 	{
 		$attach = $this->Common->one_cond_row('hris_trainings', 'trainingID', $this->uri->segment(3));
+
+		if ($this->Reg->block_when_records_locked($attach->IDNumber ?? null, '#trainings')) {
+			return;
+		}
+
 		$this->Page_model->delete_the_toxic('hris_trainings', 'trainingID', $attach->trainingID, 'uploads/trainings_staff', $attach->file);
+
+		$this->Audit->log('delete_training', [
+			'entity_type'  => 'training',
+			'entity_id'    => $attach->trainingID,
+			'applicant_id' => $attach->IDNumber ?? null,
+			'field'        => 'training',
+			'description'  => 'Deleted training "' . ($attach->trainingTitle ?? '') . '" ('
+				. (float) ($attach->noHours ?? 0) . ' hour(s)), removed ' . $this->Reg->record_stamp() . '.',
+		]);
+
 		$this->session->set_flashdata('danger', 'Successfully deleted');
 		redirect($_SERVER['HTTP_REFERER'] . '#trainings');
 	}
@@ -12192,6 +12214,10 @@ class Page extends CI_Controller
 	public function insert_experience()
 	{
 		$this->Reg->ensure_experience_columns();
+
+		if ($this->Reg->block_when_records_locked($this->input->post('id_number'), '#work')) {
+			return;
+		}
 
 		$config['allowed_types'] = 'pdf';
 		$config['upload_path'] = './uploads/experience';
@@ -12227,6 +12253,11 @@ class Page extends CI_Controller
 	{
 		$this->Reg->ensure_experience_columns();
 
+		$row = $this->Common->one_cond_row('hris_experience', 'id', $this->input->post('id'));
+		if ($this->Reg->block_when_records_locked($row->id_number ?? $this->input->post('id_number'), '#work')) {
+			return;
+		}
+
 		$from = $this->input->post('date_from');
 		$to = $this->input->post('date_to');
 
@@ -12243,13 +12274,35 @@ class Page extends CI_Controller
 	public function experience_delete()
 	{
 		$attach = $this->Common->one_cond_row('hris_experience', 'id', $this->uri->segment(3));
+
+		if ($this->Reg->block_when_records_locked($attach->id_number ?? null, '#work')) {
+			return;
+		}
+
 		$this->Common->delete_with_attachv2('hris_experience', $attach->id, 'uploads/experience', $attach->file);
+
+		$this->Audit->log('delete_experience', [
+			'entity_type'  => 'experience',
+			'entity_id'    => $attach->id,
+			'applicant_id' => $attach->id_number ?? null,
+			'field'        => 'experience',
+			'description'  => 'Deleted work experience "' . ($attach->title ?? '') . '", removed '
+				. $this->Reg->record_stamp() . '.',
+		]);
+
 		$this->session->set_flashdata('danger', 'Successfully deleted');
 		redirect($_SERVER['HTTP_REFERER'] . '#work');
 	}
 
 	public function update_cert_xp_stat()
 	{
+		$this->Reg->ensure_experience_columns();
+
+		$row = $this->Common->one_cond_row('hris_experience', 'id', $this->uri->segment(3));
+		if ($this->Reg->block_when_records_locked($row->id_number ?? null, '#work')) {
+			return;
+		}
+
 		$this->Reg->update_cert_stat('hris_experience');
 		$this->session->set_flashdata('success', 'Successfully updated');
 		redirect($_SERVER['HTTP_REFERER'] . '#work');
@@ -12264,6 +12317,13 @@ class Page extends CI_Controller
 
 	public function update_cert_training_stat_staff()
 	{
+		$this->Reg->ensure_training_columns();
+
+		$row = $this->Common->one_cond_row('hris_trainings', 'trainingID', $this->uri->segment(3));
+		if ($this->Reg->block_when_records_locked($row->IDNumber ?? null, '#trainings')) {
+			return;
+		}
+
 		$this->Reg->update_cert_stat_staff('hris_trainings');
 		$this->session->set_flashdata('success', 'Successfully updated');
 		redirect($_SERVER['HTTP_REFERER'] . '#trainings');

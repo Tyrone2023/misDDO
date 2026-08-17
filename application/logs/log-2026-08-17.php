@@ -147,3 +147,18 @@ ERROR - 2026-08-17 12:44:44 --> Severity: Warning --> Attempt to read property "
 ERROR - 2026-08-17 12:44:44 --> Severity: Warning --> Undefined variable $app /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rating_request.php 201
 ERROR - 2026-08-17 12:44:44 --> Severity: Warning --> Attempt to read property "appStatus" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rating_request.php 201
 ERROR - 2026-08-17 06:45:25 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-17 13:00:41 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 13:00:41 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 13:03:06 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 13:03:06 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 07:03:28 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-17 13:17:35 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 13:17:35 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 09:39:14 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-17 09:39:14 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-17 09:39:14 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-17 09:39:14 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-17 09:39:14 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-17 09:39:14 --> 404 Page Not Found: Assets/libs
+ERROR - 2026-08-17 15:42:12 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 15:42:12 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
