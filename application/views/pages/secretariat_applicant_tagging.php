@@ -148,10 +148,18 @@ $applicantProfileUrl = static function ($applicant) {
     .sat-page .sat-progress-track span { background:linear-gradient(90deg,#2ca66e,#56ce91); display:block; height:100%; transition:width .25s ease; }
     .sat-page .sat-evaluator-summary { background:#f8fafc; border:1px solid var(--sat-line); border-radius:13px; padding:14px 15px; }
     .sat-page .sat-evaluator-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-    .sat-page .sat-evaluator-chip { align-items:center; background:#fff; border:1px solid #dfe6ef; border-radius:22px; box-shadow:0 2px 7px rgba(24,49,83,.04); display:inline-flex; gap:7px; max-width:260px; padding:5px 7px 5px 5px; }
+    .sat-page .sat-evaluator-chip { align-items:center; background:#fff; border:1px solid #dfe6ef; border-radius:22px; box-shadow:0 2px 7px rgba(24,49,83,.04); cursor:pointer; display:inline-flex; gap:7px; max-width:260px; padding:5px 7px 5px 5px; text-align:left; transition:border-color .15s ease, box-shadow .15s ease; }
+    .sat-page .sat-evaluator-chip:hover { border-color:#b6c9ec; box-shadow:0 3px 10px rgba(24,49,83,.09); }
+    .sat-page .sat-evaluator-chip:focus { outline:2px solid rgba(36,87,214,.35); outline-offset:2px; }
+    .sat-page .sat-evaluator-chip.is-active { background:#eef4ff; border-color:var(--sat-blue); box-shadow:0 3px 10px rgba(36,87,214,.16); }
     .sat-page .sat-evaluator-chip-icon { align-items:center; background:#e8f0ff; border-radius:50%; color:var(--sat-blue); display:flex; flex:0 0 28px; font-size:15px; height:28px; justify-content:center; width:28px; }
     .sat-page .sat-evaluator-chip-name { color:#304b6d; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .sat-page .sat-evaluator-chip-count { align-items:center; background:#2457d6; border-radius:12px; color:#fff; display:flex; flex:0 0 auto; font-size:11px; font-weight:800; height:22px; justify-content:center; min-width:22px; padding:0 6px; }
+    .sat-page .sat-filter-bar { align-items:center; background:#eef4ff; border:1px solid #d3e1fb; border-radius:10px; color:#28486f; display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; margin:13px 24px 0; padding:10px 14px; }
+    .sat-page .sat-filter-bar .sat-filter-text { font-size:13px; }
+    .sat-page .sat-filter-bar .sat-filter-text strong { color:var(--sat-ink); }
+    .sat-page .sat-filter-clear { background:#fff; border:1px solid #c3d6f5; border-radius:7px; color:var(--sat-blue); font-size:12px; font-weight:700; padding:5px 11px; }
+    .sat-page .sat-filter-clear:hover { background:#dfeaff; }
     .sat-page .sat-table-card { overflow:visible; }
     .sat-page .sat-table-head { align-items:center; border-bottom:1px solid #edf1f6; display:flex; justify-content:space-between; padding:19px 24px 15px; }
     .sat-page .sat-table-head-icon { align-items:center; border-radius:11px; display:flex; flex:0 0 39px; font-size:19px; height:39px; justify-content:center; width:39px; }
@@ -193,7 +201,7 @@ $applicantProfileUrl = static function ($applicant) {
     .sat-page .page-item.active .page-link { background-color:var(--sat-blue); border-color:var(--sat-blue); }
     .sat-page .sat-empty { padding:52px 20px; text-align:center; }
     .sat-page .sat-empty-icon { align-items:center; background:#edf3ff; border-radius:16px; color:var(--sat-blue); display:inline-flex; font-size:26px; height:58px; justify-content:center; width:58px; }
-    @media (max-width:767px) { .sat-page .sat-hero { padding:22px 20px; } .sat-page .sat-hero-icon { display:none; } .sat-page .sat-card .card-body { padding:18px; } .sat-page .sat-table-head { padding:17px 18px 13px; } .sat-page .sat-table-wrap { padding:4px 12px 14px; } .sat-page .sat-tag-form { min-width:220px; } .sat-page #tagging-message { left:15px; max-width:none; right:15px; top:72px; } }
+    @media (max-width:767px) { .sat-page .sat-hero { padding:22px 20px; } .sat-page .sat-hero-icon { display:none; } .sat-page .sat-card .card-body { padding:18px; } .sat-page .sat-table-head { padding:17px 18px 13px; } .sat-page .sat-table-wrap { padding:4px 12px 14px; } .sat-page .sat-filter-bar { margin:11px 14px 0; } .sat-page .sat-tag-form { min-width:220px; } .sat-page #tagging-message { left:15px; max-width:none; right:15px; top:72px; } }
 </style>
 
 <div class="content-page sat-page">
@@ -354,7 +362,7 @@ $applicantProfileUrl = static function ($applicant) {
                             <div class="d-flex align-items-center justify-content-between flex-wrap">
                                 <div>
                                     <div class="font-weight-bold text-dark"><i class="mdi mdi-chart-donut text-primary mr-1"></i> Evaluator distribution</div>
-                                    <div class="sat-sub mt-1">Every applicant tagged to each evaluator for this vacancy, including the ones already rated or disqualified. Hover a name for the breakdown.</div>
+                                    <div class="sat-sub mt-1">Every applicant tagged to each evaluator for this vacancy, including the ones already rated or disqualified. <strong>Click an evaluator</strong> to list only their applicants below and move any of them to someone else.</div>
                                 </div>
                                 <span class="small font-weight-bold text-success"><span id="tagging-progress-label"><?= $taggingProgress; ?></span>% tagged</span>
                             </div>
@@ -363,19 +371,20 @@ $applicantProfileUrl = static function ($applicant) {
                                 <?php foreach ($evaluatorTagCounts as $evaluatorCount) : ?>
                                     <?php
                                     $chipTitle = sprintf(
-                                        '%s — %d tagged in total: %d still to rate, %d endorsed or rated, %d disqualified',
-                                        $evaluatorCount['name'],
+                                        'Show the %d applicant%s tagged to %s: %d still to rate, %d endorsed or rated, %d disqualified',
                                         $evaluatorCount['count'],
+                                        $evaluatorCount['count'] === 1 ? '' : 's',
+                                        $evaluatorCount['name'],
                                         $evaluatorCount['pending'],
                                         $evaluatorCount['evaluated'],
                                         $evaluatorCount['dq']
                                     );
                                     ?>
-                                    <div class="sat-evaluator-chip" data-evaluator-id="<?= (int) $evaluatorCount['id']; ?>" title="<?= $tagging_h($chipTitle); ?>">
+                                    <button type="button" class="sat-evaluator-chip" data-evaluator-id="<?= (int) $evaluatorCount['id']; ?>" title="<?= $tagging_h($chipTitle); ?>" aria-pressed="false">
                                         <span class="sat-evaluator-chip-icon"><i class="mdi mdi-account-check-outline"></i></span>
                                         <span class="sat-evaluator-chip-name"><?= $tagging_h($evaluatorCount['name']); ?></span>
                                         <span class="sat-evaluator-chip-count"><?= (int) $evaluatorCount['count']; ?></span>
-                                    </div>
+                                    </button>
                                 <?php endforeach; ?>
                                 <span id="evaluator-count-empty" class="text-muted small <?= empty($evaluatorTagCounts) ? '' : 'd-none'; ?>">No evaluator assignments yet.</span>
                             </div>
@@ -454,7 +463,7 @@ $applicantProfileUrl = static function ($applicant) {
                     </div>
                 </div>
 
-                <div class="card sat-card sat-table-card">
+                <div class="card sat-card sat-table-card" id="tagged-applicants">
                     <div class="sat-table-head">
                         <div class="d-flex align-items-center">
                             <span class="sat-table-head-icon sat-icon-green"><i class="mdi mdi-account-check-outline"></i></span>
@@ -466,6 +475,11 @@ $applicantProfileUrl = static function ($applicant) {
                         <span class="sat-count-badge badge-success"><i class="mdi mdi-account-check-outline"></i><span id="tagged-table-count"><?= count($taggedApplicants); ?></span> tagged</span>
                     </div>
 
+                    <div id="evaluator-filter-bar" class="sat-filter-bar d-none" role="status" aria-live="polite">
+                        <div class="sat-filter-text" id="evaluator-filter-text"></div>
+                        <button type="button" class="sat-filter-clear" id="evaluator-filter-clear">Show all tagged applicants</button>
+                    </div>
+
                     <div class="sat-table-wrap">
                             <table class="table table-bordered table-hover dt-responsive sat-table" id="tagged-datatable">
                                 <thead>
@@ -475,6 +489,7 @@ $applicantProfileUrl = static function ($applicant) {
                                         <th style="width:22%">School / district</th>
                                         <th style="width:17%">Evaluator</th>
                                         <th style="width:25%">Reassign evaluator <span class="font-weight-normal text-muted">(number = applicants tagged to them this FY, all vacancies)</span></th>
+                                        <th>Evaluator key</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -485,7 +500,7 @@ $applicantProfileUrl = static function ($applicant) {
                                         [$statusLabel, $statusClass] = $statusChip($applicant);
                                         $canReassign = (int) ($applicant->is_taggable ?? 0) === 1;
                                         ?>
-                                        <tr>
+                                        <tr data-rater-id="<?= (int) $applicant->rater_user_id; ?>">
                                             <td>
                                                 <div class="sat-name"><?= $tagging_h($fullName); ?></div>
                                                 <div class="sat-sub">
@@ -526,6 +541,8 @@ $applicantProfileUrl = static function ($applicant) {
                                                     </form>
                                                 <?php endif; ?>
                                             </td>
+                                            <?php // Hidden column: the evaluator chips filter this table on it. ?>
+                                            <td><?= (int) $applicant->rater_user_id; ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -548,6 +565,10 @@ $applicantProfileUrl = static function ($applicant) {
     var untaggedDataTable = null;
     var taggedDataTable = null;
     var activeDirtyForm = null;
+    // Evaluator chip currently filtering the tagged table, as a string id.
+    var activeEvaluatorFilter = '';
+    var activeEvaluatorName = '';
+    var RATER_KEY_COLUMN = 5;
 
     function showMessage(ok, text) {
         message.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
@@ -600,6 +621,113 @@ $applicantProfileUrl = static function ($applicant) {
         if (bar) bar.style.width = percent + '%';
     }
 
+    /* ------------------------------------------------------------------
+     * Filtering the tagged table by evaluator.
+     *
+     * Clicking a distribution chip narrows the tagged table to that
+     * evaluator's applicants, so a Secretariat can see who is carrying what
+     * and move any of them to someone else without hunting through the
+     * whole list. The match is on the hidden last column rather than on the
+     * evaluator name, so two evaluators sharing a name stay separate and
+     * rows added after a tag are filtered on the same value.
+     * ------------------------------------------------------------------ */
+
+    function raterKeyOf(rowData) {
+        if (!rowData) return '';
+        var value = rowData[RATER_KEY_COLUMN];
+        return value === undefined || value === null ? '' : String(value).trim();
+    }
+
+    function updateEvaluatorFilterBar() {
+        var bar = document.getElementById('evaluator-filter-bar');
+        var text = document.getElementById('evaluator-filter-text');
+        if (!bar || !text) return;
+
+        if (!activeEvaluatorFilter || !taggedDataTable) {
+            bar.classList.add('d-none');
+            return;
+        }
+
+        var count = taggedDataTable.rows({ search: 'applied' }).count();
+        var name = document.createElement('strong');
+        name.textContent = activeEvaluatorName;
+
+        while (text.firstChild) { text.removeChild(text.firstChild); }
+
+        if (count === 0) {
+            text.appendChild(document.createTextNode('No applicant is tagged to '));
+            text.appendChild(name);
+            text.appendChild(document.createTextNode(' anymore.'));
+        } else {
+            text.appendChild(document.createTextNode(
+                'Showing the ' + count + ' applicant' + (count === 1 ? '' : 's') + ' tagged to '
+            ));
+            text.appendChild(name);
+            text.appendChild(document.createTextNode(
+                '. Use the last column to move ' + (count === 1 ? 'this applicant' : 'any of them') + ' to another evaluator.'
+            ));
+        }
+
+        bar.classList.remove('d-none');
+    }
+
+    function syncEvaluatorChips() {
+        var chips = document.querySelectorAll('.sat-evaluator-chip');
+        Array.prototype.forEach.call(chips, function (chip) {
+            var isActive = String(chip.getAttribute('data-evaluator-id') || '') === activeEvaluatorFilter
+                && activeEvaluatorFilter !== '';
+            chip.classList.toggle('is-active', isActive);
+            chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+
+    function clearEvaluatorFilter() {
+        if (!activeEvaluatorFilter) return;
+        activeEvaluatorFilter = '';
+        activeEvaluatorName = '';
+        syncEvaluatorChips();
+        // A full draw so paging restarts at page one on the wider list.
+        if (taggedDataTable) taggedDataTable.draw();
+        updateEvaluatorFilterBar();
+    }
+
+    function filterByEvaluator(chip) {
+        var evaluatorId = String(chip.getAttribute('data-evaluator-id') || '');
+        if (!evaluatorId) return;
+
+        if (activeEvaluatorFilter === evaluatorId) {
+            clearEvaluatorFilter();
+            return;
+        }
+
+        var nameNode = chip.querySelector('.sat-evaluator-chip-name');
+        activeEvaluatorFilter = evaluatorId;
+        activeEvaluatorName = nameNode ? nameNode.textContent : ('Evaluator #' + evaluatorId);
+        syncEvaluatorChips();
+
+        if (taggedDataTable) {
+            taggedDataTable.draw();
+            updateEvaluatorFilterBar();
+        }
+
+        var card = document.getElementById('tagged-applicants');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest) return;
+
+        var chip = event.target.closest('.sat-evaluator-chip');
+        if (chip) {
+            filterByEvaluator(chip);
+            return;
+        }
+
+        if (event.target.closest('#evaluator-filter-clear')) {
+            clearEvaluatorFilter();
+        }
+    });
+
     function adjustEvaluatorCount(evaluatorId, evaluatorName, adjustment) {
         evaluatorId = String(evaluatorId || '');
         if (!evaluatorId || !adjustment) return;
@@ -610,9 +738,11 @@ $applicantProfileUrl = static function ($applicant) {
 
         var chip = list.querySelector('[data-evaluator-id="' + evaluatorId.replace(/"/g, '') + '"]');
         if (!chip && adjustment > 0) {
-            chip = document.createElement('div');
+            chip = document.createElement('button');
+            chip.type = 'button';
             chip.className = 'sat-evaluator-chip';
             chip.setAttribute('data-evaluator-id', evaluatorId);
+            chip.setAttribute('aria-pressed', 'false');
 
             var icon = document.createElement('span');
             icon.className = 'sat-evaluator-chip-icon';
@@ -638,13 +768,16 @@ $applicantProfileUrl = static function ($applicant) {
 
         if (nextCount === 0) {
             chip.parentNode.removeChild(chip);
+            // Nothing left to show for an evaluator whose chip just went away.
+            if (activeEvaluatorFilter === evaluatorId) clearEvaluatorFilter();
         } else {
             countElement.textContent = nextCount;
             // The server-rendered tooltip carries a stage breakdown we cannot
             // recompute here, so fall back to the plain total once it moves.
             var chipName = chip.querySelector('.sat-evaluator-chip-name');
-            chip.title = (chipName ? chipName.textContent : 'Evaluator #' + evaluatorId)
-                + ' — ' + nextCount + ' tagged in total (reload for the stage breakdown)';
+            chip.title = 'Show the ' + nextCount + ' applicant' + (nextCount === 1 ? '' : 's') + ' tagged to '
+                + (chipName ? chipName.textContent : 'Evaluator #' + evaluatorId)
+                + ' (reload for the stage breakdown)';
         }
 
         var remainingChips = list.querySelectorAll('.sat-evaluator-chip').length;
@@ -707,6 +840,16 @@ $applicantProfileUrl = static function ($applicant) {
             language: { emptyTable: 'No applicants are waiting to be tagged.' }
         });
 
+        // Only rows whose hidden evaluator key matches the clicked chip stay
+        // visible; with no chip active the table is untouched.
+        jQuery.fn.dataTable.ext.search.push(function (settings, searchData, rowIndex, rowData) {
+            if (settings.nTable.id !== 'tagged-datatable' || activeEvaluatorFilter === '') {
+                return true;
+            }
+
+            return raterKeyOf(rowData) === activeEvaluatorFilter;
+        });
+
         taggedDataTable = taggedTable.DataTable({
             pageLength: 10,
             lengthMenu: [[10, 25, 50, -1], [10, 25, 50, 'All']],
@@ -716,9 +859,13 @@ $applicantProfileUrl = static function ($applicant) {
             columnDefs: [
                 { targets: 0, responsivePriority: 2 },
                 { targets: 3, responsivePriority: 3 },
-                { targets: 4, responsivePriority: 1, orderable: false }
+                { targets: 4, responsivePriority: 1, orderable: false },
+                { targets: RATER_KEY_COLUMN, visible: false, searchable: false, orderable: false }
             ],
-            language: { emptyTable: 'No applicants have been tagged yet.' }
+            language: {
+                emptyTable: 'No applicants have been tagged yet.',
+                zeroRecords: 'No tagged applicant matches the current filter.'
+            }
         });
 
         untaggedTable.on('draw.dt', initEvaluatorSelects);
@@ -832,14 +979,20 @@ $applicantProfileUrl = static function ($applicant) {
 
                     var reassignForm = form.outerHTML;
                     untaggedDataTable.row(row).remove().draw(false);
-                    taggedDataTable.row.add([
+                    var addedRow = taggedDataTable.row.add([
                         applicantCell,
                         statusCell,
                         schoolCell,
                         evaluatorWrapper.innerHTML,
-                        reassignForm
-                    ]).draw(false);
+                        reassignForm,
+                        String(selectedEvaluatorId)
+                    ]);
+                    addedRow.draw(false);
+                    if (addedRow.node()) {
+                        addedRow.node().setAttribute('data-rater-id', selectedEvaluatorId);
+                    }
                     initEvaluatorSelects();
+                    updateEvaluatorFilterBar();
                 } else {
                     window.location.reload();
                 }
@@ -853,6 +1006,18 @@ $applicantProfileUrl = static function ($applicant) {
             if (previousEvaluatorId !== selectedEvaluatorId) {
                 adjustEvaluatorCount(previousEvaluatorId, '', -1);
                 adjustEvaluatorCount(selectedEvaluatorId, body.evaluator_name, 1);
+
+                // The row now belongs to the new evaluator, so the hidden key
+                // moves with it - a row transferred out of the evaluator being
+                // viewed drops out of the filtered list on the next draw.
+                row.setAttribute('data-rater-id', selectedEvaluatorId);
+                if (taggedDataTable) {
+                    taggedDataTable.cell(row, RATER_KEY_COLUMN).data(String(selectedEvaluatorId));
+                    if (activeEvaluatorFilter !== '') {
+                        taggedDataTable.draw(false);
+                        updateEvaluatorFilterBar();
+                    }
+                }
             }
             clearDirtyForm(form, true);
             button.textContent = 'Save change';

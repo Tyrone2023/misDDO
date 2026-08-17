@@ -162,3 +162,8 @@ ERROR - 2026-08-17 09:39:14 --> 404 Page Not Found: Assets/libs
 ERROR - 2026-08-17 09:39:14 --> 404 Page Not Found: Assets/libs
 ERROR - 2026-08-17 15:42:12 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
 ERROR - 2026-08-17 15:42:12 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 16:52:21 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 16:52:21 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-17 10:52:49 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-17 22:45:04 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-17 22:48:51 --> 404 Page Not Found: Uploads/profile

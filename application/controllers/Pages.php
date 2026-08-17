@@ -606,6 +606,17 @@ class Pages extends CI_Controller
                 $taggingTotals['evaluated'] += (int) $vacancy->evaluated_total;
             }
 
+            $retentionCounts = $this->secretariat->retention_counts((int) $userId);
+            $retentionTotals = ['pending' => 0, 'granted' => 0, 'denied' => 0, 'total' => 0];
+            foreach ($retentionCounts as $vacancyCounts) {
+                foreach ($retentionTotals as $key => $unused) {
+                    $retentionTotals[$key] += (int) $vacancyCounts[$key];
+                }
+            }
+
+            $result['retentionCounts'] = $retentionCounts;
+            $result['retentionTotals'] = $retentionTotals;
+
             $result['title'] = "Secretariat Dashboard";
             // already-readable "Group - Level" strings, so the badge needs no lookup
             $result['jobTypes'] = $this->secretariat->user_scope_labels((int) $userId);

@@ -29,6 +29,12 @@ $positionGroups = [
 // dividing by the queue made the figure jump around as applicants were rated.
 $applicantTotal = (int) $counts['applicants'];
 $taggedPercent = $applicantTotal > 0 ? round(((int) $counts['tagged'] / $applicantTotal) * 100) : 0;
+
+$retentionCounts = $retentionCounts ?? [];
+$retentionTotals = array_merge(
+    ['pending' => 0, 'granted' => 0, 'denied' => 0, 'total' => 0],
+    $retentionTotals ?? []
+);
 ?>
 
 <style>
@@ -52,7 +58,11 @@ $taggedPercent = $applicantTotal > 0 ? round(((int) $counts['tagged'] / $applica
     .secretariat-dashboard .sd-purple { background:#efe9ff; color:#6e43c0; }
     .secretariat-dashboard .sd-card .card-body { padding:22px; }
     .secretariat-dashboard .sd-section-title { color:var(--sd-ink); font-size:17px; font-weight:800; }
-    .secretariat-dashboard .sd-position { align-items:center; border-top:1px solid #edf1f6; display:grid; gap:14px; grid-template-columns:minmax(220px,1fr) repeat(3,85px) 105px; padding:15px 2px; }
+    .secretariat-dashboard .sd-position { align-items:center; border-top:1px solid #edf1f6; display:grid; gap:14px; grid-template-columns:minmax(200px,1fr) repeat(4,80px) 105px; padding:15px 2px; }
+    .secretariat-dashboard .sd-retention { border-radius:9px; display:block; padding:4px 2px; text-decoration:none; transition:background .12s ease; }
+    .secretariat-dashboard .sd-retention:hover { background:#f4f0ff; text-decoration:none; }
+    .secretariat-dashboard .sd-retention strong { color:#6e43c0; }
+    .secretariat-dashboard .sd-retention.sd-retention-idle strong { color:#9aa7b8; }
     .secretariat-dashboard .sd-position:first-of-type { border-top:0; }
     .secretariat-dashboard .sd-position-name { color:var(--sd-ink); font-weight:750; }
     .secretariat-dashboard .sd-position-sub { color:var(--sd-muted); font-size:12px; margin-top:3px; }
@@ -83,6 +93,12 @@ $taggedPercent = $applicantTotal > 0 ? round(((int) $counts['tagged'] / $applica
                         <div class="sd-hero-actions">
                             <a href="<?= base_url('secretariat/applicant-tagging'); ?>" class="btn btn-light">
                                 <i class="mdi mdi-account-arrow-right-outline mr-1"></i> Tag applicants
+                            </a>
+                            <a href="<?= base_url('secretariat/retention'); ?>" class="btn btn-light">
+                                <i class="mdi mdi-file-restore mr-1"></i> Retention
+                                <?php if ((int) $retentionTotals['pending'] > 0) : ?>
+                                    <span class="badge badge-warning ml-1"><?= (int) $retentionTotals['pending']; ?></span>
+                                <?php endif; ?>
                             </a>
                         </div>
                     </div>
@@ -175,6 +191,16 @@ $taggedPercent = $applicantTotal > 0 ? round(((int) $counts['tagged'] / $applica
                                         <div class="sd-number"><strong><?= (int) $vacancy->applicant_total; ?></strong><span>Applicants</span></div>
                                         <div class="sd-number"><strong class="text-success"><?= (int) $vacancy->tagged_total; ?></strong><span>Tagged</span></div>
                                         <div class="sd-number"><strong class="text-danger"><?= (int) $vacancy->pending_total; ?></strong><span>Waiting</span></div>
+                                        <?php
+                                        $vacancyRetention = $retentionCounts[(int) $vacancy->jobID]
+                                            ?? ['pending' => 0, 'granted' => 0, 'denied' => 0, 'total' => 0];
+                                        $retentionPending = (int) $vacancyRetention['pending'];
+                                        ?>
+                                        <a class="sd-number sd-retention<?= $retentionPending === 0 ? ' sd-retention-idle' : ''; ?>"
+                                           href="<?= base_url('secretariat/retention?job_id=' . (int) $vacancy->jobID); ?>"
+                                           title="<?= $retentionPending; ?> pending of <?= (int) $vacancyRetention['total']; ?> retention request<?= (int) $vacancyRetention['total'] === 1 ? '' : 's'; ?> &mdash; <?= (int) $vacancyRetention['granted']; ?> granted, <?= (int) $vacancyRetention['denied']; ?> denied">
+                                            <strong><?= $retentionPending; ?></strong><span>Retention</span>
+                                        </a>
                                         <a href="<?= base_url('secretariat/applicant-tagging?job_id=' . (int) $vacancy->jobID); ?>" class="btn btn-outline-primary btn-sm">Manage</a>
                                     </div>
                                 <?php endforeach; ?>
@@ -201,6 +227,7 @@ $taggedPercent = $applicantTotal > 0 ? round(((int) $counts['tagged'] / $applica
                             <div class="sd-section-title mb-1">Recruitment shortcuts</div>
                             <div class="sd-link-list">
                                 <a href="<?= base_url('secretariat/applicant-tagging'); ?>"><span><i class="mdi mdi-account-arrow-right-outline mr-2 text-primary"></i>Applicant tagging</span><i class="mdi mdi-chevron-right"></i></a>
+                                <a href="<?= base_url('secretariat/retention'); ?>"><span><i class="mdi mdi-file-restore mr-2" style="color:#6e43c0"></i>Retention of points</span><span class="badge <?= (int) $retentionTotals['pending'] > 0 ? 'badge-warning' : 'badge-light'; ?>"><?= (int) $retentionTotals['pending']; ?></span></a>
                                 <a href="<?= base_url('Pages/endorsed_applicants'); ?>"><span><i class="mdi mdi-send-check-outline mr-2 text-info"></i>Endorse applicants</span><i class="mdi mdi-chevron-right"></i></a>
                                 <a href="<?= base_url('Pages/endorsed_applicants_unassigned'); ?>"><span><i class="mdi mdi-account-alert-outline mr-2 text-warning"></i>Endorsed without evaluator</span><span class="badge badge-warning"><?= (int) $counts['no_rater']; ?></span></a>
                                 <a href="<?= base_url('Pages/secretariat_endorsed'); ?>"><span><i class="mdi mdi-chart-box-outline mr-2 text-success"></i>Endorsed &amp; scored</span><span class="badge badge-light"><?= (int) $counts['endorsed']; ?></span></a>

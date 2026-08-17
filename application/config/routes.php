@@ -52,6 +52,10 @@ $route['new_applicant'] = 'pages/new_applicant';
 $route['secretariat'] = 'pages/secretariat';
 $route['secretariat/applicant-tagging'] = 'SecretariatTagging/index';
 $route['secretariat/applicant-tagging/tag'] = 'SecretariatTagging/tag';
+$route['secretariat/retention'] = 'SecretariatRetention/index';
+$route['secretariat/retention/grant-copy'] = 'SecretariatRetention/grant_copy';
+$route['secretariat/retention/grant-manual'] = 'SecretariatRetention/grant_manual';
+$route['secretariat/retention/deny'] = 'SecretariatRetention/deny';
 
 $route['davor_confession'] = 'pages/davor_confession';
 $route['private'] = 'Ps/private';

@@ -633,6 +633,581 @@ class Secretariat_model extends CI_Model
             ->result();
     }
 
+    /* ------------------------------------------------------------------ *
+     * Retention of points
+     *
+     * An applicant who was already rated for an earlier vacancy can ask to
+     * keep those points instead of being rated again. The request lands in
+     * hris_rating_request with stat 0, and is resolved either by copying the
+     * scores off the earlier application or - when the earlier score is not on
+     * file here - by encoding it manually. Both routes write the same rating
+     * row and mark the same request as granted.
+     * ------------------------------------------------------------------ */
+
+    /**
+     * Criteria a retention carries, as label => rating column, covering the
+     * same columns as Pages::retention_score_map() which drives the panel on
+     * the rating page. $partial is the r_type 2 scope.
+     *
+     * The labels are written out in full - the wording the rating pages
+     * themselves use - because they are read by whoever encodes the score and
+     * they are quoted back in the validation messages. Nothing keys off them.
+     *
+     * Skills is deliberately left out of the non-teaching map: it is not
+     * retained, so it is neither encoded on the retention screen nor counted
+     * when deciding whether an earlier application has a score worth copying.
+     */
+    public function retention_score_map(int $pType, bool $partial = false): array
+    {
+        if ($pType === 1) {
+            $partialMap = [
+                'PBET/LET/LEPT Rating' => 'let_rating',
+                'Demonstration Teaching' => 'demo_rating',
+                'Teacher Reflection' => 'tr_rating',
+            ];
+
+            return $partial ? $partialMap : array_merge(
+                ['Education' => 'education', 'Training' => 'training', 'Experience' => 'experience'],
+                $partialMap
+            );
+        }
+
+        $partialMap = ['Interview' => 'interview', 'Written Examination' => 'written'];
+
+        return $partial ? $partialMap : array_merge(
+            ['Education' => 'educ',
+             'Trainings and Seminars' => 'trainings',
+             'Work Experience' => 'experience',
+             'Performance Rating' => 'performance',
+             'Outstanding Accomplishments' => 'oa',
+             'Application of Education' => 'ae',
+             'Application of Learning and Development' => 'ald'/*, 'Skills' => 'skills'*/],
+            $partialMap
+        );
+    }
+
+    public function retention_rating_table(int $pType): string
+    {
+        return $pType === 1 ? 'hris_applications_rating' : 'hris_rating_none';
+    }
+
+    /**
+     * Whether a set of criterion scores holds anything worth carrying over.
+     * 0.00001 is the placeholder the rating forms and copy routines write for
+     * "not rated yet", so a row made only of those is empty, not zero-scored.
+     */
+    private function retention_has_real_score(array $scores): bool
+    {
+        foreach ($scores as $value) {
+            if ((float) $value > 0.001) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Point ceiling per rating column for one vacancy, so manual encoding is
+     * held to the same maximums the rating form enforces.
+     *
+     * Non-teaching ceilings come from hris_position_points via
+     * hris_positions.bracket, overridden by the position's criteria sheet where
+     * one exists. Interview, Written and Skills have no column in either table
+     * - the rating form hard-codes 20 for each, so that is what is used here.
+     */
+    public function retention_max_points(string $jobTitle, int $pType): array
+    {
+        if ($pType === 1) {
+            // The teaching form caps each criterion at 100 and relies on the
+            // total; nothing narrower is on file to borrow.
+            return ['education' => 100, 'training' => 100, 'experience' => 100,
+                    'let_rating' => 100, 'demo_rating' => 100, 'tr_rating' => 100];
+        }
+
+        $max = ['educ' => 0, 'trainings' => 0, 'experience' => 0, 'performance' => 0,
+                'oa' => 0, 'ae' => 0, 'ald' => 0,
+                'interview' => 20, 'written' => 20, 'skills' => 20];
+
+        $position = $this->db
+            ->select('id, bracket')
+            ->from('hris_positions')
+            ->where('title', $jobTitle)
+            ->get()
+            ->row();
+
+        if (empty($position)) {
+            return $max;
+        }
+
+        $points = $this->db
+            ->from('hris_position_points')
+            ->where('id', $position->bracket)
+            ->get()
+            ->row();
+
+        // hris_position_points names Training "tr" and Experience "exp"; the
+        // rating table spells them out.
+        $fromBracket = ['educ' => 'educ', 'trainings' => 'tr', 'experience' => 'exp',
+                        'performance' => 'per', 'oa' => 'oa', 'ae' => 'ae', 'ald' => 'ald'];
+
+        foreach ($fromBracket as $column => $bracketColumn) {
+            if (!empty($points) && isset($points->$bracketColumn)) {
+                $max[$column] = (float) $points->$bracketColumn;
+            }
+        }
+
+        // A position with its own criteria sheet overrides the shared bracket.
+        $this->load->model('Position_criteria_model', 'position_criteria');
+        $slots = $this->position_criteria->slots((int) $position->id);
+        $fromSheet = ['educ' => 'educ', 'trainings' => 'tr', 'experience' => 'exp',
+                      'performance' => 'per', 'oa' => 'oa', 'ae' => 'ae', 'ald' => 'ald'];
+
+        foreach ($fromSheet as $column => $slot) {
+            if (isset($slots[$slot]['max_points'])) {
+                $max[$column] = (float) $slots[$slot]['max_points'];
+            }
+        }
+
+        return $max;
+    }
+
+    /**
+     * Retention request counts per assigned vacancy, keyed by jobID, for the
+     * dashboard. Pending is the actionable figure; granted and denied are kept
+     * so a resolved queue does not read as "no requests were ever made".
+     */
+    public function retention_counts(int $userId): array
+    {
+        // a.appID gates every figure: a request whose application is no longer
+        // in the system is not listed, so it must not be counted either.
+        $rows = $this->db
+            ->select("sv.job_id,
+                COUNT(a.appID) AS total,
+                SUM(CASE WHEN rr.stat = 0 AND a.appID IS NOT NULL THEN 1 ELSE 0 END) AS pending,
+                SUM(CASE WHEN rr.stat = 1 AND a.appID IS NOT NULL THEN 1 ELSE 0 END) AS granted,
+                SUM(CASE WHEN rr.stat = 2 AND a.appID IS NOT NULL THEN 1 ELSE 0 END) AS denied", false)
+            ->from('hris_secretariat_vacancies sv')
+            ->join('hris_jobvacancy j', 'j.jobID = sv.job_id')
+            ->join('hris_rating_request rr', 'rr.job_id = sv.job_id', 'left')
+            ->join('hris_applications a', 'a.appID = rr.app_id', 'left')
+            ->where('sv.secretariat_user_id', $userId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->group_by('sv.job_id')
+            ->get()
+            ->result();
+
+        $counts = [];
+
+        foreach ($rows as $row) {
+            $counts[(int) $row->job_id] = [
+                'total' => (int) $row->total,
+                'pending' => (int) $row->pending,
+                'granted' => (int) $row->granted,
+                'denied' => (int) $row->denied,
+            ];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Applicants who asked to retain points on one assigned vacancy.
+     *
+     * source_count is how many of the applicant's earlier applications actually
+     * carry a rating row that could be copied. It is 0 for most requests, which
+     * is why manual encoding exists: without it those requests cannot be
+     * resolved at all.
+     */
+    public function retention_requests(int $userId, int $jobId): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $vacancy = $this->db
+            ->select('jobID, jobTitle, position, job_type, sy, itemNo, jvStatus')
+            ->from('hris_jobvacancy')
+            ->where('jobID', $jobId)
+            ->get()
+            ->row();
+
+        if (empty($vacancy)) {
+            return [];
+        }
+
+        $rows = $this->db
+            ->select("rr.id AS request_id, rr.app_id, rr.applicant_id, rr.r_type, rr.stat,
+                rr.granted_scope, rr.deny_reason, rr.rdate, rr.adate, rr.fy, rr.p_type, rr.res,
+                a.appID, a.appStatus, a.dq, a.empEmail, a.pre_school, a.district, a.app_year,
+                COALESCE(ha.record_no, hs.IDNumber, rr.applicant_id) AS record_no,
+                COALESCE(ha.id, hs.IDNumber, rr.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, hs.NameExtn, '') AS NameExtn,
+                CASE
+                    WHEN ha.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.lname), '')) AS resolved_by", false)
+            ->from('hris_rating_request rr')
+            // Inner join on purpose: a request pointing at an application that
+            // is no longer in the system cannot be resolved either way, so it
+            // is left out of the list entirely rather than shown as a dead end.
+            ->join('hris_applications a', 'a.appID = rr.app_id')
+            ->join('hris_applicant ha', 'ha.id = rr.applicant_id', 'left')
+            ->join('hris_staff hs', 'ha.id IS NULL AND CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = rr.applicant_id', 'left', false)
+            ->join('users u', 'u.id = rr.res', 'left')
+            ->where('rr.job_id', $jobId)
+            ->order_by('rr.stat', 'asc')
+            ->order_by('ha.LastName', 'asc')
+            ->order_by('rr.id', 'asc')
+            ->get()
+            ->result();
+
+        $sourcesByApplicant = $this->retention_sources_bulk($rows, (int) $vacancy->jobID, (int) $vacancy->position);
+
+        foreach ($rows as $row) {
+            $pType = (int) ($row->p_type ?: $vacancy->position);
+            $partial = ((int) $row->r_type === 2);
+
+            $row->p_type_resolved = $pType;
+            $row->vacancy = $vacancy;
+            $row->score_map = $this->retention_score_map($pType, $partial);
+
+            $sources = [];
+
+            foreach ($sourcesByApplicant[(string) $row->applicant_id] ?? [] as $source) {
+                // The application being resolved is never its own source.
+                if ((int) $source['app_id'] !== (int) $row->app_id) {
+                    $sources[] = $source;
+                }
+            }
+
+            $row->sources = $sources;
+            $row->source_count = count($sources);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Copyable source applications for a whole list of requests at once, keyed
+     * by applicant_id.
+     *
+     * Doing this per request cost one applications query plus one rating lookup
+     * per candidate application - several hundred queries on a vacancy with a
+     * busy retention queue. Three queries serve the whole page instead.
+     */
+    private function retention_sources_bulk(array $rows, int $jobId, int $vacancyPosition): array
+    {
+        $applicantIds = [];
+        $recordNos = [];
+        $pType = 0;
+
+        foreach ($rows as $row) {
+            $applicantId = trim((string) $row->applicant_id);
+
+            if ($applicantId !== '') {
+                $applicantIds[$applicantId] = true;
+                $recordNos[$applicantId] = trim((string) ($row->record_no ?: $applicantId));
+            }
+
+            if ($pType === 0) {
+                $pType = (int) ($row->p_type ?: $vacancyPosition);
+            }
+        }
+
+        if (empty($applicantIds)) {
+            return [];
+        }
+
+        $isTeaching = ($pType === 1);
+
+        $this->db
+            ->select('a.appID, a.applicant_id, a.jobID, a.appStatus, a.dateSubmitted,
+                jv.jobTitle, jv.sy, jv.datePosted, jv.itemNo')
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy jv', 'jv.jobID = a.jobID', 'left')
+            ->where_in('a.applicant_id', array_keys($applicantIds))
+            ->where('a.jobID !=', $jobId);
+
+        if (!$isTeaching) {
+            // Non-teaching scores live in hris_rating_none, so a teaching
+            // vacancy can never be a source for them.
+            $this->db->where('jv.position !=', 1);
+        }
+
+        $candidates = $this->db
+            ->order_by('jv.datePosted', 'desc')
+            ->order_by('a.appID', 'desc')
+            ->get()
+            ->result();
+
+        if (empty($candidates)) {
+            return [];
+        }
+
+        $appIds = [];
+        foreach ($candidates as $candidate) {
+            $appIds[] = (int) $candidate->appID;
+        }
+
+        $ratings = [];
+        foreach ($this->db->from($this->retention_rating_table($pType))->where_in('appID', $appIds)->get()->result() as $rating) {
+            // The copy routines match on record_no AND appID, so a rating filed
+            // under a different record_no would copy nothing.
+            $ratings[(int) $rating->appID . '|' . trim((string) $rating->record_no)] = $rating;
+        }
+
+        $partialByApplicant = [];
+        foreach ($rows as $row) {
+            $partialByApplicant[(string) $row->applicant_id] = ((int) $row->r_type === 2);
+        }
+
+        $out = [];
+
+        foreach ($candidates as $candidate) {
+            $applicantId = (string) $candidate->applicant_id;
+            $recordNo = $recordNos[$applicantId] ?? '';
+            $rating = $ratings[(int) $candidate->appID . '|' . $recordNo] ?? null;
+
+            if (empty($rating)) {
+                continue;
+            }
+
+            $scores = [];
+            foreach ($this->retention_score_map($pType, $partialByApplicant[$applicantId] ?? false) as $label => $column) {
+                $scores[$label] = $rating->$column ?? null;
+            }
+
+            // A rating row whose criteria are all still the 0.00001 "not rated
+            // yet" placeholder is not a usable source: copying it would mark
+            // this application Rated on a total of zero. Those applicants need
+            // manual encoding, so the row is not offered at all.
+            if (!$this->retention_has_real_score($scores)) {
+                continue;
+            }
+
+            $out[$applicantId][] = [
+                'app_id' => (int) $candidate->appID,
+                'job_id' => (int) $candidate->jobID,
+                'title' => trim((string) ($candidate->jobTitle ?? '')),
+                'item_no' => trim((string) ($candidate->itemNo ?? '')),
+                'sy' => trim((string) ($candidate->sy ?? '')),
+                'date_applied' => trim((string) ($candidate->dateSubmitted ?? '')),
+                'app_status' => trim((string) ($candidate->appStatus ?? '')),
+                'total_points' => $rating->total_points ?? null,
+                'scores' => $scores,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Earlier applications of the same applicant whose scores could be copied.
+     *
+     * Mirrors Pages::retention_source_applications(): the application being
+     * resolved and any other application to the same vacancy are never sources,
+     * a non-teaching request can only draw on a non-teaching vacancy, and a row
+     * only counts when a rating row exists under the same record_no + appID the
+     * copy routines match on.
+     */
+    public function retention_sources(object $request, int $pType, int $jobId): array
+    {
+        $isTeaching = ($pType === 1);
+        $ratingTable = $this->retention_rating_table($pType);
+        $partial = ((int) ($request->r_type ?? 0) === 2);
+        $recordNo = $this->retention_record_no($request);
+
+        $this->db
+            ->select('a.appID, a.jobID, a.appStatus, a.dateSubmitted, a.app_year,
+                jv.jobTitle, jv.job_type, jv.sy, jv.datePosted, jv.jvStatus, jv.itemNo')
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy jv', 'jv.jobID = a.jobID', 'left')
+            ->where('a.applicant_id', $request->applicant_id)
+            ->where('a.appID !=', (int) $request->app_id)
+            ->where('a.jobID !=', $jobId);
+
+        if (!$isTeaching) {
+            $this->db->where('jv.position !=', 1);
+        }
+
+        $rows = $this->db
+            ->order_by('jv.datePosted', 'desc')
+            ->order_by('a.appID', 'desc')
+            ->get()
+            ->result();
+
+        $scoreMap = $this->retention_score_map($pType, $partial);
+        $sources = [];
+
+        foreach ($rows as $row) {
+            $rating = $this->db
+                ->from($ratingTable)
+                ->where('record_no', $recordNo)
+                ->where('appID', (int) $row->appID)
+                ->get()
+                ->row();
+
+            if (empty($rating)) {
+                continue;
+            }
+
+            $scores = [];
+
+            foreach ($scoreMap as $label => $column) {
+                $scores[$label] = $rating->$column ?? null;
+            }
+
+            if (!$this->retention_has_real_score($scores)) {
+                continue;
+            }
+
+            $sources[] = [
+                'app_id' => (int) $row->appID,
+                'job_id' => (int) $row->jobID,
+                'title' => trim((string) ($row->jobTitle ?? '')),
+                'item_no' => trim((string) ($row->itemNo ?? '')),
+                'sy' => trim((string) ($row->sy ?? '')),
+                'date_applied' => trim((string) ($row->dateSubmitted ?? '')),
+                'app_status' => trim((string) ($row->appStatus ?? '')),
+                'total_points' => $rating->total_points ?? null,
+                'scores' => $scores,
+            ];
+        }
+
+        return $sources;
+    }
+
+    /**
+     * One pending request the Secretariat is allowed to act on, or null. Guards
+     * both the vacancy assignment and the request state, so a double submit
+     * cannot resolve the same request twice.
+     */
+    public function retention_actionable_request(int $userId, int $requestId): ?object
+    {
+        $request = $this->db
+            ->select('rr.*, j.jobID, j.jobTitle, j.position, j.job_type, j.sy, j.jvStatus,
+                a.appID, a.appStatus, a.app_year, a.empEmail, a.applicant_id AS app_applicant_id')
+            ->from('hris_rating_request rr')
+            ->join('hris_jobvacancy j', 'j.jobID = rr.job_id')
+            ->join('hris_applications a', 'a.appID = rr.app_id', 'left')
+            ->where('rr.id', $requestId)
+            ->get()
+            ->row();
+
+        if (empty($request) || !$this->secretariat_has_vacancy($userId, (int) $request->job_id)) {
+            return null;
+        }
+
+        if ((int) $request->stat !== 0 || strcasecmp(trim((string) $request->jvStatus), 'Closed') === 0) {
+            return null;
+        }
+
+        return $request;
+    }
+
+    /**
+     * record_no the rating row must be keyed on. The copy routines and the
+     * rating views look a rating up by record_no + appID, so a manual row that
+     * used anything else would be invisible to them.
+     */
+    public function retention_record_no(object $request): string
+    {
+        // Already resolved by retention_requests(); everything else has to look
+        // it up, and both must agree or a copy silently finds no source.
+        if (!empty($request->record_no)) {
+            return trim((string) $request->record_no);
+        }
+
+        $applicant = $this->db
+            ->select('record_no')
+            ->from('hris_applicant')
+            ->where('id', $request->applicant_id)
+            ->get()
+            ->row();
+
+        if (!empty($applicant->record_no)) {
+            return trim((string) $applicant->record_no);
+        }
+
+        // Non-teaching rating rows for staff applicants are keyed on the
+        // employee id, which is what empEmail carries on those applications.
+        return trim((string) ($request->empEmail ?: $request->applicant_id));
+    }
+
+    /**
+     * Write a manually encoded retained score.
+     *
+     * Mirrors Hiring_model::copy_rating() / Reg::copy_rating(): the same
+     * columns, eval ids left at 0 so the scores stay visible and editable to
+     * whoever holds the application, total_points summed the same way, and an
+     * upsert on appID. Criteria outside the retention scope keep the 0.00001
+     * "not rated yet" placeholder so a partial grant still leaves work for the
+     * evaluator.
+     */
+    public function save_manual_retention(object $request, int $pType, array $scores, string $recordNo): bool
+    {
+        $table = $this->retention_rating_table($pType);
+        $partial = ((int) $request->r_type === 2);
+        $scoreMap = $this->retention_score_map($pType, $partial);
+        $allColumns = array_values($this->retention_score_map($pType, false));
+
+        $data = ['record_no' => $recordNo, 'appID' => (int) $request->appID];
+
+        foreach ($allColumns as $column) {
+            $data[$column] = 0.00001;
+        }
+
+        foreach ($scoreMap as $label => $column) {
+            if (isset($scores[$column])) {
+                $data[$column] = (float) $scores[$column];
+            }
+        }
+
+        // Unclaimed, exactly as a copied retention arrives.
+        $data['eval_id1'] = 0;
+        $data['eval_id2'] = 0;
+        $data['eval_id3'] = 0;
+        $data['job_type'] = (int) $request->job_type;
+        $data['fy'] = $request->app_year ?: $request->fy ?: date('Y');
+
+        // The placeholder must not inflate the total.
+        $total = 0.0;
+        foreach ($allColumns as $column) {
+            $value = (float) $data[$column];
+            if ($value > 0.001) {
+                $total += $value;
+            }
+        }
+        $data['total_points'] = $total;
+
+        $existing = $this->db
+            ->from($table)
+            ->where('appID', (int) $request->appID)
+            ->get()
+            ->row();
+
+        if (!empty($existing)) {
+            unset($data['fy']);
+            return (bool) $this->db->where('appID', (int) $request->appID)->update($table, $data);
+        }
+
+        // Skills is out of the retention map, so it is never encoded here - but
+        // the non-teaching rating row still carries the column, so a new row
+        // gets the "not rated yet" placeholder rather than leaving it unset.
+        // It stays out of total_points either way, being below the threshold.
+        if ($pType !== 1) {
+            $data['skills'] = 0.00001;
+        }
+
+        return (bool) $this->db->insert($table, $data);
+    }
+
     /**
      * All users whose position is Evaluator, including their current load so
      * Secretariats can distribute applicants without leaving the table.
