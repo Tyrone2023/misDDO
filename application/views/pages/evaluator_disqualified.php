@@ -331,6 +331,19 @@ $evaluationUrl = static function (array $applicant) {
         color: var(--ead-red);
     }
 
+    .ead-action-btn.is-revert {
+        min-width: 80px;
+        background: #fff;
+        border: 1px solid #b8d4c6;
+        color: var(--ead-green);
+    }
+
+    .ead-action-btn.is-revert:hover {
+        background: #e8f5ee;
+        border-color: var(--ead-green);
+        color: var(--ead-green);
+    }
+
     .ead-page .dataTables_wrapper .dataTables_length label,
     .ead-page .dataTables_wrapper .dataTables_filter label,
     .ead-page .dataTables_wrapper .dataTables_info {
@@ -387,13 +400,28 @@ $evaluationUrl = static function (array $applicant) {
 <div class="content-page ead-page">
     <div class="content">
         <div class="container-fluid py-3 py-lg-4">
+            <?php
+            $flashSuccess = $this->session->flashdata('success');
+            $flashDanger  = $this->session->flashdata('danger');
+            if ($flashSuccess): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="mdi mdi-check-circle-outline mr-1"></i> <?= eh($flashSuccess) ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+            <?php endif; ?>
+            <?php if ($flashDanger): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="mdi mdi-alert-circle-outline mr-1"></i> <?= eh($flashDanger) ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+            <?php endif; ?>
             <div class="card ead-hero mb-4">
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col-lg-7">
                             <div class="ead-eyebrow"><i class="mdi mdi-account-remove-outline"></i> Evaluator workspace</div>
                             <h1>Disqualified Applicants</h1>
-                            <p class="ead-hero-copy">Applicants you have marked as disqualified during the qualification review. Select <strong>Reason</strong> on any row to view the recorded disqualification reason.</p>
+                            <p class="ead-hero-copy">Applicants you have marked as disqualified during the qualification review. Select <strong>Reason</strong> to view the recorded disqualification reason, or <strong>Revert</strong> to send an applicant back to your Applicants to Evaluate list.</p>
                         </div>
                         <div class="col-lg-5">
                             <div class="ead-hero-actions">
@@ -483,6 +511,14 @@ $evaluationUrl = static function (array $applicant) {
                                                         data-reason="<?= $reasonAttr ?>">
                                                     <i class="mdi mdi-comment-alert-outline"></i> Reason
                                                 </button>
+                                                <button type="button"
+                                                        class="btn btn-sm ead-action-btn is-revert dq-revert-btn"
+                                                        data-toggle="modal"
+                                                        data-target="#dqRevertModal"
+                                                        data-app-id="<?= $applicant['appId'] ?>"
+                                                        data-name="<?= $nameAttr ?>">
+                                                    <i class="mdi mdi-undo-variant"></i> Revert
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -527,6 +563,34 @@ $evaluationUrl = static function (array $applicant) {
             <div class="modal-footer">
                 <button type="button" class="btn btn-light waves-effect" data-dismiss="modal">Close</button>
             </div>
+        </div>
+    </div>
+</div>
+<!-- /.modal -->
+
+<!-- Revert Disqualification Modal -->
+<div id="dqRevertModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="dqRevertModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="dqRevertForm" action="<?= eh(base_url('EvaluatorAssigned/revert_disqualification')) ?>" method="post">
+                <div class="modal-header bg-success">
+                    <h5 class="modal-title text-white" id="dqRevertModalLabel">
+                        <i class="mdi mdi-undo-variant mr-1"></i>Revert Disqualification
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="appID" id="dqRevertAppId" value="">
+                    <p>Are you sure you want to revert the disqualification for <strong id="dqRevertName"></strong>?</p>
+                    <p class="text-muted mb-0">The applicant will be moved back to your <strong>Applicants to Evaluate</strong> list and the disqualification reason will be removed.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light waves-effect" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success waves-effect">
+                        <i class="mdi mdi-undo-variant mr-1"></i> Yes, Revert
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -585,6 +649,15 @@ $evaluationUrl = static function (array $applicant) {
                 $('#dqReasonJob').text(job);
                 $('#dqReasonDate').text(date ? date : '—');
                 $('#dqReasonText').text(reason ? reason : 'No reason was recorded.');
+            });
+
+            $('#dqRevertModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var appId  = button.data('app-id') || '';
+                var name   = button.data('name')   || '';
+
+                $('#dqRevertAppId').val(appId);
+                $('#dqRevertName').text(name);
             });
         }
 

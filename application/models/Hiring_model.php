@@ -429,6 +429,56 @@ public function get_granted_rating_request($fy,$stat)
   }
 
 
+  /**
+   * Partial retention for non-teaching positions: carry over only the
+   * Interview and Written Examination scores, leaving every other criterion
+   * unrated (0.00001) so the evaluator still has to score it.
+   */
+  public function copy_limited_rating($record_no, $appID) {
+    $result = $this->db->select('record_no, appID, interview, written, eval_id2, eval_id3, total_points, job_type, fy')
+                      ->from('hris_rating_none')
+                      ->where('record_no', $record_no)
+                      ->where('appID', $appID)
+                      ->get()
+                      ->row_array();
+
+    if (!$result) {
+        return false;
+    }
+
+    $targetAppId = $this->input->post('app_id');
+
+    $existing = $this->db->get_where('hris_rating_none', ['appID' => $targetAppId])->row_array();
+
+    $baseData = array(
+        'record_no'    => $result['record_no'],
+        'appID'        => $targetAppId,
+        'educ'         => 0.00001,
+        'trainings'    => 0.00001,
+        'experience'   => 0.00001,
+        'performance'  => 0.00001,
+        'oa'           => 0.00001,
+        'ae'           => 0.00001,
+        'ald'          => 0.00001,
+        'skills'       => 0.00001,
+        'eval_id1'     => 0,
+        'interview'    => $result['interview'],
+        'eval_id2'     => $result['eval_id2'],
+        'written'      => $result['written'],
+        'eval_id3'     => $result['eval_id3'],
+        'job_type'     => $result['job_type'],
+        'total_points' => $result['total_points']
+    );
+
+    if ($existing) {
+        return $this->db->where('appID', $targetAppId)->update('hris_rating_none', $baseData);
+    }
+
+    $baseData['fy'] = $result['fy'] ?? date('Y');
+    return $this->db->insert('hris_rating_none', $baseData);
+  }
+
+
   public function jshs_applicant($jt)
     {
     $this->db->select("

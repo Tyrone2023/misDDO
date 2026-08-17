@@ -202,7 +202,9 @@
                     <div class="container-fluid">
 
                         <?php if(empty($request) && !in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true)){?>
-                            <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_all/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/1/<?= $this->uri->segment(2); ?>/<?= $this->uri->segment(5); ?>/2" class="btn btn-info">Request for Retention of Ratings</a>
+                            <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_all/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/1/<?= $this->uri->segment(2); ?>/<?= $this->uri->segment(5); ?>/2" class="btn btn-info">Request for Retention of Ratings (All Scores)</a>
+
+                            <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_all/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/2/<?= $this->uri->segment(2); ?>/<?= $this->uri->segment(5); ?>/2" class="btn btn-purple">Request for Retention of Interview and Written Examination Ratings</a>
                         <?php } ?>
                        
 

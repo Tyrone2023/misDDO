@@ -12,7 +12,26 @@ $gate_h = static function ($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 };
 
-$isDisqualified = (int)($gateApplication->dq ?? 0) === 2;
+$gateState = (string)($gate['state'] ?? '');
+if ($gateState === '') {
+    $gateState = (int)($gateApplication->dq ?? 0) === 2 ? 'disqualified' : 'pending';
+}
+
+$isDisqualified = $gateState === 'disqualified';
+$isQualified = $gateState === 'qualified';
+$isPending = $gateState === 'pending';
+
+// A closed vacancy freezes every qualification decision, revert included.
+$gateJobClosed = isset($gateJob->jvStatus) && strcasecmp(trim((string)$gateJob->jvStatus), 'Closed') === 0;
+
+if ($isDisqualified) {
+    $gatePalette = ['border' => '#f1b9b9', 'accent' => '#cf5555', 'bg' => '#fff6f6', 'iconBg' => '#fde4e4', 'iconFg' => '#c34d4d', 'kicker' => '#a83d3d'];
+} elseif ($isQualified) {
+    $gatePalette = ['border' => '#bde3d1', 'accent' => '#2f9e73', 'bg' => 'linear-gradient(110deg, #f3fbf7, #ffffff)', 'iconBg' => '#e3f6ed', 'iconFg' => '#16815f', 'kicker' => '#1d7b5b'];
+} else {
+    $gatePalette = ['border' => '#bcd8f5', 'accent' => '#2878db', 'bg' => 'linear-gradient(110deg, #f3f8ff, #ffffff)', 'iconBg' => '#dfedff', 'iconFg' => '#276ebc', 'kicker' => '#2969aa'];
+}
+
 $recordNo = trim((string)($gateApplicant->record_no ?? $gateApplication->applicant_id ?? ''));
 $applicantName = trim(implode(' ', array_filter([
     trim((string)($gateApplicant->FirstName ?? '')),
@@ -32,10 +51,10 @@ $applicantName = trim(implode(' ', array_filter([
         justify-content: space-between;
         gap: 20px;
         margin: 0 0 20px;
-        border: 1px solid <?= $isDisqualified ? '#f1b9b9' : '#bcd8f5' ?>;
-        border-left: 5px solid <?= $isDisqualified ? '#cf5555' : '#2878db' ?>;
+        border: 1px solid <?= $gatePalette['border'] ?>;
+        border-left: 5px solid <?= $gatePalette['accent'] ?>;
         border-radius: 14px;
-        background: <?= $isDisqualified ? '#fff6f6' : 'linear-gradient(110deg, #f3f8ff, #ffffff)' ?>;
+        background: <?= $gatePalette['bg'] ?>;
         box-shadow: 0 8px 24px rgba(31, 65, 101, .08);
         padding: 18px 20px;
     }
@@ -55,14 +74,14 @@ $applicantName = trim(implode(' ', array_filter([
         align-items: center;
         justify-content: center;
         border-radius: 13px;
-        background: <?= $isDisqualified ? '#fde4e4' : '#dfedff' ?>;
-        color: <?= $isDisqualified ? '#c34d4d' : '#276ebc' ?>;
+        background: <?= $gatePalette['iconBg'] ?>;
+        color: <?= $gatePalette['iconFg'] ?>;
         font-size: 24px;
     }
 
     .eqg-panel-kicker {
         margin-bottom: 3px;
-        color: <?= $isDisqualified ? '#a83d3d' : '#2969aa' ?>;
+        color: <?= $gatePalette['kicker'] ?>;
         font-size: 10px;
         font-weight: 800;
         letter-spacing: .08em;
@@ -109,9 +128,29 @@ $applicantName = trim(implode(' ', array_filter([
         color: #fff;
     }
 
+    .eqg-modal.eqg-modal-danger .modal-header {
+        background: linear-gradient(120deg, #8d2b2b, #cf5555);
+    }
+
     .eqg-modal .modal-title,
     .eqg-modal .close {
         color: #fff;
+    }
+
+    .eqg-revert-warning {
+        margin-bottom: 16px;
+        border: 1px solid #f2d3d3;
+        border-radius: 11px;
+        background: #fff7f7;
+        padding: 13px 15px;
+        color: #7d4141;
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .eqg-revert-warning ul {
+        margin: 8px 0 0;
+        padding-left: 18px;
     }
 
     .eqg-modal .modal-title {
@@ -300,28 +339,44 @@ $applicantName = trim(implode(' ', array_filter([
     }
 </style>
 
+<?php
+if ($isDisqualified) {
+    $gateIcon = 'mdi-account-remove-outline';
+} elseif ($isQualified) {
+    $gateIcon = 'mdi-account-check-outline';
+} else {
+    $gateIcon = 'mdi-clipboard-check-outline';
+}
+?>
 <div class="eqg-panel" id="evaluatorQualificationGate">
     <div class="eqg-panel-main">
-        <span class="eqg-panel-icon"><i class="mdi <?= $isDisqualified ? 'mdi-account-remove-outline' : 'mdi-clipboard-check-outline' ?>"></i></span>
+        <span class="eqg-panel-icon"><i class="mdi <?= $gateIcon ?>"></i></span>
         <div>
             <div class="eqg-panel-kicker">Qualification stage</div>
             <?php if ($isDisqualified): ?>
                 <h4>Applicant marked Disqualified</h4>
                 <p>The document review and disqualification reason were saved. Rating remains unavailable for this application.</p>
+            <?php elseif ($isQualified): ?>
+                <h4>Applicant marked Qualified</h4>
+                <p>This application was endorsed for rating. If the applicant was qualified by mistake, revert the decision to move them back to Disqualified.</p>
             <?php else: ?>
                 <h4>Complete the qualification review before rating</h4>
                 <p>Check the mandatory documents and record a Qualified or Disqualified decision. Qualified applicants will be endorsed for rating automatically.</p>
             <?php endif; ?>
         </div>
     </div>
-    <?php if (!$isDisqualified): ?>
+    <?php if ($isPending): ?>
         <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#evaluatorQualificationModal">
             <i class="mdi mdi-clipboard-check-outline"></i> Qualification remarks
+        </button>
+    <?php elseif ($isQualified && !$gateJobClosed): ?>
+        <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#evaluatorRevertQualificationModal">
+            <i class="mdi mdi-account-remove-outline"></i> Revert to Disqualified
         </button>
     <?php endif; ?>
 </div>
 
-<?php if (!$isDisqualified): ?>
+<?php if ($isPending): ?>
     <div class="modal fade eqg-modal" id="evaluatorQualificationModal" tabindex="-1" role="dialog" aria-labelledby="evaluatorQualificationTitle" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -420,6 +475,60 @@ $applicantName = trim(implode(' ', array_filter([
     </div>
 <?php endif; ?>
 
+<?php if ($isQualified && !$gateJobClosed): ?>
+    <div class="modal fade eqg-modal eqg-modal-danger" id="evaluatorRevertQualificationModal" tabindex="-1" role="dialog" aria-labelledby="evaluatorRevertQualificationTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <form id="evaluatorRevertQualificationForm" action="<?= $gate_h(base_url('EvaluatorAssigned/revert_qualification')) ?>" method="post">
+                    <div class="modal-header">
+                        <div>
+                            <h5 class="modal-title" id="evaluatorRevertQualificationTitle">Revert to Disqualified</h5>
+                            <div class="eqg-modal-subtitle">Use this when the applicant was marked Qualified by mistake.</div>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input type="hidden" name="appID" value="<?= (int)$gateApplication->appID ?>">
+                        <input type="hidden" name="id" value="<?= $gate_h($gateApplicant->id ?? $gateApplication->applicant_id) ?>">
+                        <input type="hidden" name="jobID" value="<?= (int)$gateApplication->jobID ?>">
+                        <input type="hidden" name="job_fy" value="<?= $gate_h($gateApplication->app_year ?? $gateJob->sy ?? date('Y')) ?>">
+                        <input type="hidden" name="record_no" value="<?= $gate_h($recordNo) ?>">
+                        <input type="hidden" name="return_url" value="<?= $gate_h(current_url()) ?>">
+
+                        <div class="eqg-applicant-summary">
+                            <i class="mdi mdi-account-circle-outline"></i>
+                            <div>
+                                <div class="eqg-applicant-name"><?= $gate_h($applicantName !== '' ? $applicantName : 'Applicant #' . $gateApplication->appID) ?></div>
+                                <div class="eqg-applicant-position"><?= $gate_h($gateJob->jobTitle ?? '') ?> · <?= $gate_h($recordNo) ?></div>
+                            </div>
+                        </div>
+
+                        <div class="eqg-revert-warning">
+                            Reverting this decision will:
+                            <ul>
+                                <li>mark the applicant as <strong>Disqualified</strong>;</li>
+                                <li>return the application to the qualification review stage;</li>
+                                <li>make rating unavailable until the disqualification is reverted.</li>
+                            </ul>
+                        </div>
+
+                        <div class="eqg-reason-wrap">
+                            <label for="eqg-revert-reason">Reason for disqualification <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="eqg-revert-reason" name="reason" maxlength="2000" required placeholder="Explain why this applicant is being moved back to Disqualified."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger" id="eqg-revert-submit"><i class="mdi mdi-account-remove-outline mr-1"></i> Revert to Disqualified</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var gate = document.getElementById('evaluatorQualificationGate');
@@ -437,26 +546,45 @@ $applicantName = trim(implode(' ', array_filter([
 
         // Rating controls stay unavailable until the server changes the status
         // to Endorsed for Rating. Document/profile viewing remains available.
-        document.querySelectorAll('[data-target]').forEach(function (control) {
-            var target = String(control.getAttribute('data-target') || '').toLowerCase();
-            if (target.indexOf('rating') !== -1 || /qs$/.test(target)) {
-                control.style.display = 'none';
-                control.setAttribute('aria-hidden', 'true');
-            }
-        });
+        // A Qualified applicant is already endorsed, so the controls stay live -
+        // the panel there only offers the revert-to-DQ action.
+        var ratingLockedByGate = <?= $isQualified ? 'false' : 'true' ?>;
 
-        document.querySelectorAll('form[action]').forEach(function (form) {
-            var action = String(form.getAttribute('action') || '').toLowerCase();
-            if (/pages\/update_[^/]*rate/.test(action)) {
-                form.querySelectorAll('input, select, textarea, button').forEach(function (control) {
-                    control.disabled = true;
-                });
-                form.addEventListener('submit', function (event) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                });
-            }
-        });
+        if (ratingLockedByGate) {
+            document.querySelectorAll('[data-target]').forEach(function (control) {
+                var target = String(control.getAttribute('data-target') || '').toLowerCase();
+                if (target.indexOf('rating') !== -1 || /qs$/.test(target)) {
+                    control.style.display = 'none';
+                    control.setAttribute('aria-hidden', 'true');
+                }
+            });
+
+            document.querySelectorAll('form[action]').forEach(function (form) {
+                var action = String(form.getAttribute('action') || '').toLowerCase();
+                if (/pages\/update_[^/]*rate/.test(action)) {
+                    form.querySelectorAll('input, select, textarea, button').forEach(function (control) {
+                        control.disabled = true;
+                    });
+                    form.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    });
+                }
+            });
+        }
+
+        var revertForm = document.getElementById('evaluatorRevertQualificationForm');
+        if (revertForm) {
+            revertForm.addEventListener('submit', function () {
+                if (!revertForm.checkValidity()) {
+                    return;
+                }
+
+                var revertSubmit = document.getElementById('eqg-revert-submit');
+                revertSubmit.disabled = true;
+                revertSubmit.innerHTML = '<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span> Reverting...';
+            });
+        }
 
         var form = document.getElementById('evaluatorQualificationForm');
         if (!form) {

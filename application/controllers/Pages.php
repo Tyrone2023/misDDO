@@ -7734,8 +7734,24 @@ public function rqa_municipality_print_shsv2()
                 return;
             }
 
-            if (in_array((string)$applicationForEvaluator->appStatus, ['Application Submitted', 'Validated'], true)) {
+            // pending      - review not done yet, rating stays locked
+            // disqualified - decision recorded as DQ, rating stays locked
+            // qualified    - already endorsed; rating is open but the evaluator
+            //                can still revert a mistaken Qualified back to DQ.
+            $dqFlag = (int)($applicationForEvaluator->dq ?? 0);
+            $gateState = null;
+
+            if ($dqFlag === 2) {
+                $gateState = 'disqualified';
+            } elseif (in_array((string)$applicationForEvaluator->appStatus, ['Application Submitted', 'Validated'], true)) {
+                $gateState = 'pending';
+            } elseif ($dqFlag === 1) {
+                $gateState = 'qualified';
+            }
+
+            if ($gateState !== null) {
                 $data['evaluator_qualification_gate'] = [
+                    'state' => $gateState,
                     'application' => $applicationForEvaluator,
                     'applicant' => $applicant,
                     'job' => $jobvacancy,
@@ -7747,6 +7763,10 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->consolidate_rating_single($appIdForRating);
             $this->Reg->auto_mark_rated($appIdForRating);
         }
+
+        // Retention request raised for this application, so it can be granted or
+        // denied straight from the rating page instead of Pages/request_rating.
+        $data['retention_request_panel'] = $this->retention_request_panel($applicant, $jobvacancy, $appIdForRating);
 
 
         // A Closed vacancy can no longer be scored from the rating page (any
@@ -7760,10 +7780,78 @@ public function rqa_municipality_print_shsv2()
         if (!empty($data['evaluator_qualification_gate'])) {
             $this->load->view('pages/_evaluator_qualification_gate', $data);
         }
+        if (!empty($data['retention_request_panel'])) {
+            $this->load->view('pages/_retention_request_panel', $data);
+        }
         if ($ratingLocked) {
             $this->load->view('pages/_rating_locked');
         }
         $this->load->view('templates/footer');
+    }
+
+    /**
+     * Retention request attached to the application being rated, for the panel
+     * rendered under the qualification stage on the rating page. Returns null
+     * when there is no request or the current role has no business seeing it.
+     *
+     * Pending requests are actionable (grant / deny) from the panel; granted and
+     * denied ones are shown read-only so the decision is visible where the
+     * rating happens.
+     */
+    private function retention_request_panel($applicant, $jobvacancy, $appId)
+    {
+        $appId = (int) $appId;
+
+        if ($appId <= 0 || empty($jobvacancy)) {
+            return null;
+        }
+
+        // Same audience as the Retained Rating Request list, plus the evaluator
+        // assigned to the application - ma() already rejected unassigned ones.
+        $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'Evaluator', 'rater', 'raters'];
+
+        if (!in_array((string) $this->session->userdata('position'), $allowed, true)) {
+            return null;
+        }
+
+        $request = $this->db
+            ->from('hris_rating_request')
+            ->where('app_id', $appId)
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get()
+            ->row();
+
+        if (empty($request)) {
+            return null;
+        }
+
+        $jobClosed = isset($jobvacancy->jvStatus) && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Closed') === 0;
+
+        // p_type drives which endpoint handles the grant: teaching positions copy
+        // from hris_applications_rating, everything else from hris_rating_none.
+        $pType = (int) (!empty($request->p_type) ? $request->p_type : ($jobvacancy->position ?? 0));
+        $isPending = (int) $request->stat === 0;
+
+        $applications = [];
+
+        if ($isPending && !$jobClosed) {
+            $applications = ($pType === 1)
+                ? $this->Common->one_cond('hris_applications', 'applicant_id', $request->applicant_id)
+                : $this->Hiring_model->get_applicantion($request->applicant_id, $jobvacancy->jobID);
+        }
+
+        return [
+            'request' => $request,
+            'applicant' => $applicant,
+            'job' => $jobvacancy,
+            'p_type' => $pType,
+            'app_id' => $appId,
+            'record_no' => trim((string) ($applicant->record_no ?? $applicant->IDNumber ?? $request->applicant_id)),
+            'applications' => $applications,
+            'can_act' => $isPending && !$jobClosed,
+            'job_closed' => $jobClosed,
+        ];
     }
 
     public function ma_staff($param = null)
@@ -12605,6 +12693,7 @@ public function rqa_municipality_print_shsv2()
         //$data['data'] = $this->Common->two_cond('hris_rating_request','fy', $fy, 'stat',0);
         $data['data'] = $this->Hiring_model->get_granted_rating_request($fy,0);
         $data['granted'] = $this->Hiring_model->get_granted_rating_request($fy,1);
+        $data['denied'] = $this->Hiring_model->get_granted_rating_request($fy,2);
 
 
         $this->load->view('templates/head');
@@ -12715,7 +12804,10 @@ public function rqa_municipality_print_shsv2()
         $recordNo    = trim($this->input->post('record_no'));
         $rType       = trim($this->input->post('r_type'));
 
-        if ($rType == 1) {
+        // The applicant chose the scope when requesting retention.
+        $scope = $this->retention_scope($rType);
+
+        if ($scope === 1) {
             $this->Reg->copy_rating($recordNo, $sourceAppId);
             $this->Reg->application_change_stat('Rated');
         } else {
@@ -12725,10 +12817,88 @@ public function rqa_municipality_print_shsv2()
 
         $this->Reg->copy_dq($sourceAppId, $targetAppId, $jobID);
 
-        $this->Reg->update_request_stat();
+        $this->Reg->update_request_stat($scope);
         $this->session->set_flashdata('success', 'Saved successfully');
-        redirect(base_url() . 'Pages/request_rating');
+        redirect($this->retention_return_url());
     }
+}
+
+/**
+ * Retention scope the applicant asked for when requesting retention:
+ * 1 = all criteria, 2 = partial (Demo & TR for teaching positions,
+ * Interview & Written Examination for non-teaching ones).
+ */
+private function retention_scope($requestedType)
+{
+    return ((int) $requestedType === 2) ? 2 : 1;
+}
+
+/**
+ * Where to send the reviewer after granting or denying retention. The rating
+ * page posts its own URL so the decision returns there; anything that is not a
+ * plain URL inside this installation falls back to the request list.
+ */
+private function retention_return_url()
+{
+    $fallback = base_url() . 'Pages/request_rating';
+    $url = trim((string) $this->input->post('return_url'));
+
+    if ($url === '' || preg_match('/[\r\n]/', $url) || strpos($url, base_url()) !== 0) {
+        return $fallback;
+    }
+
+    return $url;
+}
+
+/**
+ * Deny a retention request with a reason. The reason is shown to the applicant
+ * on Pages/request_rating_applicant.
+ */
+public function request_rating_deny()
+{
+    if (strtoupper((string) $this->input->server('REQUEST_METHOD')) !== 'POST') {
+        show_error('Method Not Allowed', 405);
+        return;
+    }
+
+    if (empty($this->session->id)) {
+        show_error('Forbidden', 403);
+        return;
+    }
+
+    $requestId = (int) $this->input->post('id');
+    $reason    = trim((string) $this->input->post('deny_reason'));
+    $returnUrl = $this->retention_return_url();
+
+    $request = $requestId > 0
+        ? $this->Common->one_cond_row('hris_rating_request', 'id', $requestId)
+        : null;
+
+    if (empty($request)) {
+        show_404();
+        return;
+    }
+
+    if ((int) $request->stat !== 0) {
+        $this->session->set_flashdata('danger', 'This retention request has already been acted on.');
+        redirect($returnUrl);
+        return;
+    }
+
+    if ($reason === '') {
+        $this->session->set_flashdata('danger', 'A reason is required when denying a retention request.');
+        redirect($returnUrl);
+        return;
+    }
+
+    if (!$this->Reg->deny_request_stat($requestId, $reason)) {
+        $this->session->set_flashdata('danger', 'The retention request could not be denied. Please try again.');
+        redirect($returnUrl);
+        return;
+    }
+
+    $this->session->set_flashdata('success', 'Retention request denied. The applicant can now see the reason.');
+    redirect($returnUrl);
 }
 
 public function request_rating_granted_none()
@@ -12770,16 +12940,21 @@ public function request_rating_granted_none()
         $recordNo    = trim($this->input->post('record_no'));
         $rType       = trim($this->input->post('r_type'));
 
-        
-        $this->Hiring_model->copy_rating($recordNo, $sourceAppId);
-        $this->Reg->application_change_stat('Rated');
-        
+        $scope = $this->retention_scope($rType);
+
+        if ($scope === 1) {
+            $this->Hiring_model->copy_rating($recordNo, $sourceAppId);
+            $this->Reg->application_change_stat('Rated');
+        } else {
+            $this->Hiring_model->copy_limited_rating($recordNo, $sourceAppId);
+            $this->Reg->application_change_stat('Endorsed for Rating');
+        }
 
         $this->Reg->copy_dq($sourceAppId, $targetAppId, $jobID);
 
-        $this->Reg->update_request_stat();
+        $this->Reg->update_request_stat($scope);
         $this->session->set_flashdata('success', 'Saved successfully');
-        redirect(base_url() . 'Pages/request_rating');
+        redirect($this->retention_return_url());
     }
 }
 

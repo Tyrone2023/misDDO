@@ -508,6 +508,157 @@ class EvaluatorAssigned extends CI_Controller
 
 
     /**
+     * Revert a mistaken Qualified decision back to Disqualified: flip dq to 2,
+     * send the application back to the qualification review stage and record the
+     * reason on the existing hris_app_dq row.  Only the assigned evaluator may
+     * perform this action, and only while the vacancy is still open.
+     */
+    public function revert_qualification()
+    {
+        $this->guard();
+        date_default_timezone_set('Asia/Manila');
+
+        $returnUrl = $this->safeQualificationReturnUrl();
+
+        $position = (string)$this->session->userdata('position');
+        if (!in_array($position, ['Evaluator', 'rater', 'raters'], true)) {
+            show_error('Only an assigned evaluator may revert this qualification.', 403);
+            return;
+        }
+
+        if (strtoupper((string)$this->input->server('REQUEST_METHOD')) !== 'POST') {
+            show_error('Method Not Allowed', 405);
+            return;
+        }
+
+        $appID = (int)$this->input->post('appID');
+        if ($appID <= 0 || !$this->isAssignedToCurrentEvaluator($appID)) {
+            show_error('This application is not assigned to your evaluator account.', 403);
+            return;
+        }
+
+        $application = $this->db
+            ->where('appID', $appID)
+            ->get('hris_applications')
+            ->row();
+
+        if (!$application) {
+            show_error('Application not found.', 404);
+            return;
+        }
+
+        if ((int)$application->dq !== 1) {
+            $this->session->set_flashdata('danger', 'This applicant is not currently marked Qualified.');
+            redirect($returnUrl);
+            return;
+        }
+
+        $reason = trim((string)$this->input->post('reason'));
+        if ($reason === '') {
+            $this->session->set_flashdata('danger', 'A reason is required when reverting a Qualified applicant to Disqualified.');
+            redirect($returnUrl);
+            return;
+        }
+
+        $job = $this->db
+            ->where('jobID', (int)$application->jobID)
+            ->get('hris_jobvacancy')
+            ->row();
+
+        if ($job && isset($job->jvStatus) && strcasecmp(trim((string)$job->jvStatus), 'Closed') === 0) {
+            $this->session->set_flashdata('danger', 'This vacancy is closed. Qualification decisions can no longer be changed.');
+            redirect($returnUrl);
+            return;
+        }
+
+        $applicantIdForTracking = (int)$this->input->post('id');
+        if ($applicantIdForTracking <= 0 && is_numeric($application->applicant_id)) {
+            $applicantIdForTracking = (int)$application->applicant_id;
+        }
+
+        $this->db->trans_begin();
+
+        $dqSet = $this->db
+            ->where('appID', $appID)
+            ->update('hris_applications', [
+                'dq'        => 2,
+                'appStatus' => 'Application Submitted',
+            ]);
+
+        // The Qualified decision already left a hris_app_dq row; rewrite that one
+        // so the disqualified list reads back a single, current reason.
+        $existingDq = $this->db
+            ->where('appID', $appID)
+            ->order_by('id', 'DESC')
+            ->get('hris_app_dq')
+            ->row();
+
+        $dqRecord = [
+            'remarks' => 2,
+            'reason'  => $reason,
+            'vdate'   => date('Y-m-d'),
+            'res'     => (int)$this->session->userdata('id'),
+        ];
+
+        if ($existingDq) {
+            $dqSaved = $this->db->where('id', $existingDq->id)->update('hris_app_dq', $dqRecord);
+        } else {
+            $dqSaved = $this->db->insert('hris_app_dq', $dqRecord + [
+                'jobID'  => (int)$application->jobID,
+                'appID'  => $appID,
+                'apID'   => $applicantIdForTracking,
+                'li'     => 0,
+                'da_pds' => 0,
+                'prc'    => 0,
+                'trbd'   => 0,
+                'omni'   => 0,
+                'local'  => 0,
+                'educ'   => 0,
+                'exp'    => 0,
+                'tr'     => 0,
+                'eli'    => 0,
+                'fy'     => (int)($this->input->post('job_fy') ?: date('Y')),
+            ]);
+        }
+
+        $trackingSaved = $this->db->insert('hris_applications_track', [
+            'jobID'         => (int)$application->jobID,
+            'empEmail'      => (string)($application->empEmail ?? ''),
+            'dateSubmitted' => date('Y-m-d'),
+            'appStatus'     => 'Qualification reverted. Applicant marked Disqualified.',
+            'note'          => '',
+            'timeSubmitted' => date('h:i:s a'),
+            'applicant_id'  => $applicantIdForTracking,
+            'res'           => (string)$this->session->userdata('username'),
+            'nstat'         => 0,
+            'app_id'        => $appID,
+        ]);
+
+        if (!$dqSet || !$dqSaved || !$trackingSaved || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            $this->session->set_flashdata('danger', 'The qualification could not be reverted. Please try again.');
+            redirect($returnUrl);
+            return;
+        }
+
+        $this->db->trans_commit();
+
+        $this->Audit->log('disqualify', [
+            'entity_type'  => 'application',
+            'entity_id'    => $appID,
+            'app_id'       => $appID,
+            'applicant_id' => $applicantIdForTracking,
+            'job_id'       => (int)$application->jobID,
+            'field'        => 'remarks',
+            'description'  => 'Reverted a Qualified decision back to Disqualified. Reason: ' . $reason,
+        ]);
+
+        $this->session->set_flashdata('success', 'Applicant reverted to Disqualified. They now appear in your Disqualified Applicants list.');
+
+        redirect($returnUrl);
+    }
+
+    /**
      * Disqualified applicants assigned to the current evaluator/rater.
      * Renders a dedicated list with a per-row "Reason" button that opens a
      * modal showing the disqualification reason recorded in hris_app_dq.
@@ -537,6 +688,96 @@ class EvaluatorAssigned extends CI_Controller
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
         $this->load->view('templates/footer');
+    }
+
+    /**
+     * Revert a disqualification: set dq back to 0, restore the application
+     * status so the applicant reappears on the evaluator's main dashboard,
+     * and remove the hris_app_dq record.  Only the assigned evaluator may
+     * perform this action.
+     */
+    public function revert_disqualification()
+    {
+        $this->guard();
+        date_default_timezone_set('Asia/Manila');
+
+        if (strtoupper((string)$this->input->server('REQUEST_METHOD')) !== 'POST') {
+            show_error('Method Not Allowed', 405);
+            return;
+        }
+
+        $appID = (int)$this->input->post('appID');
+        if ($appID <= 0 || !$this->isAssignedToCurrentEvaluator($appID)) {
+            show_error('This application is not assigned to your evaluator account.', 403);
+            return;
+        }
+
+        $application = $this->db
+            ->where('appID', $appID)
+            ->get('hris_applications')
+            ->row();
+
+        if (!$application) {
+            show_error('Application not found.', 404);
+            return;
+        }
+
+        if ((int)$application->dq !== 2) {
+            $this->session->set_flashdata('danger', 'This applicant is not currently disqualified.');
+            redirect(base_url('EvaluatorAssigned/disqualified'));
+            return;
+        }
+
+        $job = $this->db
+            ->where('jobID', (int)$application->jobID)
+            ->get('hris_jobvacancy')
+            ->row();
+
+        if ($job && isset($job->jvStatus) && strcasecmp(trim((string)$job->jvStatus), 'Closed') === 0) {
+            $this->session->set_flashdata('danger', 'This vacancy is closed. Disqualification can no longer be reverted.');
+            redirect(base_url('EvaluatorAssigned/disqualified'));
+            return;
+        }
+
+        $applicantIdForTracking = (int)$application->applicant_id;
+
+        $this->db->trans_begin();
+
+        $dqReset = $this->db
+            ->where('appID', $appID)
+            ->update('hris_applications', [
+                'dq'        => 0,
+                'appStatus' => 'Application Submitted',
+            ]);
+
+        $dqRowDeleted = $this->db
+            ->where('appID', $appID)
+            ->delete('hris_app_dq');
+
+        $trackingSaved = $this->db->insert('hris_applications_track', [
+            'jobID'        => (int)$application->jobID,
+            'empEmail'     => (string)($application->empEmail ?? ''),
+            'dateSubmitted' => date('Y-m-d'),
+            'appStatus'    => 'Disqualification reverted. Application returned to qualification review.',
+            'note'         => '',
+            'timeSubmitted' => date('h:i:s a'),
+            'applicant_id' => $applicantIdForTracking,
+            'res'          => (string)$this->session->userdata('username'),
+            'nstat'        => 0,
+            'app_id'       => $appID,
+        ]);
+
+        if (!$dqReset || !$dqRowDeleted || !$trackingSaved || $this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            $this->session->set_flashdata('danger', 'The disqualification could not be reverted. Please try again.');
+            redirect(base_url('EvaluatorAssigned/disqualified'));
+            return;
+        }
+
+        $this->db->trans_commit();
+        $this->session->set_flashdata('success', 'Applicant reverted successfully. They are now back in your Applicants to Evaluate list.');
+
+        redirect(base_url('EvaluatorAssigned/disqualified'));
     }
 
     public function check_updates()

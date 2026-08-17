@@ -14,8 +14,22 @@
                                                             8 => '- IPED Junior High School',
                                                             9 => '- IPED Senior High School',
                                                             10 => '- SNED',
-                                                            
+
                                                         ];
+
+                                                        // What the applicant asked to retain. r_type 2 means Demo & TR for
+                                                        // teaching positions and Interview & Written Examination for the rest.
+                                                        $retentionScopeLabel = function ($scope, $pType) {
+                                                            if ((int) $scope === 1) {
+                                                                return "<span class='badge badge-warning'>All scores</span>";
+                                                            }
+                                                            if ((int) $scope !== 2) {
+                                                                return "<span class='badge badge-light'>Not recorded</span>";
+                                                            }
+                                                            return "<span class='badge badge-purple'>"
+                                                                . (((int) $pType === 1) ? 'Demo &amp; TR only' : 'Interview &amp; Written only')
+                                                                . "</span>";
+                                                        };
                                                     ?>
 
             <div class="content-page">
@@ -108,9 +122,9 @@
                                                     <td><?= $row->jobTitle; ?> <?=  $jobTypes[$row->job_type] ?? ''; ?></td>    
                                                     <td><?= $row->rdate; ?></td>
                                                     <td><?= $row->sy; ?></td>
-                                                    <td><?php if($row->r_type == 1){echo "<span class='badge badge-warning'>Retention of Rating";}else{echo "<span class='badge badge-purple'>Update Credentials";} ?></span></td>
-                                                    <td>
                                                     <?php $pType = (int)($row->p_type ?? $row->job_position ?? 1); ?>
+                                                    <td><?= $retentionScopeLabel($row->r_type, $pType); ?></td>
+                                                    <td>
                                                     <?php if($pType == 1){?>
                                                     <a href="<?= base_url(); ?>Pages/request_rating_granted/<?= $row->rid; ?>/<?= $row->job_id; ?>/<?= $row->applicant_id; ?>/<?= $row->code; ?>/<?= $row->app_id; ?>/<?= $row->r_type; ?>" class="btn btn-sm btn-success">Retain</a>
                                                     <?php }else{ ?>
@@ -147,6 +161,7 @@
                                                 <th>Date Submitted</th>
                                                 <!-- <th>Status</th> -->
                                                 <th>Request Type</th>
+                                                <th>Retained</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -184,10 +199,12 @@
                                                     <td><?= $row->jobTitle; ?> <?=  $jobTypes[$row->job_type] ?? ''; ?></td>    
                                                     <td><?= $row->rdate; ?></td>
                                                     <!-- <td><a href="<?= base_url(); ?>Pages/special_change_stat/<?= $row->r_type; ?>/<?= $app->appID; ?>">change</a> <?php if ($app->appStatus == 'Application Submitted'){echo $app->appStatus; } ?> </td> -->
+                                                    <?php $pType = (int)($row->p_type ?? $row->job_position ?? 1); ?>
                                                     <td>
-                                                        <?php if($row->r_type == 1){echo "<span class='badge badge-warning'>Retention of Rating";}else{echo "<span class='badge badge-purple'>Update Credentials";} ?></span>
+                                                        <?= $retentionScopeLabel($row->r_type, $pType); ?>
                                                         <!-- <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_delete/<?= $row->id; ?>" class="btn btn-sm btn-danger">Delete</a> -->
                                                     </td>
+                                                    <td><?= $retentionScopeLabel($row->granted_scope ?? 0, $pType); ?></td>
                                                     
                                                 </tr>
 										    <?php	}  ?>
@@ -212,6 +229,48 @@
 
                         
 
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body table-responsive">
+                                    <h4 class="header-title mb-4">List of denied requests</h4><br />
+                                        <table id="datatable3" class="table table-bordered dt-responsive nowrap" style="border-collapse: collapse; border-spacing: 0; width: 100%;">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Applicant No.</th>
+                                                <th>Last Name</th>
+                                                <th>Middle Name</th>
+                                                <th>First Name</th>
+                                                <th>Position Applied</th>
+                                                <th>Date Submitted</th>
+                                                <th>Date Denied</th>
+                                                <th>Reason</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php $d=1; foreach(($denied ?? []) as $row){ ?>
+                                                <tr>
+                                                    <td><?= $d++; ?></td>
+                                                    <td><a target="_blank" href="<?= base_url(); ?>Pages/<?= $row->st; ?>/<?= $row->id; ?>/<?= $row->job_id; ?>/<?= $row->pre_school; ?>"><?= strtoupper($row->code); ?></a></td>
+                                                    <td><?= $row->LastName; ?></td>
+                                                    <td><?= $row->MiddleName; ?></td>
+                                                    <td><?= $row->FirstName; ?></td>
+                                                    <td><?= $row->jobTitle; ?> <?=  $jobTypes[$row->job_type] ?? ''; ?></td>
+                                                    <td><?= $row->rdate; ?></td>
+                                                    <td><?= $row->adate; ?></td>
+                                                    <td style="white-space: normal; min-width: 260px;"><?= nl2br(html_escape((string) $row->deny_reason)); ?></td>
+                                                </tr>
+                                            <?php } ?>
+                                        </tbody>
+
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- end row -->
 
                     </div>
                     <!-- end container-fluid -->

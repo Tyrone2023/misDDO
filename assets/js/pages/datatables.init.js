@@ -1,6 +1,7 @@
 $(document).ready(function(){
     $("#datatable").DataTable();
     $("#datatable2").DataTable();
+    $("#datatable3").DataTable();
     $(".datatable2").DataTable();
     var a=$("#datatable-buttons").DataTable({lengthChange:!1,buttons:["copy","excel","pdf"]});
     $("#key-datatable").DataTable({keys:!0}),

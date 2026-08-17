@@ -8,8 +8,24 @@
                                                             2 => '- Secondary',
                                                             3 => '- Junior High School',
                                                             4 => '- Senior High School'
-                                                            
+
                                                         ];
+
+                                                        // What the applicant asked to retain. r_type 2 means Demo & TR for
+                                                        // teaching positions and Interview & Written Examination for the rest.
+                                                        $retentionScopeLabel = function ($scope, $pType) {
+                                                            if ((int) $scope === 1) {
+                                                                return "<span class='badge badge-warning'>Retention of Ratings (All Scores)</span>";
+                                                            }
+                                                            if ((int) $scope !== 2) {
+                                                                return '<span class="text-muted">&mdash;</span>';
+                                                            }
+                                                            return "<span class='badge badge-purple'>"
+                                                                . (((int) $pType === 1)
+                                                                    ? 'Retention of Demo and TR Ratings'
+                                                                    : 'Retention of Interview and Written Examination Ratings')
+                                                                . "</span>";
+                                                        };
                                                     ?>
 
             <div class="content-page">
@@ -69,6 +85,7 @@
                                                 <th>Date Submitted</th>
                                                 <th>Request Type</th>
                                                 <th>Request Status</th>
+                                                <th>Retained</th>
                                                 <th style="text-align:center">Action</th>
                                             </tr>
                                         </thead>
@@ -103,10 +120,42 @@
                                                     <td><?= $a->FirstName; ?></td>
                                                     <td><?= $job->jobTitle; ?> <?=  $jobTypes[$job->job_type] ?? ''; ?></td>    
                                                     <td><?= $row->rdate; ?> </td>
-                                                    <td><?php if($row->r_type == 1){echo "<span class='badge badge-warning'>Retention of Ratings (All Criteria)";}else{echo "<span class='badge badge-purple'>Retention of Demo and TR Ratings";} ?></span></td>
-                                                    <td><?php if($row->stat == 0){echo "<span class='badge badge-warning'>Under Review";}else{echo "<span class='badge badge-success'>Confirmed";} ?></td>
+                                                    <?php $pType = (int)($row->p_type ?? 1); ?>
+                                                    <td><?= $retentionScopeLabel($row->r_type, $pType); ?></td>
                                                     <td>
-                                                    <?php if($row->stat == 0){ ?>
+                                                        <?php
+                                                            $requestStat = (int) $row->stat;
+                                                            $denyReason  = trim((string)($row->deny_reason ?? ''));
+                                                            if($requestStat === 0){
+                                                                echo "<span class='badge badge-warning'>Under Review</span>";
+                                                            }elseif($requestStat === 2){
+                                                                echo "<span class='badge badge-danger'>Denied</span>";
+                                                            }else{
+                                                                echo "<span class='badge badge-success'>Confirmed</span>";
+                                                            }
+                                                        ?>
+                                                        <?php if($requestStat === 2 && $denyReason !== ''){ ?>
+                                                            <button type="button"
+                                                                    class="btn btn-sm btn-outline-danger ml-1 rrDenyReasonBtn"
+                                                                    data-toggle="modal"
+                                                                    data-target="#rrDenyReasonModal"
+                                                                    data-reason="<?= html_escape($denyReason); ?>"
+                                                                    data-position="<?= html_escape($job->jobTitle . ' ' . ($jobTypes[$job->job_type] ?? '')); ?>"
+                                                                    data-date="<?= html_escape((string)($row->adate ?? '')); ?>">
+                                                                Reason
+                                                            </button>
+                                                        <?php } ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php
+                                                            // Only meaningful once the request has been granted.
+                                                            echo ($requestStat === 1)
+                                                                ? $retentionScopeLabel($row->granted_scope ?? 0, $pType)
+                                                                : '<span class="text-muted">&mdash;</span>';
+                                                        ?>
+                                                    </td>
+                                                    <td>
+                                                    <?php if($requestStat === 0){ ?>
                                                     <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_delete/<?= $row->id; ?>" class="btn btn-sm btn-danger">Delete</a>
                                                     <?php } ?>
                                                 </td>
@@ -121,7 +170,37 @@
                         </div>
                         <!-- end row -->
 
-                    
+                        <!-- Denial reason -->
+                        <div class="modal fade" id="rrDenyReasonModal" tabindex="-1" role="dialog" aria-labelledby="rrDenyReasonModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger">
+                                        <h5 class="modal-title text-white" id="rrDenyReasonModalLabel">
+                                            <i class="mdi mdi-close-circle-outline mr-1"></i>Retention Request Denied
+                                        </h5>
+                                        <button type="button" class="close text-white" data-dismiss="modal" aria-hidden="true">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Position Applied</label>
+                                            <p id="rrDenyPosition" class="form-control-plaintext mb-2"></p>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="font-weight-bold">Date Denied</label>
+                                            <p id="rrDenyDate" class="form-control-plaintext mb-2"></p>
+                                        </div>
+                                        <div class="form-group mb-0">
+                                            <label class="font-weight-bold">Reason</label>
+                                            <div id="rrDenyReasonText" class="form-control bg-light" style="min-height:80px; white-space:pre-wrap;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-light waves-effect" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /.modal -->
 
 
                     </div>
@@ -134,6 +213,13 @@
                 $(document).on("click", ".passingID", function () {
                     $(this).attr('data-id');
                 $(".modal-body").val( ids );
+                });
+
+                $(document).on("click", ".rrDenyReasonBtn", function () {
+                    var $btn = $(this);
+                    $("#rrDenyPosition").text($btn.data("position") || "—");
+                    $("#rrDenyDate").text($btn.data("date") || "—");
+                    $("#rrDenyReasonText").text($btn.data("reason") || "No reason was recorded.");
                 });
             </script>
 

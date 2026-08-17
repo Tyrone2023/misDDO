@@ -2667,14 +2667,45 @@ public function application_change_stat_by_job_id($status){
 
 
 
-public function update_request_stat(){
+/**
+ * Mark a retention request as granted. $grantedScope records what was actually
+ * retained: 1 = all criteria, 2 = partial (Demo & TR for teaching positions,
+ * Interview & Written Examination for non-teaching ones).
+ */
+public function update_request_stat($grantedScope = null){
+
+  date_default_timezone_set('Asia/Manila');
 
   $data = array(
-    'stat' => 1, 
-    'res' => $this->session->id
+    'stat' => 1,
+    'res' => $this->session->id,
+    'adate' => date('Y-m-d')
   );
 
+  if ($grantedScope !== null) {
+    $data['granted_scope'] = (int) $grantedScope;
+  }
+
   $this->db->where('id', $this->input->post('id'));
+  return $this->db->update('hris_rating_request', $data);
+}
+
+/**
+ * Deny a retention request. The reason is surfaced to the applicant on
+ * Pages/request_rating_applicant.
+ */
+public function deny_request_stat($id, $reason){
+
+  date_default_timezone_set('Asia/Manila');
+
+  $data = array(
+    'stat' => 2,
+    'deny_reason' => $reason,
+    'res' => $this->session->id,
+    'adate' => date('Y-m-d')
+  );
+
+  $this->db->where('id', (int) $id);
   return $this->db->update('hris_rating_request', $data);
 }
 

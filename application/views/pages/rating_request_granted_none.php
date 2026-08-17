@@ -20,6 +20,19 @@
 
     // Applications of the applicant
     $application = $this->Hiring_model->get_applicantion($this->uri->segment(5),$job->jobID);
+
+    // The applicant picks the scope when requesting retention, so the reviewer
+    // only confirms it here: 1 = all scores, 2 = Interview & Written only.
+    $requestedType = (int) trim($this->uri->segment(8));
+    $requestId     = (int) trim($this->uri->segment(3));
+
+    if ($requestedType === 2) {
+        $requestedScopeLabel = 'Interview and Written Examination ratings only';
+        $requestedScopeHelp  = 'Copies the Interview and Written Examination scores only. Every other criterion still has to be rated.';
+    } else {
+        $requestedScopeLabel = 'All scores';
+        $requestedScopeHelp  = 'Copies every criterion (Education, Training, Experience, Performance, OA, AE, ALD, Skills, Interview and Written Examination) and marks the application Rated.';
+    }
 ?>
 
 <!-- ============================================================== -->
@@ -126,9 +139,27 @@
                                         </div>
 
                                         <div class="form-group row">
+                                            <label class="col-lg-2 col-form-label">Retain</label>
+                                            <div class="col-lg-10">
+                                                <input
+                                                    type="text"
+                                                    readonly
+                                                    class="form-control"
+                                                    value="<?= $requestedScopeLabel; ?>"
+                                                >
+                                                <small class="text-muted">
+                                                    <?= $requestedScopeHelp; ?>
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row">
                                             <label class="col-lg-2 col-form-label"></label>
                                             <div class="col-lg-10">
                                                 <input type="submit" value="Submit" class="btn btn-primary waves-effect waves-light mr-1">
+                                                <button type="button" class="btn btn-danger waves-effect waves-light mr-1" data-toggle="modal" data-target="#denyRetentionModal">
+                                                    Deny Retention
+                                                </button>
                                                 <a href="<?= base_url('Pages/request_rating'); ?>" class="btn btn-secondary waves-effect waves-light">
                                                     Cancel
                                                 </a>
@@ -144,6 +175,8 @@
                 </div>
             </div>
             <!-- end row -->
+
+            <?php $this->load->view('pages/_deny_retention_modal', ['requestId' => $requestId]); ?>
 
         </div>
         <!-- end container-fluid -->
