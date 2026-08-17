@@ -82,6 +82,66 @@ $rrpApplicantName = trim(implode(' ', array_filter([
 })));
 
 $rrpApplications = $rrp['applications'] ?? [];
+$rrpSelectable   = (int)($rrp['selectable'] ?? 0);
+$rrpRetained     = $rrp['retained'] ?? null;
+
+// Scores kept by another evaluator never reach the rating form of whoever holds
+// the application, so the panel offers to release them.
+$rrpNeedsRelease = $rrpIsGranted
+    && !empty($rrpRetained)
+    && (int)($rrpRetained['claimed_by'] ?? 0) > 0
+    && empty($rrpRetained['claimed_by_me']);
+
+// Same list rp.php uses - the shorter 1-10 map in the older views leaves the
+// SHS tracks and SPIMS levels unlabelled.
+$rrpJobTypes = [
+    1  => 'Elementary',
+    2  => 'Secondary',
+    3  => 'Junior High School',
+    4  => 'Senior High School',
+    5  => 'Kindergarten',
+    6  => 'IPED Elementary',
+    7  => 'IPED Secondary',
+    8  => 'IPED Junior High School',
+    9  => 'IPED Senior High School',
+    10 => 'SNED',
+    11 => 'SHS Academic and Core Subjects',
+    12 => 'SHS Arts and Design Track',
+    13 => 'SHS Sports Track',
+    14 => 'SHS Technical-Vocational (TVL) Track',
+    15 => 'Elementary - SPIMS',
+    16 => 'Junior High School - SPIMS',
+    17 => 'DOST - (RA 7687)',
+    18 => 'DOST - (RA 10612)',
+    19 => '(SST I)',
+    20 => 'FOR TESTING PURPOSES (DO NOT APPLY)',
+];
+
+// Dates are stored as plain strings and older rows carry zero dates, so only
+// something that really parses gets reformatted.
+$rrpDate = static function ($value) {
+    $value = trim((string)$value);
+
+    if ($value === '' || strpos($value, '0000-00-00') === 0) {
+        return '';
+    }
+
+    $stamp = strtotime($value);
+
+    return $stamp ? date('M j, Y', $stamp) : $value;
+};
+
+// 0.00001 is the "not rated yet" placeholder the rating forms and copy routines
+// write, so it must not be shown as a score of 0.00.
+$rrpPoints = static function ($value) {
+    $value = (float)$value;
+
+    if ($value > 0 && $value < 0.001) {
+        return '--';
+    }
+
+    return number_format($value, 2);
+};
 
 if ($rrpIsGranted) {
     $rrpPalette = ['border' => '#bde3d1', 'accent' => '#2f9e73', 'bg' => 'linear-gradient(110deg, #f3fbf7, #ffffff)', 'iconBg' => '#e3f6ed', 'iconFg' => '#16815f', 'kicker' => '#1d7b5b'];
@@ -173,6 +233,55 @@ if ($rrpIsGranted) {
         border-radius: 9px;
         padding: 9px 14px;
         font-weight: 700;
+    }
+
+    .rrp-retained {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .rrp-retained-item {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+        border: 1px solid #d7e9e0;
+        border-radius: 8px;
+        background: #fff;
+        padding: 4px 9px;
+    }
+
+    .rrp-retained-item em {
+        color: #7b8a99;
+        font-size: 10px;
+        font-style: normal;
+        font-weight: 700;
+        letter-spacing: .03em;
+        text-transform: uppercase;
+    }
+
+    .rrp-retained-item strong {
+        color: #26414f;
+        font-size: 12px;
+    }
+
+    .rrp-retained-total {
+        border-color: #2f9e73;
+        background: #eefaf4;
+    }
+
+    .rrp-retained-total strong {
+        color: #16815f;
+    }
+
+    .rrp-retained-note {
+        margin-top: 8px !important;
+        font-size: 11px !important;
+    }
+
+    .rrp-panel-actions form {
+        margin: 0;
     }
 
     .rrp-modal .modal-content {
@@ -274,6 +383,175 @@ if ($rrpIsGranted) {
         font-weight: 700;
     }
 
+    .rrp-empty {
+        border: 1px solid #f2d3d3;
+        border-radius: 10px;
+        background: #fff7f7;
+        padding: 12px 14px;
+        color: #7d4141;
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .rrp-source-list {
+        display: grid;
+        gap: 10px;
+        max-height: 340px;
+        overflow-y: auto;
+        padding-right: 3px;
+    }
+
+    .rrp-empty + .rrp-source-list {
+        margin-top: 12px;
+    }
+
+    .rrp-source {
+        position: relative;
+    }
+
+    .rrp-source input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .rrp-source label {
+        display: flex;
+        width: 100%;
+        cursor: pointer;
+        align-items: flex-start;
+        gap: 11px;
+        margin: 0;
+        border: 2px solid #e3e9ef;
+        border-radius: 11px;
+        background: #fff;
+        padding: 12px 13px;
+        transition: .16s ease;
+    }
+
+    .rrp-source label:hover {
+        border-color: #cfe0d8;
+    }
+
+    .rrp-source input:checked + label {
+        border-color: #31a67e;
+        background: #f5fcf9;
+        box-shadow: 0 0 0 3px rgba(47, 158, 115, .1);
+    }
+
+    .rrp-source-tick {
+        display: inline-flex;
+        width: 22px;
+        height: 22px;
+        flex: 0 0 22px;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1px;
+        border: 2px solid #d6dee6;
+        border-radius: 50%;
+        background: #fff;
+        color: transparent;
+        font-size: 13px;
+    }
+
+    .rrp-source input:checked + label .rrp-source-tick {
+        border-color: #31a67e;
+        background: #31a67e;
+        color: #fff;
+    }
+
+    .rrp-source-body {
+        display: block;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .rrp-source-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .rrp-source-title {
+        color: #2c4256;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .rrp-source-title em {
+        color: #7b8a99;
+        font-size: 11px;
+        font-style: normal;
+        font-weight: 600;
+    }
+
+    .rrp-badge {
+        flex: 0 0 auto;
+        border-radius: 20px;
+        padding: 3px 9px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .02em;
+        white-space: nowrap;
+    }
+
+    .rrp-badge-ok { background: #e3f6ed; color: #16815f; }
+    .rrp-badge-none { background: #f1f3f5; color: #8a97a3; }
+
+    .rrp-source-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 14px;
+        margin-top: 6px;
+        color: #7b8a99;
+        font-size: 11px;
+    }
+
+    .rrp-source-meta i {
+        margin-right: 3px;
+        opacity: .75;
+    }
+
+    .rrp-source-scores {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 3px 12px;
+        margin-top: 8px;
+        border-top: 1px dashed #e7edf3;
+        padding-top: 7px;
+        color: #55697c;
+        font-size: 11px;
+    }
+
+    .rrp-source-scores strong {
+        color: #2c4256;
+    }
+
+    .rrp-source-scores-label {
+        color: #8a97a3;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        font-size: 10px;
+    }
+
+    .rrp-source-scores-muted {
+        color: #a17070;
+    }
+
+    .rrp-source-unusable label {
+        cursor: not-allowed;
+        border-style: dashed;
+        background: #fbfcfd;
+        opacity: .78;
+    }
+
+    .rrp-source-unusable label:hover {
+        border-color: #e3e9ef;
+    }
+
     .rrp-modal .modal-footer {
         border-top: 1px solid #e8edf3;
         padding: 15px 24px;
@@ -312,7 +590,34 @@ if ($rrpIsGranted) {
                 <p>
                     The scores of the selected previous application were copied into this one
                     <?php if (!empty($rrpRequest->adate)) : ?>on <?= $rrp_h($rrpRequest->adate) ?><?php endif; ?>.
+                    <?php if (!empty($rrpRetained)) : ?>
+                        These are the scores standing on the application now &mdash; the evaluator can still
+                        change any of them from the rating form below.
+                    <?php endif; ?>
                 </p>
+
+                <?php if (!empty($rrpRetained)) : ?>
+                    <div class="rrp-retained">
+                        <?php foreach ($rrpRetained['scores'] as $rrpLabel => $rrpValue) : ?>
+                            <span class="rrp-retained-item">
+                                <em><?= $rrp_h($rrpLabel) ?></em>
+                                <strong><?= $rrp_h($rrpPoints($rrpValue)) ?></strong>
+                            </span>
+                        <?php endforeach; ?>
+                        <span class="rrp-retained-item rrp-retained-total">
+                            <em>Total</em>
+                            <strong><?= $rrp_h($rrpPoints($rrpRetained['total'])) ?></strong>
+                        </span>
+                    </div>
+                    <p class="rrp-retained-note">
+                        <?= $rrp_h('--') ?> means the criterion is still unrated.
+                        <?php if ($rrpNeedsRelease) : ?>
+                            These scores are attributed to evaluator #<?= (int)$rrpRetained['claimed_by'] ?>
+                            (the one who rated the previous application), so they stay hidden in the rating
+                            form. Release them to make them visible and editable there.
+                        <?php endif; ?>
+                    </p>
+                <?php endif; ?>
             <?php elseif ($rrpIsDenied) : ?>
                 <h4>Retention denied</h4>
                 <p>
@@ -345,6 +650,17 @@ if ($rrpIsGranted) {
                 <i class="mdi mdi-close-circle-outline"></i> Deny retention
             </button>
         </div>
+    <?php elseif ($rrpNeedsRelease) : ?>
+        <div class="rrp-panel-actions">
+            <form action="<?= $rrp_h(base_url('Pages/retention_release_scores')) ?>" method="post"
+                  onsubmit="return confirm('Release the retained scores so they show in the rating form?');">
+                <input type="hidden" name="appID" value="<?= $rrpAppId ?>">
+                <input type="hidden" name="return_url" value="<?= $rrp_h($rrpReturnUrl) ?>">
+                <button type="submit" class="btn btn-success">
+                    <i class="mdi mdi-lock-open-variant-outline"></i> Show scores in rating form
+                </button>
+            </form>
+        </div>
     <?php endif; ?>
 </div>
 
@@ -373,45 +689,104 @@ if ($rrpIsGranted) {
                             <i class="mdi mdi-account-circle-outline"></i>
                             <div>
                                 <div class="rrp-applicant-name"><?= $rrp_h($rrpApplicantName !== '' ? $rrpApplicantName : 'Applicant #' . $rrpAppId) ?></div>
-                                <div class="rrp-applicant-position"><?= $rrp_h($rrpJob->jobTitle ?? '') ?> &middot; <?= $rrp_h($rrpRecordNo) ?></div>
+                                <div class="rrp-applicant-position">
+                                    Rating <?= $rrp_h($rrpJob->jobTitle ?? '') ?> &middot; <?= $rrp_h($rrpRecordNo) ?> &middot; App <?= $rrpAppId ?>
+                                    <?php $rrpTargetOpened = $rrpDate($rrpJob->datePosted ?? ''); ?>
+                                    <?php if ($rrpTargetOpened !== '') : ?>
+                                        &middot; vacancy opened <?= $rrp_h($rrpTargetOpened) ?>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
 
                         <div class="rrp-section">
                             <div class="rrp-section-title">Source application <span class="text-danger">*</span></div>
-                            <div class="rrp-section-help">Past applications of this applicant. The scores of the one you select are copied into the application being rated.</div>
-                            <select class="form-control" required name="application">
-                                <option value="" disabled selected>-- Select application --</option>
-                                <?php foreach ($rrpApplications as $rrpRow) : ?>
-                                    <?php
-                                        $rrpSourceId = (int)($rrpRow->appID ?? 0);
+                            <div class="rrp-section-help">
+                                Other applications of this applicant, newest vacancy first. The application being rated and
+                                anything else filed against this same vacancy are excluded. Only applications with scores
+                                already on file can be used as a source.
+                            </div>
 
-                                        if ($rrpSourceId === 0 || $rrpSourceId === $rrpAppId) {
-                                            continue;
-                                        }
-
-                                        if ($rrpPType === 1) {
-                                            // Teaching: job details are not joined in, and the scores
-                                            // live in hris_applications_rating.
-                                            $rrpSourceJob = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $rrpRow->jobID);
-                                            $rrpSourceTitle = $rrpSourceJob->jobTitle ?? 'Unknown Position';
-                                            $rrpSourceYear = $rrpSourceJob->sy ?? '';
-                                            $rrpHasRating = (bool)$this->Common->one_cond_row('hris_applications_rating', 'appID', $rrpSourceId);
-                                        } else {
-                                            $rrpSourceTitle = $rrpRow->jobTitle ?? 'Unknown Position';
-                                            $rrpSourceYear = $rrpRow->sy ?? '';
-                                            $rrpHasRating = (bool)$this->Common->one_cond_row('hris_rating_none', 'appID', $rrpSourceId);
-                                        }
-                                    ?>
-                                    <option value="<?= $rrpSourceId ?>" <?= ($rrpPType === 1 && !$rrpHasRating) ? 'disabled' : '' ?>>
-                                        <?= $rrp_h($rrpSourceTitle) ?><?= $rrpSourceYear !== '' ? ' (' . $rrp_h($rrpSourceYear) . ')' : '' ?><?= $rrpHasRating ? '' : ' - no prior rating' ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
                             <?php if (empty($rrpApplications)) : ?>
-                                <small class="text-danger">This applicant has no other application on record, so there is nothing to retain.</small>
+                                <div class="rrp-empty">
+                                    This applicant has no other application on record, so there is nothing to retain.
+                                </div>
                             <?php else : ?>
-                                <small class="text-muted">Entries flagged <em>no prior rating</em> have no score to copy.</small>
+                                <?php if ($rrpSelectable === 0) : ?>
+                                    <div class="rrp-empty">
+                                        None of these applications has a rating on file under record no.
+                                        <strong><?= $rrp_h($rrpRecordNo) ?></strong>, so there is no score to copy.
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="rrp-source-list">
+                                    <?php foreach ($rrpApplications as $rrpRow) : ?>
+                                        <?php
+                                            $rrpSourceId = (int)$rrpRow['app_id'];
+                                            $rrpControlId = 'rrp-source-' . $rrpSourceId;
+                                            $rrpHasRating = !empty($rrpRow['has_rating']);
+                                            $rrpLevel = $rrpJobTypes[$rrpRow['job_type']] ?? '';
+                                            $rrpOpened = $rrpDate($rrpRow['date_opened']);
+                                            $rrpApplied = $rrpDate($rrpRow['date_applied']);
+                                        ?>
+                                        <div class="rrp-source<?= $rrpHasRating ? '' : ' rrp-source-unusable' ?>">
+                                            <input type="radio" name="application" id="<?= $rrp_h($rrpControlId) ?>" value="<?= $rrpSourceId ?>"
+                                                <?= $rrpHasRating ? '' : 'disabled' ?> <?= ($rrpSelectable > 0) ? 'required' : '' ?>>
+                                            <label for="<?= $rrp_h($rrpControlId) ?>">
+                                                <span class="rrp-source-tick"><i class="mdi mdi-check"></i></span>
+                                                <span class="rrp-source-body">
+                                                    <span class="rrp-source-head">
+                                                        <span class="rrp-source-title">
+                                                            <?= $rrp_h($rrpRow['title'] !== '' ? $rrpRow['title'] : 'Unknown Position') ?>
+                                                            <?php if ($rrpLevel !== '') : ?>
+                                                                <em>&ndash; <?= $rrp_h($rrpLevel) ?></em>
+                                                            <?php endif; ?>
+                                                        </span>
+                                                        <?php if ($rrpHasRating) : ?>
+                                                            <span class="rrp-badge rrp-badge-ok">
+                                                                Rated &middot; total <?= $rrp_h($rrpPoints($rrpRow['total_points'])) ?>
+                                                            </span>
+                                                        <?php else : ?>
+                                                            <span class="rrp-badge rrp-badge-none">No rating on file</span>
+                                                        <?php endif; ?>
+                                                    </span>
+
+                                                    <span class="rrp-source-meta">
+                                                        <span><i class="mdi mdi-calendar-plus"></i> Opened <?= $rrp_h($rrpOpened !== '' ? $rrpOpened : 'not recorded') ?></span>
+                                                        <span><i class="mdi mdi-send-outline"></i> Applied <?= $rrp_h($rrpApplied !== '' ? $rrpApplied : 'not recorded') ?></span>
+                                                        <?php if ($rrpRow['sy'] !== '') : ?>
+                                                            <span><i class="mdi mdi-calendar-range"></i> SY <?= $rrp_h($rrpRow['sy']) ?></span>
+                                                        <?php endif; ?>
+                                                        <?php if ($rrpRow['item_no'] !== '') : ?>
+                                                            <span><i class="mdi mdi-tag-outline"></i> Item <?= $rrp_h($rrpRow['item_no']) ?></span>
+                                                        <?php endif; ?>
+                                                        <?php if ($rrpRow['app_status'] !== '') : ?>
+                                                            <span><i class="mdi mdi-progress-check"></i> <?= $rrp_h($rrpRow['app_status']) ?></span>
+                                                        <?php endif; ?>
+                                                        <?php if ($rrpRow['jv_status'] !== '') : ?>
+                                                            <span><i class="mdi mdi-briefcase-outline"></i> Vacancy <?= $rrp_h($rrpRow['jv_status']) ?></span>
+                                                        <?php endif; ?>
+                                                        <span><i class="mdi mdi-pound"></i> App <?= $rrpSourceId ?></span>
+                                                    </span>
+
+                                                    <?php if ($rrpHasRating && !empty($rrpRow['scores'])) : ?>
+                                                        <span class="rrp-source-scores">
+                                                            <span class="rrp-source-scores-label">Will be copied:</span>
+                                                            <?php foreach ($rrpRow['scores'] as $rrpScoreLabel => $rrpScoreValue) : ?>
+                                                                <span><?= $rrp_h($rrpScoreLabel) ?> <strong><?= $rrp_h($rrpPoints($rrpScoreValue)) ?></strong></span>
+                                                            <?php endforeach; ?>
+                                                        </span>
+                                                    <?php elseif (!$rrpHasRating) : ?>
+                                                        <span class="rrp-source-scores rrp-source-scores-muted">
+                                                            No row in <?= $rrp_h($rrpPType === 1 ? 'hris_applications_rating' : 'hris_rating_none') ?>
+                                                            for record no. <?= $rrp_h($rrpRecordNo) ?> - nothing to copy from this application.
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             <?php endif; ?>
                         </div>
 
@@ -424,7 +799,7 @@ if ($rrpIsGranted) {
 
                     <div class="modal-footer">
                         <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success" id="rrp-grant-submit">
+                        <button type="submit" class="btn btn-success" id="rrp-grant-submit" <?= $rrpSelectable === 0 ? 'disabled' : '' ?>>
                             <i class="mdi mdi-file-restore mr-1"></i> Grant retention
                         </button>
                     </div>

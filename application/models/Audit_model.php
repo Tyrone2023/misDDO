@@ -406,15 +406,22 @@ class Audit_model extends CI_Model
     private function classify_action($action)
     {
         $map = [
-            'submit_application' => ['Application Submitted', 'mdi-send', 'info'],
-            'update_document'    => ['Document Updated', 'mdi-file-replace-outline', 'warning'],
-            'delete_document'    => ['Document Removed', 'mdi-file-remove-outline', 'danger'],
-            'upload_document'    => ['Document Uploaded', 'mdi-file-upload-outline', 'info'],
-            'validate'           => ['Validated', 'mdi-check-decagram', 'success'],
-            'disqualify'         => ['Disqualified', 'mdi-close-octagon-outline', 'danger'],
-            'endorse'            => ['Endorsed for Rating', 'mdi-share-outline', 'purple'],
-            'status_change'      => ['Status Changed', 'mdi-swap-horizontal', 'warning'],
-            'rate'               => ['Rating Encoded', 'mdi-notebook-outline', 'primary'],
+            'submit_application'   => ['Application Submitted', 'mdi-send', 'info'],
+            'update_document'      => ['Document Updated', 'mdi-file-replace-outline', 'warning'],
+            'delete_document'      => ['Document Removed', 'mdi-file-remove-outline', 'danger'],
+            'upload_document'      => ['Document Uploaded', 'mdi-file-upload-outline', 'info'],
+            'validate'             => ['Validated', 'mdi-check-decagram', 'success'],
+            'qualify'              => ['Marked Qualified', 'mdi-account-check-outline', 'success'],
+            'disqualify'           => ['Disqualified', 'mdi-close-octagon-outline', 'danger'],
+            'revert_qualification' => ['Qualification Reverted', 'mdi-undo-variant', 'danger'],
+            'endorse'              => ['Endorsed for Rating', 'mdi-share-outline', 'purple'],
+            'status_change'        => ['Status Changed', 'mdi-swap-horizontal', 'warning'],
+            'rate'                 => ['Rating Encoded', 'mdi-notebook-outline', 'primary'],
+            'retention_request'    => ['Retention Requested', 'mdi-file-clock-outline', 'info'],
+            'retention_grant'      => ['Retention Granted', 'mdi-file-restore', 'success'],
+            'retention_deny'       => ['Retention Denied', 'mdi-close-circle-outline', 'danger'],
+            'retention_release'    => ['Retained Scores Released', 'mdi-lock-open-variant-outline', 'warning'],
+            'retention_delete'     => ['Retention Request Deleted', 'mdi-delete-outline', 'danger'],
         ];
 
         $key = strtolower(trim((string) $action));

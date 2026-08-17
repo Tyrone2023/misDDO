@@ -10,6 +10,25 @@ class RatingBatch_model extends CI_Model
     }
 
     /**
+     * Audit a retention granted by one of the batch screens, using the same
+     * action slug as the single grant on Pages/request_rating so both show up
+     * on the application timeline the same way.
+     */
+    private function audit_batch_grant($row, $description, $userId = null)
+    {
+        $this->Audit->log('retention_grant', [
+            'user_id'      => $userId ?: null,
+            'entity_type'  => 'rating_request',
+            'entity_id'    => $row->id ?? null,
+            'app_id'       => $row->app_id ?? null,
+            'applicant_id' => $row->applicant_id ?? null,
+            'job_id'       => $row->job_id ?? null,
+            'field'        => 'retention',
+            'description'  => $description,
+        ]);
+    }
+
+    /**
      * Extract the starting year (int) from a school year string (e.g., "2024-2025").
      * Returns null when parsing is not possible.
      */
@@ -310,6 +329,7 @@ class RatingBatch_model extends CI_Model
                         'res' => $userId,
                         'stat' => 1,
                     ]);
+                    $this->audit_batch_grant($row, 'Granted retention in bulk (placeholder fill): no rated source application was found, so a blank rating row was created.', $userId);
                 }
 
                 $summary['updated']++;
@@ -327,9 +347,12 @@ class RatingBatch_model extends CI_Model
                 'demo_rating'  => $source->demo_rating,
                 'tr_rating'    => $source->tr_rating,
                 'total_points' => $source->total_points,
-                'eval_id1'     => ((int)$row->r_type === 1) ? $source->eval_id1    : 0,
-                'eval_id2'     => $source->eval_id2,
-                'eval_id3'     => $source->eval_id3,
+                // Retained scores stay unclaimed so the evaluator holding this
+                // application can see and edit them - same rule as the single
+                // grant in Reg/Hiring_model::copy_rating().
+                'eval_id1'     => 0,
+                'eval_id2'     => 0,
+                'eval_id3'     => 0,
                 'job_type'     => $row->job_type,
                 'fy'           => $fy,
             ];
@@ -356,6 +379,13 @@ class RatingBatch_model extends CI_Model
                     'res' => $userId,
                     'stat' => 1,
                 ]);
+                $this->audit_batch_grant(
+                    $row,
+                    'Granted retention in bulk (placeholder fill) of '
+                        . (((int)$row->r_type === 1) ? 'all scores' : 'Demo & TR ratings only')
+                        . ' from application #' . (int)$source->appID . '.',
+                    $userId
+                );
             }
 
             $summary['updated']++;
@@ -644,6 +674,8 @@ class RatingBatch_model extends CI_Model
                             'res' => $userId,
                         ]);
 
+                    $this->audit_batch_grant($row, 'Granted retention in bulk (mass accept): prior application #' . (int)$priorApp->appID . ' had no rating yet, so a blank rating row was created.', $userId);
+
                     continue;
                 } else {
                     $summary['skipped']++;
@@ -665,9 +697,11 @@ class RatingBatch_model extends CI_Model
                 'demo_rating'  => $previous->demo_rating,
                 'tr_rating'    => $previous->tr_rating,
                 'total_points' => $previous->total_points,
-                'eval_id1'     => $row->r_type == 1 ? $previous->eval_id1    : 0,
-                'eval_id2'     => $previous->eval_id2,
-                'eval_id3'     => $previous->eval_id3,
+                // Unclaimed, so the evaluator on this application can see and
+                // edit the retained scores.
+                'eval_id1'     => 0,
+                'eval_id2'     => 0,
+                'eval_id3'     => 0,
                 'job_type'     => $previous->job_type,
                 'fy'           => $ratingFy,
             ];
@@ -696,6 +730,14 @@ class RatingBatch_model extends CI_Model
                     'stat' => 1,
                     'res' => $userId,
                 ]);
+
+            $this->audit_batch_grant(
+                $row,
+                'Granted retention in bulk (mass accept) of '
+                    . (($row->r_type == 1) ? 'all scores' : 'Demo & TR ratings only')
+                    . ' from application #' . (int)$previous->appID . '.',
+                $userId
+            );
 
             $summary['accepted']++;
         }

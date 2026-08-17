@@ -4498,6 +4498,20 @@ public function car_rqa_promotion()
             $message = 'Score saved, applicant transferred to "' . trim((string) $targetJob->jobTitle) . '" and marked as ' . ucfirst($type) . '.';
         }
 
+        // Post-close score corrections bypass the update_rate* funnel that
+        // audits ordinary scoring, so log them here.
+        $this->Audit->log('rate', [
+            'entity_type'  => 'rating',
+            'entity_id'    => 'hris_applications_rating',
+            'app_id'       => $appID,
+            'applicant_id' => $recordNo,
+            'job_id'       => $targetJobID > 0 ? $targetJobID : $jobID,
+            'field'        => 'corrigendum',
+            'description'  => 'Corrigendum / Addendum (' . $type . '): saved a total of '
+                . number_format((float) $scores['total_points'], 2, '.', '') . ' point(s)'
+                . ($isTransfer ? ', transferred to job #' . (int) $targetJobID : '') . '.',
+        ]);
+
         echo json_encode([
             'status' => 'success',
             'message' => $message,
@@ -7832,13 +7846,17 @@ public function rqa_municipality_print_shsv2()
         // from hris_applications_rating, everything else from hris_rating_none.
         $pType = (int) (!empty($request->p_type) ? $request->p_type : ($jobvacancy->position ?? 0));
         $isPending = (int) $request->stat === 0;
+        $recordNo = trim((string) ($applicant->record_no ?? $applicant->IDNumber ?? $request->applicant_id));
 
         $applications = [];
+        $retained = null;
 
         if ($isPending && !$jobClosed) {
-            $applications = ($pType === 1)
-                ? $this->Common->one_cond('hris_applications', 'applicant_id', $request->applicant_id)
-                : $this->Hiring_model->get_applicantion($request->applicant_id, $jobvacancy->jobID);
+            $applications = $this->retention_source_applications($request, $jobvacancy, $appId, $recordNo, $pType);
+        }
+
+        if ((int) $request->stat === 1) {
+            $retained = $this->retention_retained_scores($appId, $pType);
         }
 
         return [
@@ -7847,11 +7865,153 @@ public function rqa_municipality_print_shsv2()
             'job' => $jobvacancy,
             'p_type' => $pType,
             'app_id' => $appId,
-            'record_no' => trim((string) ($applicant->record_no ?? $applicant->IDNumber ?? $request->applicant_id)),
+            'record_no' => $recordNo,
             'applications' => $applications,
+            'selectable' => count(array_filter($applications, static function ($row) {
+                return !empty($row['has_rating']);
+            })),
+            'retained' => $retained,
             'can_act' => $isPending && !$jobClosed,
             'job_closed' => $jobClosed,
         ];
+    }
+
+    /**
+     * Criteria carried by a retention, as label => rating column. $partial is the
+     * r_type 2 scope: Demo & TR for teaching positions, Interview & Written
+     * Examination for the rest.
+     */
+    private function retention_score_map($pType, $partial = false)
+    {
+        if ((int) $pType === 1) {
+            $partialMap = ['LET' => 'let_rating', 'Demo' => 'demo_rating', 'TR' => 'tr_rating'];
+
+            return $partial ? $partialMap : array_merge(
+                ['Education' => 'education', 'Training' => 'training', 'Experience' => 'experience'],
+                $partialMap
+            );
+        }
+
+        $partialMap = ['Interview' => 'interview', 'Written' => 'written'];
+
+        return $partial ? $partialMap : array_merge(
+            ['Education' => 'educ', 'Training' => 'trainings', 'Experience' => 'experience',
+             'Performance' => 'performance', 'OA' => 'oa', 'AE' => 'ae', 'ALD' => 'ald', 'Skills' => 'skills'],
+            $partialMap
+        );
+    }
+
+    /**
+     * Scores standing on an application whose retention was granted, so the
+     * panel can show what was retained instead of just saying that it was.
+     *
+     * 'claimed_by' is the evaluator the criteria are attributed to. Rows copied
+     * before the eval-id reset carry the previous application's evaluator, which
+     * keeps the scores out of the rating form of whoever holds this application.
+     */
+    private function retention_retained_scores($appId, $pType)
+    {
+        $rating = $this->db
+            ->from(((int) $pType === 1) ? 'hris_applications_rating' : 'hris_rating_none')
+            ->where('appID', (int) $appId)
+            ->get()
+            ->row();
+
+        if (empty($rating)) {
+            return null;
+        }
+
+        $scores = [];
+
+        foreach ($this->retention_score_map($pType, false) as $label => $column) {
+            $scores[$label] = $rating->$column ?? null;
+        }
+
+        $claimedBy = (int) ($rating->eval_id1 ?? 0) ?: (int) ($rating->eval_id2 ?? 0) ?: (int) ($rating->eval_id3 ?? 0);
+
+        return [
+            'scores' => $scores,
+            'total' => $rating->total_points ?? null,
+            'claimed_by' => $claimedBy,
+            'claimed_by_me' => $claimedBy > 0 && $claimedBy === (int) $this->session->userdata('id'),
+        ];
+    }
+
+    /**
+     * Past applications whose scores could be copied into the one being rated,
+     * with everything the reviewer needs to tell them apart: when the vacancy
+     * was opened, when the applicant applied, where the application stands and
+     * which scores are actually on file.
+     *
+     * The application being rated and any other application to the same vacancy
+     * are never offered as a source.
+     *
+     * A source is only usable when a rating row exists under the same record_no
+     * and appID the copy will look for - Reg/Hiring_model::copy_rating() match on
+     * both, so anything else would copy nothing and still mark the target Rated.
+     */
+    private function retention_source_applications($request, $jobvacancy, $appId, $recordNo, $pType)
+    {
+        $isTeaching = ($pType === 1);
+        $ratingTable = $isTeaching ? 'hris_applications_rating' : 'hris_rating_none';
+        $partial = (int) ($request->r_type ?? 0) === 2;
+
+        $this->db
+            ->select('a.appID, a.jobID, a.appStatus, a.dateSubmitted, a.app_year, jv.jobTitle, jv.job_type, jv.sy, jv.datePosted, jv.jvStatus, jv.itemNo, jv.department')
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy jv', 'jv.jobID = a.jobID', 'left')
+            ->where('a.applicant_id', $request->applicant_id)
+            ->where('a.appID !=', (int) $appId)
+            ->where('a.jobID !=', (int) $jobvacancy->jobID);
+
+        if (!$isTeaching) {
+            // Non-teaching scores live in hris_rating_none, so a teaching
+            // vacancy can never be a source for them.
+            $this->db->where('jv.position !=', 1);
+        }
+
+        $rows = $this->db
+            ->order_by('jv.datePosted', 'DESC')
+            ->order_by('a.appID', 'DESC')
+            ->get()
+            ->result();
+
+        $scoreMap = $this->retention_score_map($pType, $partial);
+        $sources = [];
+
+        foreach ($rows as $row) {
+            $rating = $this->db
+                ->from($ratingTable)
+                ->where('record_no', $recordNo)
+                ->where('appID', (int) $row->appID)
+                ->get()
+                ->row();
+
+            $scores = [];
+
+            foreach ($scoreMap as $label => $column) {
+                $scores[$label] = $rating->$column ?? null;
+            }
+
+            $sources[] = [
+                'app_id' => (int) $row->appID,
+                'job_id' => (int) $row->jobID,
+                'title' => trim((string) ($row->jobTitle ?? '')),
+                'job_type' => (int) ($row->job_type ?? 0),
+                'item_no' => trim((string) ($row->itemNo ?? '')),
+                'department' => trim((string) ($row->department ?? '')),
+                'sy' => trim((string) ($row->sy ?? '')),
+                'date_opened' => trim((string) ($row->datePosted ?? '')),
+                'date_applied' => trim((string) ($row->dateSubmitted ?? '')),
+                'app_status' => trim((string) ($row->appStatus ?? '')),
+                'jv_status' => trim((string) ($row->jvStatus ?? '')),
+                'has_rating' => !empty($rating),
+                'total_points' => $rating->total_points ?? null,
+                'scores' => empty($rating) ? [] : $scores,
+            ];
+        }
+
+        return $sources;
     }
 
     public function ma_staff($param = null)
@@ -10342,6 +10502,23 @@ public function rqa_municipality_print_shsv2()
                 $this->db->where('appID', $val);
                 $this->db->update('hris_applications', $update_data);
 
+                // This screen writes hris_app_dq itself instead of going through
+                // Reg::insert_dq(), so the decision is audited here.
+                $this->Audit->log(($dq == 1) ? 'validate' : 'disqualify', [
+                    'entity_type'  => 'application',
+                    'entity_id'    => $val,
+                    'app_id'       => $val,
+                    'applicant_id' => $this->input->post('id'),
+                    'job_id'       => $jobID,
+                    'field'        => 'remarks',
+                    'description'  => (($dq == 1)
+                        ? 'Marked application as Qualified (bulk remarks).'
+                        : 'Marked application as Disqualified (bulk remarks).')
+                        . (trim((string) $this->input->post('reason')) !== ''
+                            ? ' Reason: ' . trim((string) $this->input->post('reason'))
+                            : ''),
+                ]);
+
                 // Optional: assign an evaluator when marking as Qualified
                 if ($assignRater && $dq == 1) {
                     $appRow = $this->Common->one_cond_row('hris_applications', 'appID', $val);
@@ -12673,8 +12850,17 @@ public function rqa_municipality_print_shsv2()
             $this->session->set_flashdata('danger', 'This is a duplicate request.');
         }else{
             $this->Reg->rrall();
+
+            $request = $this->Common->one_cond_row('hris_rating_request', 'id', (int) $this->db->insert_id());
+            if (!empty($request)) {
+                $scope = ((int) $request->r_type === 2)
+                    ? (((int) $request->p_type === 1) ? 'Demo & TR ratings only' : 'Interview & Written Examination ratings only')
+                    : 'all scores';
+                $this->audit_retention('retention_request', $request, 'Requested retention of ' . $scope . '.');
+            }
+
             $this->session->set_flashdata('success', 'Succesfully saved.');
-            
+
         }
         redirect(base_url() . 'Pages/'.$this->uri->segment(7).'/'.$this->uri->segment(3).'/'.$this->uri->segment(4).'/'.$this->uri->segment(8));
     }
@@ -12818,6 +13004,18 @@ public function rqa_municipality_print_shsv2()
         $this->Reg->copy_dq($sourceAppId, $targetAppId, $jobID);
 
         $this->Reg->update_request_stat($scope);
+
+        $request = $this->Common->one_cond_row('hris_rating_request', 'id', (int) $this->input->post('id'));
+        if (!empty($request)) {
+            $this->audit_retention(
+                'retention_grant',
+                $request,
+                $this->retention_grant_description($scope, 1, $sourceAppId),
+                $targetAppId,
+                $jobID
+            );
+        }
+
         $this->session->set_flashdata('success', 'Saved successfully');
         redirect($this->retention_return_url());
     }
@@ -12848,6 +13046,39 @@ private function retention_return_url()
     }
 
     return $url;
+}
+
+/**
+ * Audit a retention decision against the application that receives (or was
+ * refused) the scores, so it shows up on that application's tracking timeline
+ * next to the rating and qualification entries.
+ */
+private function audit_retention($action, $request, $description, $appId = null, $jobId = null)
+{
+    $appId = (int) ($appId !== null ? $appId : ($request->app_id ?? 0));
+
+    $this->Audit->log($action, [
+        'entity_type'  => 'rating_request',
+        'entity_id'    => $request->id ?? null,
+        'app_id'       => $appId,
+        'applicant_id' => $request->applicant_id ?? null,
+        'job_id'       => (int) ($jobId !== null ? $jobId : ($request->job_id ?? 0)),
+        'field'        => 'retention',
+        'description'  => $description,
+    ]);
+}
+
+/**
+ * Wording for a retention grant, for both the audit trail and the flash
+ * message: what was retained and where it came from.
+ */
+private function retention_grant_description($scope, $pType, $sourceAppId)
+{
+    $scopeLabel = ((int) $scope === 2)
+        ? (((int) $pType === 1) ? 'Demo & TR ratings only' : 'Interview & Written Examination ratings only')
+        : 'all scores';
+
+    return 'Granted retention of ' . $scopeLabel . ' from application #' . (int) $sourceAppId . '.';
 }
 
 /**
@@ -12897,7 +13128,86 @@ public function request_rating_deny()
         return;
     }
 
+    $this->audit_retention('retention_deny', $request, 'Denied the retention request. Reason: ' . $reason);
+
     $this->session->set_flashdata('success', 'Retention request denied. The applicant can now see the reason.');
+    redirect($returnUrl);
+}
+
+/**
+ * Hand the retained scores of a granted retention back to the evaluator holding
+ * the application.
+ *
+ * The rating views only show a criterion to the evaluator whose id is on it, so
+ * rows copied before the eval-id reset (which carried the previous
+ * application's evaluator) stay invisible in the rating form. Clearing the ids
+ * puts them in the same unclaimed state a fresh copy now lands in: visible,
+ * editable, and claimed again on the next save.
+ */
+public function retention_release_scores()
+{
+    if (strtoupper((string) $this->input->server('REQUEST_METHOD')) !== 'POST') {
+        show_error('Method Not Allowed', 405);
+        return;
+    }
+
+    $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'Evaluator', 'rater', 'raters'];
+    $position = (string) $this->session->userdata('position');
+
+    if (empty($this->session->id) || !in_array($position, $allowed, true)) {
+        show_error('Forbidden', 403);
+        return;
+    }
+
+    $appId = (int) $this->input->post('appID');
+    $returnUrl = $this->retention_return_url();
+
+    $request = $appId > 0
+        ? $this->db->from('hris_rating_request')->where('app_id', $appId)->order_by('id', 'DESC')->limit(1)->get()->row()
+        : null;
+
+    if (empty($request) || (int) $request->stat !== 1) {
+        show_error('This application has no granted retention request.', 404);
+        return;
+    }
+
+    // An evaluator may only do this for an application assigned to them.
+    if (in_array($position, ['Evaluator', 'rater', 'raters'], true)) {
+        $isAssigned = (bool) $this->db
+            ->from('hris_rater_assignments')
+            ->where('app_id', $appId)
+            ->where('rater_user_id', (int) $this->session->id)
+            ->count_all_results();
+
+        if (!$isAssigned) {
+            show_error('This application is not assigned to your evaluator account.', 403);
+            return;
+        }
+    }
+
+    $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', (int) $request->job_id);
+    $pType = (int) (!empty($request->p_type) ? $request->p_type : ($job->position ?? 0));
+    $table = ($pType === 1) ? 'hris_applications_rating' : 'hris_rating_none';
+
+    $this->db->where('appID', $appId)->update($table, [
+        'eval_id1' => 0,
+        'eval_id2' => 0,
+        'eval_id3' => 0,
+    ]);
+
+    if ($this->db->affected_rows() > 0) {
+        $this->audit_retention(
+            'retention_release',
+            $request,
+            'Released the retained scores so the evaluator on this application can view and edit them.',
+            $appId,
+            (int) $request->job_id
+        );
+        $this->session->set_flashdata('success', 'Retained scores released. They now show in the rating form and can be edited.');
+    } else {
+        $this->session->set_flashdata('danger', 'No rating row was found for this application, so there was nothing to release.');
+    }
+
     redirect($returnUrl);
 }
 
@@ -12953,6 +13263,18 @@ public function request_rating_granted_none()
         $this->Reg->copy_dq($sourceAppId, $targetAppId, $jobID);
 
         $this->Reg->update_request_stat($scope);
+
+        $request = $this->Common->one_cond_row('hris_rating_request', 'id', (int) $this->input->post('id'));
+        if (!empty($request)) {
+            $this->audit_retention(
+                'retention_grant',
+                $request,
+                $this->retention_grant_description($scope, 2, $sourceAppId),
+                $targetAppId,
+                $jobID
+            );
+        }
+
         $this->session->set_flashdata('success', 'Saved successfully');
         redirect($this->retention_return_url());
     }
@@ -12981,8 +13303,16 @@ public function request_rating_granted_none()
 
     public function rr_delete()
     {
+        // Read the row first - after the delete there is nothing left to audit.
+        $request = $this->Common->one_cond_row('hris_rating_request', 'id', (int) $this->uri->segment(3));
+
         $this->Page_model->delete('3', 'id', 'hris_rating_request');
         $this->Page_model->insert_at('Delete application', $this->db->insert_id());
+
+        if (!empty($request)) {
+            $this->audit_retention('retention_delete', $request, 'Deleted the retention request.');
+        }
+
         $this->session->set_flashdata('danger', 'Request was deleted');
         if($this->session->position == 'reg'){
             redirect(base_url() . 'Pages/request_rating_applicant');

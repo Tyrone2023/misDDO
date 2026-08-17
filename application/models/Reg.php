@@ -1598,7 +1598,13 @@ class Reg extends CI_Model{
       return $this->db->update('hris_applications', $data);
     }
 
-    public function insert_dq(){
+    /**
+     * @param string $context 'validation'    - document validation screens
+     *                        'qualification' - evaluator qualification gate.
+     *                        Only changes how the decision is labelled in the
+     *                        audit trail.
+     */
+    public function insert_dq($context = 'validation'){
       date_default_timezone_set('Asia/Manila');
       $date = date('Y-m-d');
       $t = date('h:i:s a', time());
@@ -1639,26 +1645,42 @@ class Reg extends CI_Model{
       );
 
       $res = $this->db->insert('hris_app_dq', $data);
-      $this->audit_validation($this->input->post('remarks'), $this->input->post('reason'));
+      $this->audit_validation($this->input->post('remarks'), $this->input->post('reason'), $context);
       return $res;
     }
 
     /**
-     * Log a Qualified / Disqualified validation decision to the audit trail.
+     * Log a Qualified / Disqualified decision to the audit trail.
      * remarks: 1 = Qualified, 2 = Disqualified.
+     *
+     * The evaluator's qualification gate and the document validation screens
+     * write the same hris_app_dq row, so $context keeps them apart on the
+     * timeline: "Marked Qualified" vs "Validated".
      */
-    private function audit_validation($remarks, $reason = ''){
+    private function audit_validation($remarks, $reason = '', $context = 'validation'){
       $qualified = ((string) $remarks === '1');
-      $this->Audit->log($qualified ? 'validate' : 'disqualify', [
+      $qualification = ($context === 'qualification');
+
+      if ($qualified) {
+          $action = $qualification ? 'qualify' : 'validate';
+      } else {
+          $action = 'disqualify';
+      }
+
+      $decision = $qualification
+          ? ($qualified ? 'Marked applicant as Qualified and endorsed the application for rating.'
+                        : 'Marked applicant as Disqualified at the qualification review.')
+          : ($qualified ? 'Marked application as Qualified.'
+                        : 'Marked application as Disqualified.');
+
+      $this->Audit->log($action, [
           'entity_type'  => 'application',
           'entity_id'    => $this->input->post('appID'),
           'app_id'       => $this->input->post('appID'),
           'applicant_id' => $this->input->post('id'),
           'job_id'       => $this->input->post('jobID'),
           'field'        => 'remarks',
-          'description'  => $qualified
-              ? 'Marked application as Qualified.'
-              : 'Marked application as Disqualified.' . ($reason ? ' Reason: ' . $reason : ''),
+          'description'  => $decision . ($reason ? ' Reason: ' . $reason : ''),
       ]);
     }
 
@@ -2458,9 +2480,14 @@ function sbfp_upload($record)
         'demo_rating'  => $result['demo_rating'],
         'tr_rating'    => $result['tr_rating'],
         'total_points' => $result['total_points'],
-        'eval_id1'     => $result['eval_id1'],
-        'eval_id2'     => $result['eval_id2'],
-        'eval_id3'     => $result['eval_id3'],
+        // Retained scores arrive unclaimed. Carrying the source evaluator ids
+        // over would hide the scores from the evaluator handling this
+        // application - the rating views only show a criterion to the evaluator
+        // who owns it (or to asds), and update_rate_* only claims an id when it
+        // is still 0.
+        'eval_id1'     => 0,
+        'eval_id2'     => 0,
+        'eval_id3'     => 0,
         'job_type'     => $result['job_type']
     );
 
@@ -2635,9 +2662,11 @@ function sbfp_upload($record)
         'demo_rating'  => $result['demo_rating'],
         'tr_rating'    => $result['tr_rating'],
         'total_points' => $result['total_points'],
+        // Unclaimed, so the evaluator on this application can see and re-rate
+        // the retained Demo / TR scores.
         'eval_id1'     => 0,
-        'eval_id2'     => $result['eval_id2'],
-        'eval_id3'     => $result['eval_id3'],
+        'eval_id2'     => 0,
+        'eval_id3'     => 0,
         'job_type'     => $result['job_type']
     );
 

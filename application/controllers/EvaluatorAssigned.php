@@ -462,7 +462,7 @@ class EvaluatorAssigned extends CI_Controller
         $this->db->trans_begin();
 
         $decisionSaved = $this->Reg->update_dq($decision);
-        $remarksSaved = $this->Reg->insert_dq();
+        $remarksSaved = $this->Reg->insert_dq('qualification');
         $ratingReady = true;
         $statusSaved = true;
         $trackingSaved = true;
@@ -643,7 +643,7 @@ class EvaluatorAssigned extends CI_Controller
 
         $this->db->trans_commit();
 
-        $this->Audit->log('disqualify', [
+        $this->Audit->log('revert_qualification', [
             'entity_type'  => 'application',
             'entity_id'    => $appID,
             'app_id'       => $appID,

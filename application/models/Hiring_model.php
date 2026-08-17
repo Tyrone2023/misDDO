@@ -404,11 +404,16 @@ public function get_granted_rating_request($fy,$stat)
         'oa'           => $result['oa'],
         'ae'           => $result['ae'],
         'ald'          => $result['ald'],
-        'eval_id1'     => $result['eval_id1'],
+        // Retained scores arrive unclaimed. Carrying the source evaluator ids
+        // over would hide the scores from the evaluator handling this
+        // application - the rating views only show a criterion to the evaluator
+        // who owns it (or to asds), and update_rate_* only claims an id when it
+        // is still 0.
+        'eval_id1'     => 0,
         'interview'    => $result['interview'],
-        'eval_id2'     => $result['eval_id2'],
+        'eval_id2'     => 0,
         'written'      => $result['written'],
-        'eval_id3'     => $result['eval_id3'],
+        'eval_id3'     => 0,
         'fy'           => $result['fy'],
         'job_type'     => $result['job_type'],
         'total_points' => $result['total_points'],
@@ -461,11 +466,13 @@ public function get_granted_rating_request($fy,$stat)
         'ae'           => 0.00001,
         'ald'          => 0.00001,
         'skills'       => 0.00001,
+        // Unclaimed, so the evaluator on this application can see and re-rate
+        // the retained Interview / Written Examination scores.
         'eval_id1'     => 0,
         'interview'    => $result['interview'],
-        'eval_id2'     => $result['eval_id2'],
+        'eval_id2'     => 0,
         'written'      => $result['written'],
-        'eval_id3'     => $result['eval_id3'],
+        'eval_id3'     => 0,
         'job_type'     => $result['job_type'],
         'total_points' => $result['total_points']
     );
