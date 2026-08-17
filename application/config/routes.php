@@ -56,6 +56,23 @@ $route['secretariat/retention'] = 'SecretariatRetention/index';
 $route['secretariat/retention/grant-copy'] = 'SecretariatRetention/grant_copy';
 $route['secretariat/retention/grant-manual'] = 'SecretariatRetention/grant_manual';
 $route['secretariat/retention/deny'] = 'SecretariatRetention/deny';
+// Exam Builder, scoped to the Secretariat's assigned vacancies.
+$route['secretariat/exams'] = 'SecretariatExam/index';
+$route['secretariat/exams/create'] = 'SecretariatExam/create';
+$route['secretariat/exams/store'] = 'SecretariatExam/store';
+$route['secretariat/exams/(:num)'] = 'SecretariatExam/show/$1';
+$route['secretariat/exams/(:num)/edit'] = 'SecretariatExam/edit/$1';
+$route['secretariat/exams/(:num)/update'] = 'SecretariatExam/update/$1';
+$route['secretariat/exams/(:num)/delete'] = 'SecretariatExam/delete/$1';
+
+// The applicant's side of the same exams, reached from the Manage column of
+// Pages/ja. (:num) is the application id for the gate, the attempt id once one
+// has been opened.
+$route['applicant/exam/(:num)'] = 'ApplicantExam/index/$1';
+$route['applicant/exam/(:num)/enter'] = 'ApplicantExam/enter/$1';
+$route['applicant/exam/attempt/(:num)'] = 'ApplicantExam/take/$1';
+$route['applicant/exam/attempt/(:num)/submit'] = 'ApplicantExam/submit/$1';
+$route['applicant/exam/result/(:num)'] = 'ApplicantExam/result/$1';
 
 $route['davor_confession'] = 'pages/davor_confession';
 $route['private'] = 'Ps/private';

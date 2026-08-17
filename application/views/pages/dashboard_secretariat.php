@@ -35,6 +35,9 @@ $retentionTotals = array_merge(
     ['pending' => 0, 'granted' => 0, 'denied' => 0, 'total' => 0],
     $retentionTotals ?? []
 );
+
+$examCounts = $examCounts ?? [];
+$examTotals = array_merge(['total' => 0, 'published' => 0, 'draft' => 0, 'questions' => 0], $examTotals ?? []);
 ?>
 
 <style>
@@ -58,7 +61,18 @@ $retentionTotals = array_merge(
     .secretariat-dashboard .sd-purple { background:#efe9ff; color:#6e43c0; }
     .secretariat-dashboard .sd-card .card-body { padding:22px; }
     .secretariat-dashboard .sd-section-title { color:var(--sd-ink); font-size:17px; font-weight:800; }
-    .secretariat-dashboard .sd-position { align-items:center; border-top:1px solid #edf1f6; display:grid; gap:14px; grid-template-columns:minmax(200px,1fr) repeat(4,80px) 105px; padding:15px 2px; }
+    /* This row lives in a col-xl-8 card, so it has roughly 660px to work with at
+       1366px wide. Fixed track widths that add up to more than that cannot shrink,
+       and .content-page sets overflow:hidden - the spill is clipped rather than
+       scrolled, which is what hid the Exam button. So: the title track shrinks
+       from zero, the number tracks have a floor and a ceiling, and the actions
+       track takes only what the buttons need. */
+    .secretariat-dashboard .sd-position { align-items:center; border-top:1px solid #edf1f6; display:grid; gap:12px 10px; grid-template-columns:minmax(0,1fr) repeat(4,minmax(54px,66px)) auto; padding:15px 2px; }
+    .secretariat-dashboard .sd-position-main { min-width:0; }
+    .secretariat-dashboard .sd-position-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+    .secretariat-dashboard .sd-position-actions .btn { padding-left:10px; padding-right:10px; white-space:nowrap; }
+    .secretariat-dashboard .sd-exam-link { border-color:#c9bdf0; color:#6e43c0; }
+    .secretariat-dashboard .sd-exam-link:hover, .secretariat-dashboard .sd-exam-link:focus { background:#6e43c0; border-color:#6e43c0; color:#fff; }
     .secretariat-dashboard .sd-retention { border-radius:9px; display:block; padding:4px 2px; text-decoration:none; transition:background .12s ease; }
     .secretariat-dashboard .sd-retention:hover { background:#f4f0ff; text-decoration:none; }
     .secretariat-dashboard .sd-retention strong { color:#6e43c0; }
@@ -75,7 +89,9 @@ $retentionTotals = array_merge(
     .secretariat-dashboard .sd-link-list a:first-child { border-top:0; }
     .secretariat-dashboard .sd-link-list a:hover { color:var(--sd-blue); }
     .secretariat-dashboard .sd-scope { background:#edf3ff; border-radius:18px; color:#315ca6; display:inline-block; font-size:11px; font-weight:700; margin:3px 4px 3px 0; padding:6px 10px; }
-    @media (max-width:991px) { .secretariat-dashboard .sd-hero { align-items:flex-start; flex-direction:column; } .secretariat-dashboard .sd-hero-actions { margin-top:18px; } .secretariat-dashboard .sd-position { grid-template-columns:minmax(190px,1fr) repeat(3,70px); } .secretariat-dashboard .sd-position .btn { grid-column:1/-1; } }
+    @media (max-width:991px) { .secretariat-dashboard .sd-hero { align-items:flex-start; flex-direction:column; } .secretariat-dashboard .sd-hero-actions { flex-wrap:wrap; margin-top:18px; } /* Keep all four figures on the title's line and drop only the buttons below;
+   a 3-column track left Retention orphaned on a line of its own. */
+    .secretariat-dashboard .sd-position { grid-template-columns:minmax(0,1fr) repeat(4,minmax(52px,64px)); } .secretariat-dashboard .sd-position-actions { grid-column:1/-1; justify-content:flex-start; } }
     @media (max-width:575px) { .secretariat-dashboard .sd-hero { padding:23px 20px; } .secretariat-dashboard .sd-hero-actions { width:100%; } .secretariat-dashboard .sd-hero-actions .btn { width:100%; } .secretariat-dashboard .sd-position { grid-template-columns:1fr 1fr; } .secretariat-dashboard .sd-position-main { grid-column:1/-1; } }
 </style>
 
@@ -98,6 +114,12 @@ $retentionTotals = array_merge(
                                 <i class="mdi mdi-file-restore mr-1"></i> Retention
                                 <?php if ((int) $retentionTotals['pending'] > 0) : ?>
                                     <span class="badge badge-warning ml-1"><?= (int) $retentionTotals['pending']; ?></span>
+                                <?php endif; ?>
+                            </a>
+                            <a href="<?= base_url('secretariat/exams'); ?>" class="btn btn-light">
+                                <i class="mdi mdi-clipboard-text-outline mr-1"></i> Exam Builder
+                                <?php if ((int) $examTotals['total'] > 0) : ?>
+                                    <span class="badge badge-secondary ml-1"><?= (int) $examTotals['total']; ?></span>
                                 <?php endif; ?>
                             </a>
                         </div>
@@ -201,7 +223,21 @@ $retentionTotals = array_merge(
                                            title="<?= $retentionPending; ?> pending of <?= (int) $vacancyRetention['total']; ?> retention request<?= (int) $vacancyRetention['total'] === 1 ? '' : 's'; ?> &mdash; <?= (int) $vacancyRetention['granted']; ?> granted, <?= (int) $vacancyRetention['denied']; ?> denied">
                                             <strong><?= $retentionPending; ?></strong><span>Retention</span>
                                         </a>
-                                        <a href="<?= base_url('secretariat/applicant-tagging?job_id=' . (int) $vacancy->jobID); ?>" class="btn btn-outline-primary btn-sm">Manage</a>
+                                        <?php
+                                        $vacancyExams = $examCounts[(int) $vacancy->jobID]
+                                            ?? ['total' => 0, 'published' => 0, 'draft' => 0, 'questions' => 0];
+                                        $examTotal = (int) $vacancyExams['total'];
+                                        ?>
+                                        <div class="sd-position-actions">
+                                            <a href="<?= base_url('secretariat/applicant-tagging?job_id=' . (int) $vacancy->jobID); ?>" class="btn btn-outline-primary btn-sm">Manage</a>
+                                            <a href="<?= base_url('secretariat/exams?job_id=' . (int) $vacancy->jobID); ?>"
+                                               class="btn btn-outline-secondary btn-sm sd-exam-link"
+                                               title="<?= $examTotal === 0
+                                                   ? 'No exam built for this vacancy yet'
+                                                   : $examTotal . ' exam' . ($examTotal === 1 ? '' : 's') . ' &mdash; ' . (int) $vacancyExams['published'] . ' published, ' . (int) $vacancyExams['draft'] . ' draft, ' . (int) $vacancyExams['questions'] . ' question' . ((int) $vacancyExams['questions'] === 1 ? '' : 's'); ?>">
+                                                Exam<?= $examTotal > 0 ? ' (' . $examTotal . ')' : ''; ?>
+                                            </a>
+                                        </div>
                                     </div>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -228,6 +264,7 @@ $retentionTotals = array_merge(
                             <div class="sd-link-list">
                                 <a href="<?= base_url('secretariat/applicant-tagging'); ?>"><span><i class="mdi mdi-account-arrow-right-outline mr-2 text-primary"></i>Applicant tagging</span><i class="mdi mdi-chevron-right"></i></a>
                                 <a href="<?= base_url('secretariat/retention'); ?>"><span><i class="mdi mdi-file-restore mr-2" style="color:#6e43c0"></i>Retention of points</span><span class="badge <?= (int) $retentionTotals['pending'] > 0 ? 'badge-warning' : 'badge-light'; ?>"><?= (int) $retentionTotals['pending']; ?></span></a>
+                                <a href="<?= base_url('secretariat/exams'); ?>" title="<?= (int) $examTotals['questions']; ?> question<?= (int) $examTotals['questions'] === 1 ? '' : 's'; ?> across <?= (int) $examTotals['total']; ?> exam<?= (int) $examTotals['total'] === 1 ? '' : 's'; ?>"><span><i class="mdi mdi-clipboard-text-outline mr-2" style="color:#0d6efd"></i>Exam builder</span><span class="badge badge-light"><?= (int) $examTotals['total']; ?></span></a>
                                 <a href="<?= base_url('Pages/endorsed_applicants'); ?>"><span><i class="mdi mdi-send-check-outline mr-2 text-info"></i>Endorse applicants</span><i class="mdi mdi-chevron-right"></i></a>
                                 <a href="<?= base_url('Pages/endorsed_applicants_unassigned'); ?>"><span><i class="mdi mdi-account-alert-outline mr-2 text-warning"></i>Endorsed without evaluator</span><span class="badge badge-warning"><?= (int) $counts['no_rater']; ?></span></a>
                                 <a href="<?= base_url('Pages/secretariat_endorsed'); ?>"><span><i class="mdi mdi-chart-box-outline mr-2 text-success"></i>Endorsed &amp; scored</span><span class="badge badge-light"><?= (int) $counts['endorsed']; ?></span></a>

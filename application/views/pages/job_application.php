@@ -107,8 +107,23 @@
                                                         <a  href="<?= base_url(); ?>Pages/<?php if($this->session->position == 'reg'){echo "ma";}else{echo "ma_staff";}?>/<?= $this->uri->segment(3)?>/<?= $row->jobID; ?>/<?= $s->schoolID; ?>">
                                                             <i class="fas fa-clipboard-list noti-icon btn btn-info"></i>
                                                         </a>
-                                                    
-                                                    
+
+                                                    <?php
+                                                    // Examination for this vacancy. Shown only to the applicant
+                                                    // themselves, only where an exam has been published, and only
+                                                    // while the application is still in the running - the exam
+                                                    // page asks for the password before anything starts.
+                                                    $examCounts = $examCounts ?? [];
+                                                    $hasExam = (int) ($examCounts[(int) $row->jobID] ?? 0) > 0;
+                                                    $isApplicant = $this->session->position == 'reg' || $this->session->position == 'user';
+                                                    ?>
+                                                    <?php if ($hasExam && $isApplicant && (int) $row->dq !== 2) { ?>
+                                                        <a href="<?= base_url(); ?>applicant/exam/<?= (int) $row->appID; ?>">
+                                                            <i class="fas fa-file-signature noti-icon btn btn-warning tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Take the examination"></i>
+                                                        </a>
+                                                    <?php } ?>
+
+
                                                     <?php 
                                                         if($this->session->position == 'reg' || $this->session->position == 'user'){ 
                                                             if($jv->a_stat == 0){

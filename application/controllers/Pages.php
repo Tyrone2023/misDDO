@@ -617,6 +617,24 @@ class Pages extends CI_Controller
             $result['retentionCounts'] = $retentionCounts;
             $result['retentionTotals'] = $retentionTotals;
 
+            // Exam Builder tallies per vacancy, so the workload row can say
+            // whether a position already has an exam before it is opened.
+            $this->load->model('ExamBuilder_model', 'exams');
+            $examJobIds = [];
+            foreach ($taggingVacancies as $vacancy) {
+                $examJobIds[] = (int) $vacancy->jobID;
+            }
+            $examCounts = $this->exams->counts_for_jobs($examJobIds);
+            $examTotals = ['total' => 0, 'published' => 0, 'draft' => 0, 'questions' => 0];
+            foreach ($examCounts as $vacancyExams) {
+                foreach ($examTotals as $key => $unused) {
+                    $examTotals[$key] += (int) $vacancyExams[$key];
+                }
+            }
+
+            $result['examCounts'] = $examCounts;
+            $result['examTotals'] = $examTotals;
+
             $result['title'] = "Secretariat Dashboard";
             // already-readable "Group - Level" strings, so the badge needs no lookup
             $result['jobTypes'] = $this->secretariat->user_scope_labels((int) $userId);
@@ -9626,14 +9644,23 @@ public function rqa_municipality_print_shsv2()
             //$data['data'] = $this->Common->one_cond_loop_order_by('hris_applications', 'empEmail', $this->session->username,'appID','Desc');
             //$data['data'] = $this->Common->two_cond('hris_applications', 'empEmail', $this->session->username, 'app_year', date('Y'));
             $data['data'] = $this->Common->two_join_two_cond('hris_applications', 'hris_jobvacancy', 'a.jobID,a.empEmail,a.app_year,a.district,a.district,
-            a.pre_school,a.applicant_id,a.appID,b.jobID,b.jobTitle,b.jvStatus', 'a.jobID = b.jobID', 'empEmail', $this->session->username,'jvStatus','Open','jobTitle', 'ASC');
+            a.pre_school,a.applicant_id,a.appID,a.dq,b.jobID,b.jobTitle,b.jvStatus', 'a.jobID = b.jobID', 'empEmail', $this->session->username,'jvStatus','Open','jobTitle', 'ASC');
         } elseif ($this->session->position == 'user') {
             $data['data'] = $this->Common->two_join_two_cond('hris_applications', 'hris_jobvacancy', 'a.jobID,a.empEmail,a.app_year,a.district,a.district,
-            a.pre_school,a.applicant_id,a.appID,b.jobID,b.jobTitle,b.jvStatus', 'a.jobID = b.jobID', 'empEmail', $this->session->username,'jvStatus','Open','jobTitle', 'ASC');
+            a.pre_school,a.applicant_id,a.appID,a.dq,b.jobID,b.jobTitle,b.jvStatus', 'a.jobID = b.jobID', 'empEmail', $this->session->username,'jvStatus','Open','jobTitle', 'ASC');
         } else {
             $data['data'] = $this->Common->one_cond('hris_applications', 'empEmail', $ee);
         }
 
+        // Which of these vacancies has a published exam, so the Manage column can
+        // show the Exam button only where there is something to take. One query for
+        // the whole list rather than one per row.
+        $this->load->model('ExamBuilder_model', 'exams');
+        $examJobIds = [];
+        foreach ((array) $data['data'] as $application) {
+            $examJobIds[] = (int) $application->jobID;
+        }
+        $data['examCounts'] = $this->exams->published_counts_for_jobs($examJobIds);
 
         $this->load->view('templates/head');
         $this->load->view('templates/header');
