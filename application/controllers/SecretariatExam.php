@@ -23,11 +23,18 @@ class SecretariatExam extends CI_Controller
         $this->load->model('Secretariat_model', 'secretariat');
         $this->load->model('ExamBuilder_model', 'exams');
         $this->load->model('Audit_model', 'Audit');
+        $this->load->library('GiftAssessmentParser');
     }
 
     private function guard(): void
     {
         if ($this->session->userdata('position') !== 'Secretariat') {
+            // AJAX requests (fetch with X-Requested-With) get JSON so the caller
+            // can show a clean error instead of receiving an HTML error page.
+            // json() exits on its own; the show_error path still needs exit.
+            if (strtolower((string) $this->input->get_request_header('X-Requested-With')) === 'xmlhttprequest') {
+                $this->json(false, 'Your session has expired. Reload the page and sign in again.', 403);
+            }
             show_error('Only Secretariat users can build exams.', 403, 'Forbidden');
             exit;
         }
@@ -130,6 +137,97 @@ class SecretariatExam extends CI_Controller
             'selectedJobId' => (int) $this->input->get('job_id'),
             'old' => (array) $this->session->flashdata('exam_form_old'),
         ]);
+    }
+
+    /**
+     * Preview a GIFT / XML question bank before saving.
+     *
+     * Ported from AssessmentSuite::preview_import() so both builders accept the
+     * same files. Returns the parsed questions as JSON for the builder to render.
+     */
+    public function preview_import(): void
+    {
+        $this->guard();
+
+        if (strtoupper((string) $this->input->method()) !== 'POST') {
+            $this->json(false, 'Question bank preview requires a POST request.', 405);
+            return;
+        }
+
+        $sourceName = 'pasted_import';
+        $source = trim((string) $this->input->post('gift_text'));
+        $upload = $_FILES['gift_file'] ?? null;
+
+        if (is_array($upload) && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            if ((int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                $this->json(false, 'The question bank file could not be uploaded for preview.', 422);
+                return;
+            }
+
+            $sourceName = basename((string) ($upload['name'] ?? 'uploaded_import'));
+            $extension = strtolower((string) pathinfo($sourceName, PATHINFO_EXTENSION));
+            if (!in_array($extension, ['txt', 'gift', 'xml'], true)) {
+                $this->json(false, 'Upload a .txt, .gift, or .xml question bank file.', 422);
+                return;
+            }
+
+            if ((int) ($upload['size'] ?? 0) > 5 * 1024 * 1024) {
+                $this->json(false, 'The question bank file must not exceed 5 MB.', 422);
+                return;
+            }
+
+            $tmpName = (string) ($upload['tmp_name'] ?? '');
+            if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+                $this->json(false, 'The uploaded question bank file is invalid.', 422);
+                return;
+            }
+
+            $source = (string) file_get_contents($tmpName);
+        }
+
+        if (trim($source) === '') {
+            $this->json(false, 'Choose a question bank file or paste GIFT / XML content first.', 422);
+            return;
+        }
+
+        // Suppress warnings during parsing so development-mode display_errors
+        // cannot inject PHP notices into the JSON response.
+        $prevDisplay = ini_set('display_errors', '0');
+        $parsed = $this->giftassessmentparser->parse($source, $sourceName);
+        if ($prevDisplay !== false) {
+            ini_set('display_errors', $prevDisplay);
+        }
+        if (empty($parsed['questions'])) {
+            $this->json(false, 'No valid questions were found in this import.', 422, [
+                'warnings' => array_values((array) ($parsed['warnings'] ?? [])),
+            ]);
+            return;
+        }
+
+        $this->json(true, '', 200, [
+            'source_name' => $sourceName,
+            'source' => $source,
+            'question_count' => count($parsed['questions']),
+            'questions' => array_values($parsed['questions']),
+            'warnings' => array_values((array) ($parsed['warnings'] ?? [])),
+        ]);
+    }
+
+    private function json(bool $ok, string $message, int $status, array $extra = []): void
+    {
+        // Discard anything already written (PHP warnings/notices from the
+        // development environment would otherwise corrupt the JSON body).
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        $payload = array_merge(['ok' => $ok, 'message' => $message], $extra);
+        $this->output
+            ->set_status_header($status)
+            ->set_content_type('application/json', 'utf-8')
+            ->set_output(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES))
+            ->_display();
+        exit;
     }
 
     public function store(): void
@@ -321,11 +419,12 @@ class SecretariatExam extends CI_Controller
             throw new RuntimeException('Closes At must come after Open At.');
         }
 
-        // The password is the applicant's way in, so it is always required - unlike
-        // the college build, where a schedule could stand in for it.
+        // An exam gated by an Open At window does not need a password: the window
+        // itself is the gate, so applicants can enter directly once it opens. Only
+        // an exam with no schedule requires a password as the entry point.
         $password = trim((string) $this->input->post('exam_password'));
 
-        if ($password === '') {
+        if ($password === '' && $openAt === null) {
             throw new RuntimeException('A password is required - applicants key it in to enter the exam.');
         }
 

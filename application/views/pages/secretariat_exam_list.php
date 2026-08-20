@@ -84,7 +84,13 @@ $fmtPoints = static function ($value) {
     .ex-page .ex-stat-value { color:var(--ex-ink); font-size:26px; font-weight:700; letter-spacing:-.02em; line-height:1.1; margin-top:4px; }
     .ex-page .ex-stat-note { color:#98a1ad; font-size:11.5px; margin-top:3px; }
 
-    .ex-page .ex-group { border:1px solid var(--ex-line); border-radius:12px; margin-bottom:16px; overflow:hidden; }
+    .ex-page .ex-group { border:1px solid var(--ex-line); border-radius:12px; margin-bottom:16px; }
+    /* The group head keeps its own corners rounded; the table below needs no
+       clipping since the group no longer crops overflow. */
+    .ex-page .ex-group-head { border-radius:12px 12px 0 0; }
+    /* Keep the dropdown menu above the table and let it overflow the group. */
+    .ex-page .ex-group .table-responsive { overflow:visible; }
+    .ex-page .ex-group .dropdown-menu { z-index:1050; }
     .ex-page .ex-group-head { align-items:center; background:linear-gradient(135deg,#f0f7ff 0%,#e3efff 100%); border-bottom:1px solid #cfe0f8; border-left:4px solid var(--ex-accent); display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; padding:15px 18px; }
     .ex-page .ex-group-title { color:var(--ex-ink); font-size:15px; font-weight:700; }
     .ex-page .ex-group-meta { color:var(--ex-muted); font-size:12.5px; margin-top:3px; }

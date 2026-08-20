@@ -79,7 +79,7 @@ $fmtPoints = static function ($value) {
 
             <div class="aeg-head">
                 <h2>Examination</h2>
-                <p>The examination for the position you applied to. You will need the password given to you by the Secretariat.</p>
+                <p>The examination for the position you applied to. Most exams require a password from the Secretariat; an open exam can be started directly during its scheduled window.</p>
                 <div class="aeg-vacancy">
                     <?= $ae_h($app->jobTitle); ?>
                     <span>
@@ -164,18 +164,27 @@ $fmtPoints = static function ($value) {
                                 <?php if ((int) $used['total'] > (int) $used['submitted']) : ?>
                                     <div class="aeg-resume">
                                         <i class="mdi mdi-progress-clock"></i>
-                                        You have an exam already in progress. Entering the password again takes you back to it &mdash;
+                                        You have an exam already in progress. Entering again takes you back to it &mdash;
                                         the timer, if any, has kept running.
                                     </div>
                                 <?php endif; ?>
 
+                                <?php $examHasPassword = !empty($exam->password_hash); ?>
+
                                 <form method="post" action="<?= base_url('applicant/exam/' . (int) $app->appID . '/enter'); ?>" class="aeg-form">
                                     <input type="hidden" name="exam_id" value="<?= $examId; ?>">
-                                    <div class="aeg-field">
-                                        <label class="aeg-label" for="pw-<?= $examId; ?>">Exam password</label>
-                                        <input type="password" class="aeg-input" id="pw-<?= $examId; ?>" name="exam_password"
-                                               autocomplete="off" placeholder="Enter the password given to you" required>
-                                    </div>
+                                    <?php if ($examHasPassword) : ?>
+                                        <div class="aeg-field">
+                                            <label class="aeg-label" for="pw-<?= $examId; ?>">Exam password</label>
+                                            <input type="password" class="aeg-input" id="pw-<?= $examId; ?>" name="exam_password"
+                                                   autocomplete="off" placeholder="Enter the password given to you" required>
+                                        </div>
+                                    <?php else : ?>
+                                        <div class="aeg-field">
+                                            <span class="aeg-label" style="color:#1a7a4c;"><i class="mdi mdi-lock-open-variant-outline"></i> This exam is open &mdash; no password needed.</span>
+                                            <input type="hidden" name="exam_password" value="">
+                                        </div>
+                                    <?php endif; ?>
                                     <div>
                                         <button type="submit" class="aeg-start">
                                             <i class="mdi mdi-play-circle-outline mr-1"></i> Start exam
@@ -184,7 +193,7 @@ $fmtPoints = static function ($value) {
                                 </form>
                                 <p class="aeg-help">
                                     <?php if (!empty($exam->time_limit_minutes)) : ?>
-                                        The <?= (int) $exam->time_limit_minutes; ?>-minute timer starts the moment you enter the password. Make sure you can finish in one sitting.
+                                        The <?= (int) $exam->time_limit_minutes; ?>-minute timer starts the moment you start. Make sure you can finish in one sitting.
                                     <?php else : ?>
                                         This exam has no time limit, but it can only be submitted once per attempt.
                                     <?php endif; ?>

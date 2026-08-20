@@ -59,6 +59,7 @@ $route['secretariat/retention/deny'] = 'SecretariatRetention/deny';
 // Exam Builder, scoped to the Secretariat's assigned vacancies.
 $route['secretariat/exams'] = 'SecretariatExam/index';
 $route['secretariat/exams/create'] = 'SecretariatExam/create';
+$route['secretariat/exams/preview-import'] = 'SecretariatExam/preview_import';
 $route['secretariat/exams/store'] = 'SecretariatExam/store';
 $route['secretariat/exams/(:num)'] = 'SecretariatExam/show/$1';
 $route['secretariat/exams/(:num)/edit'] = 'SecretariatExam/edit/$1';

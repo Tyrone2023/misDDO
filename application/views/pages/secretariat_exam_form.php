@@ -165,12 +165,21 @@ $formAction = $isEdit
     .exb-page .exb-btn-danger:hover { background:#fef2f2; }
     .exb-page .exb-btn-danger:disabled { cursor:not-allowed; opacity:.35; }
 
-    .exb-page .exb-submit-row { align-items:center; display:flex; flex-wrap:wrap; gap:12px; justify-content:flex-end; padding-bottom:24px; }
+    /* Sticky submit bar: .content-page has overflow:hidden which kills
+       position:sticky, so we use position:fixed pinned to the viewport bottom.
+       The left offset matches the sidebar width (240px) and the top bar height
+       is already accounted for by anchoring to bottom. The bar sits over the
+       page content with a solid background and shadow so questions scroll
+       underneath it cleanly. */
+    .exb-page .exb-submit-row { align-items:center; background:#fff; border-top:1px solid var(--exb-line); bottom:0; box-shadow:0 -4px 12px rgba(0,0,0,.06); display:flex; flex-wrap:wrap; gap:12px; justify-content:flex-end; left:240px; padding:12px 24px; position:fixed; right:0; z-index:100; }
     .exb-page .exb-submit { background:var(--exb-accent); border:1px solid var(--exb-accent); border-radius:var(--exb-radius-sm); box-shadow:0 6px 16px rgba(13,110,253,.18); color:#fff; cursor:pointer; font-size:13.5px; font-weight:600; padding:9px 22px; transition:background .12s,border-color .12s; }
     .exb-page .exb-submit:hover, .exb-page .exb-submit:focus { background:var(--exb-accent-strong); border-color:var(--exb-accent-strong); color:#fff; text-decoration:none; }
     .exb-page .exb-cancel { color:var(--exb-muted); font-size:13px; font-weight:600; }
     .exb-page .exb-points-note { color:var(--exb-muted); font-size:12.5px; margin-right:auto; }
     .exb-page .exb-points-note strong { color:var(--exb-ink); }
+    /* The fixed bar overlaps the last question, so reserve space at the bottom
+       of the form to scroll the last question into view. */
+    .exb-page .exb-spacer { height:64px; }
 
     /* The 12 columns are kept at every width; only the spans regroup, so the fields
        stay on a shared grid instead of collapsing into one ragged stack.
@@ -201,6 +210,43 @@ $formAction = $isEdit
     @media (max-width:575px) {
         .exb-page .exb-col-2, .exb-page .exb-col-3,
         .exb-page .exb-col-4, .exb-page .exb-col-5 { grid-column:span 12; }
+    }
+
+    /* GIFT / XML import */
+    .exb-page .import-row { display:flex; flex-wrap:wrap; gap:16px; }
+    .exb-page .import-col { flex:1 1 320px; min-width:0; }
+    .exb-page .upload-zone { align-items:center; background:var(--exb-soft); border:2px dashed #c4cdd9; border-radius:var(--exb-radius-sm); cursor:pointer; display:flex; flex-direction:column; gap:6px; justify-content:center; padding:22px 16px; text-align:center; transition:border-color .15s,background .15s; }
+    .exb-page .upload-zone:hover, .exb-page .upload-zone.drag-over, .exb-page .upload-zone:focus { background:var(--exb-accent-light); border-color:var(--exb-accent); outline:none; }
+    .exb-page .upload-zone.has-file { border-color:var(--exb-accent); border-style:solid; background:#fff; }
+    .exb-page .upload-zone input[type=file] { display:none; }
+    .exb-page .upload-icon { color:var(--exb-muted); font-size:26px; }
+    .exb-page .upload-title { color:var(--exb-ink); font-size:13px; font-weight:600; }
+    .exb-page .upload-sub { color:var(--exb-muted); font-size:12px; }
+    .exb-page .fmt-tags { display:flex; gap:6px; justify-content:center; margin-top:4px; }
+    .exb-page .fmt-tag { background:#fff; border:1px solid var(--exb-line); border-radius:4px; color:var(--exb-muted); font-size:10.5px; font-weight:600; padding:2px 7px; }
+    .exb-page .file-info { align-items:center; background:#fff; border:1px solid var(--exb-line); border-radius:var(--exb-radius-sm); display:none; gap:8px; margin-top:10px; padding:8px 12px; }
+    .exb-page .file-info.visible { display:flex; }
+    .exb-page .file-info .file-name { color:var(--exb-ink); flex:1; font-size:12.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .exb-page .file-info .file-clear { background:none; border:0; color:var(--exb-danger); cursor:pointer; font-size:12px; font-weight:600; }
+    .exb-page .import-actions { align-items:center; display:flex; gap:8px; margin-top:10px; }
+    .exb-page .import-btn { background:var(--exb-accent); border:1px solid var(--exb-accent); border-radius:var(--exb-radius-sm); color:#fff; cursor:pointer; font-size:12.5px; font-weight:600; padding:7px 16px; transition:background .12s; }
+    .exb-page .import-btn:hover { background:var(--exb-accent-strong); border-color:var(--exb-accent-strong); }
+    .exb-page .import-btn:disabled { cursor:not-allowed; opacity:.5; }
+    .exb-page .import-status { border-radius:var(--exb-radius-sm); display:none; font-size:12.5px; line-height:1.5; margin-top:10px; padding:10px 12px; }
+    .exb-page .import-status.visible { display:block; }
+    .exb-page .import-status.loading { background:var(--exb-accent-light); color:var(--exb-accent-strong); }
+    .exb-page .import-status.success { background:#e7f5ed; color:#1a7a4c; }
+    .exb-page .import-status.error { background:#fbeaea; color:#b03636; }
+    .exb-page .import-status ul { margin:6px 0 0; padding-left:18px; }
+    .exb-page .imported-badge { background:var(--exb-accent-light); border-radius:4px; color:var(--exb-accent-strong); font-size:10.5px; font-weight:600; margin-left:6px; padding:1px 6px; }
+
+    /* Sticky submit bar: sidebar-aware left offset. The sidebar is 240px by
+       default, 70px when the body has .enlarged (collapsed sidebar), and 0 on
+       mobile. The fixed bar must track each so it always spans the content area. */
+    body.enlarged .exb-page .exb-submit-row { left:70px; }
+    @media (max-width:767.98px) {
+        .exb-page .exb-submit-row { left:0 !important; padding:10px 14px; }
+        .exb-page .exb-spacer { height:56px; }
     }
 </style>
 
@@ -348,6 +394,45 @@ $formAction = $isEdit
                 </div>
 
                 <div class="section-card">
+                    <div class="section-head">GIFT / XML Import</div>
+                    <div class="section-body">
+                        <div class="field-help" style="margin:0 0 14px;">
+                            Upload a <code>.txt</code>, <code>.gift</code>, or <code>.xml</code> question bank, or paste GIFT / XML content below, then click <strong>Preview import</strong>. The parsed questions appear in the builder underneath, where you can review and edit them before saving.
+                        </div>
+                        <div class="import-row">
+                            <div class="import-col">
+                                <span class="field-label">Upload file</span>
+                                <div class="upload-zone" id="uploadZone" tabindex="0" role="button" aria-label="Upload question bank file">
+                                    <input type="file" name="gift_file" id="giftFileInput" accept=".txt,.gift,.xml,text/xml,application/xml">
+                                    <i class="mdi mdi-upload-outline upload-icon"></i>
+                                    <div class="upload-title"><span>Click to browse</span> or drag &amp; drop</div>
+                                    <div class="upload-sub">Your question bank file</div>
+                                    <div class="fmt-tags">
+                                        <span class="fmt-tag">.TXT</span>
+                                        <span class="fmt-tag">.GIFT</span>
+                                        <span class="fmt-tag">.XML</span>
+                                    </div>
+                                </div>
+                                <div class="file-info" id="fileInfo">
+                                    <i class="mdi mdi-file-document-outline" style="color:var(--exb-accent);"></i>
+                                    <span class="file-name" id="fileNameEl">filename.gift</span>
+                                    <button type="button" class="file-clear" id="fileClear">Remove</button>
+                                </div>
+                            </div>
+                            <div class="import-col">
+                                <span class="field-label">Or paste GIFT / XML content</span>
+                                <textarea name="gift_text" id="giftText" rows="8" class="fc" placeholder="Paste your GIFT or XML question bank here&#10;&#10;::Question 1:: What is 2+2? { =4 ~3 ~5 }"></textarea>
+                                <div class="import-actions">
+                                    <button type="button" class="import-btn" id="previewImportBtn"><i class="mdi mdi-magnify-scan mr-1"></i> Preview import</button>
+                                    <small style="color:var(--exb-muted);font-size:12px;">Supports GIFT and Moodle XML.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="import-status" id="importStatus" role="status" aria-live="polite"></div>
+                    </div>
+                </div>
+
+                <div class="section-card">
                     <div class="section-head">
                         <span>Question Builder</span>
                         <span class="text-muted" style="font-size:12px;font-weight:400;" id="pointsTotal">0 points</span>
@@ -378,6 +463,7 @@ $formAction = $isEdit
                     <a href="<?= base_url('secretariat/exams' . ($curJobId > 0 ? '?job_id=' . $curJobId : '')); ?>" class="exb-cancel">Cancel</a>
                     <button type="submit" class="exb-submit"><?= $isEdit ? 'Save Exam' : 'Create Exam'; ?></button>
                 </div>
+                <div class="exb-spacer"></div>
             </form>
 
         </div>
@@ -462,6 +548,7 @@ $formAction = $isEdit
         // match what the server will actually count.
         function normalizeQuestion(q) {
             var out = Object.assign({}, q);
+            delete out._imported;
             if (q.question_type === 'matching') {
                 var cleaned = {};
                 toEntries(q.answer_key).forEach(function (pair) {
@@ -558,9 +645,10 @@ $formAction = $isEdit
                 builder.innerHTML = '<div class="builder-empty">No questions yet. Add one with the buttons above.</div>';
             } else {
                 builder.innerHTML = questions.map(function (q, i) {
+                    var importedBadge = q._imported ? '<span class="imported-badge">Imported preview</span>' : '';
                     return '<div class="q-card">' +
                         '<div class="q-card-head">' +
-                        '<span>Q' + (i + 1) + ' &middot; ' + labelFor(q.question_type) + '</span>' +
+                        '<span>Q' + (i + 1) + ' &middot; ' + labelFor(q.question_type) + importedBadge + '</span>' +
                         '<button type="button" class="exb-btn-danger" data-action="remove-question" data-index="' + i + '">Remove</button>' +
                         '</div>' +
                         '<div class="q-card-body">' +
@@ -728,6 +816,239 @@ $formAction = $isEdit
                 }
             }
         });
+
+        // ── Open At gates access instead of a password ───────────────────────
+        // When Open At is set, the schedule is the gate, so the password becomes
+        // optional and the examinee can enter directly once the window opens.
+        var openAtField = document.getElementById('openAt');
+        var examPasswordField = document.getElementById('examPassword');
+
+        function syncPasswordRequirement() {
+            if (!openAtField || !examPasswordField) {
+                return;
+            }
+            var hasOpenAt = String(openAtField.value || '').trim() !== '';
+            examPasswordField.required = !hasOpenAt;
+            var help = examPasswordField.parentNode.querySelector('.field-help');
+            if (help) {
+                help.innerHTML = hasOpenAt
+                    ? 'Optional &mdash; an Open At window is set, so applicants can enter without a password once the exam opens. Set one only if you want an extra gate.'
+                    : 'The applicant\'s entry point &mdash; this is what they key in to start the exam. Kept in plain text here so you can read it out or print it.';
+            }
+            var label = examPasswordField.parentNode.querySelector('.field-label');
+            if (label) {
+                var req = label.querySelector('.req');
+                if (req) {
+                    req.style.display = hasOpenAt ? 'none' : '';
+                }
+            }
+        }
+
+        if (openAtField) {
+            openAtField.addEventListener('input', syncPasswordRequirement);
+            openAtField.addEventListener('change', syncPasswordRequirement);
+            syncPasswordRequirement();
+        }
+
+        // ── GIFT / XML import ────────────────────────────────────────────────
+        var uploadZone = document.getElementById('uploadZone');
+        var giftFileInput = document.getElementById('giftFileInput');
+        var fileInfo = document.getElementById('fileInfo');
+        var fileNameEl = document.getElementById('fileNameEl');
+        var fileClear = document.getElementById('fileClear');
+        var giftText = document.getElementById('giftText');
+        var previewImportBtn = document.getElementById('previewImportBtn');
+        var importStatus = document.getElementById('importStatus');
+        var importPreviewUrl = <?= json_encode(site_url('secretariat/exams/preview-import')); ?>;
+        var selectedFile = null;
+
+        function setImportStatus(kind, html) {
+            if (!importStatus) return;
+            importStatus.className = 'import-status visible ' + kind;
+            importStatus.innerHTML = html;
+        }
+
+        function clearImportStatus() {
+            if (!importStatus) return;
+            importStatus.className = 'import-status';
+            importStatus.innerHTML = '';
+        }
+
+        function showFile(name) {
+            if (!uploadZone) return;
+            uploadZone.classList.add('has-file');
+            if (fileNameEl) fileNameEl.textContent = name;
+            if (fileInfo) fileInfo.classList.add('visible');
+        }
+
+        function hideFile() {
+            selectedFile = null;
+            if (giftFileInput) giftFileInput.value = '';
+            if (uploadZone) uploadZone.classList.remove('has-file');
+            if (fileInfo) fileInfo.classList.remove('visible');
+        }
+
+        if (giftFileInput) {
+            giftFileInput.addEventListener('change', function () {
+                selectedFile = giftFileInput.files && giftFileInput.files[0] ? giftFileInput.files[0] : null;
+                if (selectedFile) {
+                    showFile(selectedFile.name);
+                    clearImportStatus();
+                    // Auto-trigger preview on file selection, like the college build.
+                    runPreviewImport(selectedFile);
+                } else {
+                    hideFile();
+                }
+            });
+        }
+
+        if (fileClear) {
+            fileClear.addEventListener('click', function (e) {
+                e.stopPropagation();
+                hideFile();
+            });
+        }
+
+        if (uploadZone) {
+            // Clicking anywhere on the zone opens the file picker. The input is
+            // display:none, so without this the zone is not clickable at all.
+            uploadZone.addEventListener('click', function (e) {
+                if (e.target === fileClear || (fileClear && fileClear.contains(e.target))) return;
+                if (giftFileInput) giftFileInput.click();
+            });
+            uploadZone.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (giftFileInput) giftFileInput.click();
+                }
+            });
+            uploadZone.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                uploadZone.classList.add('drag-over');
+            });
+            uploadZone.addEventListener('dragleave', function () {
+                uploadZone.classList.remove('drag-over');
+            });
+            uploadZone.addEventListener('drop', function (e) {
+                e.preventDefault();
+                uploadZone.classList.remove('drag-over');
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    var dropped = e.dataTransfer.files[0];
+                    var dt = new DataTransfer();
+                    dt.items.add(dropped);
+                    if (giftFileInput) giftFileInput.files = dt.files;
+                    selectedFile = dropped;
+                    showFile(selectedFile.name);
+                    clearImportStatus();
+                    runPreviewImport(selectedFile);
+                }
+            });
+        }
+
+        // Map a parser question into the builder's shape. Choice ids from the
+        // parser are stable strings, which the builder handles just fine.
+        function importQuestion(q) {
+            var out = {
+                question_name: String(q.gift_name || ''),
+                question_type: String(q.question_type || ''),
+                prompt: String(q.prompt || ''),
+                points: Number(q.points) || 1,
+                choices: [],
+                answer_key: q.answer_key
+            };
+            if (q.question_type === 'single_choice' || q.question_type === 'multiple_choice') {
+                out.choices = (q.choices || []).map(function (c) {
+                    return { id: String(c.id || uid()), text: String(c.text || '') };
+                });
+            } else if (q.question_type === 'true_false') {
+                out.choices = [
+                    { id: 'true', text: 'True' },
+                    { id: 'false', text: 'False' }
+                ];
+            }
+            return out;
+        }
+
+        function runPreviewImport(fileArg) {
+            clearImportStatus();
+            var formData = new FormData();
+            var hasSource = false;
+            var fileForImport = fileArg || selectedFile;
+            if (giftText && String(giftText.value || '').trim() !== '') {
+                formData.append('gift_text', giftText.value);
+                hasSource = true;
+            }
+            if (fileForImport) {
+                formData.append('gift_file', fileForImport, fileForImport.name);
+                hasSource = true;
+            }
+            if (!hasSource) {
+                setImportStatus('error', 'Choose a question bank file or paste GIFT / XML content first.');
+                return;
+            }
+
+            if (previewImportBtn) previewImportBtn.disabled = true;
+            setImportStatus('loading', '<i class="mdi mdi-loading mdi-spin mr-1"></i> Parsing question bank…');
+
+            fetch(importPreviewUrl, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (res) {
+                    var ct = res.headers.get('content-type') || '';
+                    if (!ct.includes('application/json')) {
+                        throw new Error('Your session may have expired. Reload the page and try again.');
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    if (!data || !data.ok) {
+                        var msg = (data && data.message) ? data.message : 'The import could not be parsed.';
+                        var warnings = (data && data.warnings && data.warnings.length) ? '<ul>' + data.warnings.map(function (w) { return '<li>' + escapeHtml(w) + '</li>'; }).join('') + '</ul>' : '';
+                        setImportStatus('error', escapeHtml(msg) + warnings);
+                        return;
+                    }
+                    var imported = (data.questions || []).map(function (q) {
+                        var mapped = importQuestion(q);
+                        mapped._imported = true;
+                        return mapped;
+                    });
+                    if (imported.length === 0) {
+                        setImportStatus('error', 'No valid questions were found in this import.');
+                        return;
+                    }
+                    // Append so a manual bank already in the builder is kept.
+                    var firstImportedIndex = questions.length;
+                    imported.forEach(function (q) { questions.push(q); });
+                    render();
+                    var warnHtml = (data.warnings && data.warnings.length)
+                        ? '<ul>' + data.warnings.map(function (w) { return '<li>' + escapeHtml(w) + '</li>'; }).join('') + '</ul>'
+                        : '';
+                    setImportStatus('success', '<i class="mdi mdi-check-circle-outline mr-1"></i> Imported ' + imported.length + ' question' + (imported.length === 1 ? '' : 's') + ' into the builder below.' + warnHtml);
+                    // Scroll to the first imported question so the preview is visible.
+                    var builderEl = document.getElementById('questionBuilder');
+                    if (builderEl && builderEl.children[firstImportedIndex]) {
+                        builderEl.children[firstImportedIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    // Clear the file input after a successful file import so a second
+                    // import doesn't re-send the same file.
+                    if (fileForImport) {
+                        hideFile();
+                    }
+                })
+                .catch(function (err) {
+                    setImportStatus('error', escapeHtml(err && err.message ? err.message : 'The preview request failed. Please try again.'));
+                })
+                .finally(function () {
+                    if (previewImportBtn) previewImportBtn.disabled = false;
+                });
+        }
+
+        if (previewImportBtn) {
+            previewImportBtn.addEventListener('click', function () { runPreviewImport(); });
+        }
 
         render();
     })();

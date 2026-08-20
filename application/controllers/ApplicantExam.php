@@ -167,14 +167,20 @@ class ApplicantExam extends CI_Controller
         }
 
         $password = trim((string) $this->input->post('exam_password'));
-        if ($password === '') {
-            $this->fail('Enter the exam password to begin.', $appId);
-            return;
-        }
+        $hasPassword = !empty($exam->password_hash);
 
-        if (sha1($password) !== (string) $exam->password_hash) {
-            $this->fail('That password is not correct. Ask the Secretariat if you were not given one.', $appId);
-            return;
+        // An exam with no password is gated by its Open At window instead: once
+        // availability says it is open, the applicant enters directly.
+        if ($hasPassword) {
+            if ($password === '') {
+                $this->fail('Enter the exam password to begin.', $appId);
+                return;
+            }
+
+            if (sha1($password) !== (string) $exam->password_hash) {
+                $this->fail('That password is not correct. Ask the Secretariat if you were not given one.', $appId);
+                return;
+            }
         }
 
         // An attempt already open is resumed rather than duplicated, so a reload
