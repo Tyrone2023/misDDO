@@ -1046,30 +1046,44 @@ a.mis-card-static:hover {
    ========================================================================== */
 
 /* Stock app.min.css pins `.footer` with `position:absolute; left:240px`, and
-   nothing between it and <body> is positioned — so the bar is laid out against
-   the document: 240px from the window edge, at whatever height the document
-   happens to end. The retheme sidebar is 245px wide and fixed to the viewport,
-   so the bar slides under the menu and, on a short page, lands above the
-   bottom of the screen and paints over the sidebar.
+   nothing above it is positioned — so the bar is laid out against the initial
+   containing block: 240px from the window edge, one viewport-height down from
+   the top of the document. That is why it slides under the 245px retheme
+   sidebar, cuts the menu off, and on a long page lands in the middle of the
+   content instead of at the end of it.
 
-   Making `.content-page` the containing block fixes both at once: `left:0`
-   now means "the content column", which starts exactly where the sidebar ends
-   whatever width it has (245px / 70px collapsed / 0 on mobile), and `bottom:0`
-   is the bottom of a column that is always at least one screen tall. The 65px
-   bottom padding app.min.css already puts on `.content-page` keeps page
-   content clear of the bar. */
+   The markup has two shapes: most views leave `<div class="content-page">`
+   open for templates/footer.php to close, so the bar sits inside the content
+   column; a few (the newer Secretariat pages, for instance) close it
+   themselves, leaving the bar a direct child of `#wrapper`. Giving both an
+   anchor covers either shape — `bottom:0` then means the true bottom of the
+   page, which is at least one screen tall, and each shape gets the `left`
+   that matches its own box. */
+#wrapper {
+    position: relative;
+}
+
 .content-page {
     position: relative;
     min-height: calc(100vh - 70px); /* 70px topbar */
 }
 
-.footer,
-.enlarged .footer {
-    left: 0 !important;
+/* Footer left outside the column: offset it by the sidebar itself. The
+   collapsed state keeps app.min.css's `.enlarged .footer{left:70px!important}`,
+   which already matches the 70px rail. */
+.footer {
+    left: var(--mis-side-width);
     right: 0;
     background: var(--mis-surface);
     border-top: 1px solid var(--mis-border);
     color: var(--mis-muted);
+}
+
+/* Footer inside the column: `.content-page` already starts where the sidebar
+   ends, at any sidebar width, so the bar is flush at 0. `!important` only to
+   outrank the `.enlarged` rule above, which would otherwise indent it 70px. */
+.content-page .footer {
+    left: 0 !important;
 }
 
 
