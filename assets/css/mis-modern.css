@@ -1042,7 +1042,39 @@ a.mis-card-static:hover {
 
 
 /* ==========================================================================
-   6. RESPONSIVE
+   6. FOOTER
+   ========================================================================== */
+
+/* Stock app.min.css pins `.footer` with `position:absolute; left:240px`, and
+   nothing between it and <body> is positioned — so the bar is laid out against
+   the document: 240px from the window edge, at whatever height the document
+   happens to end. The retheme sidebar is 245px wide and fixed to the viewport,
+   so the bar slides under the menu and, on a short page, lands above the
+   bottom of the screen and paints over the sidebar.
+
+   Making `.content-page` the containing block fixes both at once: `left:0`
+   now means "the content column", which starts exactly where the sidebar ends
+   whatever width it has (245px / 70px collapsed / 0 on mobile), and `bottom:0`
+   is the bottom of a column that is always at least one screen tall. The 65px
+   bottom padding app.min.css already puts on `.content-page` keeps page
+   content clear of the bar. */
+.content-page {
+    position: relative;
+    min-height: calc(100vh - 70px); /* 70px topbar */
+}
+
+.footer,
+.enlarged .footer {
+    left: 0 !important;
+    right: 0;
+    background: var(--mis-surface);
+    border-top: 1px solid var(--mis-border);
+    color: var(--mis-muted);
+}
+
+
+/* ==========================================================================
+   7. RESPONSIVE
    ========================================================================== */
 
 @media (max-width: 991.98px) {
