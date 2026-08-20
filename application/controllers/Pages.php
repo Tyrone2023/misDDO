@@ -845,6 +845,24 @@ class Pages extends CI_Controller
             $this->load->view('templates/modal');
             $this->load->view('templates/footer');
             
+        }elseif ($this->session->position == 'District Supervisor') {
+
+            // District Supervisor: RQA Recommendation + Appointed List only.
+            // The figures are rendered empty and then filled (and refreshed)
+            // via AJAX from Pages/district_sup_counts so they stay realtime.
+            $page = "dashboard_district_sup";
+
+            if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+                show_404();
+            }
+
+            $data['title'] = "District Supervisor Dashboard";
+
+            $this->load->view('templates/head');
+            $this->load->view('templates/header');
+            $this->load->view('pages/' . $page, $data);
+            $this->load->view('templates/footer');
+
         }elseif ($this->session->position == 'mathcoor') {
             $page = "dashboard_mathcoor";
             
@@ -3885,6 +3903,40 @@ public function car_rqa_promotion()
         return $group !== '' ? $group : $specialization;
     }
 
+    /**
+     * Positions whose RQA access is view-only: they may read the
+     * Recommendation report and the Appointed List but never write to them.
+     * Every RQA save endpoint checks this before touching the database, so the
+     * restriction holds even if the read-only UI is bypassed.
+     */
+    private function rqa_view_only()
+    {
+        return $this->session->position === 'District Supervisor';
+    }
+
+    /**
+     * The single job title a view-only position is allowed to see, or null when
+     * the signed-in user may see every position. District Supervisors only ever
+     * deal with Teacher I, so both the position selector and the rows behind it
+     * are narrowed to that title.
+     */
+    private function rqa_restricted_job_title()
+    {
+        return $this->rqa_view_only() ? 'Teacher I' : null;
+    }
+
+    /**
+     * True when $jobTitle is the title a restricted user is limited to (or when
+     * there is no restriction at all).
+     */
+    private function rqa_job_title_allowed($jobTitle)
+    {
+        $restricted = $this->rqa_restricted_job_title();
+
+        return $restricted === null
+            || strcasecmp(trim((string) $jobTitle), $restricted) === 0;
+    }
+
     private function rqa_recommendation_job_suffixes()
     {
         return [
@@ -3944,10 +3996,34 @@ public function car_rqa_promotion()
 
         $this->ensure_rqa_recommendation_table();
 
+        // Positions offered in the selector. A view-only position (District
+        // Supervisor) only ever sees Teacher I, so the list is narrowed here
+        // rather than in the view — rqa_recommendation_data() enforces the same
+        // limit on the rows, so a hand-typed jobID cannot get around it.
+        $jobOptions = $this->Page_model->rqa_job_options();
+        if ($this->rqa_restricted_job_title() !== null) {
+            $jobOptions = array_values(array_filter($jobOptions, function ($j) {
+                return $this->rqa_job_title_allowed($j->jobTitle ?? '');
+            }));
+        }
+
         // Years that have vacancies (newest first). The report is scoped by the
         // vacancy's school year rather than by Open/Closed status so it keeps
-        // working on positions whose vacancy has already been closed.
-        $years = $this->Page_model->rqa_available_years();
+        // working on positions whose vacancy has already been closed. When the
+        // positions are restricted the year list follows them, so a year with
+        // no Teacher I vacancy is never offered.
+        if ($this->rqa_restricted_job_title() !== null) {
+            $years = [];
+            foreach ($jobOptions as $j) {
+                $sy = (int) ($j->sy ?? 0);
+                if ($sy > 0 && !in_array($sy, $years, true)) {
+                    $years[] = $sy;
+                }
+            }
+            rsort($years);
+        } else {
+            $years = $this->Page_model->rqa_available_years();
+        }
 
         $requestedYear = (int) $this->input->get('year', true);
         if ($requestedYear > 0 && in_array($requestedYear, $years, true)) {
@@ -3961,11 +4037,12 @@ public function car_rqa_promotion()
 
         $data = [
             'title' => 'RQA Recommendation',
-            'jobOptions' => $this->Page_model->rqa_job_options(),
+            'jobOptions' => $jobOptions,
             'jobTypeSuffixes' => $this->rqa_recommendation_job_suffixes(),
             'years' => $years,
             'selectedYear' => $selectedYear,
             'selectedJobId' => (int) $this->input->get('job', true),
+            'readOnly' => $this->rqa_view_only(),
         ];
 
         $this->load->view('templates/head');
@@ -4120,6 +4197,15 @@ public function car_rqa_promotion()
             return;
         }
 
+        // A view-only position is limited to one job title; refuse any jobID
+        // outside it so the restriction cannot be bypassed via the query string.
+        foreach ($jobs as $job) {
+            if (!$this->rqa_job_title_allowed($job->jobTitle ?? '')) {
+                echo json_encode(['status' => 'error', 'message' => 'You are not authorised to view this position.']);
+                return;
+            }
+        }
+
         $jobType = (int) $jobs[0]->job_type;
         $jobTitle = $jobs[0]->jobTitle;
         $specializationKind = $this->rqa_specialization_kind($jobType);
@@ -4213,6 +4299,11 @@ public function car_rqa_promotion()
 
         if ($this->session->logged_in == false) {
             echo json_encode(['status' => 'error', 'message' => 'Your session has expired. Please log in again.']);
+            return;
+        }
+
+        if ($this->rqa_view_only()) {
+            echo json_encode(['status' => 'error', 'message' => 'Your account has view-only access to this report.']);
             return;
         }
 
@@ -4730,6 +4821,11 @@ public function car_rqa_promotion()
             return;
         }
 
+        if ($this->rqa_view_only()) {
+            echo json_encode(['status' => 'error', 'message' => 'Your account has view-only access to this report.']);
+            return;
+        }
+
         $this->ensure_rqa_recommendation_table();
 
         $jobID = (int) $this->input->post('jobID');
@@ -4815,6 +4911,11 @@ public function car_rqa_promotion()
 
         if ($this->session->logged_in == false) {
             echo json_encode(['status' => 'error', 'message' => 'Your session has expired. Please log in again.']);
+            return;
+        }
+
+        if ($this->rqa_view_only()) {
+            echo json_encode(['status' => 'error', 'message' => 'Your account has view-only access to this report.']);
             return;
         }
 
@@ -6329,6 +6430,11 @@ public function car_rqa_promotion()
 
         // Newest appointment first (ordered by appointment_issued_at)
         foreach ($this->Page_model->recommended_for_approval('appointed', null, true) as $row) {
+            // A view-only position sees only its one allowed job title.
+            if (!$this->rqa_job_title_allowed($row->jobTitle ?? '')) {
+                continue;
+            }
+
             $jobType = (int) ($row->job_type ?? 0);
             $suffix = $suffixes[$jobType] ?? '';
             $name = trim((string) ($row->rec_name ?? ''));
@@ -6649,6 +6755,90 @@ public function car_rqa_promotion()
         }
 
         echo json_encode(['status' => 'success', 'rows' => $rows]);
+    }
+
+    /* ====================================================================
+     * DISTRICT SUPERVISOR
+     * A view-only position whose only functions are the RQA Recommendation
+     * report and the Appointed List, both limited to Teacher I. The screens
+     * themselves are the existing ones (narrowed by rqa_view_only() /
+     * rqa_restricted_job_title()); only the dashboard below is role-specific.
+     * ==================================================================== */
+
+    /**
+     * Row count in hris_rqa_recommendation, optionally narrowed to one status
+     * and/or one job title. Backs the District Supervisor dashboard cards.
+     */
+    private function rqa_rec_count($status = null, $jobTitle = null)
+    {
+        if ($status !== null) {
+            $this->db->where('rec.status', $status);
+        }
+        if ($jobTitle !== null) {
+            $this->db->join('hris_jobvacancy jv', 'jv.jobID = rec.jobID', 'left');
+            $this->db->where('jv.jobTitle', $jobTitle);
+        }
+
+        return (int) $this->db->count_all_results('hris_rqa_recommendation rec');
+    }
+
+    /**
+     * Live counts for the District Supervisor dashboard (AJAX, JSON), polled
+     * every 10s. Every figure is division-wide but limited to the job title the
+     * role is allowed to see, so the cards agree with the two screens they
+     * link to. The role cannot recommend, so nothing here is per-user.
+     */
+    public function district_sup_counts()
+    {
+        header('Content-Type: application/json');
+
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'Your session has expired. Please log in again.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+
+        $title = $this->rqa_restricted_job_title();
+
+        // Latest appointments for that title, newest first.
+        $recent = [];
+        foreach ($this->Page_model->recommended_for_approval('appointed', null, true) as $row) {
+            if (!$this->rqa_job_title_allowed($row->jobTitle ?? '')) {
+                continue;
+            }
+
+            $name = trim((string) ($row->rec_name ?? ''));
+            if ($name === '') {
+                $name = rqa_applicant_name($row);
+            }
+
+            $issuedAt = trim((string) ($row->appointment_issued_at ?? ''));
+
+            $recent[] = [
+                'name' => $name,
+                'position' => trim((string) ($row->jobTitle ?? '')),
+                'itemNumber' => (string) ($row->item_number ?? ''),
+                'school' => (string) ($row->school_name ?? ''),
+                'date' => $issuedAt !== '' ? substr($issuedAt, 0, 10) : '',
+            ];
+
+            if (count($recent) >= 5) {
+                break;
+            }
+        }
+
+        echo json_encode([
+            'status' => 'success',
+            'jobTitle' => $title,
+            'counts' => [
+                'recommended' => $this->rqa_rec_count('recommended', $title),
+                'approved' => $this->rqa_rec_count('approved', $title),
+                'appointed' => $this->rqa_rec_count('appointed', $title),
+                'waived' => $this->rqa_rec_count('waived', $title),
+            ],
+            'recent' => $recent,
+        ]);
     }
 
     public function car_rqa_non()

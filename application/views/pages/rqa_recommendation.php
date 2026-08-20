@@ -10,6 +10,10 @@ $suffixes = $jobTypeSuffixes ?? [];
 $selectedJobId = (int) ($selectedJobId ?? 0);
 $years = $years ?? [];
 $selectedYear = (int) ($selectedYear ?? 0);
+// View-only positions (District Supervisor) get the same report without the
+// School / Item No. / Tribe / Remarks inputs, the Action column or the
+// tie-reordering handles. The save endpoints refuse them server-side too.
+$readOnly = !empty($readOnly);
 ?>
 
 <style>
@@ -754,6 +758,9 @@ $selectedYear = (int) ($selectedYear ?? 0);
         font-size: 15px;
     }
     .rqa-drag-handle:active { cursor: grabbing; }
+
+    /* Shown instead of the recommend-list buttons for view-only positions */
+    .rqa-readonly-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: .4rem .8rem; font-size: .74rem; font-weight: 700; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.22); color: #fff; white-space: nowrap; }
 </style>
 
 <div class="content-page">
@@ -764,17 +771,25 @@ $selectedYear = (int) ($selectedYear ?? 0);
                 <div class="rqa-hero-content">
                     <div class="rqa-title-block">
                         <h4><?= h($title ?? 'RQA Recommendation'); ?></h4>
-                        <p>Pick a position to load qualified applicants ranked from highest to lowest RQA score. Use the filters, enter the item number, then recommend the selected applicant.</p>
+                        <?php if ($readOnly) : ?>
+                            <p>Pick a position to load qualified applicants ranked from highest to lowest RQA score. This report is read-only for your account.</p>
+                        <?php else : ?>
+                            <p>Pick a position to load qualified applicants ranked from highest to lowest RQA score. Use the filters, enter the item number, then recommend the selected applicant.</p>
+                        <?php endif; ?>
                     </div>
 
                     <div class="d-flex align-items-center flex-wrap justify-content-end" style="gap:10px;">
                         <span id="rqa-count-badge"></span>
-                        <a href="<?= base_url('Pages/rqa_recommended_list'); ?>?scope=mine" class="btn btn-light btn-sm font-weight-bold" style="border-radius:10px;">
-                            <i class="mdi mdi-account-check mr-1"></i>My Recommended List
-                        </a>
-                        <a href="<?= base_url('Pages/rqa_recommended_list'); ?>?scope=all" class="btn btn-light btn-sm font-weight-bold" style="border-radius:10px;">
-                            <i class="mdi mdi-format-list-bulleted mr-1"></i>All Recommended List
-                        </a>
+                        <?php if ($readOnly) : ?>
+                            <span class="rqa-readonly-chip"><i class="mdi mdi-eye-outline"></i> View only</span>
+                        <?php else : ?>
+                            <a href="<?= base_url('Pages/rqa_recommended_list'); ?>?scope=mine" class="btn btn-light btn-sm font-weight-bold" style="border-radius:10px;">
+                                <i class="mdi mdi-account-check mr-1"></i>My Recommended List
+                            </a>
+                            <a href="<?= base_url('Pages/rqa_recommended_list'); ?>?scope=all" class="btn btn-light btn-sm font-weight-bold" style="border-radius:10px;">
+                                <i class="mdi mdi-format-list-bulleted mr-1"></i>All Recommended List
+                            </a>
+                        <?php endif; ?>
                         <div class="rqa-hero-icon">
                             <i class="mdi mdi-account-check-outline"></i>
                         </div>
@@ -865,7 +880,9 @@ $selectedYear = (int) ($selectedYear ?? 0);
                             <span class="rqa-legend-item"><span class="rqa-legend-swatch tie"></span> Tie Score</span>
                             <span class="rqa-legend-item"><span class="rqa-legend-swatch corr"></span> Corrigendum / Addendum</span>
                             <span class="rqa-legend-item"><span class="rqa-legend-swatch remarks"></span> Has Remarks</span>
-                            <span class="rqa-legend-item rqa-legend-hint"><i class="mdi mdi-drag-vertical"></i> Drag tied rows to set their order</span>
+                            <?php if (!$readOnly) : ?>
+                                <span class="rqa-legend-item rqa-legend-hint"><i class="mdi mdi-drag-vertical"></i> Drag tied rows to set their order</span>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -895,11 +912,13 @@ $selectedYear = (int) ($selectedYear ?? 0);
                                 <col style="width:3.5%;">
                                 <col style="width:3.5%;">
                                 <col style="width:4%;">
-                                <col style="width:12%;">
-                                <col style="width:7%;">
-                                <col class="rqa-col-tribe" style="width:7%; display:none;">
-                                <col style="width:9%;">
-                                <col style="width:7%;">
+                                <?php if (!$readOnly) : ?>
+                                    <col style="width:12%;">
+                                    <col style="width:7%;">
+                                    <col class="rqa-col-tribe" style="width:7%; display:none;">
+                                    <col style="width:9%;">
+                                    <col style="width:7%;">
+                                <?php endif; ?>
                             </colgroup>
 
                             <thead>
@@ -915,11 +934,13 @@ $selectedYear = (int) ($selectedYear ?? 0);
                                     <th class="num">Demo</th>
                                     <th class="num">TRF</th>
                                     <th class="num">Total</th>
-                                    <th>School</th>
-                                    <th>Item No.</th>
-                                    <th class="rqa-col-tribe" style="display:none;">Tribe</th>
-                                    <th>Remarks</th>
-                                    <th>Action</th>
+                                    <?php if (!$readOnly) : ?>
+                                        <th>School</th>
+                                        <th>Item No.</th>
+                                        <th class="rqa-col-tribe" style="display:none;">Tribe</th>
+                                        <th>Remarks</th>
+                                        <th>Action</th>
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
 
@@ -942,6 +963,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var tribeUrl = '<?= base_url('Pages/rqa_tribe_save'); ?>';
     var schoolSearchUrl = '<?= base_url('Pages/rqa_school_search'); ?>';
     var preselectJob = '<?= $selectedJobId > 0 ? $selectedJobId : ''; ?>';
+    // Mirrors the server-side check; the save endpoints reject this role too.
+    var readOnly = <?= $readOnly ? 'true' : 'false'; ?>;
 
     // Every position (Open and Closed) with its school year. The position
     // dropdown is rebuilt from this list for the selected year so the report
@@ -1192,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', function () {
             + (tied ? ' data-tied="1"' : '') + '>';
 
         html += '<td class="num">';
-        if (tied) {
+        if (tied && !readOnly) {
             html += '<span class="rqa-drag-handle" draggable="true" title="Drag to reorder this tie"><i class="mdi mdi-drag-vertical"></i></span>';
         }
         html += '<span class="rqa-rank-badge">' + index + '</span></td>';
@@ -1219,24 +1242,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
         html += '<td class="total"><span class="rqa-total-pill">' + escHtml(r.total_points) + '</span></td>';
 
-        html += '<td><select class="form-control form-control-sm rqa-school"></select></td>';
-        html += '<td><input type="text" class="form-control form-control-sm rqa-item-number" placeholder="Item"></td>';
-        if (tribeApplicable) {
-            html += '<td class="rqa-col-tribe"><input type="text" class="form-control form-control-sm rqa-tribe" placeholder="Tribe" value="' + escAttr(r.tribe || '') + '"></td>';
-        }
-        html += '<td><input type="text" class="form-control form-control-sm rqa-remarks" placeholder="Remarks" value="' + escAttr(r.remarks || '') + '"></td>';
+        if (!readOnly) {
+            html += '<td><select class="form-control form-control-sm rqa-school"></select></td>';
+            html += '<td><input type="text" class="form-control form-control-sm rqa-item-number" placeholder="Item"></td>';
+            if (tribeApplicable) {
+                html += '<td class="rqa-col-tribe"><input type="text" class="form-control form-control-sm rqa-tribe" placeholder="Tribe" value="' + escAttr(r.tribe || '') + '"></td>';
+            }
+            html += '<td><input type="text" class="form-control form-control-sm rqa-remarks" placeholder="Remarks" value="' + escAttr(r.remarks || '') + '"></td>';
 
-        html += '<td>';
-        html += '<button type="button" class="btn btn-sm btn-success rqa-recommend-btn"'
-            + ' data-jobid="' + r.jobID + '"'
-            + ' data-appid="' + r.appID + '"'
-            + ' data-email="' + escAttr(r.empEmail) + '"'
-            + ' data-record="' + escAttr(r.code) + '"'
-            + ' data-name="' + escAttr(r.name) + '"'
-            + ' data-total="' + escAttr(r.total_points) + '">';
-        html += '<i class="mdi mdi-check-circle-outline mr-1"></i>Recommend';
-        html += '</button>';
-        html += '</td>';
+            html += '<td>';
+            html += '<button type="button" class="btn btn-sm btn-success rqa-recommend-btn"'
+                + ' data-jobid="' + r.jobID + '"'
+                + ' data-appid="' + r.appID + '"'
+                + ' data-email="' + escAttr(r.empEmail) + '"'
+                + ' data-record="' + escAttr(r.code) + '"'
+                + ' data-name="' + escAttr(r.name) + '"'
+                + ' data-total="' + escAttr(r.total_points) + '">';
+            html += '<i class="mdi mdi-check-circle-outline mr-1"></i>Recommend';
+            html += '</button>';
+            html += '</td>';
+        }
 
         html += '</tr>';
 

@@ -106,7 +106,8 @@
                                                                                     'SocMob' => 'socmob',
                                                                                     'School Base Child Protection' => 'sbcp',
                                                                                     'Mathematics Coordinator' => 'mathcoor',
-                                                                                    'Plan Supervisor' => 'plansup'
+                                                                                    'Plan Supervisor' => 'plansup',
+                                                                                    'District Supervisor' => 'District Supervisor'
                                                                             );
                                                                 foreach($position as $row => $key){
                                                             ?>

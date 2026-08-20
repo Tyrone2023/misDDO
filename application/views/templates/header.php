@@ -1110,6 +1110,27 @@
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
 
+                            <?php elseif ($this->session->position === 'District Supervisor') : ?>
+                                <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
+
+                                <li class="menu-title">Appointments</li>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_recommendation" class="waves-effect">
+                                        <i class="mdi mdi-account-check-outline"></i>
+                                        <span> RQA Recommendation </span>
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/rqa_appointed_list" class="waves-effect">
+                                        <i class="mdi mdi-account-tie"></i>
+                                        <span> Appointed List </span>
+                                    </a>
+                                </li>
+
+                                <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
+                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
+
                             <?php elseif ($this->session->userdata('position') === 'SHNS') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
 
