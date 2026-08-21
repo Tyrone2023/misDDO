@@ -160,6 +160,11 @@ class ApplicantExam extends CI_Controller
             return;
         }
 
+        if ((string) ($exam->delivery_mode ?? 'online') !== 'online') {
+            $this->fail('This examination is administered on a printed OMR answer sheet.', $appId);
+            return;
+        }
+
         $availability = $this->exams->availability($exam);
         if (!$availability['open']) {
             $this->fail($availability['message'], $appId);

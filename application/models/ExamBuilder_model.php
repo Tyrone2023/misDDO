@@ -60,6 +60,7 @@ class ExamBuilder_model extends CI_Model
                 created_by_username VARCHAR(100) NULL,
                 title VARCHAR(255) NOT NULL,
                 exam_type VARCHAR(30) NOT NULL DEFAULT 'written_exam',
+                delivery_mode VARCHAR(20) NOT NULL DEFAULT 'online',
                 instructions TEXT NULL,
                 total_points DECIMAL(10,2) NOT NULL DEFAULT 0.00,
                 question_count INT UNSIGNED NOT NULL DEFAULT 0,
@@ -80,6 +81,14 @@ class ExamBuilder_model extends CI_Model
                 KEY idx_creator (created_by)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
+
+        // Existing installations pre-date printable OMR delivery. Keep the
+        // bootstrap migration additive so every saved exam remains online by
+        // default and no manual SQL step is required during deployment.
+        if (!$this->db->field_exists('delivery_mode', $this->tableExams)) {
+            $this->db->query("ALTER TABLE {$this->tableExams}
+                ADD COLUMN delivery_mode VARCHAR(20) NOT NULL DEFAULT 'online' AFTER exam_type");
+        }
 
         $this->db->query("
             CREATE TABLE IF NOT EXISTS {$this->tableQuestions} (
@@ -219,6 +228,7 @@ class ExamBuilder_model extends CI_Model
             ->from($this->tableExams)
             ->where('job_id', $jobId)
             ->where('status', 'published')
+            ->where('delivery_mode', 'online')
             ->order_by('created_at', 'asc')
             ->order_by('exam_id', 'asc')
             ->get()
@@ -241,6 +251,7 @@ class ExamBuilder_model extends CI_Model
             ->from($this->tableExams)
             ->where_in('job_id', $jobIds)
             ->where('status', 'published')
+            ->where('delivery_mode', 'online')
             ->group_by('job_id')
             ->get()
             ->result();
@@ -448,6 +459,7 @@ class ExamBuilder_model extends CI_Model
             'sy' => trim((string) ($payload['sy'] ?? '')) ?: null,
             'title' => trim((string) $payload['title']),
             'exam_type' => self::EXAM_TYPE,
+            'delivery_mode' => ($payload['delivery_mode'] ?? 'online') === 'omr' ? 'omr' : 'online',
             'instructions' => trim((string) ($payload['instructions'] ?? '')),
             'total_points' => round($totalPoints, 2),
             'question_count' => count($questions),

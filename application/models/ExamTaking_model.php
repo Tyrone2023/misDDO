@@ -36,6 +36,8 @@ class ExamTaking_model extends CI_Model
                 applicant_id INT UNSIGNED NOT NULL,
                 applicant_email VARCHAR(150) NULL,
                 attempt_no INT UNSIGNED NOT NULL DEFAULT 1,
+                submission_source VARCHAR(20) NOT NULL DEFAULT 'online',
+                submitted_by INT UNSIGNED NULL,
                 status VARCHAR(20) NOT NULL DEFAULT 'in_progress',
                 score DECIMAL(10,2) NOT NULL DEFAULT 0.00,
                 total_points DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -56,6 +58,15 @@ class ExamTaking_model extends CI_Model
                 KEY idx_applicant (applicant_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
+
+        if (!$this->db->field_exists('submission_source', $this->tableAttempts)) {
+            $this->db->query("ALTER TABLE {$this->tableAttempts}
+                ADD COLUMN submission_source VARCHAR(20) NOT NULL DEFAULT 'online' AFTER attempt_no");
+        }
+        if (!$this->db->field_exists('submitted_by', $this->tableAttempts)) {
+            $this->db->query("ALTER TABLE {$this->tableAttempts}
+                ADD COLUMN submitted_by INT UNSIGNED NULL AFTER submission_source");
+        }
 
         $this->db->query("
             CREATE TABLE IF NOT EXISTS {$this->tableAnswers} (
@@ -184,6 +195,8 @@ class ExamTaking_model extends CI_Model
             'applicant_id' => (int) $meta['applicant_id'],
             'applicant_email' => trim((string) ($meta['applicant_email'] ?? '')) ?: null,
             'attempt_no' => $attemptNo,
+            'submission_source' => ($meta['submission_source'] ?? 'online') === 'omr' ? 'omr' : 'online',
+            'submitted_by' => !empty($meta['submitted_by']) ? (int) $meta['submitted_by'] : null,
             'status' => 'in_progress',
             'started_at' => $now,
             'expires_at' => $timeLimitMinutes > 0
@@ -197,6 +210,77 @@ class ExamTaking_model extends CI_Model
         $attemptId = (int) $this->db->insert_id();
 
         return $attemptId > 0 ? $this->get_attempt($attemptId) : null;
+    }
+
+    /**
+     * Record or replace the single scanned-paper result for an application.
+     * A rescan updates the original OMR attempt instead of consuming another
+     * attempt, which makes correction after a poor photo safe and auditable.
+     */
+    public function record_omr_attempt(object $exam, object $application, array $questions, array $responses, int $submittedBy): array
+    {
+        $attempt = $this->db
+            ->from($this->tableAttempts)
+            ->where('exam_id', (int) $exam->exam_id)
+            ->where('app_id', (int) $application->appID)
+            ->where('submission_source', 'omr')
+            ->order_by('attempt_id', 'desc')
+            ->limit(1)
+            ->get()
+            ->row();
+
+        if ($attempt) {
+            $this->db->where('attempt_id', (int) $attempt->attempt_id)->update($this->tableAttempts, [
+                'status' => 'in_progress',
+                'expires_at' => null,
+                'submitted_by' => $submittedBy,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            $attempt = $this->get_attempt((int) $attempt->attempt_id);
+        } else {
+            $attempt = $this->start_attempt([
+                'exam_id' => (int) $exam->exam_id,
+                'job_id' => (int) $exam->job_id,
+                'app_id' => (int) $application->appID,
+                'applicant_id' => (int) $application->applicant_id,
+                'applicant_email' => (string) $application->empEmail,
+                'ip_address' => (string) ($application->ip_address ?? ''),
+                'submission_source' => 'omr',
+                'submitted_by' => $submittedBy,
+            ], null);
+        }
+
+        if (!$attempt) {
+            return [];
+        }
+
+        $totals = $this->submit_attempt($attempt, $questions, $responses);
+        if (empty($totals)) {
+            return [];
+        }
+
+        $totals['attempt_id'] = (int) $attempt->attempt_id;
+        return $totals;
+    }
+
+    /** Scanned results with applicant names, newest first, for Secretariat UI. */
+    public function omr_attempts_for_exam(int $examId): array
+    {
+        return $this->db
+            ->select("a.*, COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName", false)
+            ->from($this->tableAttempts . ' a')
+            ->join('hris_applications app', 'app.appID = a.app_id', 'left')
+            ->join('hris_applicant ha', 'ha.id = app.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(app.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = app.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->where('a.exam_id', $examId)
+            ->where('a.submission_source', 'omr')
+            ->where('a.status', 'submitted')
+            ->order_by('a.submitted_at', 'desc')
+            ->get()
+            ->result();
     }
 
     public function has_expired(object $attempt): bool

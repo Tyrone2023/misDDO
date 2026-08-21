@@ -22,6 +22,7 @@ class SecretariatExam extends CI_Controller
         $this->load->helper(['url', 'form']);
         $this->load->model('Secretariat_model', 'secretariat');
         $this->load->model('ExamBuilder_model', 'exams');
+        $this->load->model('ExamTaking_model', 'taking');
         $this->load->model('Audit_model', 'Audit');
         $this->load->library('GiftAssessmentParser');
     }
@@ -295,6 +296,9 @@ class SecretariatExam extends CI_Controller
             'title' => $exam->title,
             'exam' => $exam,
             'questions' => $this->exams->get_questions($examId),
+            'omrAttempts' => (string) ($exam->delivery_mode ?? 'online') === 'omr'
+                ? $this->taking->omr_attempts_for_exam($examId)
+                : [],
         ]);
     }
 
@@ -372,6 +376,124 @@ class SecretariatExam extends CI_Controller
         redirect(base_url('secretariat/exams/' . $examId));
     }
 
+    /** Printable question paper and generic, batch-ready OMR answer sheets. */
+    public function omr_print(int $examId = 0): void
+    {
+        $this->guard();
+        $exam = $this->owned_exam($examId);
+
+        if (!$exam || (string) ($exam->delivery_mode ?? 'online') !== 'omr') {
+            $this->session->set_flashdata('danger', 'That exam is not configured for OMR paper delivery.');
+            redirect(base_url('secretariat/exams/' . $examId));
+            return;
+        }
+
+        $this->load->view('pages/secretariat_exam_omr_print', [
+            'title' => 'Print OMR Exam',
+            'exam' => $exam,
+            'questions' => $this->exams->get_questions($examId),
+        ]);
+    }
+
+    /** Mobile-friendly capture and review screen for a completed OMR sheet. */
+    public function omr_scan(int $examId = 0): void
+    {
+        $this->guard();
+        $exam = $this->owned_exam($examId);
+
+        if (!$exam || (string) ($exam->delivery_mode ?? 'online') !== 'omr') {
+            $this->session->set_flashdata('danger', 'That exam is not configured for OMR scanning.');
+            redirect(base_url('secretariat/exams/' . $examId));
+            return;
+        }
+
+        $applicants = array_values(array_filter(
+            $this->secretariat->applicants_for_tagging($this->user_id(), (int) $exam->job_id),
+            static function ($row) { return (int) $row->dq !== 2; }
+        ));
+        $result = null;
+        $resultId = (int) $this->input->get('result');
+        if ($resultId > 0) {
+            $candidate = $this->taking->get_attempt($resultId);
+            if ($candidate && (int) $candidate->exam_id === $examId && (string) ($candidate->submission_source ?? '') === 'omr') {
+                $result = $candidate;
+            }
+        }
+
+        $this->render('secretariat_exam_omr_scan', [
+            'title' => 'Scan OMR Answer Sheet',
+            'exam' => $exam,
+            'questions' => $this->exams->get_questions($examId),
+            'applicants' => $applicants,
+            'selectedAppId' => (int) $this->input->get('app_id'),
+            'result' => $result,
+            'omrAttempts' => $this->taking->omr_attempts_for_exam($examId),
+        ]);
+    }
+
+    /** Validate reviewed bubbles, grade them, and store an ordinary exam result. */
+    public function omr_submit(int $examId = 0): void
+    {
+        $this->guard();
+        $this->require_post();
+        $exam = $this->owned_exam($examId);
+
+        if (!$exam || (string) ($exam->delivery_mode ?? 'online') !== 'omr') {
+            show_error('That exam is not available for OMR submission.', 404, 'Not found');
+            return;
+        }
+
+        $applicants = $this->secretariat->applicants_for_tagging($this->user_id(), (int) $exam->job_id);
+        $appId = (int) $this->input->post('app_id');
+        $application = $this->find_application($applicants, $appId);
+        $scanUrl = base_url('secretariat/exams/' . $examId . '/omr/scan?app_id=' . $appId);
+
+        if (!$application || (int) $application->dq === 2) {
+            $this->session->set_flashdata('danger', 'Choose an eligible applicant for this vacancy.');
+            redirect($scanUrl);
+            return;
+        }
+
+        $questions = $this->exams->get_questions($examId);
+        $decoded = json_decode((string) $this->input->post('answers_json'), true);
+        if (!is_array($decoded)) {
+            $this->session->set_flashdata('danger', 'The reviewed bubble answers could not be read. Scan the sheet again.');
+            redirect($scanUrl);
+            return;
+        }
+
+        $responses = [];
+        foreach ($questions as $question) {
+            $qid = (int) $question->question_id;
+            $posted = $decoded[$qid] ?? $decoded[(string) $qid] ?? [];
+            $valid = [];
+            foreach ((array) $question->choices as $choice) {
+                $valid[] = (string) (is_array($choice) ? ($choice['id'] ?? '') : $choice);
+            }
+            $selected = array_values(array_intersect(array_map('strval', (array) $posted), $valid));
+            if ((string) $question->question_type === 'multiple_choice') {
+                $responses[$qid] = array_values(array_unique($selected));
+            } else {
+                $responses[$qid] = $selected[0] ?? '';
+            }
+        }
+
+        $application->ip_address = (string) $this->input->ip_address();
+        $totals = $this->taking->record_omr_attempt($exam, $application, $questions, $responses, $this->user_id());
+        if (empty($totals)) {
+            $this->session->set_flashdata('danger', 'The scanned result could not be saved. Please try again.');
+            redirect($scanUrl);
+            return;
+        }
+
+        $this->audit((int) $exam->job_id, $examId, 'Recorded OMR result for application #'
+            . $appId . ': ' . number_format((float) $totals['score'], 2) . '/'
+            . number_format((float) $totals['total_points'], 2) . ' points.', 'exam_omr_scan');
+        $this->session->set_flashdata('success', 'OMR result saved and graded.');
+        redirect(base_url('secretariat/exams/' . $examId . '/omr/scan?app_id=' . $appId
+            . '&result=' . (int) $totals['attempt_id']));
+    }
+
     public function delete(int $examId = 0): void
     {
         $this->guard();
@@ -412,6 +534,9 @@ class SecretariatExam extends CI_Controller
             throw new RuntimeException('Exam title is required.');
         }
 
+        $deliveryMode = strtolower(trim((string) $this->input->post('delivery_mode')));
+        $deliveryMode = $deliveryMode === 'omr' ? 'omr' : 'online';
+
         $openAt = $this->normalize_datetime($this->input->post('open_at'), 'Open At');
         $closeAt = $this->normalize_datetime($this->input->post('close_at'), 'Closes At');
 
@@ -424,7 +549,7 @@ class SecretariatExam extends CI_Controller
         // an exam with no schedule requires a password as the entry point.
         $password = trim((string) $this->input->post('exam_password'));
 
-        if ($password === '' && $openAt === null) {
+        if ($deliveryMode === 'online' && $password === '' && $openAt === null) {
             throw new RuntimeException('A password is required - applicants key it in to enter the exam.');
         }
 
@@ -434,6 +559,7 @@ class SecretariatExam extends CI_Controller
             'position_group' => (int) $vacancy->position,
             'sy' => (string) $vacancy->sy,
             'title' => $title,
+            'delivery_mode' => $deliveryMode,
             // Recruitment runs one kind of exam, so no type is posted; the model
             // stamps the column with its single value.
             'instructions' => trim((string) $this->input->post('instructions')),
@@ -580,6 +706,18 @@ class SecretariatExam extends CI_Controller
             throw new RuntimeException('Add at least one question before saving this exam.');
         }
 
+        if (strtolower(trim((string) $this->input->post('delivery_mode'))) === 'omr') {
+            foreach ($out as $idx => $question) {
+                if (!in_array($question['question_type'], ['single_choice', 'multiple_choice', 'true_false'], true)) {
+                    throw new RuntimeException('OMR question ' . ($idx + 1)
+                        . ' must be Single Choice, Multiple Choice, or True / False.');
+                }
+                if (count((array) $question['choices']) > 6) {
+                    throw new RuntimeException('OMR question ' . ($idx + 1) . ' has more than six choices.');
+                }
+            }
+        }
+
         return $out;
     }
 
@@ -677,6 +815,7 @@ class SecretariatExam extends CI_Controller
         $this->session->set_flashdata('exam_form_old', [
             'job_id' => (int) $this->input->post('job_id'),
             'title' => (string) $this->input->post('title', true),
+            'delivery_mode' => (string) $this->input->post('delivery_mode'),
             'status' => (string) $this->input->post('status', true),
             'instructions' => (string) $this->input->post('instructions'),
             'exam_password' => (string) $this->input->post('exam_password'),
@@ -690,6 +829,16 @@ class SecretariatExam extends CI_Controller
         ]);
 
         redirect($redirectTo);
+    }
+
+    private function find_application(array $rows, int $appId): ?object
+    {
+        foreach ($rows as $row) {
+            if ((int) $row->appID === $appId) {
+                return $row;
+            }
+        }
+        return null;
     }
 
     private function audit(int $jobId, int $examId, string $description, string $action): void

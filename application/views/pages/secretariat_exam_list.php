@@ -249,16 +249,19 @@ $fmtPoints = static function ($value) {
                                     </thead>
                                     <tbody>
                                         <?php foreach ($exams as $exam) : ?>
-                                            <?php $state = $examState($exam); ?>
+                                            <?php $state = $examState($exam); $isOmr = (string) ($exam->delivery_mode ?? 'online') === 'omr'; ?>
                                             <tr>
                                                 <td data-label="Exam">
                                                     <div class="ex-row-title">
                                                         <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id); ?>"><?= $ex_h($exam->title); ?></a>
                                                     </div>
                                                     <div class="ex-row-meta">
+                                                        <span><i class="mdi <?= $isOmr ? 'mdi-checkbox-marked-circle-outline' : 'mdi-laptop'; ?>"></i> <?= $isOmr ? 'OMR paper' : 'Online'; ?></span>
                                                         <span title="Access code"><i class="mdi mdi-pound"></i> <span class="ex-code"><?= $ex_h($exam->exam_code); ?></span></span>
-                                                        <span title="Password applicants key in to enter"><i class="mdi mdi-shield-key-outline"></i> <span class="ex-code"><?= $ex_h($exam->password_plain); ?></span></span>
-                                                        <span><i class="mdi mdi-refresh"></i> <?= (int) $exam->attempt_limit > 0 ? (int) $exam->attempt_limit . '&times; attempt' . ((int) $exam->attempt_limit === 1 ? '' : 's') : 'Unlimited attempts'; ?></span>
+                                                        <?php if (!$isOmr) : ?>
+                                                            <span title="Password applicants key in to enter"><i class="mdi mdi-shield-key-outline"></i> <span class="ex-code"><?= $ex_h($exam->password_plain); ?></span></span>
+                                                            <span><i class="mdi mdi-refresh"></i> <?= (int) $exam->attempt_limit > 0 ? (int) $exam->attempt_limit . '&times; attempt' . ((int) $exam->attempt_limit === 1 ? '' : 's') : 'Unlimited attempts'; ?></span>
+                                                        <?php endif; ?>
                                                         <span><i class="mdi mdi-timer-outline"></i> <?= !empty($exam->time_limit_minutes) ? (int) $exam->time_limit_minutes . ' min' : 'No time limit'; ?></span>
                                                         <?php if ($exam->passing_score !== null) : ?>
                                                             <span><i class="mdi mdi-target"></i> Passing <?= $fmtPoints($exam->passing_score); ?></span>
@@ -291,6 +294,10 @@ $fmtPoints = static function ($value) {
                                                             <a class="dropdown-item" href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/edit'); ?>">
                                                                 <i class="mdi mdi-pencil-outline mr-1"></i> Edit
                                                             </a>
+                                                            <?php if ($isOmr) : ?>
+                                                                <a class="dropdown-item" href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/print'); ?>"><i class="mdi mdi-printer-outline mr-1"></i> Print OMR</a>
+                                                                <a class="dropdown-item" href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/scan'); ?>"><i class="mdi mdi-camera-outline mr-1"></i> Scan sheets</a>
+                                                            <?php endif; ?>
                                                             <div class="dropdown-divider"></div>
                                                             <form method="post" action="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/delete'); ?>"
                                                                   onsubmit="return confirm('Delete this exam? Its question bank is removed with it.');">

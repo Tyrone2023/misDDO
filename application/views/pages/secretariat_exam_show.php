@@ -24,6 +24,8 @@ $questionTypes = [
 ];
 
 $questions = $questions ?? [];
+$omrAttempts = $omrAttempts ?? [];
+$isOmr = (string) ($exam->delivery_mode ?? 'online') === 'omr';
 
 $fmtStamp = static function ($value) {
     $value = trim((string) $value);
@@ -123,6 +125,9 @@ $vacancySy = trim((string) ($exam->vacancy_sy ?? '')) ?: (string) $exam->sy;
     .exs-page table.exs-pairs th { background:var(--exs-soft); border-bottom:1px solid var(--exs-line); color:#5b6673; font-size:11px; font-weight:650; letter-spacing:.03em; padding:8px 10px; text-transform:uppercase; }
     .exs-page table.exs-pairs td { border-bottom:1px solid #eef0f4; font-size:13.5px; padding:9px 10px; }
     .exs-page .exs-manual { background:#fdf3e0; border-radius:6px; color:#96650a; display:inline-block; font-size:12.5px; font-weight:600; padding:5px 10px; }
+    .exs-page .exs-results { margin:0; width:100%; }
+    .exs-page .exs-results th { background:var(--exs-soft); border-bottom:1px solid var(--exs-line); color:var(--exs-muted); font-size:11px; letter-spacing:.04em; padding:9px 12px; text-transform:uppercase; }
+    .exs-page .exs-results td { border-bottom:1px solid #edf0f4; color:#3d4855; font-size:13px; padding:10px 12px; }
 
     .exs-page .exs-nothing { color:var(--exs-muted); font-size:13px; padding:36px 20px; text-align:center; }
     .exs-page .exs-nothing i { color:#c3cbd6; display:block; font-size:36px; margin-bottom:8px; }
@@ -151,6 +156,10 @@ $vacancySy = trim((string) ($exam->vacancy_sy ?? '')) ?: (string) $exam->sy;
                 </div>
                 <div class="exs-hero-actions">
                     <a href="<?= base_url('secretariat/exams?job_id=' . (int) $exam->job_id); ?>" class="exs-chip"><i class="mdi mdi-arrow-left"></i> All exams</a>
+                    <?php if ($isOmr) : ?>
+                        <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/print'); ?>" class="exs-chip"><i class="mdi mdi-printer-outline"></i> Print OMR</a>
+                        <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/scan'); ?>" class="exs-chip"><i class="mdi mdi-camera-outline"></i> Scan sheets</a>
+                    <?php endif; ?>
                     <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/edit'); ?>" class="exs-chip"><i class="mdi mdi-pencil-outline"></i> Edit</a>
                     <form method="post" action="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/delete'); ?>"
                           onsubmit="return confirm('Delete this exam? Its question bank is removed with it.');" style="margin:0;">
@@ -199,13 +208,17 @@ $vacancySy = trim((string) ($exam->vacancy_sy ?? '')) ?: (string) $exam->sy;
 
                     <div class="exs-facts">
                         <div class="exs-fact">
+                            <div class="exs-fact-label">Delivery</div>
+                            <div class="exs-fact-value"><?= $isOmr ? 'OMR paper' : 'Online'; ?></div>
+                        </div>
+                        <div class="exs-fact">
                             <div class="exs-fact-label">Access code</div>
                             <div class="exs-fact-value exs-mono"><?= $ex_h($exam->exam_code); ?></div>
                         </div>
                         <div class="exs-fact">
                             <div class="exs-fact-label">Password</div>
-                            <div class="exs-fact-value exs-mono"><?= !empty($exam->password_plain) ? $ex_h($exam->password_plain) : '&mdash;'; ?></div>
-                            <div class="exs-fact-sub">The applicant's entry point</div>
+                            <div class="exs-fact-value exs-mono"><?= $isOmr ? 'Not used' : (!empty($exam->password_plain) ? $ex_h($exam->password_plain) : '&mdash;'); ?></div>
+                            <div class="exs-fact-sub"><?= $isOmr ? 'Scanned by the Secretariat' : "The applicant's entry point"; ?></div>
                         </div>
                         <div class="exs-fact">
                             <div class="exs-fact-label">Questions</div>
@@ -237,6 +250,39 @@ $vacancySy = trim((string) ($exam->vacancy_sy ?? '')) ?: (string) $exam->sy;
                     </div>
                 </div>
             </div>
+
+            <?php if ($isOmr) : ?>
+                <div class="card exs-card">
+                    <div class="exs-card-head">
+                        <h5 class="exs-card-title">Scanned OMR results</h5>
+                        <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/scan'); ?>" class="btn btn-sm btn-primary"><i class="mdi mdi-camera-outline mr-1"></i> Scan answer sheet</a>
+                    </div>
+                    <?php if (empty($omrAttempts)) : ?>
+                        <div class="exs-nothing"><i class="mdi mdi-checkbox-marked-circle-outline"></i>No OMR answer sheets have been graded yet.</div>
+                    <?php else : ?>
+                        <div class="table-responsive">
+                            <table class="exs-results">
+                                <thead><tr><th>Applicant</th><th>Application</th><th>Score</th><th>Grade</th><th>Scanned</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($omrAttempts as $attempt) : ?>
+                                        <?php
+                                        $name = trim((string) $attempt->LastName . ', ' . (string) $attempt->FirstName . ' ' . (string) $attempt->MiddleName);
+                                        $passed = $exam->passing_score === null || (float) $attempt->score >= (float) $exam->passing_score;
+                                        ?>
+                                        <tr>
+                                            <td><?= $ex_h($name !== ',' ? $name : $attempt->applicant_email); ?></td>
+                                            <td>#<?= (int) $attempt->app_id; ?></td>
+                                            <td><strong><?= $fmtPoints($attempt->score); ?> / <?= $fmtPoints($attempt->total_points); ?></strong></td>
+                                            <td><?= $fmtPoints($attempt->percentage); ?>%<?php if ($exam->passing_score !== null) : ?> &middot; <span class="text-<?= $passed ? 'success' : 'danger'; ?>"><?= $passed ? 'Passed' : 'Below passing'; ?></span><?php endif; ?></td>
+                                            <td><?= $ex_h(date('M j, Y g:i A', strtotime((string) $attempt->submitted_at))); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
 
             <div class="card exs-card">
                 <div class="exs-card-head">

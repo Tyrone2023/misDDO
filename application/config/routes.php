@@ -64,6 +64,9 @@ $route['secretariat/exams/store'] = 'SecretariatExam/store';
 $route['secretariat/exams/(:num)'] = 'SecretariatExam/show/$1';
 $route['secretariat/exams/(:num)/edit'] = 'SecretariatExam/edit/$1';
 $route['secretariat/exams/(:num)/update'] = 'SecretariatExam/update/$1';
+$route['secretariat/exams/(:num)/omr/print'] = 'SecretariatExam/omr_print/$1';
+$route['secretariat/exams/(:num)/omr/scan'] = 'SecretariatExam/omr_scan/$1';
+$route['secretariat/exams/(:num)/omr/submit'] = 'SecretariatExam/omr_submit/$1';
 $route['secretariat/exams/(:num)/delete'] = 'SecretariatExam/delete/$1';
 
 // The applicant's side of the same exams, reached from the Manage column of

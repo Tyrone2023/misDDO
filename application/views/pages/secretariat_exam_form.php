@@ -54,6 +54,7 @@ $toLocalInput = static function ($value) {
 $curJobId = (int) ($old['job_id'] ?? 0) ?: ($isEdit ? (int) $exam->job_id : $selectedJobId);
 $curTitle = (string) $val('title');
 $curStatus = (string) $val('status', 'published');
+$curDeliveryMode = strtolower((string) $val('delivery_mode', 'online')) === 'omr' ? 'omr' : 'online';
 $curInstructions = (string) ($old['instructions'] ?? ($exam->instructions ?? ''));
 $curPassword = (string) ($old['exam_password'] ?? ($exam->password_plain ?? ''));
 $curAttemptLimit = (string) ($old['attempt_limit'] ?? ($exam ? (string) (int) $exam->attempt_limit : '1'));
@@ -122,6 +123,15 @@ $formAction = $isEdit
     .exb-page .exb-col-4 { grid-column:span 4; }
     .exb-page .exb-col-5 { grid-column:span 5; }
     .exb-page .exb-col-12 { grid-column:span 12; }
+    .exb-page .mode-picker { display:grid; gap:12px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .exb-page .mode-option { border:1px solid var(--exb-line); border-radius:10px; cursor:pointer; display:flex; gap:12px; margin:0; padding:14px 16px; transition:.15s ease; }
+    .exb-page .mode-option:has(input:checked) { background:var(--exb-accent-light); border-color:var(--exb-accent); box-shadow:0 0 0 2px rgba(13,110,253,.08); }
+    .exb-page .mode-option input { margin-top:4px; }
+    .exb-page .mode-title { color:var(--exb-ink); display:block; font-size:14px; font-weight:700; }
+    .exb-page .mode-help { color:var(--exb-muted); display:block; font-size:12px; font-weight:400; line-height:1.45; margin-top:3px; }
+    .exb-page .online-only.omr-disabled { opacity:.48; }
+    .exb-page .omr-guidance { background:#fff8e6; border:1px solid #f1d58c; border-radius:8px; color:#795b14; display:none; font-size:12.5px; line-height:1.5; padding:10px 12px; }
+    .exb-page .omr-guidance.visible { display:block; }
     /* Rows align on their own baseline, so a two-line help text under one field
        does not push the field beside it down. */
     .exb-page .settings-strip > div { align-self:start; }
@@ -247,6 +257,7 @@ $formAction = $isEdit
     @media (max-width:767.98px) {
         .exb-page .exb-submit-row { left:0 !important; padding:10px 14px; }
         .exb-page .exb-spacer { height:56px; }
+        .exb-page .mode-picker { grid-template-columns:1fr; }
     }
 </style>
 
@@ -294,6 +305,23 @@ $formAction = $isEdit
                       Open At 4 + Closes At 4 + Questions 4
                 -->
                 <div class="settings-strip">
+                    <div class="exb-col-12">
+                        <span class="field-label">Delivery method <span class="req">*</span></span>
+                        <div class="mode-picker" role="radiogroup" aria-label="Exam delivery method">
+                            <label class="mode-option">
+                                <input type="radio" name="delivery_mode" value="online" <?= $curDeliveryMode === 'online' ? 'checked' : ''; ?>>
+                                <span><span class="mode-title"><i class="mdi mdi-laptop mr-1"></i> Online exam</span><span class="mode-help">The current workflow. Applicants sign in, enter the password or wait for the schedule, and answer in the browser.</span></span>
+                            </label>
+                            <label class="mode-option">
+                                <input type="radio" name="delivery_mode" value="omr" <?= $curDeliveryMode === 'omr' ? 'checked' : ''; ?>>
+                                <span><span class="mode-title"><i class="mdi mdi-checkbox-marked-circle-outline mr-1"></i> OMR paper exam</span><span class="mode-help">Print one generic master set, photocopy it for the batch, then photograph each completed sheet on the mobile web scanner for automatic identification and grading.</span></span>
+                            </label>
+                        </div>
+                        <div class="omr-guidance mt-2" id="omrGuidance">
+                            OMR supports Single Choice, Multiple Choice, or True / False questions, with no more than six choices each. Long exams automatically continue onto additional 60-question answer-sheet pages. Password and browser attempts do not apply.
+                        </div>
+                    </div>
+
                     <!-- Vacancy: the class-section slot of the college build -->
                     <div class="exb-col-5">
                         <span class="field-label">Vacancy <span class="req">*</span></span>
@@ -330,13 +358,13 @@ $formAction = $isEdit
                         </select>
                     </div>
 
-                    <div class="exb-col-4">
-                        <span class="field-label">Password <span class="req">*</span></span>
+                    <div class="exb-col-4 online-only">
+                        <span class="field-label">Password <span class="req online-required-mark">*</span></span>
                         <input type="text" name="exam_password" id="examPassword" class="fc" value="<?= $ex_h($curPassword); ?>" placeholder="e.g. AOII-2026-SETA" required>
                         <span class="field-help">The applicant's entry point &mdash; this is what they key in to start the exam. Kept in plain text here so you can read it out or print it.</span>
                     </div>
 
-                    <div class="exb-col-2">
+                    <div class="exb-col-2 online-only">
                         <span class="field-label">Attempts</span>
                         <select name="attempt_limit" class="fc">
                             <option value="1" <?= $curAttemptLimit === '1' ? 'selected' : ''; ?>>1</option>
@@ -367,13 +395,13 @@ $formAction = $isEdit
                                min="1" placeholder="Enter custom minutes" style="<?= $timeLimitIsCustom ? '' : 'display:none;'; ?>">
                     </div>
 
-                    <div class="exb-col-4">
+                    <div class="exb-col-4 online-only">
                         <span class="field-label">Open At</span>
                         <input type="datetime-local" name="open_at" id="openAt" class="fc" value="<?= $ex_h($curOpenAt); ?>">
                         <span class="field-help">Optional. Before this moment the password will not let anyone in.</span>
                     </div>
 
-                    <div class="exb-col-4">
+                    <div class="exb-col-4 online-only">
                         <span class="field-label">Closes At</span>
                         <input type="datetime-local" name="close_at" class="fc" value="<?= $ex_h($curCloseAt); ?>">
                         <span class="field-help">Optional. Must fall after Open At.</span>
@@ -494,6 +522,11 @@ $formAction = $isEdit
         var pointsSummary = document.getElementById('pointsSummary');
         var questionSummary = document.getElementById('questionSummary');
         var questions = restoredQuestions.slice();
+
+        function deliveryMode() {
+            var selected = document.querySelector('input[name="delivery_mode"]:checked');
+            return selected ? selected.value : 'online';
+        }
 
         function uid() {
             return 'c_' + Math.random().toString(36).slice(2, 10);
@@ -672,6 +705,9 @@ $formAction = $isEdit
 
         Array.prototype.forEach.call(document.querySelectorAll('.js-add-question'), function (btn) {
             btn.addEventListener('click', function () {
+                if (deliveryMode() === 'omr' && ['single_choice', 'multiple_choice', 'true_false'].indexOf(btn.dataset.type) === -1) {
+                    return;
+                }
                 questions.push(defaults[btn.dataset.type]());
                 render();
             });
@@ -697,6 +733,9 @@ $formAction = $isEdit
             }
 
             if (action === 'add-choice') {
+                if (deliveryMode() === 'omr' && q.choices.length >= 6) {
+                    return;
+                }
                 q.choices.push({ id: uid(), text: '' });
             }
             if (action === 'remove-choice') {
@@ -814,6 +853,21 @@ $formAction = $isEdit
                     alertBox.style.display = 'block';
                     alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
+                return;
+            }
+            if (deliveryMode() === 'omr') {
+                var invalid = questions.findIndex(function (q) {
+                    return ['single_choice', 'multiple_choice', 'true_false'].indexOf(q.question_type) === -1 || (q.choices || []).length > 6;
+                });
+                if (invalid !== -1) {
+                    e.preventDefault();
+                    var guidance = document.getElementById('omrGuidance');
+                    if (guidance) {
+                        guidance.classList.add('visible');
+                        guidance.innerHTML = '<strong>Question ' + (invalid + 1) + ' is not OMR-compatible.</strong> Use only Single Choice, Multiple Choice, or True / False with up to six choices.';
+                        guidance.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
             }
         });
 
@@ -828,10 +882,13 @@ $formAction = $isEdit
                 return;
             }
             var hasOpenAt = String(openAtField.value || '').trim() !== '';
-            examPasswordField.required = !hasOpenAt;
+            var isOmr = deliveryMode() === 'omr';
+            examPasswordField.required = !isOmr && !hasOpenAt;
             var help = examPasswordField.parentNode.querySelector('.field-help');
             if (help) {
-                help.innerHTML = hasOpenAt
+                help.innerHTML = isOmr
+                    ? 'Not used for OMR paper exams. The Secretariat records the completed answer sheet in the scanner.'
+                    : hasOpenAt
                     ? 'Optional &mdash; an Open At window is set, so applicants can enter without a password once the exam opens. Set one only if you want an extra gate.'
                     : 'The applicant\'s entry point &mdash; this is what they key in to start the exam. Kept in plain text here so you can read it out or print it.';
             }
@@ -839,10 +896,29 @@ $formAction = $isEdit
             if (label) {
                 var req = label.querySelector('.req');
                 if (req) {
-                    req.style.display = hasOpenAt ? 'none' : '';
+                    req.style.display = (isOmr || hasOpenAt) ? 'none' : '';
                 }
             }
         }
+
+        function syncDeliveryMode() {
+            var isOmr = deliveryMode() === 'omr';
+            var guidance = document.getElementById('omrGuidance');
+            if (guidance) guidance.classList.toggle('visible', isOmr);
+            Array.prototype.forEach.call(document.querySelectorAll('.online-only'), function (el) {
+                el.classList.toggle('omr-disabled', isOmr);
+            });
+            Array.prototype.forEach.call(document.querySelectorAll('.js-add-question'), function (btn) {
+                var supported = ['single_choice', 'multiple_choice', 'true_false'].indexOf(btn.dataset.type) !== -1;
+                btn.disabled = isOmr && !supported;
+                btn.title = isOmr && !supported ? 'This question type cannot be read from an OMR sheet.' : '';
+            });
+            syncPasswordRequirement();
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('input[name="delivery_mode"]'), function (radio) {
+            radio.addEventListener('change', syncDeliveryMode);
+        });
 
         if (openAtField) {
             openAtField.addEventListener('input', syncPasswordRequirement);
@@ -1050,6 +1126,7 @@ $formAction = $isEdit
             previewImportBtn.addEventListener('click', function () { runPreviewImport(); });
         }
 
+        syncDeliveryMode();
         render();
     })();
 </script>
