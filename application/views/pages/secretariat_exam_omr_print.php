@@ -17,12 +17,12 @@ $pageCount = max(1, (int) ceil(count($questions) / $questionsPerPage));
         .notice{background:#fff7dc;border:1px solid #e8ca72;border-radius:8px;color:#71550c;margin:16px auto;max-width:210mm;padding:12px 14px}
         .paper{background:#fff;margin:16px auto;min-height:297mm;padding:16mm 15mm;width:210mm}.paper h1{font-size:20pt;margin:0 0 4px;text-align:center}.paper .meta{font-size:10pt;text-align:center}.paper .identity{border-bottom:1px solid #222;display:flex;font-size:10pt;gap:15mm;margin-top:8mm;padding:0 0 3mm}.paper .instructions{border:1px solid #777;font-size:9.5pt;line-height:1.45;margin:7mm 0 8mm;padding:5mm}.question{break-inside:avoid;font-size:10pt;margin:0 0 5mm}.question strong{display:inline-block;min-width:8mm}.choices{display:grid;gap:2mm;grid-template-columns:repeat(2,minmax(0,1fr));margin:2mm 0 0 8mm}.choice{display:flex;gap:2mm}.letter{font-weight:700}
         .answer-sheet{background:#fff;height:297mm;margin:16px auto;width:210mm}.answer-sheet svg{display:block;height:297mm;width:210mm}
-        @page{size:A4;margin:0}@media print{body{background:#fff}.toolbar,.notice{display:none!important}.paper,.answer-sheet{margin:0}.paper{break-after:page}.answer-sheet{break-before:page}.question{break-inside:avoid}}
+        @page{size:A4;margin:0}@media print{body{background:#fff}.toolbar,.notice{display:none!important}.paper,.answer-sheet{margin:0}.paper{break-after:page}.answer-sheet{break-before:page}.question{break-inside:avoid}body.print-questionnaire .answer-sheet{display:none!important}body.print-answers .paper{display:none!important}body.print-answers .answer-sheet.first-answer-sheet{break-before:auto}}
         @media(max-width:850px){.paper,.answer-sheet{height:auto;max-width:100%;min-height:0;width:100%}.answer-sheet svg{height:auto;width:100%}}
     </style>
 </head>
 <body>
-    <div class="toolbar"><strong>Print batch OMR exam</strong><span><?= count($questions); ?> questions &middot; <?= $pageCount; ?> answer-sheet page<?= $pageCount === 1 ? '' : 's'; ?></span><button type="button" onclick="window.print()">Print master set</button><a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id); ?>">Back</a></div>
+    <div class="toolbar"><strong>Print batch OMR exam</strong><span><?= count($questions); ?> questions &middot; <?= $pageCount; ?> answer-sheet page<?= $pageCount === 1 ? '' : 's'; ?></span><button type="button" onclick="printPart('questionnaire')">Print questionnaire</button><button type="button" onclick="printPart('answers')">Print answer sheets</button><a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id); ?>">Back</a></div>
     <div class="notice"><strong>Batch workflow:</strong> This is a generic master set—photocopy it for every examinee. Nobody needs a personalized sheet. Give each examinee their application number and require all 10 digits, including leading zeroes. Print on A4 at 100% scale with browser headers and footers disabled.</div>
 
     <main class="paper">
@@ -50,7 +50,7 @@ $pageCount = max(1, (int) ceil(count($questions) / $questionsPerPage));
         $barcodeText = 'OMR|' . (string) $exam->exam_code . '|PAGE|' . $page;
         $pageCode = $page - 1;
         ?>
-        <section class="answer-sheet" aria-label="OMR answer sheet page <?= $page; ?>">
+        <section class="answer-sheet <?= $page === 1 ? 'first-answer-sheet' : ''; ?>" aria-label="OMR answer sheet page <?= $page; ?>">
             <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg">
                 <rect width="210" height="297" fill="#fff"/>
                 <g fill="#000"><rect x="5" y="5" width="6" height="6"/><rect x="199" y="5" width="6" height="6"/><rect x="5" y="286" width="6" height="6"/><rect x="199" y="286" width="6" height="6"/></g>
@@ -107,5 +107,15 @@ $pageCount = max(1, (int) ceil(count($questions) / $questionsPerPage));
             </svg>
         </section>
     <?php endfor; ?>
+    <script>
+        function printPart(part) {
+            document.body.classList.remove('print-questionnaire', 'print-answers');
+            document.body.classList.add(part === 'answers' ? 'print-answers' : 'print-questionnaire');
+            window.print();
+        }
+        window.addEventListener('afterprint', function () {
+            document.body.classList.remove('print-questionnaire', 'print-answers');
+        });
+    </script>
 </body>
 </html>

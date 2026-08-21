@@ -40,6 +40,7 @@ foreach ($questions as $index => $question) {
     .oms-hero{align-items:center;background:linear-gradient(125deg,#103764,#2357d5 62%,#4d82ed);border-radius:14px;color:#fff;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;margin-bottom:18px;padding:22px 24px}.oms-hero h3{color:#fff;font-size:22px;margin:0 0 4px}.oms-hero p{color:#dce8ff;margin:0}.oms-hero a{background:rgba(255,255,255,.16);border-radius:8px;color:#fff;padding:8px 12px;text-decoration:none}
     .oms-grid{display:grid;gap:18px;grid-template-columns:minmax(0,1.25fr) minmax(300px,.75fr)}.oms-card{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:18px;overflow:hidden}.oms-head{align-items:center;background:var(--soft);border-bottom:1px solid var(--line);display:flex;gap:8px;justify-content:space-between;padding:13px 16px}.oms-head h5{color:var(--ink);font-size:14px;font-weight:700;margin:0}.oms-body{padding:16px}.oms-step{align-items:center;display:flex;gap:9px;margin-bottom:10px}.oms-step span{align-items:center;background:var(--blue);border-radius:50%;color:#fff;display:inline-flex;font-size:12px;font-weight:700;height:24px;justify-content:center;width:24px}.oms-label{color:var(--muted);display:block;font-size:11px;font-weight:700;letter-spacing:.05em;margin-bottom:5px;text-transform:uppercase}.oms-select,.oms-file{border:1px solid #cfd6df;border-radius:8px;padding:10px;width:100%}.oms-file{background:#f8fafc}.oms-help{color:var(--muted);font-size:12px;line-height:1.45;margin-top:6px}.oms-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.oms-btn{background:var(--blue);border:0;border-radius:8px;color:#fff;cursor:pointer;font-weight:650;padding:9px 13px}.oms-btn.secondary{background:#edf2f8;color:#354052}.oms-btn:disabled{cursor:not-allowed;opacity:.5}.oms-status{border-radius:8px;display:none;font-size:12.5px;line-height:1.45;margin-top:12px;padding:10px 12px}.oms-status.visible{display:block}.oms-status.info{background:#eaf2ff;color:#1d56a5}.oms-status.success{background:#e8f6ed;color:#187447}.oms-status.error{background:#fdecec;color:#a72f35}
     .oms-preview{background:#242b34;border-radius:10px;margin-top:14px;overflow:hidden}.oms-preview canvas{display:block;height:auto;max-height:66vh;object-fit:contain;width:100%}.oms-review{display:grid;gap:7px;grid-template-columns:repeat(2,minmax(0,1fr));max-height:660px;overflow:auto;padding-right:3px}.oms-row{align-items:center;border:1px solid var(--line);border-radius:8px;display:flex;gap:5px;padding:7px}.oms-num{color:var(--ink);font-size:12px;font-weight:700;min-width:24px}.oms-bubble{align-items:center;background:#fff;border:1px solid #aeb8c5;border-radius:50%;color:#465160;cursor:pointer;display:inline-flex;font-size:11px;font-weight:700;height:27px;justify-content:center;padding:0;width:27px}.oms-bubble.marked{background:#162b4a;border-color:#162b4a;color:#fff}.oms-row.ambiguous{background:#fff7e1;border-color:#e9c86c}.oms-detected{color:var(--muted);font-size:11px;margin-left:auto}.oms-submit{background:#16804e;border:0;border-radius:9px;color:#fff;font-size:14px;font-weight:700;margin-top:14px;padding:11px 16px;width:100%}.oms-submit:disabled{opacity:.45}
+    .oms-live{background:#161d27;border-radius:10px;display:none;margin-top:12px;overflow:hidden;position:relative}.oms-live.active{display:block}.oms-live video{display:block;max-height:68vh;object-fit:contain;width:100%}.oms-live-guide{border:2px solid rgba(255,255,255,.8);border-radius:8px;inset:5% 8%;pointer-events:none;position:absolute}.oms-live-guide:before,.oms-live-guide:after{background:#13b66a;color:#fff;font-size:11px;font-weight:700;padding:4px 8px;position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap}.oms-live-guide:before{content:'Keep all 4 black squares inside';top:0}.oms-live-guide:after{bottom:0;content:'Hold steady — scanning automatically'}.oms-detected-app{background:#eaf8ef;border:1px solid #a8d5b8;border-radius:8px;color:#17683f;font-size:13px;font-weight:700;padding:10px 12px}.oms-manual-fallback{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}.oms-manual-fallback summary{color:#4b5868;cursor:pointer;font-size:12px;font-weight:700}
     .oms-page-divider{background:#eaf2ff;border-radius:7px;color:#245a9c;font-size:11px;font-weight:700;grid-column:1/-1;padding:6px 9px;text-transform:uppercase}
     .oms-result{background:#eaf8ef;border:1px solid #9ed1b0;border-radius:12px;margin-bottom:18px;padding:16px}.oms-result strong{color:#11693e;font-size:21px}.oms-history{border-collapse:collapse;width:100%}.oms-history th,.oms-history td{border-bottom:1px solid var(--line);font-size:12px;padding:8px;text-align:left}.oms-history th{color:var(--muted);font-size:10.5px;text-transform:uppercase}
     @media(max-width:850px){.oms-grid{grid-template-columns:1fr}.oms-review{grid-template-columns:1fr}.oms-hero{padding:18px}.oms-page .content{padding-top:10px}}
@@ -61,20 +62,23 @@ foreach ($questions as $index => $question) {
     <div class="oms-grid">
         <div>
             <div class="oms-card"><div class="oms-head"><h5>Capture answer-sheet pages</h5><span class="text-muted" style="font-size:11px">Nothing is uploaded until you save the reviewed result</span></div><div class="oms-body">
-                <div class="oms-step"><span>1</span><strong>Confirm the automatically read examinee number</strong></div>
-                <label class="oms-label" for="omrApplicant">Applicant</label>
-                <select id="omrApplicant" class="oms-select">
-                    <option value="">Select applicant</option>
-                    <?php foreach ($applicants as $applicant) : ?>
-                        <option value="<?= (int) $applicant->appID; ?>" <?= $selectedAppId === (int) $applicant->appID ? 'selected' : ''; ?>>#<?= (int) $applicant->appID; ?> — <?= $h($nameOf($applicant)); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <div class="oms-help">The scanner reads the 10-digit bubble grid and selects the matching application automatically. Use this list only to correct an unreadable or incorrectly shaded number.</div>
+                <div class="oms-step"><span>1</span><strong>Start the live rear camera</strong></div>
+                <div class="oms-detected-app" id="detectedApplicant"><i class="mdi mdi-account-search-outline mr-1"></i> Waiting to read the shaded examinee number</div>
+                <div class="oms-actions"><button type="button" class="oms-btn" id="startCamera"><i class="mdi mdi-camera-outline mr-1"></i> Start live camera</button><button type="button" class="oms-btn secondary" id="scanNow" disabled>Scan now</button><button type="button" class="oms-btn secondary" id="stopCamera" disabled>Stop camera</button></div>
+                <div class="oms-live" id="liveWrap"><video id="liveVideo" autoplay muted playsinline></video><div class="oms-live-guide"></div></div>
+                <div class="oms-help">Hold the complete page inside the guide. The system continuously detects the four corner squares, shaded 10-digit application number, page number, and answers—no photo upload or shutter button is required.</div>
 
-                <div class="oms-step" style="margin-top:18px"><span>2</span><strong>Photograph each complete A4 answer-sheet page</strong></div>
-                <input type="file" id="omrPhoto" class="oms-file" accept="image/*" capture="environment">
-                <div class="oms-help">This exam has <?= $pageCount; ?> answer-sheet page<?= $pageCount === 1 ? '' : 's'; ?>. Capture them one at a time; the printed page code is read automatically and the answers are combined. Keep all four black corner squares visible.</div>
-                <div class="oms-actions"><button type="button" class="oms-btn secondary" id="manualReview">Review manually</button><label style="align-items:center;display:flex;font-size:12px;gap:7px;margin:0 0 0 auto">Sensitivity <input type="range" id="sensitivity" min="18" max="62" value="34"></label></div>
+                <div class="oms-step" style="margin-top:18px"><span>2</span><strong>Replace the page when it is captured</strong></div>
+                <div class="oms-help">This exam has <?= $pageCount; ?> answer-sheet page<?= $pageCount === 1 ? '' : 's'; ?>. For a multi-page exam, keep the camera open and place the next page in view. Previously captured pages are ignored instead of being counted twice.</div>
+                <div class="oms-actions"><label style="align-items:center;display:flex;font-size:12px;gap:7px;margin-left:auto">Sensitivity <input type="range" id="sensitivity" min="18" max="62" value="34"></label></div>
+
+                <details class="oms-manual-fallback"><summary>Camera unavailable or identification needs correction</summary>
+                    <div class="oms-help">Live camera requires HTTPS (or localhost). As a fallback, capture/upload a photo or choose the applicant manually.</div>
+                    <label class="oms-label mt-2" for="omrApplicant">Correct applicant manually</label>
+                    <select id="omrApplicant" class="oms-select"><option value="">Select applicant</option><?php foreach ($applicants as $applicant) : ?><option value="<?= (int) $applicant->appID; ?>" <?= $selectedAppId === (int) $applicant->appID ? 'selected' : ''; ?>>#<?= (int) $applicant->appID; ?> — <?= $h($nameOf($applicant)); ?></option><?php endforeach; ?></select>
+                    <input type="file" id="omrPhoto" class="oms-file mt-2" accept="image/*" capture="environment">
+                    <div class="oms-actions"><button type="button" class="oms-btn secondary" id="manualReview">Enter answers manually</button></div>
+                </details>
                 <div class="oms-status" id="scanStatus" role="status" aria-live="polite"></div>
                 <div class="oms-preview" id="previewWrap" style="display:none"><canvas id="previewCanvas"></canvas></div>
                 <canvas id="sourceCanvas" style="display:none"></canvas>
@@ -126,6 +130,15 @@ foreach ($questions as $index => $question) {
     var reviewGrid = document.getElementById('reviewGrid');
     var saveButton = document.getElementById('saveResult');
     var sensitivity = document.getElementById('sensitivity');
+    var detectedApplicant = document.getElementById('detectedApplicant');
+    var liveVideo = document.getElementById('liveVideo');
+    var liveWrap = document.getElementById('liveWrap');
+    var startCameraButton = document.getElementById('startCamera');
+    var stopCameraButton = document.getElementById('stopCamera');
+    var scanNowButton = document.getElementById('scanNow');
+    var cameraStream = null;
+    var cameraTimer = null;
+    var cameraBusy = false;
 
     function setStatus(kind, text){statusBox.className='oms-status visible '+kind;statusBox.textContent=text;}
     function attr(value){return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -138,6 +151,10 @@ foreach ($questions as $index => $question) {
         document.getElementById('answerCount').textContent=count+' marked';
         document.getElementById('pageProgress').textContent=pages+'/'+pageCount+' pages';
         saveButton.disabled=!applicant.value||!reviewGrid.querySelector('.oms-row')||(!manualMode&&pages<pageCount);
+    }
+    function showApplicant(prefix){
+        var option=applicant.options[applicant.selectedIndex];
+        detectedApplicant.innerHTML=applicant.value?'<i class="mdi mdi-account-check-outline mr-1"></i> '+attr(prefix||'Detected')+': '+attr(option.textContent):'<i class="mdi mdi-account-search-outline mr-1"></i> Waiting to read the shaded examinee number';
     }
     function renderReview(ambiguous){
         ambiguous=ambiguous||ambiguousAnswers;
@@ -220,19 +237,22 @@ foreach ($questions as $index => $question) {
         var appId=parseInt(digits,10),option=applicant.querySelector('option[value="'+appId+'"]');
         return {valid:!!option&&appId>0,appId:appId,code:digits,uncertain:uncertain};
     }
-    function recognize(){
-        if(!source.width)return;
+    function recognize(options){
+        options=options||{};
+        if(!source.width)return null;
         var data=sourceCtx.getImageData(0,0,source.width,source.height),markers=findMarkers(data);
-        if(!markers){markerPoints=null;setStatus('error','The four registration squares were not found. Retake the photo closer, flatter, and in even light, or use manual review.');return;}
-        markerPoints=markers;var map=homography(markers);if(!map){setStatus('error','The page geometry could not be read. Retake the photo directly above the sheet.');return;}
+        if(!markers){markerPoints=null;if(!options.quiet)setStatus('error','The four registration squares were not found. Move the complete page inside the guide and hold it flat.');return null;}
+        markerPoints=markers;var map=homography(markers);if(!map){if(!options.quiet)setStatus('error','The page geometry could not be read. Hold the camera directly above the sheet.');return null;}
         var threshold=Number(sensitivity.value)/100,pageNumber=readPageNumber(data,map,threshold);
-        if(!pageNumber){setStatus('error','The answer-sheet page code could not be read. Check that this sheet belongs to the same exam and that the full page is visible.');return;}
+        if(!pageNumber){if(!options.quiet)setStatus('error','The answer-sheet page code could not be read. Check that this sheet belongs to the same exam and that the full page is visible.');return null;}
         var identity=readApplicationNumber(data,map,threshold);
         if(identity.valid){
-            if(capturedApplicantId&&String(identity.appId)!==String(capturedApplicantId)){setStatus('error','This page belongs to application #'+identity.appId+', but the earlier captured page belongs to application #'+capturedApplicantId+'. Keep each examinee\'s pages together.');return;}
+            if(capturedApplicantId&&String(identity.appId)!==String(capturedApplicantId)){setStatus('error','This page belongs to application #'+identity.appId+', but the earlier captured page belongs to application #'+capturedApplicantId+'. Keep each examinee\'s pages together.');return null;}
             capturedApplicantId=String(identity.appId);
             applicant.value=String(identity.appId);
+            showApplicant('Detected automatically');
         }
+        if(options.skipExisting&&scannedPages[pageNumber])return {ok:true,page:pageNumber,duplicate:true};
         questions.filter(function(q){return q.page===pageNumber;}).forEach(function(q){
             var selected=[],uncertain=false;
             q.choices.forEach(function(c,ci){var ratio=bubbleRatio(data,map,q.x+16+(ci*8),q.y,2.45);if(ratio>=threshold)selected.push(c.id);if(Math.abs(ratio-threshold)<.055)uncertain=true;});
@@ -245,15 +265,50 @@ foreach ($questions as $index => $question) {
         var captured=Object.keys(scannedPages).length,identityText=identity.valid?'Application #'+identity.appId+' identified. ':'The examinee number was not read reliably; choose the applicant manually. ';
         var warning=identity.uncertain||Object.keys(ambiguousAnswers).length;
         setStatus(warning?'info':'success',identityText+'Page '+pageNumber+' of '+pageCount+' scanned. '+(captured<pageCount?'Capture the remaining '+(pageCount-captured)+' page'+((pageCount-captured)===1?'':'s')+'.':'All pages are ready for final review and grading.'));
+        return {ok:true,page:pageNumber,duplicate:false,complete:captured>=pageCount};
     }
+    function drawLiveFrame(){
+        if(!cameraStream||!liveVideo.videoWidth)return false;
+        var scale=Math.min(1,1200/Math.max(liveVideo.videoWidth,liveVideo.videoHeight));
+        source.width=Math.round(liveVideo.videoWidth*scale);source.height=Math.round(liveVideo.videoHeight*scale);
+        sourceCtx.drawImage(liveVideo,0,0,source.width,source.height);return true;
+    }
+    function scanLive(force){
+        if(cameraBusy||!drawLiveFrame())return;
+        cameraBusy=true;
+        try{var result=recognize({quiet:!force,skipExisting:!force});if(result&&result.complete)stopCamera(true);}finally{cameraBusy=false;}
+    }
+    async function startCamera(){
+        if(cameraStream)return;
+        if(!window.isSecureContext){setStatus('error','Live camera requires HTTPS. Open this production page over HTTPS, or use the photo fallback below while testing over a local network address.');document.querySelector('.oms-manual-fallback').open=true;return;}
+        if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){setStatus('error','This browser does not provide live camera access. Use the photo fallback below.');document.querySelector('.oms-manual-fallback').open=true;return;}
+        try{
+            cameraStream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
+            liveVideo.srcObject=cameraStream;await liveVideo.play();liveWrap.classList.add('active');
+            startCameraButton.disabled=true;stopCameraButton.disabled=false;scanNowButton.disabled=false;
+            setStatus('info','Live camera active. Hold the complete answer sheet steady inside the guide; detection runs automatically.');
+            cameraTimer=window.setInterval(function(){scanLive(false);},1300);
+            window.setTimeout(function(){scanLive(false);},500);
+        }catch(err){cameraStream=null;setStatus('error','Camera access was not available. Allow camera permission and try again, or use the photo fallback below.');document.querySelector('.oms-manual-fallback').open=true;}
+    }
+    function stopCamera(silent){
+        if(cameraTimer){window.clearInterval(cameraTimer);cameraTimer=null;}
+        if(cameraStream){cameraStream.getTracks().forEach(function(track){track.stop();});cameraStream=null;}
+        liveVideo.srcObject=null;liveWrap.classList.remove('active');startCameraButton.disabled=false;stopCameraButton.disabled=true;scanNowButton.disabled=true;
+        if(!silent)setStatus('info','Live camera stopped. Captured answers remain available for review.');
+    }
+    startCameraButton.addEventListener('click',startCamera);
+    stopCameraButton.addEventListener('click',function(){stopCamera(false);});
+    scanNowButton.addEventListener('click',function(){scanLive(true);});
     photo.addEventListener('change',function(){
         var file=photo.files&&photo.files[0];if(!file)return;setStatus('info','Reading the sheet…');var img=new Image(),url=URL.createObjectURL(file);
         img.onload=function(){var scale=Math.min(1,1200/Math.max(img.naturalWidth,img.naturalHeight));source.width=Math.round(img.naturalWidth*scale);source.height=Math.round(img.naturalHeight*scale);sourceCtx.drawImage(img,0,0,source.width,source.height);URL.revokeObjectURL(url);recognize();photo.value='';};img.onerror=function(){setStatus('error','That image could not be opened. Choose another photo.');URL.revokeObjectURL(url);photo.value='';};img.src=url;
     });
     sensitivity.addEventListener('change',function(){if(source.width)recognize();});
     document.getElementById('manualReview').addEventListener('click',function(){manualMode=true;renderReview(ambiguousAnswers);setStatus('info','Manual review is open. Enter any unreadable page directly, then verify the applicant before saving.');});
-    applicant.addEventListener('change',function(){syncForm();if(capturedApplicantId&&applicant.value&&applicant.value!==capturedApplicantId)setStatus('info','The automatically read application #'+capturedApplicantId+' was manually changed to #'+applicant.value+'. Verify the paper before saving.');});
-    document.getElementById('omrSubmitForm').addEventListener('submit',function(e){syncForm();if(!applicant.value){e.preventDefault();setStatus('error','Choose the applicant before saving this result.');}});
-    blankAnswers();syncForm();
+    applicant.addEventListener('change',function(){syncForm();showApplicant('Selected manually');if(capturedApplicantId&&applicant.value&&applicant.value!==capturedApplicantId)setStatus('info','The automatically read application #'+capturedApplicantId+' was manually changed to #'+applicant.value+'. Verify the paper before saving.');});
+    document.getElementById('omrSubmitForm').addEventListener('submit',function(e){syncForm();if(!applicant.value){e.preventDefault();setStatus('error','The examinee number was not identified. Use the correction section to choose the applicant before saving.');return;}stopCamera(true);});
+    window.addEventListener('pagehide',function(){stopCamera(true);});
+    blankAnswers();syncForm();showApplicant(applicant.value?'Selected':'');
 })();
 </script>
