@@ -24,6 +24,7 @@ class SecretariatExam extends CI_Controller
         $this->load->model('ExamBuilder_model', 'exams');
         $this->load->model('ExamTaking_model', 'taking');
         $this->load->model('Audit_model', 'Audit');
+        $this->load->model('Reg');
         $this->load->library('GiftAssessmentParser');
     }
 
@@ -388,10 +389,21 @@ class SecretariatExam extends CI_Controller
             return;
         }
 
+        $qualified = (int) $this->input->get('qualified') === 1;
+        $applicants = [];
+        if ($qualified) {
+            $applicants = array_values(array_filter(
+                $this->secretariat->applicants_for_tagging($this->user_id(), (int) $exam->job_id),
+                static function ($row) { return (int) $row->dq === 1; }
+            ));
+        }
+
         $this->load->view('pages/secretariat_exam_omr_print', [
             'title' => 'Print OMR Exam',
             'exam' => $exam,
             'questions' => $this->exams->get_questions($examId),
+            'qualified' => $qualified,
+            'applicants' => $applicants,
         ]);
     }
 
@@ -484,6 +496,15 @@ class SecretariatExam extends CI_Controller
             $this->session->set_flashdata('danger', 'The scanned result could not be saved. Please try again.');
             redirect($scanUrl);
             return;
+        }
+
+        // Non-teaching vacancies record the written-exam score in hris_rating_none
+        // so it appears under Written Examination on Pages/ma.
+        if ((int) ($application->position ?? 0) !== 1) {
+            $recordNo = trim((string) ($application->record_no ?? '')) !== ''
+                ? (string) $application->record_no
+                : (string) ($application->empEmail ?? '');
+            $this->Reg->write_omr_written_score((int) $application->appID, $recordNo, (float) $totals['score']);
         }
 
         $this->audit((int) $exam->job_id, $examId, 'Recorded OMR result for application #'

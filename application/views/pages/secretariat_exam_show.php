@@ -158,6 +158,7 @@ $vacancySy = trim((string) ($exam->vacancy_sy ?? '')) ?: (string) $exam->sy;
                     <a href="<?= base_url('secretariat/exams?job_id=' . (int) $exam->job_id); ?>" class="exs-chip"><i class="mdi mdi-arrow-left"></i> All exams</a>
                     <?php if ($isOmr) : ?>
                         <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/print'); ?>" class="exs-chip"><i class="mdi mdi-printer-outline"></i> Print OMR</a>
+                        <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/print?qualified=1'); ?>" class="exs-chip"><i class="mdi mdi-printer-outline"></i> Print Qualified OMR</a>
                         <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/scan'); ?>" class="exs-chip"><i class="mdi mdi-camera-outline"></i> Scan sheets</a>
                     <?php endif; ?>
                     <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/edit'); ?>" class="exs-chip"><i class="mdi mdi-pencil-outline"></i> Edit</a>

@@ -3868,4 +3868,49 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
       return $this->db->count_all_results('users') > 0;
     }
 
+    public function calculate_rating_none_ies($appID)
+    {
+        $appID = (int) $appID;
+        if ($appID <= 0) {
+            return;
+        }
+        $this->db->query('update hris_rating_none set total_points = educ+trainings+experience+performance+oa+ae+ald+interview+written+skills where appID=' . $appID);
+    }
+
+    /**
+     * Persist an OMR written-exam score into the non-teaching rating table
+     * so Pages/ma can display it under Written Examination.
+     */
+    public function write_omr_written_score(int $appId, string $recordNo, float $written): bool
+    {
+        if ($appId <= 0 || $recordNo === '' || $written < 0) {
+            return false;
+        }
+
+        $exists = $this->db->get_where('hris_rating_none', ['appID' => $appId, 'record_no' => $recordNo])->row();
+        if (!$exists) {
+            $data = rating_required_defaults('hris_rating_none');
+            foreach (rating_score_fields('hris_rating_none') as $field) {
+                $data[$field] = .00001;
+            }
+            $data['appID'] = $appId;
+            $data['record_no'] = $recordNo;
+
+            $app = $this->db->select('jobID')->get_where('hris_applications', ['appID' => $appId])->row();
+            if ($app) {
+                $job = $this->db->select('position, sy')->get_where('hris_jobvacancy', ['jobID' => $app->jobID])->row();
+                if ($job) {
+                    $data['job_type'] = $job->position;
+                    $data['fy'] = $job->sy;
+                }
+            }
+
+            $this->db->insert('hris_rating_none', $data);
+        }
+
+        $this->db->where('appID', $appId)->where('record_no', $recordNo)->update('hris_rating_none', ['written' => $written]);
+        $this->calculate_rating_none_ies($appId);
+        return true;
+    }
+
 }
