@@ -18,137 +18,223 @@ $selectedCounts = $scoreCounts[$selectedJobId] ?? ['total' => count($applicants)
 $encodedForMode = $encodingMode === 'interview'
     ? (int) $selectedCounts['interview']
     : ($encodingMode === 'written' ? (int) $selectedCounts['written'] : (int) $selectedCounts['complete']);
+$modeTotal = (int) $selectedCounts['total'];
+$modePercent = $modeTotal > 0 ? round(($encodedForMode / $modeTotal) * 100) : 0;
 $modeLabels = ['written' => 'Written only', 'interview' => 'Interview only', 'both' => 'Both scores'];
 $successMessage = $this->session->flashdata('success');
 $dangerMessage = $this->session->flashdata('danger');
 ?>
 
 <style>
-    .score-workspace { --sw-ink:#173252; --sw-muted:#6b7b91; --sw-line:#dfe6ef; --sw-blue:#2457d6; --sw-soft:#f5f8fc; }
-    .score-workspace .sw-top { align-items:center; display:flex; justify-content:space-between; margin-bottom:12px; }
-    .score-workspace .sw-title { color:var(--sw-ink); font-size:21px; font-weight:800; margin:0; }
-    .score-workspace .sw-subtitle { color:var(--sw-muted); font-size:12px; margin:3px 0 0; }
-    .score-workspace .sw-card { border:1px solid var(--sw-line); border-radius:11px; box-shadow:0 3px 13px rgba(31,58,91,.04); }
-    .score-workspace .sw-toolbar { align-items:end; display:grid; gap:12px; grid-template-columns:minmax(260px,1.4fr) auto minmax(220px,.8fr); }
-    .score-workspace .sw-label { color:#617189; display:block; font-size:10px; font-weight:750; letter-spacing:.05em; margin-bottom:5px; text-transform:uppercase; }
-    .score-workspace .sw-mode { display:flex; }
-    .score-workspace .sw-mode .btn { border-color:#cfd8e5; border-radius:0; color:#4e617a; font-size:12px; white-space:nowrap; }
-    .score-workspace .sw-mode .btn:first-child { border-radius:7px 0 0 7px; }
-    .score-workspace .sw-mode .btn:last-child { border-radius:0 7px 7px 0; }
-    .score-workspace .sw-mode .btn.active { background:var(--sw-blue); border-color:var(--sw-blue); color:#fff; }
+    .score-workspace { --sw-ink:#132c4a; --sw-muted:#6b7b91; --sw-line:#e5eaf2; --sw-blue:#2457d6; --sw-soft:#f6f9fd; }
+    .score-workspace .sw-hero { align-items:center; background:linear-gradient(135deg,#ffffff 0%,#f4f8ff 100%); border:1px solid var(--sw-line); border-radius:16px; box-shadow:0 5px 20px rgba(24,52,88,.05); display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; margin-bottom:14px; padding:18px 22px; }
+    .score-workspace .sw-eyebrow { color:#7b8ca3; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    .score-workspace .sw-title { color:var(--sw-ink); font-size:23px; font-weight:800; letter-spacing:-.3px; margin:4px 0 0; }
+    .score-workspace .sw-subtitle { color:var(--sw-muted); font-size:12.5px; margin:4px 0 0; }
+    .score-workspace .sw-hero-side { align-items:center; display:flex; flex-wrap:wrap; gap:8px; }
+    .score-workspace .sw-back { align-items:center; border:1px solid #dbe3ee; border-radius:9px; color:#3d5876; display:inline-flex; font-size:12px; font-weight:650; gap:5px; padding:8px 13px; transition:all .14s ease; }
+    .score-workspace .sw-back:hover { background:#f2f6fd; border-color:#b9cbe8; color:var(--sw-blue); text-decoration:none; }
+
+    .score-workspace .sw-card { background:#fff; border:1px solid var(--sw-line); border-radius:16px; box-shadow:0 4px 18px rgba(31,58,91,.045); overflow:hidden; }
+    .score-workspace .sw-toolbar { display:grid; gap:14px; grid-template-columns:minmax(240px,1.3fr) auto minmax(210px,.9fr); padding:16px 18px; }
+    .score-workspace .sw-label { color:#7285a0; display:block; font-size:10px; font-weight:800; letter-spacing:.07em; margin-bottom:6px; text-transform:uppercase; }
+    .score-workspace .sw-select { background:#fff; border:1px solid #d9e1ec; border-radius:9px; color:var(--sw-ink); font-size:13px; font-weight:600; height:38px; padding:0 10px; width:100%; }
+    .score-workspace .sw-select:focus { border-color:var(--sw-blue); box-shadow:0 0 0 3px rgba(36,87,214,.1); outline:none; }
+    .score-workspace .sw-mode { background:#eff3f9; border-radius:10px; display:inline-flex; padding:3px; }
+    .score-workspace .sw-mode .btn { background:transparent; border:0; border-radius:8px; color:#5a6d87; font-size:12px; font-weight:700; padding:7px 14px; white-space:nowrap; }
+    .score-workspace .sw-mode .btn:hover { color:var(--sw-blue); }
+    .score-workspace .sw-mode .btn.active { background:#fff; box-shadow:0 2px 6px rgba(24,52,88,.12); color:var(--sw-blue); }
     .score-workspace .sw-search { position:relative; }
-    .score-workspace .sw-search i { color:#8794a6; left:11px; position:absolute; top:10px; }
-    .score-workspace .sw-search input { padding-left:34px; }
-    .score-workspace .sw-info { align-items:center; background:#f8fafc; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:8px 18px; justify-content:space-between; padding:10px 14px; }
-    .score-workspace .sw-job { color:var(--sw-ink); font-weight:800; }
-    .score-workspace .sw-job small { color:var(--sw-muted); font-weight:400; margin-left:6px; }
-    .score-workspace .sw-progress { color:#53677f; font-size:12px; }
-    .score-workspace .sw-progress strong { color:var(--sw-ink); }
-    .score-workspace .sw-live { align-items:center; color:#278457; display:inline-flex; font-size:11px; gap:5px; }
-    .score-workspace .sw-live:before { background:#35aa70; border-radius:50%; box-shadow:0 0 0 3px rgba(53,170,112,.14); content:""; height:7px; width:7px; }
-    .score-workspace .sw-table-wrap { max-height:calc(100vh - 290px); min-height:330px; overflow:auto; }
-    .score-workspace .sw-table { margin:0; min-width:760px; }
-    .score-workspace .sw-table.sw-table-both { min-width:880px; }
-    .score-workspace .sw-table thead th { background:#f3f6fa; border-bottom:1px solid #dce4ee; border-top:0; color:#64758b; font-size:10px; letter-spacing:.055em; padding:9px 11px; position:sticky; text-transform:uppercase; top:0; z-index:2; }
-    .score-workspace .sw-table td { border-color:#edf1f6; padding:8px 11px; vertical-align:middle; }
+    .score-workspace .sw-search i { color:#93a0b2; left:12px; position:absolute; top:33px; }
+    .score-workspace .sw-search input { background:#fff; border:1px solid #d9e1ec; border-radius:9px; font-size:13px; height:38px; padding-left:34px; width:100%; }
+    .score-workspace .sw-search input:focus { border-color:var(--sw-blue); box-shadow:0 0 0 3px rgba(36,87,214,.1); outline:none; }
+
+    .score-workspace .sw-info { align-items:center; background:#fbfcfe; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:12px 22px; justify-content:space-between; padding:14px 18px; }
+    .score-workspace .sw-job { color:var(--sw-ink); font-size:15px; font-weight:800; }
+    .score-workspace .sw-job-meta { color:var(--sw-muted); font-size:11px; margin-top:2px; }
+    .score-workspace .sw-meter { min-width:210px; }
+    .score-workspace .sw-meter-top { align-items:baseline; color:var(--sw-muted); display:flex; font-size:11px; gap:6px; justify-content:space-between; margin-bottom:5px; }
+    .score-workspace .sw-meter-top strong { color:var(--sw-ink); font-size:12px; }
+    .score-workspace .sw-meter-bar { background:#e8eef6; border-radius:8px; height:7px; overflow:hidden; }
+    .score-workspace .sw-meter-bar span { background:linear-gradient(90deg,#2e9e6b,#4ecb92); border-radius:8px; display:block; height:100%; transition:width .35s ease; }
+    .score-workspace .sw-autosave { align-items:center; background:#eaf7f0; border-radius:20px; color:#1f7a51; display:inline-flex; font-size:11px; font-weight:700; gap:6px; padding:7px 13px; transition:all .2s ease; }
+    .score-workspace .sw-autosave i { font-size:14px; }
+    .score-workspace .sw-autosave.is-pending { background:#fff5e2; color:#96650c; }
+    .score-workspace .sw-autosave.is-error { background:#fdeceb; color:#b8443c; }
+
+    .score-workspace .sw-filters { align-items:center; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:8px; padding:11px 18px; }
+    .score-workspace .sw-fchip { background:#fff; border:1px solid #dde4ee; border-radius:20px; color:#5a6d87; cursor:pointer; font-size:11.5px; font-weight:700; padding:6px 13px; transition:all .14s ease; }
+    .score-workspace .sw-fchip:hover { border-color:#b9cbe8; color:var(--sw-blue); }
+    .score-workspace .sw-fchip.active { background:var(--sw-blue); border-color:var(--sw-blue); color:#fff; }
+    .score-workspace .sw-fchip b { font-weight:800; opacity:.8; }
+    .score-workspace .sw-fspacer { flex:1; }
+    .score-workspace .sw-hint { color:#8b9ab0; font-size:11px; }
+    .score-workspace .sw-hint kbd { background:#eef2f8; border:1px solid #dbe3ee; border-radius:4px; box-shadow:none; color:#4a5d76; font-size:10px; font-weight:700; padding:1px 5px; }
+
+    .score-workspace .sw-table-wrap { max-height:calc(100vh - 340px); min-height:320px; overflow:auto; }
+    .score-workspace .sw-table { margin:0; min-width:820px; }
+    .score-workspace .sw-table thead th { background:#f4f7fb; border-bottom:1px solid #dfe6f0; border-top:0; color:#6c7f96; font-size:10px; font-weight:800; letter-spacing:.06em; padding:11px 12px; position:sticky; text-transform:uppercase; top:0; z-index:2; }
+    .score-workspace .sw-table td { border-color:#eef2f8; padding:9px 12px; vertical-align:middle; }
+    .score-workspace .sw-table tbody tr { transition:background .12s ease; }
     .score-workspace .sw-table tbody tr:hover { background:#fafcff; }
-    .score-workspace .sw-row-number { color:#9aa7b7; font-size:11px; text-align:center; width:46px; }
-    .score-workspace .sw-name { color:var(--sw-ink); font-size:13px; font-weight:750; }
-    .score-workspace .sw-meta { color:var(--sw-muted); font-size:10px; margin-top:2px; }
-    .score-workspace .sw-dq { color:#b34545; font-size:10px; line-height:1.25; margin-top:3px; max-width:310px; }
-    .score-workspace .sw-score-cell { text-align:center; width:135px; }
-    .score-workspace .sw-score-input { border:1px solid #cbd5e2; border-radius:7px; color:var(--sw-ink); font-size:16px; font-weight:750; height:38px; margin:auto; padding:5px 7px; text-align:center; width:92px; }
-    .score-workspace .sw-score-input:focus { border-color:var(--sw-blue); box-shadow:0 0 0 3px rgba(36,87,214,.12); }
-    .score-workspace .sw-score-input.is-invalid { background-image:none; border-color:#dc4c4c; padding-right:7px; }
-    .score-workspace .sw-score-max { color:#9aa7b7; font-size:9px; margin-top:2px; }
-    .score-workspace .sw-save-state { color:#8290a3; font-size:10px; min-width:92px; white-space:nowrap; }
-    .score-workspace .sw-save-state i { font-size:15px; margin-right:3px; vertical-align:-2px; }
+    .score-workspace .sw-table tbody tr.is-focused { background:#f2f7ff; box-shadow:inset 3px 0 0 var(--sw-blue); }
+    .score-workspace .sw-row-number { color:#a3b0c0; font-size:11px; font-weight:700; text-align:center; width:48px; }
+    .score-workspace .sw-name { color:var(--sw-ink); font-size:13.5px; font-weight:750; }
+    .score-workspace .sw-meta { color:var(--sw-muted); font-size:10.5px; margin-top:2px; }
+    .score-workspace .sw-pill { border-radius:20px; display:inline-block; font-size:10px; font-weight:700; padding:4px 10px; }
+    .score-workspace .sw-pill-ok { background:#eef2f7; color:#57697f; }
+    .score-workspace .sw-pill-dq { background:#fdeceb; color:#b8443c; }
+    .score-workspace .sw-dq { color:#b34545; font-size:10px; line-height:1.3; margin-top:4px; max-width:300px; }
+    .score-workspace .sw-score-cell { text-align:center; width:130px; }
+    .score-workspace .sw-score-input { border:1px solid #d5deea; border-radius:9px; color:var(--sw-ink); font-size:16px; font-weight:750; height:40px; margin:auto; padding:5px 7px; text-align:center; transition:border-color .14s ease,box-shadow .14s ease,background .14s ease; width:94px; }
+    .score-workspace .sw-score-input:hover { border-color:#bccbe0; }
+    .score-workspace .sw-score-input:focus { background:#fff; border-color:var(--sw-blue); box-shadow:0 0 0 3px rgba(36,87,214,.12); outline:none; }
+    .score-workspace .sw-score-input.is-filled { background:#f3faf6; border-color:#bfe3d0; }
+    .score-workspace .sw-score-input.is-invalid { background-image:none; background-color:#fdf4f3; border-color:#dc4c4c; padding-right:7px; }
+    .score-workspace .sw-score-max { color:#a3b0c0; font-size:9px; letter-spacing:.03em; margin-top:3px; }
+    .score-workspace .sw-total { color:#a3b0c0; font-size:15px; font-weight:800; text-align:center; width:86px; }
+    .score-workspace .sw-total.has-value { color:#1f7a51; }
+    .score-workspace .sw-save-state { align-items:center; color:#93a2b6; display:inline-flex; font-size:10.5px; font-weight:650; gap:4px; min-width:96px; }
+    .score-workspace .sw-save-state i { font-size:14px; }
     .score-workspace .sw-save-state.saving { color:#a66a00; }
     .score-workspace .sw-save-state.saved { color:#238052; }
-    .score-workspace .sw-save-state.error { color:#c34444; white-space:normal; }
-    .score-workspace .sw-ma-link { color:#5f7086; font-size:18px; }
-    .score-workspace .sw-empty { color:var(--sw-muted); padding:48px 20px; text-align:center; }
-    .score-workspace .sw-foot { align-items:center; background:#fff; border-top:1px solid var(--sw-line); color:var(--sw-muted); display:flex; flex-wrap:wrap; font-size:10px; gap:8px 18px; justify-content:space-between; padding:8px 13px; }
-    @media (max-width:1050px) { .score-workspace .sw-toolbar { grid-template-columns:1fr 1fr; } .score-workspace .sw-search { grid-column:1/-1; } }
-    @media (max-width:680px) { .score-workspace .sw-top { align-items:flex-start; flex-direction:column; gap:8px; } .score-workspace .sw-toolbar { grid-template-columns:1fr; } .score-workspace .sw-search { grid-column:auto; } .score-workspace .sw-mode { width:100%; } .score-workspace .sw-mode .btn { flex:1; padding-left:5px; padding-right:5px; } .score-workspace .sw-table-wrap { max-height:none; } }
+    .score-workspace .sw-save-state.error { color:#c34444; }
+    .score-workspace .sw-ma-link { color:#7488a1; font-size:17px; }
+    .score-workspace .sw-ma-link:hover { color:var(--sw-blue); }
+    .score-workspace .sw-empty { color:var(--sw-muted); padding:52px 20px; text-align:center; }
+    .score-workspace .sw-foot { align-items:center; background:#fbfcfe; border-top:1px solid var(--sw-line); color:var(--sw-muted); display:flex; flex-wrap:wrap; font-size:11px; gap:8px 20px; justify-content:space-between; padding:11px 18px; }
+
+    @media (max-width:1050px) {
+        .score-workspace .sw-toolbar { grid-template-columns:1fr 1fr; }
+        .score-workspace .sw-search { grid-column:1/-1; }
+    }
+    @media (max-width:680px) {
+        .score-workspace .sw-hero { align-items:flex-start; flex-direction:column; }
+        .score-workspace .sw-toolbar { grid-template-columns:1fr; }
+        .score-workspace .sw-search { grid-column:auto; }
+        .score-workspace .sw-mode { width:100%; }
+        .score-workspace .sw-mode .btn { flex:1; padding-left:6px; padding-right:6px; }
+        .score-workspace .sw-table-wrap { max-height:none; }
+        .score-workspace .sw-hint { display:none; }
+    }
 </style>
 
 <div class="content-page score-workspace">
     <div class="content">
         <div class="container-fluid">
-            <div class="sw-top">
+            <div class="sw-hero">
                 <div>
+                    <div class="sw-eyebrow">Recruitment</div>
                     <h2 class="sw-title">Score Encoding</h2>
-                    <p class="sw-subtitle">Fast entry for Interview and Written Examination scores.</p>
+                    <p class="sw-subtitle">Encode Interview and Written Examination scores. Every entry saves on its own.</p>
                 </div>
-                <a href="<?= base_url(); ?>" class="btn btn-outline-secondary btn-sm"><i class="mdi mdi-arrow-left mr-1"></i>Dashboard</a>
+                <div class="sw-hero-side">
+                    <a href="<?= base_url(); ?>" class="sw-back"><i class="mdi mdi-arrow-left"></i>Dashboard</a>
+                </div>
             </div>
 
             <?php if ($successMessage) : ?><div class="alert alert-success py-2"><?= $score_h($successMessage); ?></div><?php endif; ?>
             <?php if ($dangerMessage) : ?><div class="alert alert-danger py-2"><?= $score_h($dangerMessage); ?></div><?php endif; ?>
 
-            <div class="card sw-card mb-2">
-                <div class="card-body py-3">
-                    <form method="get" action="<?= base_url('secretariat/scores'); ?>" class="sw-toolbar" id="score-toolbar-form">
-                        <div>
-                            <label class="sw-label" for="score-vacancy">Vacancy</label>
-                            <select class="form-control form-control-sm" name="job_id" id="score-vacancy">
-                                <option value="">Select an assigned vacancy</option>
-                                <?php foreach ($vacancies as $vacancy) : ?>
-                                    <option value="<?= (int) $vacancy->jobID; ?>" <?= (int) $vacancy->jobID === $selectedJobId ? 'selected' : ''; ?>>
-                                        <?= $score_h($vacancy->jobTitle); ?> — FY <?= $score_h($vacancy->sy); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+            <div class="sw-card mb-3">
+                <form method="get" action="<?= base_url('secretariat/scores'); ?>" class="sw-toolbar" id="score-toolbar-form">
+                    <div>
+                        <label class="sw-label" for="score-vacancy">Vacancy</label>
+                        <select class="sw-select" name="job_id" id="score-vacancy">
+                            <option value="">Select an assigned vacancy</option>
+                            <?php foreach ($vacancies as $vacancy) : ?>
+                                <option value="<?= (int) $vacancy->jobID; ?>" <?= (int) $vacancy->jobID === $selectedJobId ? 'selected' : ''; ?>>
+                                    <?= $score_h($vacancy->jobTitle); ?> — FY <?= $score_h($vacancy->sy); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="sw-label">Encode</span>
+                        <div class="sw-mode" role="group" aria-label="Score fields to encode">
+                            <?php foreach ($modeLabels as $modeValue => $modeLabel) : ?>
+                                <button type="submit" name="mode" value="<?= $modeValue; ?>" class="btn <?= $encodingMode === $modeValue ? 'active' : ''; ?>"><?= $modeLabel; ?></button>
+                            <?php endforeach; ?>
                         </div>
-                        <div>
-                            <span class="sw-label">Encode</span>
-                            <div class="sw-mode" role="group" aria-label="Score fields to encode">
-                                <?php foreach ($modeLabels as $modeValue => $modeLabel) : ?>
-                                    <button type="submit" name="mode" value="<?= $modeValue; ?>" class="btn btn-sm <?= $encodingMode === $modeValue ? 'active' : ''; ?>"><?= $modeLabel; ?></button>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                        <div class="sw-search">
-                            <label class="sw-label" for="score-applicant-search">Find applicant</label>
-                            <i class="mdi mdi-magnify"></i>
-                            <input type="search" id="score-applicant-search" class="form-control form-control-sm" placeholder="Name, ID, status, reason" autocomplete="off">
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                    <div class="sw-search">
+                        <label class="sw-label" for="score-applicant-search">Find applicant</label>
+                        <i class="mdi mdi-magnify"></i>
+                        <input type="search" id="score-applicant-search" placeholder="Name, ID, status, reason" autocomplete="off">
+                    </div>
+                </form>
             </div>
 
             <?php if (empty($vacancies)) : ?>
                 <div class="alert alert-warning">No open score-eligible vacancy is assigned to your Secretariat account.</div>
             <?php elseif (empty($selectedVacancy)) : ?>
-                <div class="card sw-card"><div class="sw-empty"><i class="mdi mdi-format-list-numbered" style="font-size:38px"></i><h5 class="mt-2">Select a vacancy to start</h5></div></div>
+                <div class="sw-card sw-empty">
+                    <i class="mdi mdi-format-list-numbered" style="font-size:40px"></i>
+                    <h5 class="mt-2">Select a vacancy to start</h5>
+                    <p class="mb-0 small">Scores are encoded one vacancy at a time.</p>
+                </div>
             <?php else : ?>
-                <div class="card sw-card">
+                <div class="sw-card">
                     <div class="sw-info">
-                        <div class="sw-job">
-                            <?= $score_h($selectedVacancy->jobTitle); ?>
-                            <small>Job #<?= (int) $selectedVacancy->jobID; ?> &middot; <?= $score_h($modeLabels[$encodingMode]); ?></small>
+                        <div>
+                            <div class="sw-job"><?= $score_h($selectedVacancy->jobTitle); ?></div>
+                            <div class="sw-job-meta">Job #<?= (int) $selectedVacancy->jobID; ?> &middot; FY <?= $score_h($selectedVacancy->sy); ?> &middot; <?= $score_h($modeLabels[$encodingMode]); ?></div>
                         </div>
-                        <div class="d-flex align-items-center flex-wrap" style="gap:10px 20px">
-                            <span class="sw-progress"><strong id="mode-encoded-count"><?= $encodedForMode; ?></strong> of <strong><?= (int) $selectedCounts['total']; ?></strong> encoded</span>
-                            <span class="sw-live">Autosave active</span>
+                        <div class="sw-meter">
+                            <div class="sw-meter-top">
+                                <span>Encoded</span>
+                                <span><strong id="mode-encoded-count"><?= $encodedForMode; ?></strong> of <strong><?= $modeTotal; ?></strong></span>
+                            </div>
+                            <div class="sw-meter-bar"><span id="mode-encoded-bar" style="width:<?= (int) $modePercent; ?>%"></span></div>
+                        </div>
+                        <div>
+                            <span class="sw-autosave" id="sw-autosave"><i class="mdi mdi-cloud-check-outline"></i><span>All changes saved</span></span>
                         </div>
                     </div>
 
                     <?php if (empty($applicants)) : ?>
                         <div class="sw-empty">No applicants found for this vacancy.</div>
                     <?php else : ?>
+                        <?php
+                        $pendingRows = 0;
+                        $dqRows = 0;
+                        foreach ($applicants as $applicant) {
+                            $iEnc = $score_is_encoded($applicant->interview ?? null);
+                            $wEnc = $score_is_encoded($applicant->written ?? null);
+                            $complete = ($encodingMode === 'interview' && $iEnc)
+                                || ($encodingMode === 'written' && $wEnc)
+                                || ($encodingMode === 'both' && $iEnc && $wEnc);
+                            if (!$complete) {
+                                $pendingRows++;
+                            }
+                            if ((int) $applicant->dq === 2) {
+                                $dqRows++;
+                            }
+                        }
+                        ?>
+                        <div class="sw-filters">
+                            <button type="button" class="sw-fchip active" data-filter="all">All <b id="chip-all"><?= count($applicants); ?></b></button>
+                            <button type="button" class="sw-fchip" data-filter="pending">Not encoded <b id="chip-pending"><?= $pendingRows; ?></b></button>
+                            <button type="button" class="sw-fchip" data-filter="done">Encoded <b id="chip-done"><?= count($applicants) - $pendingRows; ?></b></button>
+                            <?php if ($dqRows > 0) : ?>
+                                <button type="button" class="sw-fchip" data-filter="dq">Disqualified <b><?= $dqRows; ?></b></button>
+                            <?php endif; ?>
+                            <span class="sw-fspacer"></span>
+                            <span class="sw-hint"><kbd>Enter</kbd> save &amp; next &middot; <kbd>&uarr;</kbd><kbd>&darr;</kbd> move &middot; scores are 0&ndash;20</span>
+                        </div>
+
                         <div class="sw-table-wrap">
-                            <table class="table sw-table <?= $encodingMode === 'both' ? 'sw-table-both' : ''; ?>" id="score-applicant-table">
+                            <table class="table sw-table" id="score-applicant-table">
                                 <thead>
                                     <tr>
                                         <th class="text-center">#</th>
                                         <th>Applicant</th>
                                         <th>Status</th>
-                                        <?php if ($showWritten) : ?><th class="text-center">Written Examination</th><?php endif; ?>
+                                        <?php if ($showWritten) : ?><th class="text-center">Written</th><?php endif; ?>
                                         <?php if ($showInterview) : ?><th class="text-center">Interview</th><?php endif; ?>
-                                        <th>Save status</th>
-                                        <th class="text-center">MA</th>
+                                        <?php if ($showWritten && $showInterview) : ?><th class="text-center">Total</th><?php endif; ?>
+                                        <th>Record</th>
+                                        <th class="text-center">View Application</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -168,6 +254,10 @@ $dangerMessage = $this->session->flashdata('danger');
                                         $modeComplete = ($encodingMode === 'interview' && $interviewEncoded)
                                             || ($encodingMode === 'written' && $writtenEncoded)
                                             || ($encodingMode === 'both' && $interviewEncoded && $writtenEncoded);
+                                        $isDq = (int) $applicant->dq === 2;
+                                        $rowTotal = ($interviewEncoded && $writtenEncoded)
+                                            ? (float) $applicant->interview + (float) $applicant->written
+                                            : null;
                                         $searchText = strtolower($name . ' ' . $applicant->applicant_id . ' ' . $applicant->record_no . ' ' . $applicant->appStatus . ' ' . ($applicant->dq_reason ?? ''));
                                         $formId = 'score-form-' . (int) $applicant->appID;
                                         $profileUrl = '';
@@ -181,7 +271,7 @@ $dangerMessage = $this->session->flashdata('danger');
                                             );
                                         }
                                         ?>
-                                        <tr data-score-search="<?= $score_h($searchText); ?>" data-mode-complete="<?= $modeComplete ? '1' : '0'; ?>">
+                                        <tr data-score-search="<?= $score_h($searchText); ?>" data-mode-complete="<?= $modeComplete ? '1' : '0'; ?>" data-dq="<?= $isDq ? '1' : '0'; ?>">
                                             <td class="sw-row-number"><?= $index + 1; ?></td>
                                             <td>
                                                 <form method="post" action="<?= base_url('secretariat/scores/save'); ?>" id="<?= $formId; ?>" class="score-auto-form">
@@ -193,26 +283,29 @@ $dangerMessage = $this->session->flashdata('danger');
                                                 <div class="sw-meta">ID <?= $score_h($applicant->applicant_id); ?> &middot; App #<?= (int) $applicant->appID; ?> &middot; <?= $score_h($applicant->record_no); ?></div>
                                             </td>
                                             <td>
-                                                <span class="badge <?= (int) $applicant->dq === 2 ? 'badge-danger' : 'badge-light'; ?>"><?= $score_h($applicant->appStatus ?: 'No status'); ?></span>
-                                                <?php if ((int) $applicant->dq === 2) : ?>
+                                                <span class="sw-pill <?= $isDq ? 'sw-pill-dq' : 'sw-pill-ok'; ?>"><?= $score_h($applicant->appStatus ?: 'No status'); ?></span>
+                                                <?php if ($isDq) : ?>
                                                     <div class="sw-dq"><strong>DQ</strong><?= !empty($applicant->dq_reason) ? ': ' . $score_h($applicant->dq_reason) : ''; ?></div>
                                                 <?php endif; ?>
                                             </td>
                                             <?php if ($showWritten) : ?>
                                                 <td class="sw-score-cell">
-                                                    <input form="<?= $formId; ?>" type="number" inputmode="decimal" min="0" max="20" step="0.01" name="written" data-field="written" data-last-saved="<?= $writtenEncoded ? $score_h((float) $applicant->written) : ''; ?>" data-counted="<?= $writtenEncoded ? '1' : '0'; ?>" class="form-control sw-score-input" value="<?= $writtenEncoded ? $score_h((float) $applicant->written) : ''; ?>" aria-label="Written Examination score for <?= $score_h($name); ?>">
-                                                    <div class="sw-score-max">out of 20</div>
+                                                    <input form="<?= $formId; ?>" type="number" inputmode="decimal" min="0" max="20" step="0.01" name="written" data-field="written" data-last-saved="<?= $writtenEncoded ? $score_h((float) $applicant->written) : ''; ?>" data-counted="<?= $writtenEncoded ? '1' : '0'; ?>" class="form-control sw-score-input <?= $writtenEncoded ? 'is-filled' : ''; ?>" value="<?= $writtenEncoded ? $score_h((float) $applicant->written) : ''; ?>" aria-label="Written Examination score for <?= $score_h($name); ?>">
+                                                    <div class="sw-score-max">of 20</div>
                                                 </td>
                                             <?php endif; ?>
                                             <?php if ($showInterview) : ?>
                                                 <td class="sw-score-cell">
-                                                    <input form="<?= $formId; ?>" type="number" inputmode="decimal" min="0" max="20" step="0.01" name="interview" data-field="interview" data-last-saved="<?= $interviewEncoded ? $score_h((float) $applicant->interview) : ''; ?>" data-counted="<?= $interviewEncoded ? '1' : '0'; ?>" class="form-control sw-score-input" value="<?= $interviewEncoded ? $score_h((float) $applicant->interview) : ''; ?>" aria-label="Interview score for <?= $score_h($name); ?>">
-                                                    <div class="sw-score-max">out of 20</div>
+                                                    <input form="<?= $formId; ?>" type="number" inputmode="decimal" min="0" max="20" step="0.01" name="interview" data-field="interview" data-last-saved="<?= $interviewEncoded ? $score_h((float) $applicant->interview) : ''; ?>" data-counted="<?= $interviewEncoded ? '1' : '0'; ?>" class="form-control sw-score-input <?= $interviewEncoded ? 'is-filled' : ''; ?>" value="<?= $interviewEncoded ? $score_h((float) $applicant->interview) : ''; ?>" aria-label="Interview score for <?= $score_h($name); ?>">
+                                                    <div class="sw-score-max">of 20</div>
                                                 </td>
+                                            <?php endif; ?>
+                                            <?php if ($showWritten && $showInterview) : ?>
+                                                <td class="sw-total <?= $rowTotal !== null ? 'has-value' : ''; ?>"><?= $rowTotal !== null ? $score_h(rtrim(rtrim(number_format($rowTotal, 2, '.', ''), '0'), '.')) : '&mdash;'; ?></td>
                                             <?php endif; ?>
                                             <td><span class="sw-save-state <?= $modeComplete ? 'saved' : ''; ?>"><i class="mdi <?= $modeComplete ? 'mdi-check-circle-outline' : 'mdi-circle-edit-outline'; ?>"></i><span><?= $modeComplete ? 'Saved' : 'Ready'; ?></span></span></td>
                                             <td class="text-center">
-                                                <?php if ($profileUrl !== '') : ?><a href="<?= $score_h($profileUrl); ?>" class="sw-ma-link" target="_blank" rel="noopener" title="Open MA page"><i class="mdi mdi-open-in-new"></i></a><?php else : ?><span class="text-muted">—</span><?php endif; ?>
+                                                <?php if ($profileUrl !== '') : ?><a href="<?= $score_h($profileUrl); ?>" class="sw-ma-link" target="_blank" rel="noopener" title="Open MA page"><i class="mdi mdi-open-in-new"></i></a><?php else : ?><span class="text-muted">&mdash;</span><?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -220,8 +313,8 @@ $dangerMessage = $this->session->flashdata('danger');
                             </table>
                         </div>
                         <div class="sw-foot">
-                            <span><strong><i class="mdi mdi-keyboard-return"></i> Enter</strong> saves now and moves to the next applicant in the same score column.</span>
-                            <span><span id="score-visible-count"><?= count($applicants); ?></span> applicant<?= count($applicants) === 1 ? '' : 's'; ?> shown &middot; changes also save after a short pause</span>
+                            <span><i class="mdi mdi-information-outline"></i> Leaving a box blank keeps the score already saved &mdash; it never clears it.</span>
+                            <span><strong id="score-visible-count"><?= count($applicants); ?></strong> of <?= count($applicants); ?> applicant<?= count($applicants) === 1 ? '' : 's'; ?> shown</span>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -238,7 +331,14 @@ $dangerMessage = $this->session->flashdata('danger');
     var table = document.getElementById('score-applicant-table');
     var visibleCount = document.getElementById('score-visible-count');
     var encodedCount = document.getElementById('mode-encoded-count');
+    var encodedBar = document.getElementById('mode-encoded-bar');
+    var autosaveBadge = document.getElementById('sw-autosave');
+    var chipAll = document.getElementById('chip-all');
+    var chipPending = document.getElementById('chip-pending');
+    var chipDone = document.getElementById('chip-done');
+    var modeTotal = <?= (int) $modeTotal; ?>;
     var formStates = new WeakMap();
+    var activeFilter = 'all';
 
     if (vacancy && toolbar) {
         vacancy.addEventListener('change', function () {
@@ -256,9 +356,11 @@ $dangerMessage = $this->session->flashdata('danger');
 
     if (!table) return;
 
+    var allRows = Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+
     function stateFor(form) {
         if (!formStates.has(form)) {
-            formStates.set(form, { timer: null, saving: false, queued: false });
+            formStates.set(form, { timer: null, saving: false, queued: false, retried: false });
         }
         return formStates.get(form);
     }
@@ -282,19 +384,85 @@ $dangerMessage = $this->session->flashdata('danger');
             : (type === 'saving' ? 'mdi-loading mdi-spin' : (type === 'error' ? 'mdi-alert-circle-outline' : 'mdi-circle-edit-outline'));
         status.querySelector('i').className = 'mdi ' + icon;
         status.querySelector('span').textContent = message;
+        refreshAutosaveBadge();
+    }
+
+    // Header pill mirrors the whole page: unsaved beats saving beats error beats clean.
+    function refreshAutosaveBadge() {
+        if (!autosaveBadge) return;
+        var saving = 0, dirty = 0, failed = 0;
+        allRows.forEach(function (row) {
+            var status = row.querySelector('.sw-save-state');
+            if (status && status.classList.contains('saving')) saving += 1;
+            if (status && status.classList.contains('error')) failed += 1;
+            if (rowDirtyInputs(row).length) dirty += 1;
+        });
+        var icon = 'mdi-cloud-check-outline';
+        var text = 'All changes saved';
+        var cls = '';
+        if (failed) {
+            icon = 'mdi-cloud-alert';
+            text = failed + ' failed to save';
+            cls = ' is-error';
+        } else if (saving) {
+            icon = 'mdi-cloud-sync-outline';
+            text = 'Saving…';
+            cls = ' is-pending';
+        } else if (dirty) {
+            icon = 'mdi-cloud-upload-outline';
+            text = dirty + ' unsaved';
+            cls = ' is-pending';
+        }
+        autosaveBadge.className = 'sw-autosave' + cls;
+        autosaveBadge.querySelector('i').className = 'mdi ' + icon;
+        autosaveBadge.querySelector('span').textContent = text;
+    }
+
+    function rowDirtyInputs(row) {
+        return Array.prototype.filter.call(row.querySelectorAll('.sw-score-input'), function (input) {
+            return input.value.trim() !== '' && normalized(input.value) !== normalized(input.dataset.lastSaved || '');
+        });
     }
 
     function dirtyInputs(form) {
-        return Array.prototype.filter.call(form.closest('tr').querySelectorAll('.sw-score-input'), function (input) {
-            return input.value.trim() !== '' && normalized(input.value) !== normalized(input.dataset.lastSaved || '');
-        });
+        return rowDirtyInputs(form.closest('tr'));
     }
 
     function validate(input) {
         var empty = input.value.trim() === '';
         var valid = empty || (input.checkValidity() && Number(input.value) >= 0 && Number(input.value) <= 20);
         input.classList.toggle('is-invalid', !valid);
+        input.classList.toggle('is-filled', !empty && valid);
         return valid;
+    }
+
+    function trimNumber(value) {
+        return String(Math.round(value * 100) / 100);
+    }
+
+    function refreshRowTotal(row) {
+        var cell = row.querySelector('.sw-total');
+        if (!cell) return;
+        var inputs = row.querySelectorAll('.sw-score-input');
+        var sum = 0;
+        var complete = true;
+        Array.prototype.forEach.call(inputs, function (input) {
+            var saved = input.dataset.lastSaved || '';
+            if (saved === '') { complete = false; return; }
+            sum += Number(saved);
+        });
+        cell.textContent = complete ? trimNumber(sum) : '—';
+        cell.classList.toggle('has-value', complete);
+    }
+
+    function refreshCounts() {
+        var pending = 0;
+        allRows.forEach(function (row) {
+            if (row.dataset.modeComplete !== '1') pending += 1;
+        });
+        if (chipAll) chipAll.textContent = allRows.length;
+        if (chipPending) chipPending.textContent = pending;
+        if (chipDone) chipDone.textContent = allRows.length - pending;
     }
 
     function refreshModeCount(form) {
@@ -304,7 +472,13 @@ $dangerMessage = $this->session->flashdata('danger');
         });
         if (allCounted && row.dataset.modeComplete !== '1') {
             row.dataset.modeComplete = '1';
-            if (encodedCount) encodedCount.textContent = String(Number(encodedCount.textContent || 0) + 1);
+            if (encodedCount) {
+                var next = Number(encodedCount.textContent || 0) + 1;
+                encodedCount.textContent = String(next);
+                if (encodedBar && modeTotal > 0) encodedBar.style.width = Math.round((next / modeTotal) * 100) + '%';
+            }
+            refreshCounts();
+            applyFilters();
         }
     }
 
@@ -349,45 +523,69 @@ $dangerMessage = $this->session->flashdata('danger');
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         }).then(function (response) {
             return response.json().catch(function () { return {}; }).then(function (payload) {
-                if (!response.ok || !payload.ok) throw new Error(payload.message || 'Save failed');
+                if (!response.ok || !payload.ok) {
+                    var error = new Error(payload.message || 'Save failed');
+                    error.rejected = response.status === 422;
+                    throw error;
+                }
                 return payload;
             });
         }).then(function (payload) {
             savedOk = true;
+            state.retried = false;
+            var row = form.closest('tr');
             Object.keys(sent).forEach(function (field) {
-                var input = form.closest('tr').querySelector('.sw-score-input[name="' + field + '"]');
+                var input = row.querySelector('.sw-score-input[name="' + field + '"]');
                 if (!input) return;
                 input.dataset.lastSaved = sent[field];
                 input.dataset.counted = '1';
+                input.classList.add('is-filled');
             });
+            refreshRowTotal(row);
             refreshModeCount(form);
             setStatus(form, 'saved', payload.saved_at ? 'Saved ' + payload.saved_at : 'Saved');
         }).catch(function (error) {
             setStatus(form, 'error', error.message || 'Save failed');
+            // A dropped connection is worth one silent retry; a rejected value is not.
+            if (!error.rejected && !state.retried) {
+                state.retried = true;
+                state.queued = true;
+            }
         }).finally(function () {
             state.saving = false;
             if (state.queued || (savedOk && dirtyInputs(form).length)) {
                 state.queued = false;
-                scheduleSave(form, 150);
+                scheduleSave(form, savedOk ? 150 : 2500);
             }
+            refreshAutosaveBadge();
         });
     }
 
     function scheduleSave(form, delay) {
         var state = stateFor(form);
         if (state.timer) clearTimeout(state.timer);
-        state.timer = setTimeout(function () { saveForm(form); }, delay == null ? 500 : delay);
+        state.timer = setTimeout(function () { saveForm(form); }, delay == null ? 600 : delay);
     }
 
-    function focusNext(input) {
-        var field = input.dataset.field;
-        var candidates = Array.prototype.filter.call(table.querySelectorAll('.sw-score-input[data-field="' + field + '"]'), function (candidate) {
+    function flushAll() {
+        table.querySelectorAll('.score-auto-form').forEach(function (form) {
+            if (dirtyInputs(form).length) saveForm(form);
+        });
+    }
+
+    function visibleInputs(field) {
+        return Array.prototype.filter.call(table.querySelectorAll('.sw-score-input[data-field="' + field + '"]'), function (candidate) {
             return candidate.closest('tr').style.display !== 'none';
         });
+    }
+
+    function moveFocus(input, step) {
+        var candidates = visibleInputs(input.dataset.field);
         var index = candidates.indexOf(input);
-        if (index >= 0 && candidates[index + 1]) {
-            candidates[index + 1].focus();
-            candidates[index + 1].select();
+        var next = candidates[index + step];
+        if (index >= 0 && next) {
+            next.focus();
+            next.select();
         }
     }
 
@@ -400,6 +598,9 @@ $dangerMessage = $this->session->flashdata('danger');
 
     table.querySelectorAll('.sw-score-input').forEach(function (input) {
         var form = document.getElementById(input.getAttribute('form'));
+        var row = input.closest('tr');
+
+        input.addEventListener('focus', function () { row.classList.add('is-focused'); });
         input.addEventListener('input', function () {
             if (!validate(input)) {
                 setStatus(form, 'error', 'Use 0–20');
@@ -414,16 +615,49 @@ $dangerMessage = $this->session->flashdata('danger');
                 return;
             }
             setStatus(form, '', 'Typing…');
-            scheduleSave(form, 500);
+            scheduleSave(form, 600);
         });
         input.addEventListener('blur', function () {
+            row.classList.remove('is-focused');
             if (input.value.trim() !== '' && validate(input)) saveForm(form);
         });
         input.addEventListener('keydown', function (event) {
-            if (event.key !== 'Enter') return;
-            event.preventDefault();
-            if (input.value.trim() !== '' && validate(input)) saveForm(form);
-            focusNext(input);
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (input.value.trim() !== '' && validate(input)) saveForm(form);
+                moveFocus(input, 1);
+                return;
+            }
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (input.value.trim() !== '' && validate(input)) saveForm(form);
+                moveFocus(input, event.key === 'ArrowDown' ? 1 : -1);
+            }
+        });
+    });
+
+    function applyFilters() {
+        var needle = search ? search.value.trim().toLowerCase() : '';
+        var visible = 0;
+        allRows.forEach(function (row) {
+            var matchesText = !needle || (row.getAttribute('data-score-search') || '').indexOf(needle) !== -1;
+            var matchesChip = activeFilter === 'all'
+                || (activeFilter === 'pending' && row.dataset.modeComplete !== '1')
+                || (activeFilter === 'done' && row.dataset.modeComplete === '1')
+                || (activeFilter === 'dq' && row.dataset.dq === '1');
+            var show = matchesText && matchesChip;
+            row.style.display = show ? '' : 'none';
+            if (show) visible += 1;
+        });
+        if (visibleCount) visibleCount.textContent = visible;
+    }
+
+    document.querySelectorAll('.sw-fchip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            document.querySelectorAll('.sw-fchip').forEach(function (other) { other.classList.remove('active'); });
+            chip.classList.add('active');
+            activeFilter = chip.dataset.filter;
+            applyFilters();
         });
     });
 
@@ -431,16 +665,27 @@ $dangerMessage = $this->session->flashdata('danger');
         search.addEventListener('keydown', function (event) {
             if (event.key === 'Enter') event.preventDefault();
         });
-        search.addEventListener('input', function () {
-            var needle = search.value.trim().toLowerCase();
-            var visible = 0;
-            table.querySelectorAll('tbody tr').forEach(function (row) {
-                var matches = !needle || (row.getAttribute('data-score-search') || '').indexOf(needle) !== -1;
-                row.style.display = matches ? '' : 'none';
-                if (matches) visible += 1;
-            });
-            if (visibleCount) visibleCount.textContent = visible;
-        });
+        search.addEventListener('input', applyFilters);
     }
+
+    // Nothing typed should be lost to a tab switch or a closed window.
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') flushAll();
+    });
+    window.addEventListener('beforeunload', function (event) {
+        flushAll();
+        // Only a save that actually failed is worth a confirm dialog; an
+        // in-flight keepalive request finishes on its own after unload.
+        var failed = allRows.some(function (row) {
+            var status = row.querySelector('.sw-save-state');
+            return status && status.classList.contains('error');
+        });
+        if (!failed) return;
+        event.preventDefault();
+        event.returnValue = '';
+    });
+
+    refreshCounts();
+    refreshAutosaveBadge();
 })();
 </script>
