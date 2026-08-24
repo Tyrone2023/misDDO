@@ -17,261 +17,181 @@ $counts = array_merge([
     'tagged' => 0,
     'untagged' => 0,
 ], $counts ?? []);
-
-$positionGroups = [
-    1 => 'Teaching',
-    2 => 'School Administration',
-    3 => 'Related Teaching',
-    4 => 'Non-Teaching',
-];
-
-// Percent of every applicant received, not of the shrinking tagging queue --
-// dividing by the queue made the figure jump around as applicants were rated.
-$applicantTotal = (int) $counts['applicants'];
-$taggedPercent = $applicantTotal > 0 ? round(((int) $counts['tagged'] / $applicantTotal) * 100) : 0;
-
 $retentionCounts = $retentionCounts ?? [];
-$retentionTotals = array_merge(
-    ['pending' => 0, 'granted' => 0, 'denied' => 0, 'total' => 0],
-    $retentionTotals ?? []
-);
-
+$retentionTotals = array_merge(['pending' => 0, 'granted' => 0, 'denied' => 0, 'total' => 0], $retentionTotals ?? []);
 $examCounts = $examCounts ?? [];
 $examTotals = array_merge(['total' => 0, 'published' => 0, 'draft' => 0, 'questions' => 0], $examTotals ?? []);
+$scoreCounts = $scoreCounts ?? [];
+$scoreTotals = array_merge(['total' => 0, 'interview' => 0, 'written' => 0, 'complete' => 0], $scoreTotals ?? []);
+$positionGroups = [1 => 'Teaching', 2 => 'School Administration', 3 => 'Related Teaching', 4 => 'Non-Teaching', 5 => 'Promotion'];
+$applicantTotal = (int) $counts['applicants'];
+$taggedPercent = $applicantTotal > 0 ? round(((int) $counts['tagged'] / $applicantTotal) * 100) : 0;
 ?>
 
 <style>
-    .secretariat-dashboard { --sd-ink:#173252; --sd-muted:#6b7b91; --sd-line:#e6ebf2; --sd-blue:#2457d6; --sd-soft:#f4f7fb; }
-    .secretariat-dashboard .sd-hero { align-items:center; background:linear-gradient(125deg,#103764 0%,#2357d5 62%,#4d82ed 100%); border-radius:17px; box-shadow:0 16px 35px rgba(23,50,82,.17); color:#fff; display:flex; justify-content:space-between; overflow:hidden; padding:28px 30px; position:relative; }
-    .secretariat-dashboard .sd-hero:after { border:28px solid rgba(255,255,255,.08); border-radius:50%; content:""; height:190px; position:absolute; right:-35px; top:-65px; width:190px; }
-    .secretariat-dashboard .sd-eyebrow { color:#cfe0ff; font-size:12px; font-weight:700; letter-spacing:.11em; text-transform:uppercase; }
-    .secretariat-dashboard .sd-hero h2 { color:#fff; font-size:27px; margin:6px 0 6px; }
-    .secretariat-dashboard .sd-hero p { color:#dce8ff; margin:0; max-width:650px; }
-    .secretariat-dashboard .sd-hero-actions { display:flex; gap:9px; position:relative; z-index:1; }
-    .secretariat-dashboard .sd-hero .btn-light { color:#164589; font-weight:700; }
-    .secretariat-dashboard .sd-card { border:1px solid var(--sd-line); border-radius:14px; box-shadow:0 6px 21px rgba(23,50,82,.055); }
-    .secretariat-dashboard .sd-stat { background:#fff; border:1px solid var(--sd-line); border-radius:13px; height:100%; padding:18px; position:relative; }
-    .secretariat-dashboard .sd-stat-icon { align-items:center; border-radius:11px; display:flex; font-size:21px; height:42px; justify-content:center; width:42px; }
-    .secretariat-dashboard .sd-stat-label { color:var(--sd-muted); font-size:12px; font-weight:700; letter-spacing:.045em; text-transform:uppercase; }
-    .secretariat-dashboard .sd-stat-value { color:var(--sd-ink); font-size:28px; font-weight:800; line-height:1.15; margin-top:5px; }
-    .secretariat-dashboard .sd-stat-note { color:#8492a6; font-size:12px; margin-top:5px; }
-    .secretariat-dashboard .sd-blue { background:#e8efff; color:#2457d6; }
-    .secretariat-dashboard .sd-amber { background:#fff2d7; color:#a66a00; }
-    .secretariat-dashboard .sd-green { background:#e2f6eb; color:#197447; }
-    .secretariat-dashboard .sd-purple { background:#efe9ff; color:#6e43c0; }
-    .secretariat-dashboard .sd-card .card-body { padding:22px; }
+    .secretariat-dashboard { --sd-ink:#173252; --sd-muted:#6b7b91; --sd-line:#e3e9f1; --sd-blue:#2457d6; --sd-soft:#f5f8fc; }
+    .secretariat-dashboard .sd-top { align-items:center; background:#fff; border:1px solid var(--sd-line); border-radius:14px; display:flex; justify-content:space-between; padding:20px 22px; }
+    .secretariat-dashboard .sd-title { color:var(--sd-ink); font-size:24px; font-weight:800; margin:0; }
+    .secretariat-dashboard .sd-subtitle { color:var(--sd-muted); margin:4px 0 0; }
+    .secretariat-dashboard .sd-scope { background:#edf3ff; border-radius:16px; color:#315ca6; display:inline-block; font-size:10px; font-weight:700; margin:3px 0 3px 5px; padding:5px 9px; }
+    .secretariat-dashboard .sd-workflow { background:#fff; border:1px solid var(--sd-line); border-radius:13px; color:inherit; display:block; height:100%; padding:17px; transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease; }
+    .secretariat-dashboard .sd-workflow:hover { border-color:#c8d6ea; box-shadow:0 9px 22px rgba(28,56,89,.09); color:inherit; text-decoration:none; transform:translateY(-2px); }
+    .secretariat-dashboard .sd-workflow-head { align-items:center; display:flex; justify-content:space-between; }
+    .secretariat-dashboard .sd-workflow-icon { align-items:center; border-radius:10px; display:flex; font-size:22px; height:42px; justify-content:center; width:42px; }
+    .secretariat-dashboard .sd-blue { background:#e9efff; color:#2457d6; }
+    .secretariat-dashboard .sd-teal { background:#e4f7f4; color:#12806f; }
+    .secretariat-dashboard .sd-purple { background:#f0ebff; color:#7147bd; }
+    .secretariat-dashboard .sd-amber { background:#fff1d7; color:#a56800; }
+    .secretariat-dashboard .sd-workflow-value { color:var(--sd-ink); font-size:25px; font-weight:800; }
+    .secretariat-dashboard .sd-workflow h6 { color:var(--sd-ink); font-size:15px; font-weight:800; margin:12px 0 3px; }
+    .secretariat-dashboard .sd-workflow p { color:var(--sd-muted); font-size:12px; margin:0; min-height:36px; }
+    .secretariat-dashboard .sd-card { border:1px solid var(--sd-line); border-radius:14px; box-shadow:0 5px 18px rgba(31,58,91,.045); }
+    .secretariat-dashboard .sd-summary { align-items:center; display:flex; flex-wrap:wrap; gap:8px 22px; }
+    .secretariat-dashboard .sd-summary-item { min-width:120px; }
+    .secretariat-dashboard .sd-summary-item strong { color:var(--sd-ink); display:block; font-size:21px; }
+    .secretariat-dashboard .sd-summary-item span { color:var(--sd-muted); font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
     .secretariat-dashboard .sd-section-title { color:var(--sd-ink); font-size:17px; font-weight:800; }
-    /* This row lives in a col-xl-8 card, so it has roughly 660px to work with at
-       1366px wide. Fixed track widths that add up to more than that cannot shrink,
-       and .content-page sets overflow:hidden - the spill is clipped rather than
-       scrolled, which is what hid the Exam button. So: the title track shrinks
-       from zero, the number tracks have a floor and a ceiling, and the actions
-       track takes only what the buttons need. */
-    .secretariat-dashboard .sd-position { align-items:center; border-top:1px solid #edf1f6; display:grid; gap:12px 10px; grid-template-columns:minmax(0,1fr) repeat(4,minmax(54px,66px)) auto; padding:15px 2px; }
-    .secretariat-dashboard .sd-position-main { min-width:0; }
-    .secretariat-dashboard .sd-position-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
-    .secretariat-dashboard .sd-position-actions .btn { padding-left:10px; padding-right:10px; white-space:nowrap; }
-    .secretariat-dashboard .sd-exam-link { border-color:#c9bdf0; color:#6e43c0; }
-    .secretariat-dashboard .sd-exam-link:hover, .secretariat-dashboard .sd-exam-link:focus { background:#6e43c0; border-color:#6e43c0; color:#fff; }
-    .secretariat-dashboard .sd-retention { border-radius:9px; display:block; padding:4px 2px; text-decoration:none; transition:background .12s ease; }
-    .secretariat-dashboard .sd-retention:hover { background:#f4f0ff; text-decoration:none; }
-    .secretariat-dashboard .sd-retention strong { color:#6e43c0; }
-    .secretariat-dashboard .sd-retention.sd-retention-idle strong { color:#9aa7b8; }
-    .secretariat-dashboard .sd-position:first-of-type { border-top:0; }
-    .secretariat-dashboard .sd-position-name { color:var(--sd-ink); font-weight:750; }
-    .secretariat-dashboard .sd-position-sub { color:var(--sd-muted); font-size:12px; margin-top:3px; }
-    .secretariat-dashboard .sd-number { text-align:center; }
-    .secretariat-dashboard .sd-number strong { color:var(--sd-ink); display:block; font-size:17px; }
-    .secretariat-dashboard .sd-number span { color:var(--sd-muted); font-size:10px; letter-spacing:.04em; text-transform:uppercase; }
-    .secretariat-dashboard .sd-progress { background:#e8edf5; border-radius:8px; height:8px; overflow:hidden; }
-    .secretariat-dashboard .sd-progress > span { background:linear-gradient(90deg,#25a56a,#47c986); display:block; height:100%; }
-    .secretariat-dashboard .sd-link-list a { align-items:center; border-top:1px solid #edf1f6; color:#304b6d; display:flex; justify-content:space-between; padding:13px 0; }
-    .secretariat-dashboard .sd-link-list a:first-child { border-top:0; }
-    .secretariat-dashboard .sd-link-list a:hover { color:var(--sd-blue); }
-    .secretariat-dashboard .sd-scope { background:#edf3ff; border-radius:18px; color:#315ca6; display:inline-block; font-size:11px; font-weight:700; margin:3px 4px 3px 0; padding:6px 10px; }
-    @media (max-width:991px) { .secretariat-dashboard .sd-hero { align-items:flex-start; flex-direction:column; } .secretariat-dashboard .sd-hero-actions { flex-wrap:wrap; margin-top:18px; } /* Keep all four figures on the title's line and drop only the buttons below;
-   a 3-column track left Retention orphaned on a line of its own. */
-    .secretariat-dashboard .sd-position { grid-template-columns:minmax(0,1fr) repeat(4,minmax(52px,64px)); } .secretariat-dashboard .sd-position-actions { grid-column:1/-1; justify-content:flex-start; } }
-    @media (max-width:575px) { .secretariat-dashboard .sd-hero { padding:23px 20px; } .secretariat-dashboard .sd-hero-actions { width:100%; } .secretariat-dashboard .sd-hero-actions .btn { width:100%; } .secretariat-dashboard .sd-position { grid-template-columns:1fr 1fr; } .secretariat-dashboard .sd-position-main { grid-column:1/-1; } }
+    .secretariat-dashboard .sd-vacancy { border-top:1px solid #edf1f6; padding:17px 0; }
+    .secretariat-dashboard .sd-vacancy:first-child { border-top:0; }
+    .secretariat-dashboard .sd-vacancy-grid { align-items:center; display:grid; gap:14px; grid-template-columns:minmax(230px,1.4fr) minmax(250px,1fr) auto; }
+    .secretariat-dashboard .sd-vacancy-name { color:var(--sd-ink); font-weight:800; }
+    .secretariat-dashboard .sd-vacancy-meta { color:var(--sd-muted); font-size:12px; margin-top:3px; }
+    .secretariat-dashboard .sd-progress { background:#e8edf5; border-radius:7px; height:7px; margin-top:9px; overflow:hidden; }
+    .secretariat-dashboard .sd-progress span { background:linear-gradient(90deg,#25a56a,#4ac989); display:block; height:100%; }
+    .secretariat-dashboard .sd-vacancy-counts { display:grid; gap:7px; grid-template-columns:repeat(4,minmax(55px,1fr)); }
+    .secretariat-dashboard .sd-count { background:var(--sd-soft); border-radius:9px; padding:7px 5px; text-align:center; }
+    .secretariat-dashboard .sd-count strong { color:var(--sd-ink); display:block; font-size:16px; }
+    .secretariat-dashboard .sd-count span { color:var(--sd-muted); font-size:9px; font-weight:700; text-transform:uppercase; }
+    .secretariat-dashboard .sd-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; max-width:330px; }
+    .secretariat-dashboard .sd-secondary { align-items:center; display:flex; flex-wrap:wrap; gap:8px 18px; }
+    .secretariat-dashboard .sd-secondary a { color:#405b7b; font-size:12px; }
+    .secretariat-dashboard .sd-secondary a:hover { color:var(--sd-blue); }
+    @media (max-width:1100px) { .secretariat-dashboard .sd-vacancy-grid { grid-template-columns:1fr 1fr; } .secretariat-dashboard .sd-actions { grid-column:1/-1; justify-content:flex-start; max-width:none; } }
+    @media (max-width:767px) { .secretariat-dashboard .sd-top { align-items:flex-start; flex-direction:column; gap:10px; } .secretariat-dashboard .sd-scope { margin-left:0; margin-right:4px; } .secretariat-dashboard .sd-vacancy-grid { grid-template-columns:1fr; } .secretariat-dashboard .sd-actions { grid-column:auto; } }
+    @media (max-width:480px) { .secretariat-dashboard .sd-vacancy-counts { grid-template-columns:1fr 1fr; } }
 </style>
 
 <div class="content-page secretariat-dashboard">
     <div class="content">
         <div class="container-fluid">
-            <div class="row mb-3">
-                <div class="col-12">
-                    <div class="sd-hero">
-                        <div>
-                            <div class="sd-eyebrow">Recruitment workspace</div>
-                            <h2>Secretariat Dashboard</h2>
-                            <p>Review applicant activity across your assigned vacancies and tag applicants to evaluators from one focused workspace.</p>
-                        </div>
-                        <div class="sd-hero-actions">
-                            <a href="<?= base_url('secretariat/applicant-tagging'); ?>" class="btn btn-light">
-                                <i class="mdi mdi-account-arrow-right-outline mr-1"></i> Tag applicants
-                            </a>
-                            <a href="<?= base_url('secretariat/retention'); ?>" class="btn btn-light">
-                                <i class="mdi mdi-file-restore mr-1"></i> Retention
-                                <?php if ((int) $retentionTotals['pending'] > 0) : ?>
-                                    <span class="badge badge-warning ml-1"><?= (int) $retentionTotals['pending']; ?></span>
-                                <?php endif; ?>
-                            </a>
-                            <a href="<?= base_url('secretariat/exams'); ?>" class="btn btn-light">
-                                <i class="mdi mdi-clipboard-text-outline mr-1"></i> Exam Builder
-                                <?php if ((int) $examTotals['total'] > 0) : ?>
-                                    <span class="badge badge-secondary ml-1"><?= (int) $examTotals['total']; ?></span>
-                                <?php endif; ?>
-                            </a>
-                        </div>
-                    </div>
+            <div class="sd-top mb-3">
+                <div>
+                    <h2 class="sd-title">Secretariat Workspace</h2>
+                    <p class="sd-subtitle">Your recruitment tasks, organized by workflow and assigned vacancy.</p>
+                </div>
+                <div class="text-md-right">
+                    <?php if (empty($assigned)) : ?>
+                        <span class="badge badge-warning p-2">No vacancy assigned</span>
+                    <?php else : ?>
+                        <?php foreach (array_slice($assigned, 0, 3) as $label) : ?><span class="sd-scope"><?= $dashboard_h($label); ?></span><?php endforeach; ?>
+                        <?php if (count($assigned) > 3) : ?><span class="sd-scope">+<?= count($assigned) - 3; ?> more</span><?php endif; ?>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <?php if (empty($assigned)) : ?>
-                <div class="alert alert-warning">
-                    <strong>No vacancy assigned.</strong> Ask a Super Admin to tag an open vacancy to your Secretariat account before managing applicants.
-                </div>
+                <div class="alert alert-warning"><strong>No vacancy assigned.</strong> Ask a Super Admin to assign an open vacancy before managing applicants.</div>
             <?php endif; ?>
 
-            <div class="row mb-2">
-                <div class="col-xl-3 col-sm-6 mb-3">
-                    <div class="sd-stat">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div><div class="sd-stat-label">Total applicants</div><div class="sd-stat-value"><?= $applicantTotal; ?></div></div>
-                            <span class="sd-stat-icon sd-blue"><i class="mdi mdi-account-group-outline"></i></span>
-                        </div>
-                        <div class="sd-stat-note">Every application received in your vacancies</div>
-                    </div>
+            <div class="row mb-1">
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <a class="sd-workflow" href="<?= base_url('secretariat/applicant-tagging'); ?>">
+                        <div class="sd-workflow-head"><span class="sd-workflow-icon sd-blue"><i class="mdi mdi-account-arrow-right-outline"></i></span><span class="sd-workflow-value"><?= (int) $counts['untagged']; ?></span></div>
+                        <h6>Applicant assignment</h6>
+                        <p>Review applicants and assign those waiting to an evaluator.</p>
+                    </a>
                 </div>
-                <div class="col-xl-3 col-sm-6 mb-3">
-                    <div class="sd-stat">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div><div class="sd-stat-label">Tagged applicants</div><div class="sd-stat-value"><?= (int) $counts['tagged']; ?></div></div>
-                            <span class="sd-stat-icon sd-green"><i class="mdi mdi-account-check-outline"></i></span>
-                        </div>
-                        <div class="sd-stat-note"><?= (int) $taggedPercent; ?>% of all applicants &middot; stays counted after rating</div>
-                    </div>
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <a class="sd-workflow" href="<?= base_url('secretariat/scores'); ?>">
+                        <div class="sd-workflow-head"><span class="sd-workflow-icon sd-teal"><i class="mdi mdi-clipboard-edit-outline"></i></span><span class="sd-workflow-value"><?= (int) $scoreTotals['complete']; ?>/<?= (int) $scoreTotals['total']; ?></span></div>
+                        <h6>Interview &amp; written scores</h6>
+                        <p>Encode both scores and publish them to each applicant's MA page.</p>
+                    </a>
                 </div>
-                <div class="col-xl-3 col-sm-6 mb-3">
-                    <div class="sd-stat">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div><div class="sd-stat-label">Awaiting evaluator</div><div class="sd-stat-value"><?= (int) $counts['untagged']; ?></div></div>
-                            <span class="sd-stat-icon sd-amber"><i class="mdi mdi-account-clock-outline"></i></span>
-                        </div>
-                        <div class="sd-stat-note">Submitted or validated, not yet tagged</div>
-                    </div>
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <a class="sd-workflow" href="<?= base_url('secretariat/exams'); ?>">
+                        <div class="sd-workflow-head"><span class="sd-workflow-icon sd-purple"><i class="mdi mdi-clipboard-text-outline"></i></span><span class="sd-workflow-value"><?= (int) $examTotals['total']; ?></span></div>
+                        <h6>Exam builder</h6>
+                        <p><?= (int) $examTotals['published']; ?> published and <?= (int) $examTotals['draft']; ?> draft exam<?= (int) $examTotals['total'] === 1 ? '' : 's'; ?>.</p>
+                    </a>
                 </div>
-                <div class="col-xl-3 col-sm-6 mb-3">
-                    <div class="sd-stat">
-                        <div class="d-flex align-items-start justify-content-between">
-                            <div><div class="sd-stat-label">Past tagging</div><div class="sd-stat-value"><?= (int) $counts['evaluated'] + (int) $counts['dq']; ?></div></div>
-                            <span class="sd-stat-icon sd-purple"><i class="mdi mdi-progress-check"></i></span>
-                        </div>
-                        <div class="sd-stat-note"><?= (int) $counts['evaluated']; ?> endorsed or rated &middot; <?= (int) $counts['dq']; ?> disqualified</div>
+                <div class="col-xl-3 col-md-6 mb-3">
+                    <a class="sd-workflow" href="<?= base_url('secretariat/retention'); ?>">
+                        <div class="sd-workflow-head"><span class="sd-workflow-icon sd-amber"><i class="mdi mdi-file-restore-outline"></i></span><span class="sd-workflow-value"><?= (int) $retentionTotals['pending']; ?></span></div>
+                        <h6>Retention requests</h6>
+                        <p>Resolve pending requests by copying or manually encoding scores.</p>
+                    </a>
+                </div>
+            </div>
+
+            <div class="card sd-card mb-3">
+                <div class="card-body py-3">
+                    <div class="sd-summary">
+                        <div class="mr-auto"><div class="sd-section-title">Recruitment summary</div><div class="text-muted small">Across all assigned open vacancies</div></div>
+                        <div class="sd-summary-item"><strong><?= $applicantTotal; ?></strong><span>Total applicants</span></div>
+                        <div class="sd-summary-item"><strong><?= (int) $counts['tagged']; ?></strong><span>Tagged (<?= (int) $taggedPercent; ?>%)</span></div>
+                        <div class="sd-summary-item"><strong><?= (int) $counts['evaluated']; ?></strong><span>Endorsed / rated</span></div>
+                        <div class="sd-summary-item"><strong><?= (int) $counts['dq']; ?></strong><span>Disqualified</span></div>
                     </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-xl-8 mb-3">
-                    <div class="card sd-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start justify-content-between mb-2">
-                                <div>
-                                    <div class="sd-section-title">Assigned vacancy workload</div>
-                                    <p class="text-muted mb-0">Open a position to view and tag its applicants. Applicants and Tagged count every applicant at every stage &mdash; only Waiting falls as you tag.</p>
-                                </div>
-                                <span class="badge badge-light p-2"><?= count($vacancies); ?> position<?= count($vacancies) === 1 ? '' : 's'; ?></span>
-                            </div>
+            <div class="card sd-card mb-3">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-1">
+                        <div><div class="sd-section-title">Assigned vacancies</div><p class="text-muted small mb-0">Open a vacancy directly in the workflow you need.</p></div>
+                        <span class="badge badge-light p-2"><?= count($vacancies); ?> vacancy<?= count($vacancies) === 1 ? '' : 'ies'; ?></span>
+                    </div>
 
-                            <?php if (empty($vacancies)) : ?>
-                                <div class="text-center py-5">
-                                    <i class="mdi mdi-briefcase-search-outline text-muted" style="font-size:40px"></i>
-                                    <h5 class="mt-2">No vacancy workload yet</h5>
-                                    <p class="text-muted mb-0">Your assigned open vacancies will appear here.</p>
-                                </div>
-                            <?php else : ?>
-                                <?php foreach ($vacancies as $vacancy) : ?>
-                                    <?php
-                                    $vacancyTotal = (int) $vacancy->applicant_total;
-                                    $vacancyProgress = $vacancyTotal > 0 ? round(((int) $vacancy->tagged_total / $vacancyTotal) * 100) : 0;
-                                    $vacancyPastTagging = (int) $vacancy->evaluated_total + (int) $vacancy->dq_total;
-                                    ?>
-                                    <div class="sd-position">
-                                        <div class="sd-position-main">
-                                            <div class="sd-position-name"><?= $dashboard_h($vacancy->jobTitle); ?></div>
-                                            <div class="sd-position-sub">
-                                                <?= $dashboard_h($positionGroups[(int) $vacancy->position] ?? 'Vacancy'); ?>
-                                                &middot; FY <?= $dashboard_h($vacancy->sy); ?>
-                                                <?php if ($vacancyPastTagging > 0) : ?>
-                                                    &middot; <?= $vacancyPastTagging; ?> past tagging
-                                                    (<?= (int) $vacancy->evaluated_total; ?> endorsed/rated, <?= (int) $vacancy->dq_total; ?> DQ)
-                                                <?php endif; ?>
-                                            </div>
-                                            <div class="sd-progress mt-2" title="<?= (int) $vacancyProgress; ?>% of all applicants tagged"><span style="width:<?= (int) $vacancyProgress; ?>%"></span></div>
+                    <?php if (empty($vacancies)) : ?>
+                        <div class="text-center text-muted py-5"><i class="mdi mdi-briefcase-search-outline" style="font-size:38px"></i><h5 class="mt-2">No assigned vacancy workload</h5></div>
+                    <?php else : ?>
+                        <?php foreach ($vacancies as $vacancy) : ?>
+                            <?php
+                            $jobId = (int) $vacancy->jobID;
+                            $vacancyTotal = (int) $vacancy->applicant_total;
+                            $vacancyProgress = $vacancyTotal > 0 ? round(((int) $vacancy->tagged_total / $vacancyTotal) * 100) : 0;
+                            $vacancyRetention = $retentionCounts[$jobId] ?? ['pending' => 0, 'total' => 0];
+                            $vacancyExams = $examCounts[$jobId] ?? ['total' => 0];
+                            $vacancyScores = $scoreCounts[$jobId] ?? ['total' => 0, 'complete' => 0];
+                            $scoreEligible = !in_array((int) $vacancy->position, [1, 5], true);
+                            ?>
+                            <div class="sd-vacancy">
+                                <div class="sd-vacancy-grid">
+                                    <div>
+                                        <div class="sd-vacancy-name"><?= $dashboard_h($vacancy->jobTitle); ?></div>
+                                        <div class="sd-vacancy-meta">
+                                            <?= $dashboard_h($positionGroups[(int) $vacancy->position] ?? 'Vacancy'); ?> &middot; FY <?= $dashboard_h($vacancy->sy); ?>
+                                            <?= !empty($vacancy->itemNo) ? ' &middot; Item ' . $dashboard_h($vacancy->itemNo) : ''; ?>
                                         </div>
-                                        <div class="sd-number"><strong><?= (int) $vacancy->applicant_total; ?></strong><span>Applicants</span></div>
-                                        <div class="sd-number"><strong class="text-success"><?= (int) $vacancy->tagged_total; ?></strong><span>Tagged</span></div>
-                                        <div class="sd-number"><strong class="text-danger"><?= (int) $vacancy->pending_total; ?></strong><span>Waiting</span></div>
-                                        <?php
-                                        $vacancyRetention = $retentionCounts[(int) $vacancy->jobID]
-                                            ?? ['pending' => 0, 'granted' => 0, 'denied' => 0, 'total' => 0];
-                                        $retentionPending = (int) $vacancyRetention['pending'];
-                                        ?>
-                                        <a class="sd-number sd-retention<?= $retentionPending === 0 ? ' sd-retention-idle' : ''; ?>"
-                                           href="<?= base_url('secretariat/retention?job_id=' . (int) $vacancy->jobID); ?>"
-                                           title="<?= $retentionPending; ?> pending of <?= (int) $vacancyRetention['total']; ?> retention request<?= (int) $vacancyRetention['total'] === 1 ? '' : 's'; ?> &mdash; <?= (int) $vacancyRetention['granted']; ?> granted, <?= (int) $vacancyRetention['denied']; ?> denied">
-                                            <strong><?= $retentionPending; ?></strong><span>Retention</span>
-                                        </a>
-                                        <?php
-                                        $vacancyExams = $examCounts[(int) $vacancy->jobID]
-                                            ?? ['total' => 0, 'published' => 0, 'draft' => 0, 'questions' => 0];
-                                        $examTotal = (int) $vacancyExams['total'];
-                                        ?>
-                                        <div class="sd-position-actions">
-                                            <a href="<?= base_url('secretariat/applicant-tagging?job_id=' . (int) $vacancy->jobID); ?>" class="btn btn-outline-primary btn-sm">Manage</a>
-                                            <a href="<?= base_url('secretariat/exams?job_id=' . (int) $vacancy->jobID); ?>"
-                                               class="btn btn-outline-secondary btn-sm sd-exam-link"
-                                               title="<?= $examTotal === 0
-                                                   ? 'No exam built for this vacancy yet'
-                                                   : $examTotal . ' exam' . ($examTotal === 1 ? '' : 's') . ' &mdash; ' . (int) $vacancyExams['published'] . ' published, ' . (int) $vacancyExams['draft'] . ' draft, ' . (int) $vacancyExams['questions'] . ' question' . ((int) $vacancyExams['questions'] === 1 ? '' : 's'); ?>">
-                                                Exam<?= $examTotal > 0 ? ' (' . $examTotal . ')' : ''; ?>
-                                            </a>
-                                        </div>
+                                        <div class="sd-progress" title="<?= (int) $vacancyProgress; ?>% assigned to evaluators"><span style="width:<?= (int) $vacancyProgress; ?>%"></span></div>
                                     </div>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-4 mb-3">
-                    <div class="card sd-card mb-3">
-                        <div class="card-body">
-                            <div class="sd-section-title mb-1">Your vacancy coverage</div>
-                            <p class="text-muted mb-2">Positions tagged to your account</p>
-                            <?php if (empty($assigned)) : ?>
-                                <span class="text-muted">Waiting for assignment.</span>
-                            <?php else : ?>
-                                <?php foreach ($assigned as $label) : ?><span class="sd-scope"><?= $dashboard_h($label); ?></span><?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <div class="card sd-card">
-                        <div class="card-body">
-                            <div class="sd-section-title mb-1">Recruitment shortcuts</div>
-                            <div class="sd-link-list">
-                                <a href="<?= base_url('secretariat/applicant-tagging'); ?>"><span><i class="mdi mdi-account-arrow-right-outline mr-2 text-primary"></i>Applicant tagging</span><i class="mdi mdi-chevron-right"></i></a>
-                                <a href="<?= base_url('secretariat/retention'); ?>"><span><i class="mdi mdi-file-restore mr-2" style="color:#6e43c0"></i>Retention of points</span><span class="badge <?= (int) $retentionTotals['pending'] > 0 ? 'badge-warning' : 'badge-light'; ?>"><?= (int) $retentionTotals['pending']; ?></span></a>
-                                <a href="<?= base_url('secretariat/exams'); ?>" title="<?= (int) $examTotals['questions']; ?> question<?= (int) $examTotals['questions'] === 1 ? '' : 's'; ?> across <?= (int) $examTotals['total']; ?> exam<?= (int) $examTotals['total'] === 1 ? '' : 's'; ?>"><span><i class="mdi mdi-clipboard-text-outline mr-2" style="color:#0d6efd"></i>Exam builder</span><span class="badge badge-light"><?= (int) $examTotals['total']; ?></span></a>
-                                <a href="<?= base_url('Pages/endorsed_applicants'); ?>"><span><i class="mdi mdi-send-check-outline mr-2 text-info"></i>Endorse applicants</span><i class="mdi mdi-chevron-right"></i></a>
-                                <a href="<?= base_url('Pages/endorsed_applicants_unassigned'); ?>"><span><i class="mdi mdi-account-alert-outline mr-2 text-warning"></i>Endorsed without evaluator</span><span class="badge badge-warning"><?= (int) $counts['no_rater']; ?></span></a>
-                                <a href="<?= base_url('Pages/secretariat_endorsed'); ?>"><span><i class="mdi mdi-chart-box-outline mr-2 text-success"></i>Endorsed &amp; scored</span><span class="badge badge-light"><?= (int) $counts['endorsed']; ?></span></a>
-                                <a href="<?= base_url('Pages/secretariat_dq_applicants'); ?>"><span><i class="mdi mdi-account-remove-outline mr-2 text-danger"></i>Disqualified applicants</span><span class="badge badge-light"><?= (int) $counts['dq']; ?></span></a>
+                                    <div class="sd-vacancy-counts">
+                                        <div class="sd-count"><strong><?= $vacancyTotal; ?></strong><span>Applicants</span></div>
+                                        <div class="sd-count"><strong><?= (int) $vacancy->tagged_total; ?></strong><span>Tagged</span></div>
+                                        <div class="sd-count"><strong class="<?= (int) $vacancy->pending_total > 0 ? 'text-danger' : ''; ?>"><?= (int) $vacancy->pending_total; ?></strong><span>Waiting</span></div>
+                                        <div class="sd-count"><strong><?= $scoreEligible ? (int) $vacancyScores['complete'] . '/' . (int) $vacancyScores['total'] : '&mdash;'; ?></strong><span>Scores</span></div>
+                                    </div>
+                                    <div class="sd-actions">
+                                        <a href="<?= base_url('secretariat/applicant-tagging?job_id=' . $jobId); ?>" class="btn btn-outline-primary btn-sm">Applicants</a>
+                                        <?php if ($scoreEligible) : ?><a href="<?= base_url('secretariat/scores?job_id=' . $jobId); ?>" class="btn btn-outline-success btn-sm">Scores</a><?php endif; ?>
+                                        <a href="<?= base_url('secretariat/exams?job_id=' . $jobId); ?>" class="btn btn-outline-secondary btn-sm">Exam<?= (int) $vacancyExams['total'] > 0 ? ' (' . (int) $vacancyExams['total'] . ')' : ''; ?></a>
+                                        <a href="<?= base_url('secretariat/retention?job_id=' . $jobId); ?>" class="btn btn-outline-warning btn-sm">Retention<?= (int) $vacancyRetention['pending'] > 0 ? ' (' . (int) $vacancyRetention['pending'] . ')' : ''; ?></a>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="card sd-card">
+                <div class="card-body py-3 sd-secondary">
+                    <strong class="small" style="color:#173252">Other recruitment views</strong>
+                    <a href="<?= base_url('Pages/endorsed_applicants'); ?>"><i class="mdi mdi-send-check-outline mr-1"></i>Endorse applicants</a>
+                    <a href="<?= base_url('Pages/endorsed_applicants_unassigned'); ?>"><i class="mdi mdi-account-alert-outline mr-1"></i>Without evaluator <span class="badge badge-warning ml-1"><?= (int) $counts['no_rater']; ?></span></a>
+                    <a href="<?= base_url('Pages/secretariat_endorsed'); ?>"><i class="mdi mdi-chart-box-outline mr-1"></i>Endorsed &amp; scored</a>
+                    <a href="<?= base_url('Pages/secretariat_dq_applicants'); ?>"><i class="mdi mdi-account-remove-outline mr-1"></i>Disqualified applicants</a>
                 </div>
             </div>
         </div>

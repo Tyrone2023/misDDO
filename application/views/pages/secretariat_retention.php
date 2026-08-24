@@ -100,6 +100,13 @@ $fmtMax = static function ($value) {
     .sr-page .sr-card-head { align-items:center; border-bottom:1px solid var(--sr-line); display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; padding:16px 22px; }
     .sr-page .sr-card-title { color:var(--sr-ink); font-size:15px; font-weight:700; margin:0; }
     .sr-page .sr-card-count { color:var(--sr-muted); font-size:12.5px; }
+    .sr-page .sr-pending-tools { align-items:center; display:flex; flex-wrap:wrap; gap:10px; }
+    .sr-page .sr-search-form { align-items:center; display:flex; gap:7px; }
+    .sr-page .sr-search-form input { border:1px solid #d6dbe4; border-radius:7px; font-size:13px; height:36px; min-width:230px; padding:6px 10px; }
+    .sr-page .sr-search-form input:focus { border-color:var(--sr-accent); box-shadow:0 0 0 3px rgba(90,75,196,.12); outline:none; }
+    .sr-page .sr-search-button { background:var(--sr-accent); border:0; border-radius:7px; color:#fff; font-size:12.5px; font-weight:600; height:36px; padding:0 13px; }
+    .sr-page .sr-search-button:hover, .sr-page .sr-search-button:focus { background:#4a3cae; color:#fff; }
+    .sr-page .sr-search-clear { background:#fff; border:1px solid #d6dbe4; border-radius:7px; color:var(--sr-muted); font-size:12.5px; height:36px; padding:0 11px; }
 
     .sr-page label.sr-label { color:var(--sr-ink); display:block; font-size:12.5px; font-weight:600; margin-bottom:6px; }
     .sr-page .sr-select { border:1px solid #d6dbe4; border-radius:8px; box-shadow:none; color:var(--sr-ink); height:42px; }
@@ -137,6 +144,9 @@ $fmtMax = static function ($value) {
     .sr-page .sr-chip-denied { background:#fbeaea; color:#b03636; }
     .sr-page .sr-chip-pending { background:#fdf3e0; color:#96650a; }
     .sr-page .sr-chip-warn { background:#fbeaea; color:#b03636; }
+    .sr-page .sr-dq-reason { background:#fff1f1; border-left:3px solid #c9524e; border-radius:0 7px 7px 0; color:#8f2b2b; flex:1 0 100%; font-size:12.5px; line-height:1.5; padding:8px 10px; }
+    .sr-page .sr-dq-reason strong { font-weight:650; }
+    .sr-page .sr-dq-detail { color:#8f2b2b; font-size:12px; line-height:1.45; margin-bottom:6px; }
 
     .sr-page .sr-req-body { padding:16px; }
     .sr-page .sr-routes { display:grid; gap:14px; grid-template-columns:1fr 1fr; }
@@ -144,6 +154,9 @@ $fmtMax = static function ($value) {
     .sr-page .sr-route h6 { color:var(--sr-ink); font-size:13.5px; font-weight:650; margin:0 0 3px; }
     .sr-page .sr-route p { color:var(--sr-muted); font-size:12.5px; line-height:1.5; margin:0 0 12px; }
     .sr-page .sr-route .form-control-sm { border:1px solid #d6dbe4; border-radius:7px; height:36px; }
+    .sr-page .sr-copy-help { background:#f1efff; border-radius:7px; color:#5546b5; font-size:12px; line-height:1.45; margin-top:10px; padding:8px 10px; }
+    .sr-page .sr-prefill-status { background:#eaf6f0; border-radius:7px; color:#176b4a; display:none; font-size:12px; line-height:1.45; margin-top:11px; padding:8px 10px; }
+    .sr-page .sr-prefill-status.is-visible { display:block; }
 
     .sr-page .sr-score-grid { display:grid; gap:10px 12px; grid-template-columns:repeat(auto-fill,minmax(165px,1fr)); }
     /* Criterion names are spelled out in full, so a label can run to two or
@@ -157,8 +170,6 @@ $fmtMax = static function ($value) {
     .sr-page .sr-total-value { color:var(--sr-ink); font-size:16px; font-weight:700; }
 
     .sr-page .sr-action { border-radius:8px; font-size:13px; font-weight:600; padding:7px 14px; }
-    .sr-page .sr-action-primary { background:var(--sr-accent); border:0; color:#fff; }
-    .sr-page .sr-action-primary:hover, .sr-page .sr-action-primary:focus { background:#4a3cae; color:#fff; }
     .sr-page .sr-action-save { background:#17845a; border:0; color:#fff; }
     .sr-page .sr-action-save:hover, .sr-page .sr-action-save:focus { background:#136d4a; color:#fff; }
     .sr-page .sr-action-deny { background:#fff; border:1px solid #e0b6b6; color:#b03636; }
@@ -192,6 +203,9 @@ $fmtMax = static function ($value) {
         .sr-page .sr-stats { grid-template-columns:1fr; }
         .sr-page .sr-req { margin-left:14px; margin-right:14px; }
         .sr-page .sr-card-head, .sr-page .sr-table-wrap { padding-left:14px; padding-right:14px; }
+        .sr-page .sr-pending-tools, .sr-page .sr-search-form { align-items:stretch; width:100%; }
+        .sr-page .sr-search-form { flex-wrap:wrap; }
+        .sr-page .sr-search-form input { flex:1 1 100%; min-width:0; }
     }
 </style>
 
@@ -216,12 +230,12 @@ $fmtMax = static function ($value) {
             <div class="card sr-card">
                 <div class="card-body">
                     <?php if (empty($vacancies)) : ?>
-                        <div class="alert alert-warning mb-0">No open vacancy is assigned to your account.</div>
+                        <div class="alert alert-warning mb-0">No retention request was found for your assigned open vacancies.</div>
                     <?php else : ?>
                         <form method="get" action="<?= base_url('secretariat/retention'); ?>">
                             <div class="form-row align-items-end">
                                 <div class="col-lg-9 col-md-8">
-                                    <label for="job_id" class="sr-label">Position</label>
+                                    <label for="job_id" class="sr-label">Vacancy applied for</label>
                                     <select name="job_id" id="job_id" class="form-control sr-select" required>
                                         <option value="">Choose a position...</option>
                                         <?php foreach ($vacancies as $vacancy) : ?>
@@ -298,12 +312,25 @@ $fmtMax = static function ($value) {
                 <div class="card sr-card">
                     <div class="sr-card-head">
                         <h5 class="sr-card-title">Pending requests</h5>
-                        <span class="sr-card-count"><?= count($pending); ?> waiting</span>
+                        <div class="sr-pending-tools">
+                            <span class="sr-card-count" id="retention-pending-count"><?= count($pending); ?> waiting</span>
+                            <?php if (!empty($pending)) : ?>
+                                <form class="sr-search-form" id="retention-applicant-search" role="search">
+                                    <label class="sr-only" for="retention-applicant-query">Search applicant</label>
+                                    <input type="search" id="retention-applicant-query"
+                                           placeholder="Applicant name or number" autocomplete="off">
+                                    <button type="submit" class="sr-search-button">Search</button>
+                                    <button type="button" class="sr-search-clear" id="retention-applicant-clear" hidden>Clear</button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <?php if (empty($pending)) : ?>
                         <div class="sr-nothing">Nothing is waiting for a decision on this position.</div>
                     <?php endif; ?>
+
+                    <div class="sr-nothing" id="retention-search-empty" hidden>No pending applicant matches your search.</div>
 
                     <?php foreach ($pending as $request) : ?>
                         <?php
@@ -312,7 +339,13 @@ $fmtMax = static function ($value) {
                         // Only the criteria this request's scope actually carries.
                         $rowMap = $request->score_map ?? $scoreMap;
                         ?>
-                        <div class="sr-req">
+                        <div class="sr-req" data-applicant-search="<?= $ret_h(implode(' ', [
+                            $name,
+                            (string) ($request->record_no ?? ''),
+                            (string) ($request->applicant_id ?? ''),
+                            (string) ($request->appID ?? ''),
+                            (string) ($request->empEmail ?? ''),
+                        ])); ?>">
                             <div class="sr-req-head">
                                 <div>
                                     <div class="sr-name"><?= $ret_h($name); ?></div>
@@ -328,14 +361,21 @@ $fmtMax = static function ($value) {
                                         <span class="sr-chip sr-chip-warn ml-1">Disqualified</span>
                                     <?php endif; ?>
                                 </div>
+                                <?php if ((int) $request->dq === 2) : ?>
+                                    <?php $dqReason = trim((string) ($request->dq_reason ?? '')); ?>
+                                    <div class="sr-dq-reason">
+                                        <strong>Disqualification reason:</strong>
+                                        <?= $dqReason !== '' ? nl2br($ret_h($dqReason)) : 'No reason was recorded.'; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
 
                             <div class="sr-req-body">
                                 <div class="sr-routes">
 
                                     <div class="sr-route">
-                                        <h6>Copy from an earlier application</h6>
-                                        <p>Carries over the scores already on file for this applicant.</p>
+                                        <h6>Load from an earlier application</h6>
+                                        <p>Select a scored application to fill the encoding fields for review.</p>
 
                                         <?php if ((int) $request->source_count === 0) : ?>
                                             <div class="sr-empty-route">
@@ -343,24 +383,41 @@ $fmtMax = static function ($value) {
                                             </div>
                                         <?php else : ?>
                                             <?php $sources = $request->sources ?? []; ?>
-                                            <form method="post" action="<?= base_url('secretariat/retention/grant-copy'); ?>"
-                                                  onsubmit="return confirm('Copy the scores from the chosen application and grant this retention?');">
-                                                <input type="hidden" name="id" value="<?= (int) $request->request_id; ?>">
-                                                <input type="hidden" name="app_id" value="<?= (int) $request->appID; ?>">
-                                                <div class="form-group mb-3">
-                                                    <select name="application" class="form-control form-control-sm" required>
-                                                        <option value="">Choose an application...</option>
-                                                        <?php foreach ($sources as $source) : ?>
-                                                            <option value="<?= (int) $source['app_id']; ?>">
-                                                                <?= $ret_h($source['title'] ?: 'Application #' . $source['app_id']); ?>
-                                                                <?= $source['sy'] !== '' ? ' — FY ' . $ret_h($source['sy']) : ''; ?>
-                                                                — <?= $ret_h(number_format((float) $source['total_points'], 2)); ?> pts
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                                <button type="submit" class="btn sr-action sr-action-primary">Copy scores</button>
-                                            </form>
+                                            <div class="form-group mb-0">
+                                                <select class="form-control form-control-sm sr-copy-source">
+                                                    <option value="">Choose an application...</option>
+                                                    <?php foreach ($sources as $source) : ?>
+                                                        <?php
+                                                        // Source scores arrive keyed by their display label. Re-key
+                                                        // them to the manual input columns for a safe client-side
+                                                        // preview. The 0.00001 sentinel means "not rated yet", so it
+                                                        // stays blank and must be reviewed before saving.
+                                                        $sourceScores = [];
+                                                        foreach ($rowMap as $scoreLabel => $scoreColumn) {
+                                                            $scoreValue = $source['scores'][$scoreLabel] ?? null;
+                                                            if ($scoreValue === null || $scoreValue === '' || !is_numeric($scoreValue)) {
+                                                                continue;
+                                                            }
+                                                            $scoreValue = (float) $scoreValue;
+                                                            if (abs($scoreValue - 0.00001) < 0.000001) {
+                                                                continue;
+                                                            }
+                                                            $sourceScores[$scoreColumn] = $scoreValue;
+                                                        }
+                                                        $sourceTitle = $source['title'] ?: 'Application #' . $source['app_id'];
+                                                        $sourceLabel = $sourceTitle
+                                                            . ($source['sy'] !== '' ? ' — FY ' . $source['sy'] : '')
+                                                            . ' — ' . number_format((float) $source['total_points'], 2) . ' pts';
+                                                        ?>
+                                                        <option value="<?= (int) $source['app_id']; ?>"
+                                                                data-scores="<?= $ret_h(json_encode($sourceScores)); ?>"
+                                                                data-source-label="<?= $ret_h($sourceLabel); ?>">
+                                                            <?= $ret_h($sourceLabel); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div class="sr-copy-help">Selecting an application loads its scores into <strong>Encode the score</strong> for review. It does not save or grant the request.</div>
                                         <?php endif; ?>
                                     </div>
 
@@ -388,6 +445,7 @@ $fmtMax = static function ($value) {
                                             </div>
 
                                             <div class="sr-total">Total <span class="sr-total-value">0.00</span></div>
+                                            <div class="sr-prefill-status" aria-live="polite"></div>
 
                                             <button type="submit" class="btn sr-action sr-action-save mt-3">Save score</button>
                                         </form>
@@ -456,6 +514,13 @@ $fmtMax = static function ($value) {
                                                 <?php endif; ?>
                                             </td>
                                             <td>
+                                                <?php if ((int) $request->dq === 2) : ?>
+                                                    <?php $dqReason = trim((string) ($request->dq_reason ?? '')); ?>
+                                                    <div class="sr-dq-detail">
+                                                        <strong>Disqualified:</strong>
+                                                        <?= $dqReason !== '' ? nl2br($ret_h($dqReason)) : 'No reason was recorded.'; ?>
+                                                    </div>
+                                                <?php endif; ?>
                                                 <?php if ((int) $request->stat === 2 && trim((string) $request->deny_reason) !== '') : ?>
                                                     <span class="text-danger"><?= $ret_h($request->deny_reason); ?></span>
                                                 <?php elseif ((int) $request->stat === 1) : ?>
@@ -505,6 +570,86 @@ $fmtMax = static function ($value) {
     }
 
     Array.prototype.forEach.call(document.querySelectorAll('.sr-manual-form'), wire);
+
+    // Pending requests are cards rather than a table, so give them a small
+    // applicant-specific search without a page reload.
+    var applicantSearch = document.getElementById('retention-applicant-search');
+    if (applicantSearch) {
+        var applicantQuery = document.getElementById('retention-applicant-query');
+        var applicantClear = document.getElementById('retention-applicant-clear');
+        var pendingCount = document.getElementById('retention-pending-count');
+        var noMatches = document.getElementById('retention-search-empty');
+        var requestCards = document.querySelectorAll('.sr-req[data-applicant-search]');
+
+        function filterApplicants() {
+            var query = (applicantQuery.value || '').trim().toLocaleLowerCase();
+            var visible = 0;
+
+            Array.prototype.forEach.call(requestCards, function (card) {
+                var haystack = (card.getAttribute('data-applicant-search') || '').toLocaleLowerCase();
+                var matches = query === '' || haystack.indexOf(query) !== -1;
+                card.hidden = !matches;
+                if (matches) visible++;
+            });
+
+            pendingCount.textContent = query === ''
+                ? requestCards.length + ' waiting'
+                : visible + ' of ' + requestCards.length + ' shown';
+            noMatches.hidden = query === '' || visible > 0;
+            applicantClear.hidden = query === '';
+        }
+
+        applicantSearch.addEventListener('submit', function (event) {
+            event.preventDefault();
+            filterApplicants();
+        });
+
+        applicantClear.addEventListener('click', function () {
+            applicantQuery.value = '';
+            filterApplicants();
+            applicantQuery.focus();
+        });
+    }
+
+    // A copyable application is a preview source. Selecting it fills the
+    // matching manual fields and recalculates the total, but deliberately does
+    // not submit either form. The reviewer can inspect/edit before Save score.
+    Array.prototype.forEach.call(document.querySelectorAll('.sr-copy-source'), function (select) {
+        select.addEventListener('change', function () {
+            var requestCard = select.closest('.sr-req');
+            var manualForm = requestCard ? requestCard.querySelector('.sr-manual-form') : null;
+            if (!manualForm) return;
+
+            var selected = select.options[select.selectedIndex];
+            var scores = {};
+            try {
+                scores = JSON.parse(selected.getAttribute('data-scores') || '{}');
+            } catch (error) {
+                scores = {};
+            }
+
+            Array.prototype.forEach.call(manualForm.querySelectorAll('input[type="number"]'), function (input) {
+                input.value = Object.prototype.hasOwnProperty.call(scores, input.name)
+                    ? scores[input.name]
+                    : '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+
+            var status = manualForm.querySelector('.sr-prefill-status');
+            if (!status) return;
+
+            if (select.value === '') {
+                status.textContent = '';
+                status.classList.remove('is-visible');
+                return;
+            }
+
+            status.textContent = 'Scores loaded from '
+                + (selected.getAttribute('data-source-label') || 'the selected application')
+                + '. Review or edit them, then click Save score. Nothing has been saved yet.';
+            status.classList.add('is-visible');
+        });
+    });
 
     if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
         var table = jQuery('#retention-resolved');

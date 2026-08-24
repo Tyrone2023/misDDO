@@ -3880,35 +3880,78 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
     /**
      * Persist an OMR written-exam score into the non-teaching rating table
      * so Pages/ma can display it under Written Examination.
+     *
+     * The record_no is canonicalised from the real applicant/staff record so it
+     * matches the exact key Pages/ma uses (hris_applicant.record_no or
+     * hris_staff.empEmail/IDNumber) rather than the possibly-fallback value the
+     * scanner passed in.
      */
     public function write_omr_written_score(int $appId, string $recordNo, float $written): bool
     {
-        if ($appId <= 0 || $recordNo === '' || $written < 0) {
+        if ($appId <= 0 || $written < 0) {
             return false;
         }
 
-        $exists = $this->db->get_where('hris_rating_none', ['appID' => $appId, 'record_no' => $recordNo])->row();
+        $app = $this->db->get_where('hris_applications', ['appID' => $appId])->row();
+        if (!$app) {
+            return false;
+        }
+
+        $canonicalRecordNo = null;
+
+        if (!empty($app->applicant_id)) {
+            $applicant = $this->db->get_where('hris_applicant', ['id' => (int) $app->applicant_id])->row();
+            if ($applicant && isset($applicant->record_no)) {
+                $canonicalRecordNo = $applicant->record_no;
+                $canonicalRecordNo = ($canonicalRecordNo === null) ? null : (string) $canonicalRecordNo;
+            }
+        }
+
+        if ($canonicalRecordNo === null && (empty($app->applicant_id) || empty($applicant)) && !empty($app->empEmail)) {
+            $staff = $this->db->get_where('hris_staff', ['IDNumber' => (string) $app->empEmail])->row();
+            if ($staff) {
+                $canonicalRecordNo = !empty($staff->empEmail) ? (string) $staff->empEmail : (string) $staff->IDNumber;
+                $canonicalRecordNo = ($canonicalRecordNo === '') ? null : $canonicalRecordNo;
+            }
+        }
+
+        if ($canonicalRecordNo === null && empty($applicant) && empty($staff)) {
+            $canonicalRecordNo = ($recordNo === '') ? null : $recordNo;
+        }
+
+        // Look for the row Pages/ma will actually read.
+        $this->db->where('appID', $appId);
+        if ($canonicalRecordNo === null) {
+            $this->db->group_start()->where('record_no', '')->or_where('record_no IS NULL', null, false)->group_end();
+        } else {
+            $this->db->where('record_no', $canonicalRecordNo);
+        }
+        $exists = $this->db->get('hris_rating_none')->row();
+
         if (!$exists) {
             $data = rating_required_defaults('hris_rating_none');
             foreach (rating_score_fields('hris_rating_none') as $field) {
                 $data[$field] = .00001;
             }
             $data['appID'] = $appId;
-            $data['record_no'] = $recordNo;
+            $data['record_no'] = $canonicalRecordNo;
 
-            $app = $this->db->select('jobID')->get_where('hris_applications', ['appID' => $appId])->row();
-            if ($app) {
-                $job = $this->db->select('position, sy')->get_where('hris_jobvacancy', ['jobID' => $app->jobID])->row();
-                if ($job) {
-                    $data['job_type'] = $job->position;
-                    $data['fy'] = $job->sy;
-                }
+            $job = $this->db->select('position, sy')->get_where('hris_jobvacancy', ['jobID' => (int) $app->jobID])->row();
+            if ($job) {
+                $data['job_type'] = $job->position;
+                $data['fy'] = $job->sy;
             }
 
             $this->db->insert('hris_rating_none', $data);
         }
 
-        $this->db->where('appID', $appId)->where('record_no', $recordNo)->update('hris_rating_none', ['written' => $written]);
+        $this->db->where('appID', $appId);
+        if ($canonicalRecordNo === null) {
+            $this->db->group_start()->where('record_no', '')->or_where('record_no IS NULL', null, false)->group_end();
+        } else {
+            $this->db->where('record_no', $canonicalRecordNo);
+        }
+        $this->db->update('hris_rating_none', ['written' => $written]);
         $this->calculate_rating_none_ies($appId);
         return true;
     }

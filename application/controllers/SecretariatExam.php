@@ -491,26 +491,48 @@ class SecretariatExam extends CI_Controller
         }
 
         $application->ip_address = (string) $this->input->ip_address();
-        $totals = $this->taking->record_omr_attempt($exam, $application, $questions, $responses, $this->user_id());
-        if (empty($totals)) {
-            $this->session->set_flashdata('danger', 'The scanned result could not be saved. Please try again.');
+
+        try {
+            $totals = $this->taking->record_omr_attempt($exam, $application, $questions, $responses, $this->user_id());
+        } catch (Throwable $e) {
+            log_message('error', 'OMR save exception for exam ' . $examId . ' app ' . $appId . ': ' . $e->getMessage());
+            $this->session->set_flashdata('danger', 'The scanned result could not be saved. Server error: ' . $e->getMessage());
             redirect($scanUrl);
             return;
         }
 
+        if (empty($totals)) {
+            log_message('error', 'OMR save failed for exam ' . $examId . ' app ' . $appId . ': record_omr_attempt returned empty');
+            $this->session->set_flashdata('danger', 'The scanned result could not be saved. The server error log has details. Please try again.');
+            redirect($scanUrl);
+            return;
+        }
+
+        $score = (float) $totals['score'];
+        $totalPoints = (float) $totals['total_points'];
+        $writtenEquivalent = $totalPoints > 0 ? round(($score / $totalPoints) * 20, 2) : 0.00;
+
         // Non-teaching vacancies record the written-exam score in hris_rating_none
-        // so it appears under Written Examination on Pages/ma.
+        // so it appears under Written Examination on Pages/ma as a 20-point value.
         if ((int) ($application->position ?? 0) !== 1) {
             $recordNo = trim((string) ($application->record_no ?? '')) !== ''
                 ? (string) $application->record_no
                 : (string) ($application->empEmail ?? '');
-            $this->Reg->write_omr_written_score((int) $application->appID, $recordNo, (float) $totals['score']);
+            if ($recordNo === '') {
+                $recordNo = (string) $appId;
+            }
+            if (!$this->Reg->write_omr_written_score((int) $application->appID, $recordNo, $writtenEquivalent)) {
+                log_message('error', 'OMR written score could not be written for app ' . (int) $application->appID . ' record_no ' . $recordNo);
+                $this->session->set_flashdata('warning', 'The score was saved, but it could not be copied to the Written Examination rating. The server error log has details.');
+            }
         }
 
         $this->audit((int) $exam->job_id, $examId, 'Recorded OMR result for application #'
-            . $appId . ': ' . number_format((float) $totals['score'], 2) . '/'
-            . number_format((float) $totals['total_points'], 2) . ' points.', 'exam_omr_scan');
-        $this->session->set_flashdata('success', 'OMR result saved and graded.');
+            . $appId . ': ' . number_format($score, 2) . '/'
+            . number_format($totalPoints, 2) . ' points (' . number_format($writtenEquivalent, 2) . '/20 written).', 'exam_omr_scan');
+        $this->session->set_flashdata('success', 'OMR result saved and graded: '
+            . number_format($score, 2) . '/' . number_format($totalPoints, 2)
+            . ' points - ' . number_format($writtenEquivalent, 2) . '/20 written equivalent.');
         redirect(base_url('secretariat/exams/' . $examId . '/omr/scan?app_id=' . $appId
             . '&result=' . (int) $totals['attempt_id']));
     }

@@ -61,7 +61,9 @@
                             <div class="col-12">
                                 <div class="page-title-box">
                                     <?php if($this->session->position == 'asds'){?>
+                                    <?php if(!empty($rating_request_allowed)){?>
                                     <a target="_blank" href="<?= base_url(); ?>Pages/request_to_rr/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID?>" class="btn btn-info">Request to Retain Rating</a>
+                                    <?php } ?>
                                     <a href="#" class="btn btn-primary waves-effect waves-light open-AddBookDialog" data-id="<?= $aa->appID; ?>" data-item="<?= $aa->empEmail; ?>" data-toggle="modal" data-target=".bs-example-modal-center">copy</a>
                                     <?php } ?>
 

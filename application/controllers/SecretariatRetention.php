@@ -64,14 +64,21 @@ class SecretariatRetention extends CI_Controller
 
         $userId = $this->user_id();
         $jobId = (int) $this->input->get('job_id');
-        $vacancies = $this->secretariat->tagging_vacancies($userId);
+        $assignedVacancies = $this->secretariat->tagging_vacancies($userId);
         $counts = $this->secretariat->retention_counts($userId);
+        $vacancies = [];
         $selectedVacancy = null;
 
-        foreach ($vacancies as $vacancy) {
+        foreach ($assignedVacancies as $vacancy) {
+            // The retention picker is a request queue, not a list of every
+            // vacancy assigned to the Secretariat. Keep vacancies with no
+            // retention request out of the picker.
+            if ((int) ($counts[(int) $vacancy->jobID]['total'] ?? 0) > 0) {
+                $vacancies[] = $vacancy;
+            }
+
             if ((int) $vacancy->jobID === $jobId) {
                 $selectedVacancy = $vacancy;
-                break;
             }
         }
 

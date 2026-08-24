@@ -101,27 +101,29 @@ $nameOf = static function ($a) {
                 <rect width="210" height="297" fill="#fff"/>
                 <g fill="#000"><rect x="5" y="5" width="6" height="6"/><rect x="199" y="5" width="6" height="6"/><rect x="5" y="286" width="6" height="6"/><rect x="199" y="286" width="6" height="6"/></g>
 
-                <?php if (!$qualified) : ?>
-                    <text x="16" y="16" font-family="Arial" font-size="3.3" font-weight="700">APPLICATION / EXAMINEE NUMBER — SHADE ALL 10 DIGITS</text>
+                <?php
+                $appIdCode = ($qualified && $applicant) ? str_pad((string) $applicant->appID, 10, '0', STR_PAD_LEFT) : '';
+                $applicantName = ($qualified && $applicant) ? $nameOf($applicant) : '';
+                $applicantNo = ($qualified && $applicant) ? (trim((string) ($applicant->record_no ?? '')) !== '' ? (string) $applicant->record_no : (string) $applicant->appID) : '';
+                ?>
+                <text x="16" y="16" font-family="Arial" font-size="3.3" font-weight="700"><?= $qualified ? 'APPLICANT NO. — PRE-PRINTED' : 'APPLICATION / EXAMINEE NUMBER — SHADE ALL 10 DIGITS'; ?></text>
+                <?php for ($column = 0; $column < 10; $column++) : ?>
+                    <?php $x = 23 + ($column * 5.2); ?>
+                    <text x="<?= $x; ?>" y="21" font-family="Arial" font-size="2.5" font-weight="700" text-anchor="middle"><?= $column + 1; ?></text>
+                <?php endfor; ?>
+                <?php for ($digit = 0; $digit <= 9; $digit++) : ?>
+                    <?php $y = 25 + ($digit * 3.05); ?>
+                    <text x="16" y="<?= $y + .9; ?>" font-family="Arial" font-size="2.5" font-weight="700" text-anchor="middle"><?= $digit; ?></text>
                     <?php for ($column = 0; $column < 10; $column++) : ?>
                         <?php $x = 23 + ($column * 5.2); ?>
-                        <text x="<?= $x; ?>" y="21" font-family="Arial" font-size="2.5" font-weight="700" text-anchor="middle"><?= $column + 1; ?></text>
+                        <?php $preShaded = $appIdCode !== '' && (int) $appIdCode[$column] === $digit; ?>
+                        <circle cx="<?= $x; ?>" cy="<?= $y; ?>" r="1.15" fill="<?= $preShaded ? '#000' : '#fff'; ?>" stroke="#000" stroke-width=".35"/>
                     <?php endfor; ?>
-                    <?php for ($digit = 0; $digit <= 9; $digit++) : ?>
-                        <?php $y = 25 + ($digit * 3.05); ?>
-                        <text x="16" y="<?= $y + .9; ?>" font-family="Arial" font-size="2.5" font-weight="700" text-anchor="middle"><?= $digit; ?></text>
-                        <?php for ($column = 0; $column < 10; $column++) : ?>
-                            <?php $x = 23 + ($column * 5.2); ?>
-                            <circle cx="<?= $x; ?>" cy="<?= $y; ?>" r="1.15" fill="#fff" stroke="#000" stroke-width=".35"/>
-                        <?php endfor; ?>
-                    <?php endfor; ?>
-                <?php else : ?>
-                    <?php $applicantName = $nameOf($applicant); ?>
-                    <?php $applicantNo = trim((string) ($applicant->record_no ?? '')) !== '' ? (string) $applicant->record_no : (string) $applicant->appID; ?>
-                    <text x="16" y="16" font-family="Arial" font-size="3.4" font-weight="700">APPLICANT NO.: <?= $h($applicantNo); ?></text>
-                    <text x="16" y="21.5" font-family="Arial" font-size="3.0" font-weight="700"><?= $h($applicantName); ?></text>
-                    <text x="16" y="27" font-family="Arial" font-size="2.7" font-weight="700">VACANCY: <?= $vacancy; ?></text>
-                    <text x="16" y="32.5" font-family="Arial" font-size="2.5">Do not write outside the answer bubbles.</text>
+                <?php endfor; ?>
+                <?php if ($qualified) : ?>
+                    <text x="16" y="55" font-family="Arial" font-size="2.7" font-weight="700"><?= $h($applicantName); ?></text>
+                    <text x="16" y="57" font-family="Arial" font-size="2.5">APP #: <?= $h($applicantNo); ?> &middot; GRID: <?= $h($appIdCode); ?></text>
+                    <text x="16" y="59" font-family="Arial" font-size="2.4">VACANCY: <?= $vacancy; ?></text>
                 <?php endif; ?>
 
                 <text x="142" y="18" font-family="Arial" font-size="5" font-weight="700" text-anchor="middle">OMR ANSWER SHEET</text>

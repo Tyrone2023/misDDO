@@ -83,6 +83,19 @@ class ExamTaking_model extends CI_Model
                 KEY idx_attempt (attempt_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
+
+        if (!$this->db->field_exists('response_json', $this->tableAnswers)) {
+            $this->db->query("ALTER TABLE {$this->tableAnswers} ADD COLUMN response_json LONGTEXT NULL AFTER question_id");
+        }
+        if (!$this->db->field_exists('is_correct', $this->tableAnswers)) {
+            $this->db->query("ALTER TABLE {$this->tableAnswers} ADD COLUMN is_correct TINYINT(1) NULL AFTER response_json");
+        }
+        if (!$this->db->field_exists('points_awarded', $this->tableAnswers)) {
+            $this->db->query("ALTER TABLE {$this->tableAnswers} ADD COLUMN points_awarded DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER is_correct");
+        }
+        if (!$this->db->field_exists('max_points', $this->tableAnswers)) {
+            $this->db->query("ALTER TABLE {$this->tableAnswers} ADD COLUMN max_points DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER points_awarded");
+        }
     }
 
     /** Every attempt this application has made on one exam, oldest first. */
@@ -256,6 +269,7 @@ class ExamTaking_model extends CI_Model
 
         $totals = $this->submit_attempt($attempt, $questions, $responses);
         if (empty($totals)) {
+            log_message('error', 'record_omr_attempt: submit_attempt returned empty for exam ' . (int) $exam->exam_id . ' app ' . (int) $application->appID);
             return [];
         }
 
@@ -364,6 +378,8 @@ class ExamTaking_model extends CI_Model
         $this->db->where('attempt_id', $attemptId)->update($this->tableAttempts, $totals);
 
         if ($this->db->trans_status() === false) {
+            $error = $this->db->error();
+            log_message('error', 'OMR submit transaction failed for attempt ' . $attemptId . ': ' . json_encode($error));
             $this->db->trans_rollback();
             return [];
         }

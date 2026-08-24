@@ -635,6 +635,18 @@ class Pages extends CI_Controller
             $result['examCounts'] = $examCounts;
             $result['examTotals'] = $examTotals;
 
+            // Interview and Written Examination are encoded against the same
+            // non-teaching rating row displayed on Pages/ma.
+            $scoreCounts = $this->secretariat->score_entry_counts((int) $userId);
+            $scoreTotals = ['total' => 0, 'interview' => 0, 'written' => 0, 'complete' => 0];
+            foreach ($scoreCounts as $vacancyScores) {
+                foreach ($scoreTotals as $key => $unused) {
+                    $scoreTotals[$key] += (int) $vacancyScores[$key];
+                }
+            }
+            $result['scoreCounts'] = $scoreCounts;
+            $result['scoreTotals'] = $scoreTotals;
+
             $result['title'] = "Secretariat Dashboard";
             // already-readable "Group - Level" strings, so the badge needs no lookup
             $result['jobTypes'] = $this->secretariat->user_scope_labels((int) $userId);
@@ -8025,6 +8037,12 @@ public function rqa_municipality_print_shsv2()
         // role). The lock partial disables the form controls and points the
         // user to the Corrigendum / Addendum page for post-close corrections.
         $ratingLocked = isset($jobvacancy->jvStatus) && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Closed') === 0;
+        // Page/jobVacancy can close applications/documents with a_stat = 1
+        // while leaving jvStatus as Open. Either kind of closure must suppress
+        // new retention requests.
+        $data['rating_request_allowed'] = isset($jobvacancy->jvStatus)
+            && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Open') === 0
+            && (int) ($jobvacancy->a_stat ?? 1) === 0;
 
         $this->load->view('templates/head');
         $this->load->view('templates/header');
@@ -8293,6 +8311,9 @@ public function rqa_municipality_print_shsv2()
         $data['user'] = $this->Common->one_cond_row('users', 'user_id', $param);
 
         $ratingLocked = isset($jobvacancy->jvStatus) && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Closed') === 0;
+        $data['rating_request_allowed'] = isset($jobvacancy->jvStatus)
+            && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Open') === 0
+            && (int) ($jobvacancy->a_stat ?? 1) === 0;
 
         $this->load->view('templates/head');
         $this->load->view('templates/header');
@@ -8316,6 +8337,10 @@ public function rqa_municipality_print_shsv2()
 
         $data['data'] = $this->Common->one_cond_row('hris_applicant', 'id', $param);
         $data['user'] = $this->Common->one_cond_row('users', 'user_id', $param);
+        $jobvacancy = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->uri->segment(4));
+        $data['rating_request_allowed'] = isset($jobvacancy->jvStatus)
+            && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Open') === 0
+            && (int) ($jobvacancy->a_stat ?? 1) === 0;
 
 
         $this->load->view('templates/head');
@@ -13092,6 +13117,31 @@ public function rqa_municipality_print_shsv2()
 
     public function rr_all()
     {
+        $jobId = (int) $this->uri->segment(4);
+        $appId = (int) $this->uri->segment(5);
+        $returnUrl = base_url() . 'Pages/' . $this->uri->segment(7) . '/'
+            . $this->uri->segment(3) . '/' . $jobId . '/' . $this->uri->segment(8);
+
+        // Hiding the controls is only the presentation layer. Reject a saved
+        // or manually constructed request URL as well once the vacancy closes,
+        // and verify that the application really belongs to that vacancy.
+        $application = $this->db
+            ->select('a.appID, j.jvStatus, j.a_stat')
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->where('a.appID', $appId)
+            ->where('a.jobID', $jobId)
+            ->get()
+            ->row();
+
+        if (empty($application)
+            || strcasecmp(trim((string) $application->jvStatus), 'Open') !== 0
+            || (int) $application->a_stat !== 0) {
+            $this->session->set_flashdata('danger', 'Rating retention requests are unavailable because this vacancy is closed.');
+            redirect($returnUrl);
+            return;
+        }
+
         $check = $this->Common->three_cond_count_row('hris_rating_request', 'job_id', $this->uri->segment(4),'app_id',$this->uri->segment(5),'applicant_id',$this->uri->segment(3));
         if($check->num_rows() >= 1){
             $this->session->set_flashdata('danger', 'This is a duplicate request.');
@@ -13109,7 +13159,7 @@ public function rqa_municipality_print_shsv2()
             $this->session->set_flashdata('success', 'Succesfully saved.');
 
         }
-        redirect(base_url() . 'Pages/'.$this->uri->segment(7).'/'.$this->uri->segment(3).'/'.$this->uri->segment(4).'/'.$this->uri->segment(8));
+        redirect($returnUrl);
     }
 
     public function request_rating()

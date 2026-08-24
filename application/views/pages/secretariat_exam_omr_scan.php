@@ -5,6 +5,10 @@ $applicants = $applicants ?? [];
 $omrAttempts = $omrAttempts ?? [];
 $selectedAppId = (int) ($selectedAppId ?? 0);
 $result = $result ?? null;
+$writtenEquivalent = null;
+if ($result && (float) ($result->total_points ?? 0) > 0) {
+    $writtenEquivalent = round(((float) $result->score / (float) $result->total_points) * 20, 2);
+}
 $questionsPerPage = 60;
 $pageCount = max(1, (int) ceil(count($questions) / $questionsPerPage));
 $nameOf = static function ($row) {
@@ -52,11 +56,11 @@ foreach ($questions as $index => $question) {
         <div><a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id); ?>"><i class="mdi mdi-arrow-left mr-1"></i> Exam</a> <a href="<?= base_url('secretariat/exams/' . (int) $exam->exam_id . '/omr/print'); ?>"><i class="mdi mdi-printer-outline mr-1"></i> Print</a></div>
     </div>
 
-    <?php foreach (['success' => 'alert-success', 'danger' => 'alert-danger'] as $flash => $class) : ?>
+    <?php foreach (['success' => 'alert-success', 'warning' => 'alert-warning', 'danger' => 'alert-danger'] as $flash => $class) : ?>
         <?php if ($this->session->flashdata($flash)) : ?><div class="alert <?= $class; ?>"><?= $h($this->session->flashdata($flash)); ?></div><?php endif; ?>
     <?php endforeach; ?>
     <?php if ($result) : ?>
-        <div class="oms-result"><div>Saved OMR grade for application #<?= (int) $result->app_id; ?></div><strong><?= $h(rtrim(rtrim(number_format((float) $result->score, 2, '.', ''), '0'), '.')); ?> / <?= $h(rtrim(rtrim(number_format((float) $result->total_points, 2, '.', ''), '0'), '.')); ?> points &middot; <?= $h(rtrim(rtrim(number_format((float) $result->percentage, 2, '.', ''), '0'), '.')); ?>%</strong></div>
+        <div class="oms-result"><div>Saved OMR grade for application #<?= (int) $result->app_id; ?></div><strong><?= $h(rtrim(rtrim(number_format((float) $result->score, 2, '.', ''), '0'), '.')); ?> / <?= $h(rtrim(rtrim(number_format((float) $result->total_points, 2, '.', ''), '0'), '.')); ?> points &middot; <?= $h(rtrim(rtrim(number_format((float) $result->percentage, 2, '.', ''), '0'), '.')); ?>%</strong><?php if ($writtenEquivalent !== null) : ?><div style="margin-top:6px;font-size:14px">Written Examination equivalent: <strong><?= $h(rtrim(rtrim(number_format((float) $writtenEquivalent, 2, '.', ''), '0'), '.')); ?> / 20</strong></div><?php endif; ?></div>
     <?php endif; ?>
 
     <div class="oms-grid">

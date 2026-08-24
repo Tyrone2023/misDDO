@@ -201,7 +201,7 @@
                     <!-- Start Content-->
                     <div class="container-fluid">
 
-                        <?php if(empty($request) && !in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true)){?>
+                        <?php if(!empty($rating_request_allowed) && empty($request) && !in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true)){?>
                             <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_all/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/1/<?= $this->uri->segment(2); ?>/<?= $this->uri->segment(5); ?>/2" class="btn btn-info">Request for Retention of Ratings (All Scores)</a>
 
                             <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_all/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/2/<?= $this->uri->segment(2); ?>/<?= $this->uri->segment(5); ?>/2" class="btn btn-purple">Request for Retention of Interview and Written Examination Ratings</a>
@@ -212,7 +212,9 @@
                             <div class="col-12">
                                 <div class="page-title-box">
                                     <?php if($this->session->position == 'asds'){?>
+                                    <?php if(!empty($rating_request_allowed)){?>
                                     <a target="_blank" href="<?= base_url(); ?>Pages/request_to_rr/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID?>" class="btn btn-info">Request to Retain Rating</a>
+                                    <?php } ?>
                                     <a href="#" class="btn btn-primary waves-effect waves-light open-AddBookDialog" data-id="<?= $aa->appID; ?>" data-toggle="modal" data-target=".bs-example-modal-center">copy</a>
                                     <?php } ?>
 

@@ -113,7 +113,7 @@
                                             if($job->sy == date('Y')){
                                             if($check->num_rows() == 0){
                                             if($pangit->num_rows() > 1 ){
-                                                if($job->a_stat == 0 && !in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true)){
+                                                if(!empty($rating_request_allowed) && $job->a_stat == 0 && !in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true)){
                                     ?>
                                             
                                             <a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/rr_all/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/1/<?= $this->uri->segment(2); ?>/<?= $this->uri->segment(5); ?>/1" class="btn btn-info">Request for Retention of Ratings (All Criteria) </a>

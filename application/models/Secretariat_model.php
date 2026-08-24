@@ -634,6 +634,266 @@ class Secretariat_model extends CI_Model
     }
 
     /* ------------------------------------------------------------------ *
+     * Secretariat interview and written-examination score encoding
+     * ------------------------------------------------------------------ */
+
+    /**
+     * Applicants whose Interview and Written Examination scores are stored in
+     * hris_rating_none. The latest rating and qualification-review rows are
+     * joined once per application so duplicate historical rows cannot duplicate
+     * an applicant on the encoding screen.
+     */
+    public function score_entry_applicants(int $userId, int $jobId, int $appId = 0): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $vacancy = $this->db
+            ->select('jobID, position')
+            ->where('jobID', $jobId)
+            ->where_not_in('position', [1, 5])
+            ->get('hris_jobvacancy')
+            ->row();
+
+        if (empty($vacancy)) {
+            return [];
+        }
+
+        $latestRating = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_rating_none')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $latestDq = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_app_dq')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        return $this->db
+            ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
+                a.app_year, a.pre_school, a.dq,
+                j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.department,
+                COALESCE(ha.record_no, ha2.record_no, a.empEmail, a.applicant_id) AS record_no,
+                COALESCE(ha.id, ha2.id, hs.IDNumber, a.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, ha2.NameExtn, hs.NameExtn, '') AS NameExtn,
+                CASE
+                    WHEN ha.id IS NOT NULL OR ha2.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                dq.reason AS dq_reason,
+                r.id AS rating_id, r.interview, r.written, r.total_points,
+                r.eval_id1, r.eval_id2, r.eval_id3", false)
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(a.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->join("($latestRating) latest_rating", 'latest_rating.appID = a.appID', 'left')
+            ->join('hris_rating_none r', 'r.id = latest_rating.latest_id', 'left')
+            ->join("($latestDq) latest_dq", 'latest_dq.appID = a.appID', 'left')
+            ->join('hris_app_dq dq', 'dq.id = latest_dq.latest_id', 'left')
+            ->where('a.jobID', $jobId)
+            ->where_not_in('j.position', [1, 5])
+            ->group_start()
+                ->where($appId > 0 ? 'a.appID' : 'a.appID >', $appId > 0 ? $appId : 0)
+            ->group_end()
+            ->order_by('a.dq', 'asc')
+            ->order_by('ha.LastName', 'asc')
+            ->order_by('hs.LastName', 'asc')
+            ->order_by('a.appID', 'desc')
+            ->get()
+            ->result();
+    }
+
+    /** One application, after applying the same vacancy/role scope as the list. */
+    public function score_entry_application(int $userId, int $appId)
+    {
+        if ($appId <= 0) {
+            return null;
+        }
+
+        $application = $this->db
+            ->select('jobID')
+            ->where('appID', $appId)
+            ->get('hris_applications')
+            ->row();
+
+        if (empty($application)) {
+            return null;
+        }
+
+        $rows = $this->score_entry_applicants($userId, (int) $application->jobID, $appId);
+        return $rows[0] ?? null;
+    }
+
+    /**
+     * Save either or both scores into the exact rating row read by Pages/ma.
+     * A missing row is initialized with the same 0.00001 sentinel used by the
+     * regular rating forms; a legacy row under another record number is
+     * normalized instead of creating a second rating for the application.
+     */
+    public function save_interview_written_scores(
+        int $userId,
+        int $appId,
+        ?float $interview,
+        ?float $written
+    ): array {
+        $application = $this->score_entry_application($userId, $appId);
+
+        if (empty($application)) {
+            return ['ok' => false, 'message' => 'The application or assigned vacancy is no longer available.'];
+        }
+
+        if ($interview === null && $written === null) {
+            return ['ok' => false, 'message' => 'Enter an Interview or Written Examination score.'];
+        }
+
+        $recordNo = trim((string) ($application->record_no ?? ''));
+        if ($recordNo === '') {
+            $recordNo = trim((string) ($application->applicant_id ?? $application->empEmail ?? ''));
+        }
+
+        $this->db->trans_begin();
+
+        $rating = $this->db
+            ->where('appID', $appId)
+            ->where('record_no', $recordNo)
+            ->order_by('id', 'desc')
+            ->limit(1)
+            ->get('hris_rating_none')
+            ->row();
+
+        if (empty($rating)) {
+            $rating = $this->db
+                ->where('appID', $appId)
+                ->order_by('id', 'desc')
+                ->limit(1)
+                ->get('hris_rating_none')
+                ->row();
+
+            if (!empty($rating)) {
+                $this->db->where('id', (int) $rating->id)->update('hris_rating_none', ['record_no' => $recordNo]);
+                $rating->record_no = $recordNo;
+            }
+        }
+
+        if (empty($rating)) {
+            $data = rating_required_defaults('hris_rating_none');
+            foreach (rating_score_fields('hris_rating_none') as $field) {
+                $data[$field] = .00001;
+            }
+            $data['appID'] = $appId;
+            $data['record_no'] = $recordNo;
+            $data['job_type'] = (int) $application->position;
+            $data['fy'] = (int) $application->sy;
+            $data['eval_id1'] = $userId;
+
+            $this->db->insert('hris_rating_none', $data);
+            $rating = $this->db->where('id', (int) $this->db->insert_id())->get('hris_rating_none')->row();
+
+            if (empty($rating)) {
+                $this->db->trans_rollback();
+                return ['ok' => false, 'message' => 'The rating record could not be initialized. Please try again.'];
+            }
+        }
+
+        $old = [
+            'interview' => isset($rating->interview) ? (float) $rating->interview : null,
+            'written' => isset($rating->written) ? (float) $rating->written : null,
+        ];
+        $updates = [];
+
+        if ($interview !== null) {
+            $updates['interview'] = $interview;
+        }
+        if ($written !== null) {
+            $updates['written'] = $written;
+        }
+        if ((int) ($rating->eval_id1 ?? 0) === 0) {
+            $updates['eval_id1'] = $userId;
+        }
+
+        // An old application can carry duplicate rating rows. Keep the two
+        // Secretariat-owned scores and the canonical record key consistent on
+        // every copy so the legacy MA lookup cannot display a stale duplicate.
+        $updates['record_no'] = $recordNo;
+        $this->db->where('appID', $appId)->update('hris_rating_none', $updates);
+        $this->db
+            ->set('total_points', 'COALESCE(educ,0)+COALESCE(trainings,0)+COALESCE(experience,0)+COALESCE(performance,0)+COALESCE(oa,0)+COALESCE(ae,0)+COALESCE(ald,0)+COALESCE(interview,0)+COALESCE(written,0)+COALESCE(skills,0)', false)
+            ->where('appID', $appId)
+            ->update('hris_rating_none');
+
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return ['ok' => false, 'message' => 'The scores could not be saved. Please try again.'];
+        }
+
+        $this->db->trans_commit();
+
+        return [
+            'ok' => true,
+            'application' => $application,
+            'old' => $old,
+            'new' => ['interview' => $interview, 'written' => $written],
+        ];
+    }
+
+    /** Dashboard progress for score-eligible assigned vacancies. */
+    public function score_entry_counts(int $userId): array
+    {
+        $latestRating = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_rating_none')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $rows = $this->db
+            ->select("sv.job_id,
+                COUNT(DISTINCT a.appID) AS total,
+                COUNT(DISTINCT CASE
+                    WHEN r.id IS NOT NULL AND ABS(COALESCE(r.interview, 0.00001) - 0.00001) > 0.000001 THEN a.appID
+                END) AS interview_encoded,
+                COUNT(DISTINCT CASE
+                    WHEN r.id IS NOT NULL AND ABS(COALESCE(r.written, 0.00001) - 0.00001) > 0.000001 THEN a.appID
+                END) AS written_encoded,
+                COUNT(DISTINCT CASE
+                    WHEN r.id IS NOT NULL
+                     AND ABS(COALESCE(r.interview, 0.00001) - 0.00001) > 0.000001
+                     AND ABS(COALESCE(r.written, 0.00001) - 0.00001) > 0.000001 THEN a.appID
+                END) AS complete", false)
+            ->from('hris_secretariat_vacancies sv')
+            ->join('hris_jobvacancy j', 'j.jobID = sv.job_id')
+            ->join('hris_applications a', 'a.jobID = sv.job_id', 'left')
+            ->join("($latestRating) latest_rating", 'latest_rating.appID = a.appID', 'left')
+            ->join('hris_rating_none r', 'r.id = latest_rating.latest_id', 'left')
+            ->where('sv.secretariat_user_id', $userId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->where_not_in('j.position', [1, 5])
+            ->group_by('sv.job_id')
+            ->get()
+            ->result();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[(int) $row->job_id] = [
+                'total' => (int) $row->total,
+                'interview' => (int) $row->interview_encoded,
+                'written' => (int) $row->written_encoded,
+                'complete' => (int) $row->complete,
+            ];
+        }
+
+        return $counts;
+    }
+
+    /* ------------------------------------------------------------------ *
      * Retention of points
      *
      * An applicant who was already rated for an earlier vacancy can ask to
@@ -779,18 +1039,20 @@ class Secretariat_model extends CI_Model
      */
     public function retention_counts(int $userId): array
     {
-        // a.appID gates every figure: a request whose application is no longer
-        // in the system is not listed, so it must not be counted either.
+        // The application is authoritative for the vacancy being applied for.
+        // Historical request rows can carry the vacancy an applicant came
+        // from; grouping on rr.job_id would put those requests in that earlier
+        // vacancy instead of the vacancy receiving the application.
         $rows = $this->db
             ->select("sv.job_id,
-                COUNT(a.appID) AS total,
-                SUM(CASE WHEN rr.stat = 0 AND a.appID IS NOT NULL THEN 1 ELSE 0 END) AS pending,
-                SUM(CASE WHEN rr.stat = 1 AND a.appID IS NOT NULL THEN 1 ELSE 0 END) AS granted,
-                SUM(CASE WHEN rr.stat = 2 AND a.appID IS NOT NULL THEN 1 ELSE 0 END) AS denied", false)
+                COUNT(rr.id) AS total,
+                SUM(CASE WHEN rr.stat = 0 THEN 1 ELSE 0 END) AS pending,
+                SUM(CASE WHEN rr.stat = 1 THEN 1 ELSE 0 END) AS granted,
+                SUM(CASE WHEN rr.stat = 2 THEN 1 ELSE 0 END) AS denied", false)
             ->from('hris_secretariat_vacancies sv')
             ->join('hris_jobvacancy j', 'j.jobID = sv.job_id')
-            ->join('hris_rating_request rr', 'rr.job_id = sv.job_id', 'left')
-            ->join('hris_applications a', 'a.appID = rr.app_id', 'left')
+            ->join('hris_applications a', 'a.jobID = sv.job_id', 'left')
+            ->join('hris_rating_request rr', 'rr.app_id = a.appID', 'left')
             ->where('sv.secretariat_user_id', $userId)
             ->where('j.jvStatus !=', 'Closed')
             ->group_by('sv.job_id')
@@ -840,6 +1102,7 @@ class Secretariat_model extends CI_Model
             ->select("rr.id AS request_id, rr.app_id, rr.applicant_id, rr.r_type, rr.stat,
                 rr.granted_scope, rr.deny_reason, rr.rdate, rr.adate, rr.fy, rr.p_type, rr.res,
                 a.appID, a.appStatus, a.dq, a.empEmail, a.pre_school, a.district, a.app_year,
+                dq.reason AS dq_reason,
                 COALESCE(ha.record_no, hs.IDNumber, rr.applicant_id) AS record_no,
                 COALESCE(ha.id, hs.IDNumber, rr.applicant_id) AS profile_id,
                 COALESCE(ha.FirstName, hs.FirstName, '') AS FirstName,
@@ -857,10 +1120,23 @@ class Secretariat_model extends CI_Model
             // is no longer in the system cannot be resolved either way, so it
             // is left out of the list entirely rather than shown as a dead end.
             ->join('hris_applications a', 'a.appID = rr.app_id')
+            // An application can have several qualification-review rows over
+            // time. Join only its latest one so the request is not duplicated
+            // and the displayed disqualification reason is the current one.
+            ->join(
+                '(SELECT appID, MAX(id) AS latest_id FROM hris_app_dq GROUP BY appID) dq_latest',
+                'dq_latest.appID = a.appID',
+                'left',
+                false
+            )
+            ->join('hris_app_dq dq', 'dq.id = dq_latest.latest_id', 'left')
             ->join('hris_applicant ha', 'ha.id = rr.applicant_id', 'left')
             ->join('hris_staff hs', 'ha.id IS NULL AND CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = rr.applicant_id', 'left', false)
             ->join('users u', 'u.id = rr.res', 'left')
-            ->where('rr.job_id', $jobId)
+            // A request belongs to the vacancy of the exact application it
+            // references. Do not use rr.job_id here: old rows may contain the
+            // vacancy whose ratings are being retained.
+            ->where('a.jobID', $jobId)
             ->order_by('rr.stat', 'asc')
             ->order_by('ha.LastName', 'asc')
             ->order_by('rr.id', 'asc')
@@ -1091,22 +1367,29 @@ class Secretariat_model extends CI_Model
     public function retention_actionable_request(int $userId, int $requestId): ?object
     {
         $request = $this->db
-            ->select('rr.*, j.jobID, j.jobTitle, j.position, j.job_type, j.sy, j.jvStatus,
+            ->select('rr.*, a.jobID AS applied_job_id,
+                j.jobID, j.jobTitle, j.position, j.job_type, j.sy, j.jvStatus,
                 a.appID, a.appStatus, a.app_year, a.empEmail, a.applicant_id AS app_applicant_id')
             ->from('hris_rating_request rr')
-            ->join('hris_jobvacancy j', 'j.jobID = rr.job_id')
-            ->join('hris_applications a', 'a.appID = rr.app_id', 'left')
+            ->join('hris_applications a', 'a.appID = rr.app_id')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
             ->where('rr.id', $requestId)
             ->get()
             ->row();
 
-        if (empty($request) || !$this->secretariat_has_vacancy($userId, (int) $request->job_id)) {
+        if (empty($request) || !$this->secretariat_has_vacancy($userId, (int) $request->applied_job_id)) {
             return null;
         }
 
         if ((int) $request->stat !== 0 || strcasecmp(trim((string) $request->jvStatus), 'Closed') === 0) {
             return null;
         }
+
+        // All decision handlers use job_id for redirects, source filtering,
+        // audit entries, and downstream status changes. Normalize it to the
+        // vacancy actually applied for rather than propagating stale request
+        // metadata.
+        $request->job_id = (int) $request->applied_job_id;
 
         return $request;
     }
