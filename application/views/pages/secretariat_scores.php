@@ -11,6 +11,9 @@ $applicants = $applicants ?? [];
 $selectedJobId = (int) ($selectedJobId ?? 0);
 $selectedVacancy = $selectedVacancy ?? null;
 $scoreCounts = $scoreCounts ?? [];
+$activity = $activity ?? [];
+$lastActions = $lastActions ?? [];
+$modeOptions = $modeOptions ?? ['written', 'interview', 'both'];
 $encodingMode = in_array(($encodingMode ?? 'both'), ['written', 'interview', 'both'], true) ? $encodingMode : 'both';
 $showInterview = in_array($encodingMode, ['interview', 'both'], true);
 $showWritten = in_array($encodingMode, ['written', 'both'], true);
@@ -23,6 +26,17 @@ $modePercent = $modeTotal > 0 ? round(($encodedForMode / $modeTotal) * 100) : 0;
 $modeLabels = ['written' => 'Written only', 'interview' => 'Interview only', 'both' => 'Both scores'];
 $successMessage = $this->session->flashdata('success');
 $dangerMessage = $this->session->flashdata('danger');
+
+/** Server time is authoritative (Asia/Manila) - format it, never re-zone it. */
+$score_when = static function ($value) {
+    $stamp = strtotime((string) $value);
+    return $stamp ? date('M j, Y g:i A', $stamp) : (string) $value;
+};
+
+/** 'Encoded ...' vs 'Edited ...' - the two things the trail records. */
+$score_action_kind = static function ($description) {
+    return stripos((string) $description, 'Edited') === 0 ? 'edit' : 'encode';
+};
 ?>
 
 <style>
@@ -44,6 +58,9 @@ $dangerMessage = $this->session->flashdata('danger');
     .score-workspace .sw-mode .btn { background:transparent; border:0; border-radius:8px; color:#5a6d87; font-size:12px; font-weight:700; padding:7px 14px; white-space:nowrap; }
     .score-workspace .sw-mode .btn:hover { color:var(--sw-blue); }
     .score-workspace .sw-mode .btn.active { background:#fff; box-shadow:0 2px 6px rgba(24,52,88,.12); color:var(--sw-blue); }
+    .score-workspace .sw-mode-locked { align-items:center; background:#eff3f9; border-radius:10px; color:#41577a; display:inline-flex; font-size:12px; font-weight:700; gap:6px; height:38px; padding:0 14px; white-space:nowrap; }
+    .score-workspace .sw-mode-locked i { color:#7b8ca3; font-size:15px; }
+    .score-workspace .sw-mode-locked span { color:#8b9ab0; font-size:10.5px; font-weight:600; }
     .score-workspace .sw-search { position:relative; }
     .score-workspace .sw-search i { color:#93a0b2; left:12px; position:absolute; top:33px; }
     .score-workspace .sw-search input { background:#fff; border:1px solid #d9e1ec; border-radius:9px; font-size:13px; height:38px; padding-left:34px; width:100%; }
@@ -99,6 +116,34 @@ $dangerMessage = $this->session->flashdata('danger');
     .score-workspace .sw-save-state.saving { color:#a66a00; }
     .score-workspace .sw-save-state.saved { color:#238052; }
     .score-workspace .sw-save-state.error { color:#c34444; }
+    .score-workspace .sw-actor { align-items:center; color:#5a6d87; display:flex; font-size:10.5px; font-weight:650; gap:4px; margin-top:4px; max-width:190px; }
+    .score-workspace .sw-actor i { font-size:12px; }
+    .score-workspace .sw-actor span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .score-workspace .sw-actor-empty { color:#b3bece; font-weight:600; }
+    .score-workspace .sw-actor-when { color:#a3b0c0; font-size:10px; margin-top:1px; }
+
+    .score-workspace .sw-trail { margin-top:16px; }
+    .score-workspace .sw-trail-head { align-items:center; background:#fbfcfe; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; padding:14px 18px; }
+    .score-workspace .sw-trail-title { align-items:center; color:var(--sw-ink); display:flex; font-size:14px; font-weight:800; gap:7px; margin:0; }
+    .score-workspace .sw-trail-title i { color:var(--sw-blue); font-size:17px; }
+    .score-workspace .sw-trail-note { color:var(--sw-muted); font-size:11.5px; margin:2px 0 0; }
+    .score-workspace .sw-trail-tools { align-items:center; display:flex; flex-wrap:wrap; gap:6px; }
+    .score-workspace .sw-tchip { background:#fff; border:1px solid #dde4ee; border-radius:20px; color:#5a6d87; cursor:pointer; font-size:11px; font-weight:700; padding:6px 12px; transition:all .14s ease; }
+    .score-workspace .sw-tchip:hover { border-color:#b9cbe8; color:var(--sw-blue); }
+    .score-workspace .sw-tchip.active { background:var(--sw-blue); border-color:var(--sw-blue); color:#fff; }
+    .score-workspace .sw-trail-list { max-height:360px; overflow-y:auto; }
+    .score-workspace .sw-trail-item { border-bottom:1px solid #f0f4f9; display:flex; gap:11px; padding:11px 18px; }
+    .score-workspace .sw-trail-item:last-child { border-bottom:0; }
+    .score-workspace .sw-trail-icon { align-items:center; border-radius:9px; display:flex; flex:0 0 30px; font-size:15px; height:30px; justify-content:center; width:30px; }
+    .score-workspace .sw-trail-icon.is-encode { background:#eaf7f0; color:#1f7a51; }
+    .score-workspace .sw-trail-icon.is-edit { background:#fff5e2; color:#96650c; }
+    .score-workspace .sw-trail-body { min-width:0; }
+    .score-workspace .sw-trail-line { color:var(--sw-ink); font-size:12.5px; line-height:1.4; }
+    .score-workspace .sw-trail-line b { font-weight:750; }
+    .score-workspace .sw-trail-meta { align-items:center; color:var(--sw-muted); display:flex; flex-wrap:wrap; font-size:10.5px; gap:4px 10px; margin-top:3px; }
+    .score-workspace .sw-trail-role { background:#eef3fb; border-radius:20px; color:#41577a; font-size:9.5px; font-weight:800; letter-spacing:.04em; padding:2px 8px; text-transform:uppercase; }
+    .score-workspace .sw-trail-empty { color:var(--sw-muted); font-size:12.5px; padding:34px 18px; text-align:center; }
+    .score-workspace .sw-trail-empty i { color:#c3cddc; display:block; font-size:32px; margin-bottom:6px; }
     .score-workspace .sw-ma-link { color:#7488a1; font-size:17px; }
     .score-workspace .sw-ma-link:hover { color:var(--sw-blue); }
     .score-workspace .sw-empty { color:var(--sw-muted); padding:52px 20px; text-align:center; }
@@ -129,7 +174,9 @@ $dangerMessage = $this->session->flashdata('danger');
                     <p class="sw-subtitle">Encode Interview and Written Examination scores. Every entry saves on its own.</p>
                 </div>
                 <div class="sw-hero-side">
-                    <a href="<?= base_url(); ?>" class="sw-back"><i class="mdi mdi-arrow-left"></i>Dashboard</a>
+                    <?php if ($this->session->position !== 'Field Encoder') : ?>
+                        <a href="<?= base_url(); ?>" class="sw-back"><i class="mdi mdi-arrow-left"></i>Dashboard</a>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -151,11 +198,19 @@ $dangerMessage = $this->session->flashdata('danger');
                     </div>
                     <div>
                         <span class="sw-label">Encode</span>
-                        <div class="sw-mode" role="group" aria-label="Score fields to encode">
-                            <?php foreach ($modeLabels as $modeValue => $modeLabel) : ?>
-                                <button type="submit" name="mode" value="<?= $modeValue; ?>" class="btn <?= $encodingMode === $modeValue ? 'active' : ''; ?>"><?= $modeLabel; ?></button>
-                            <?php endforeach; ?>
-                        </div>
+                        <?php if (count($modeOptions) <= 1) : ?>
+                            <div class="sw-mode-locked">
+                                <i class="mdi mdi-lock-outline"></i>
+                                <?= $score_h($modeLabels[$modeOptions[0] ?? 'both']); ?>
+                                <span>your account's permission on this vacancy</span>
+                            </div>
+                        <?php else : ?>
+                            <div class="sw-mode" role="group" aria-label="Score fields to encode">
+                                <?php foreach ($modeOptions as $modeValue) : ?>
+                                    <button type="submit" name="mode" value="<?= $modeValue; ?>" class="btn <?= $encodingMode === $modeValue ? 'active' : ''; ?>"><?= $score_h($modeLabels[$modeValue]); ?></button>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
                     <div class="sw-search">
                         <label class="sw-label" for="score-applicant-search">Find applicant</label>
@@ -233,7 +288,7 @@ $dangerMessage = $this->session->flashdata('danger');
                                         <?php if ($showWritten) : ?><th class="text-center">Written</th><?php endif; ?>
                                         <?php if ($showInterview) : ?><th class="text-center">Interview</th><?php endif; ?>
                                         <?php if ($showWritten && $showInterview) : ?><th class="text-center">Total</th><?php endif; ?>
-                                        <th>Record</th>
+                                        <th>Last action</th>
                                         <th class="text-center">View Application</th>
                                     </tr>
                                 </thead>
@@ -303,7 +358,31 @@ $dangerMessage = $this->session->flashdata('danger');
                                             <?php if ($showWritten && $showInterview) : ?>
                                                 <td class="sw-total <?= $rowTotal !== null ? 'has-value' : ''; ?>"><?= $rowTotal !== null ? $score_h(rtrim(rtrim(number_format($rowTotal, 2, '.', ''), '0'), '.')) : '&mdash;'; ?></td>
                                             <?php endif; ?>
-                                            <td><span class="sw-save-state <?= $modeComplete ? 'saved' : ''; ?>"><i class="mdi <?= $modeComplete ? 'mdi-check-circle-outline' : 'mdi-circle-edit-outline'; ?>"></i><span><?= $modeComplete ? 'Saved' : 'Ready'; ?></span></span></td>
+                                            <td>
+                                                <span class="sw-save-state <?= $modeComplete ? 'saved' : ''; ?>"><i class="mdi <?= $modeComplete ? 'mdi-check-circle-outline' : 'mdi-circle-edit-outline'; ?>"></i><span><?= $modeComplete ? 'Saved' : 'Ready'; ?></span></span>
+                                                <?php
+                                                // Newest of the two per-field audit rows for this application.
+                                                $rowActions = $lastActions[(int) $applicant->appID] ?? [];
+                                                $rowLast = null;
+                                                $rowLastField = '';
+                                                foreach ($rowActions as $actionField => $action) {
+                                                    if ($rowLast === null || strcmp((string) $action['when'], (string) $rowLast['when']) > 0) {
+                                                        $rowLast = $action;
+                                                        $rowLastField = $actionField;
+                                                    }
+                                                }
+                                                ?>
+                                                <?php if ($rowLast) : ?>
+                                                    <div class="sw-actor" data-row-actor title="<?= $score_h($rowLast['description']); ?>">
+                                                        <i class="mdi <?= $score_action_kind($rowLast['description']) === 'edit' ? 'mdi-pencil-outline' : 'mdi-plus-circle-outline'; ?>"></i>
+                                                        <span><?= $score_h(($rowLastField === 'interview' ? 'Interview' : 'Written') . ' by ' . ($rowLast['name'] !== '' ? $rowLast['name'] : $rowLast['username'])); ?></span>
+                                                    </div>
+                                                    <div class="sw-actor-when"><?= $score_h($score_when($rowLast['when'])); ?></div>
+                                                <?php else : ?>
+                                                    <div class="sw-actor sw-actor-empty" data-row-actor><i class="mdi mdi-minus"></i><span>No action yet</span></div>
+                                                    <div class="sw-actor-when"></div>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-center">
                                                 <?php if ($profileUrl !== '') : ?><a href="<?= $score_h($profileUrl); ?>" class="sw-ma-link" target="_blank" rel="noopener" title="Open MA page"><i class="mdi mdi-open-in-new"></i></a><?php else : ?><span class="text-muted">&mdash;</span><?php endif; ?>
                                             </td>
@@ -318,6 +397,59 @@ $dangerMessage = $this->session->flashdata('danger');
                         </div>
                     <?php endif; ?>
                 </div>
+                </div>
+                </div>
+                <br>
+
+                <!-- <div class="sw-card sw-trail" id="score-trail" data-job-id="<?= $selectedJobId; ?>" data-activity-url="<?= base_url('secretariat/scores/activity'); ?>">
+                    <div class="sw-trail-head">
+                        <div>
+                            <h5 class="sw-trail-title"><i class="mdi mdi-history"></i>Encoding Activity</h5>
+                            <p class="sw-trail-note">Every encode and edit on this vacancy, newest first, with who did it.</p>
+                        </div>
+                        <div class="sw-trail-tools">
+                            <button type="button" class="sw-tchip active" data-trail-filter="all">All</button>
+                            <button type="button" class="sw-tchip" data-trail-filter="encode">Encoded</button>
+                            <button type="button" class="sw-tchip" data-trail-filter="edit">Edited</button>
+                            <button type="button" class="sw-tchip" data-trail-filter="written">Written</button>
+                            <button type="button" class="sw-tchip" data-trail-filter="interview">Interview</button>
+                            <button type="button" class="sw-tchip" id="score-trail-refresh" title="Reload the trail"><i class="mdi mdi-refresh"></i> Refresh</button>
+                        </div>
+                    </div>
+                    <div class="sw-trail-list" id="score-trail-list">
+                        <?php if (empty($activity)) : ?>
+                            <div class="sw-trail-empty">
+                                <i class="mdi mdi-clipboard-text-clock-outline"></i>
+                                No score has been encoded for this vacancy yet.
+                            </div>
+                        <?php else : ?>
+                            <?php foreach ($activity as $entry) :
+                                $kind = $score_action_kind($entry->description);
+                                $actor = trim(trim((string) $entry->fname) . ' ' . trim((string) $entry->lname));
+                                if ($actor === '') {
+                                    $actor = (string) $entry->username;
+                                }
+                                $applicantName = trim(trim(trim((string) $entry->app_last) . ', ' . trim((string) $entry->app_first)), ', ');
+                            ?>
+                                <div class="sw-trail-item" data-trail-kind="<?= $kind; ?>" data-trail-field="<?= $score_h($entry->field); ?>">
+                                    <div class="sw-trail-icon is-<?= $kind; ?>"><i class="mdi <?= $kind === 'edit' ? 'mdi-pencil-outline' : 'mdi-plus-circle-outline'; ?>"></i></div>
+                                    <div class="sw-trail-body">
+                                        <div class="sw-trail-line"><b><?= $score_h($actor); ?></b> &mdash; <?= $score_h($entry->description); ?></div>
+                                        <div class="sw-trail-meta">
+                                            <?php if ($entry->position) : ?><span class="sw-trail-role"><?= $score_h($entry->position); ?></span><?php endif; ?>
+                                            <span><i class="mdi mdi-account-outline"></i> <?= $score_h($applicantName !== '' ? $applicantName : ('App #' . (int) $entry->app_id)); ?></span>
+                                            <span><i class="mdi mdi-clock-outline"></i> <?= $score_h($score_when($entry->created_at)); ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="sw-foot">
+                        <span><i class="mdi mdi-shield-check-outline"></i> Recorded automatically in the system audit trail.</span>
+                        <span><strong id="score-trail-count"><?= count($activity); ?></strong> action<?= count($activity) === 1 ? '' : 's'; ?> shown</span>
+                    </div>
+                </div> -->
             <?php endif; ?>
         </div>
     </div>
@@ -544,6 +676,7 @@ $dangerMessage = $this->session->flashdata('danger');
             refreshRowTotal(row);
             refreshModeCount(form);
             setStatus(form, 'saved', payload.saved_at ? 'Saved ' + payload.saved_at : 'Saved');
+            document.dispatchEvent(new CustomEvent('score:saved'));
         }).catch(function (error) {
             setStatus(form, 'error', error.message || 'Save failed');
             // A dropped connection is worth one silent retry; a rejected value is not.
@@ -687,5 +820,151 @@ $dangerMessage = $this->session->flashdata('danger');
 
     refreshCounts();
     refreshAutosaveBadge();
+})();
+
+/* ---- Encoding activity trail ---- */
+(function () {
+    var trail = document.getElementById('score-trail');
+    if (!trail) return;
+
+    var list = document.getElementById('score-trail-list');
+    var countLabel = document.getElementById('score-trail-count');
+    var refreshBtn = document.getElementById('score-trail-refresh');
+    var jobId = trail.dataset.jobId;
+    var activityUrl = trail.dataset.activityUrl;
+    var filter = 'all';
+    var pending = null;
+    var loading = false;
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // The stamp is already Asia/Manila server time - parse the parts by hand
+    // rather than through Date(), which would re-zone it to the browser.
+    function formatWhen(value) {
+        var match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(value || ''));
+        if (!match) return String(value || '');
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var hour = Number(match[4]);
+        var suffix = hour >= 12 ? 'PM' : 'AM';
+        var hour12 = hour % 12 === 0 ? 12 : hour % 12;
+        return months[Number(match[2]) - 1] + ' ' + Number(match[3]) + ', ' + match[1]
+            + ' ' + hour12 + ':' + match[5] + ' ' + suffix;
+    }
+
+    function kindOf(description) {
+        return /^edited/i.test(String(description || '')) ? 'edit' : 'encode';
+    }
+
+    function applyFilter() {
+        var shown = 0;
+        trail.querySelectorAll('.sw-trail-item').forEach(function (item) {
+            var match = filter === 'all'
+                || item.dataset.trailKind === filter
+                || item.dataset.trailField === filter;
+            item.style.display = match ? '' : 'none';
+            if (match) shown += 1;
+        });
+        if (countLabel) countLabel.textContent = shown;
+    }
+
+    function render(entries) {
+        if (!entries.length) {
+            list.innerHTML = '<div class="sw-trail-empty"><i class="mdi mdi-clipboard-text-clock-outline"></i>No score has been encoded for this vacancy yet.</div>';
+            if (countLabel) countLabel.textContent = '0';
+            return;
+        }
+
+        list.innerHTML = entries.map(function (entry) {
+            var kind = kindOf(entry.description);
+            var who = entry.actor || entry.username || '';
+            var applicant = entry.applicant || ('App #' + entry.app_id);
+            return '<div class="sw-trail-item" data-trail-kind="' + kind + '" data-trail-field="' + escapeHtml(entry.field) + '">'
+                + '<div class="sw-trail-icon is-' + kind + '"><i class="mdi ' + (kind === 'edit' ? 'mdi-pencil-outline' : 'mdi-plus-circle-outline') + '"></i></div>'
+                + '<div class="sw-trail-body">'
+                + '<div class="sw-trail-line"><b>' + escapeHtml(who) + '</b> &mdash; ' + escapeHtml(entry.description) + '</div>'
+                + '<div class="sw-trail-meta">'
+                + (entry.role ? '<span class="sw-trail-role">' + escapeHtml(entry.role) + '</span>' : '')
+                + '<span><i class="mdi mdi-account-outline"></i> ' + escapeHtml(applicant) + '</span>'
+                + '<span><i class="mdi mdi-clock-outline"></i> ' + escapeHtml(formatWhen(entry.when)) + '</span>'
+                + '</div></div></div>';
+        }).join('');
+
+        applyFilter();
+    }
+
+    // The trail is ordered newest first, so the first entry seen for an
+    // application is the one its row should advertise.
+    function refreshRowActors(entries) {
+        var seen = {};
+        entries.forEach(function (entry) {
+            if (seen[entry.app_id]) return;
+            seen[entry.app_id] = entry;
+        });
+
+        document.querySelectorAll('#score-applicant-table tbody tr').forEach(function (row) {
+            var form = row.querySelector('.score-auto-form');
+            var actor = row.querySelector('[data-row-actor]');
+            if (!form || !actor) return;
+
+            var entry = seen[form.querySelector('[name="app_id"]').value];
+            if (!entry) return;
+
+            var kind = kindOf(entry.description);
+            actor.className = 'sw-actor';
+            actor.title = entry.description;
+            actor.innerHTML = '<i class="mdi ' + (kind === 'edit' ? 'mdi-pencil-outline' : 'mdi-plus-circle-outline') + '"></i>'
+                + '<span>' + escapeHtml((entry.field === 'interview' ? 'Interview' : 'Written') + ' by ' + (entry.actor || entry.username)) + '</span>';
+
+            var when = actor.nextElementSibling;
+            if (when && when.classList.contains('sw-actor-when')) {
+                when.textContent = formatWhen(entry.when);
+            }
+        });
+    }
+
+    function load() {
+        if (loading || !jobId || jobId === '0') return;
+        loading = true;
+        if (refreshBtn) refreshBtn.disabled = true;
+
+        fetch(activityUrl + '?job_id=' + encodeURIComponent(jobId), {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (response) {
+            return response.json();
+        }).then(function (payload) {
+            if (!payload || !payload.ok) return;
+            render(payload.entries || []);
+            refreshRowActors(payload.entries || []);
+        }).catch(function () {
+            /* A failed refresh leaves the trail as it was - nothing to undo. */
+        }).finally(function () {
+            loading = false;
+            if (refreshBtn) refreshBtn.disabled = false;
+        });
+    }
+
+    trail.querySelectorAll('[data-trail-filter]').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            trail.querySelectorAll('[data-trail-filter]').forEach(function (other) { other.classList.remove('active'); });
+            chip.classList.add('active');
+            filter = chip.dataset.trailFilter;
+            applyFilter();
+        });
+    });
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', load);
+    }
+
+    // Autosave fires per keystroke burst; coalesce the reloads it triggers.
+    document.addEventListener('score:saved', function () {
+        if (pending) clearTimeout(pending);
+        pending = setTimeout(load, 900);
+    });
 })();
 </script>

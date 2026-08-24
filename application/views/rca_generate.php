@@ -275,8 +275,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     <td><?= $row->unit_measure; ?></td>
                     <td><?= $row->materials; ?></td>
                     <td></td>
-                    <td><?= number_format($m); ?></td>
-                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups); ?></td>
+                    <td><?= number_format($m, 2); ?></td>
+                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
                     
                 </tr>
 
@@ -342,8 +342,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     <td><?= $row->unit_measure; ?></td>
                     <td><?= $row->materials; ?></td>
                     <td></td>
-                    <td><?= number_format($m); ?></td>
-                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups); ?></td>
+                    <td><?= number_format($m, 2); ?></td>
+                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
                     
                 </tr>
 
@@ -407,8 +407,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     <td><?= $row->unit_measure; ?></td>
                     <td><?= $row->materials; ?></td>
                     <td></td>
-                    <td><?= number_format($m); ?></td>
-                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups); ?></td>
+                    <td><?= number_format($m, 2); ?></td>
+                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
                     
                 </tr>
                 <?php $ttli+=$mb_ups;?>
@@ -470,8 +470,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     <td><?= $row->unit_measure; ?></td>
                     <td><?= $row->materials; ?></td>
                     <td></td>
-                    <td><?= number_format($m); ?></td>
-                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups); ?></td>
+                    <td><?= number_format($m, 2); ?></td>
+                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
                     
                 </tr>
                 <?php $ttst+=$mb_ups;?>
@@ -542,7 +542,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
     <p class="name"><b><?= $sds->fullname; ?></b><br /><?= $sds->position; ?></p>
     <p class="sname"><b>Thru: <?= $fund->fullname; ?></b><br/><span class="hide"><b>Thru: </b></span><?= $fund->position; ?></p>
     <p class="maam">Maam:</p>
-    <p class="coa">In pursuance to COA Circular No. 97-002 dated February 10, 2007, the undersigned respectfully request the amount of <b> <?= $get_amount; ?></b>(&#8369; <?= number_format($omtt); ?> ) as Cash Advance for the Month of <b><?= $month; ?></b> the Maintenance & Other Operating Expenses (MOOE) of <b><?= strtoupper($school->schoolName); ?> <?php if(isset($bs->alloc_group)){echo strtoupper($bs->alloc_group);} ?>, <?php if(isset($school->sitio)){strtoupper($school->sitio).', ';} ?><?= strtoupper($school->brgy); ?>, <?= strtoupper($school->city); ?>, <?= strtoupper($school->province); ?></b> for payments of bills/travels/ purchases of various supplies and materials listed below for the Month of <b><?= $month; ?></b>.</p>
+    <p class="coa">In pursuance to COA Circular No. 97-002 dated February 10, 2007, the undersigned respectfully request the amount of <b> <?= $get_amount; ?></b>(&#8369; <?= number_format($omtt, 2); ?> ) as Cash Advance for the Month of <b><?= $month; ?></b> the Maintenance & Other Operating Expenses (MOOE) of <b><?= strtoupper($school->schoolName); ?> <?php if(isset($bs->alloc_group)){echo strtoupper($bs->alloc_group);} ?>, <?php if(isset($school->sitio)){strtoupper($school->sitio).', ';} ?><?= strtoupper($school->brgy); ?>, <?= strtoupper($school->city); ?>, <?= strtoupper($school->province); ?></b> for payments of bills/travels/ purchases of various supplies and materials listed below for the Month of <b><?= $month; ?></b>.</p>
 
 
     <table style="width:100%; margin-bottom:0">
@@ -612,8 +612,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <td><?= $row->unit_measure; ?></td>
                 <td><?= $row->materials; ?></td>
                 <td></td>
-                <td><?= number_format($m); ?></td>
-                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups); ?></td>
+                <td><?= number_format($m, 2); ?></td>
+                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
                 
             </tr>
 
@@ -679,8 +679,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <td><?= $row->unit_measure; ?></td>
                 <td><?= $row->materials; ?></td>
                 <td></td>
-                <td><?= number_format($m); ?></td>
-                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups); ?></td>
+                <td><?= number_format($m, 2); ?></td>
+                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
                 
             </tr>
 
@@ -744,8 +744,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <td><?= $row->unit_measure; ?></td>
                 <td><?= $row->materials; ?></td>
                 <td></td>
-                <td><?= number_format($m); ?></td>
-                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups); ?></td>
+                <td><?= number_format($m, 2); ?></td>
+                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
                 
             </tr>
             <?php $ttli+=$mb_ups;?>
@@ -807,8 +807,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <td><?= $row->unit_measure; ?></td>
                 <td><?= $row->materials; ?></td>
                 <td></td>
-                <td><?= number_format($m); ?></td>
-                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups); ?></td>
+                <td><?= number_format($m, 2); ?></td>
+                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
                 
             </tr>
             <?php $ttst+=$mb_ups;?>
@@ -818,7 +818,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
 
         <tr>
             <td colspan="5" class="alignLeft">TOTAL</td>
-            <td><?php $omt = $tmb+$tmr+$ttli+$ttst;  echo number_format($omt); ?></td>
+            <td><?php $omt = $tmb+$tmr+$ttli+$ttst;  echo number_format($omt, 2); ?></td>
             <?php $_SESSION['omt'] = $omt; ?>
         </tr>
     </table>

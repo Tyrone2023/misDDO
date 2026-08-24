@@ -24,8 +24,18 @@ $hook['pre_controller'] = array(
 // Runs after the controller is constructed so the session (and therefore
 // flashdata) is available, but before any controller method executes.
 $hook['post_controller_constructor'] = array(
-    'class'    => 'UploadSizeGuard',
-    'function' => 'check_post_size',
-    'filename' => 'UploadSizeGuard.php',
-    'filepath' => 'hooks',
+    array(
+        'class'    => 'UploadSizeGuard',
+        'function' => 'check_post_size',
+        'filename' => 'UploadSizeGuard.php',
+        'filepath' => 'hooks',
+    ),
+    // Field Encoder logins are limited to secretariat/scores; most Pages methods
+    // carry no role check of their own, so the restriction is enforced here.
+    array(
+        'class'    => 'FieldEncoderGuard',
+        'function' => 'check_access',
+        'filename' => 'FieldEncoderGuard.php',
+        'filepath' => 'hooks',
+    ),
 );

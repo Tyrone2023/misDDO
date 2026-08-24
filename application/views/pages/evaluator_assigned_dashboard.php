@@ -16,16 +16,22 @@ $counts = array_merge([
     'pending' => count($pending),
     'scored' => count($scored),
     'pending_queries' => 0,
+    'denied_requests' => 0,
 ], isset($counts) && is_array($counts) ? $counts : []);
 
 if (isset($pending_queries)) {
     $counts['pending_queries'] = (int) $pending_queries;
 }
 
+if (isset($denied_requests)) {
+    $counts['denied_requests'] = (int) $denied_requests;
+}
+
 $totalCount = (int) $counts['total'];
 $pendingCount = (int) $counts['pending'];
 $scoredCount = (int) $counts['scored'];
 $pendingQueryCount = (int) $counts['pending_queries'];
+$deniedRequestCount = (int) $counts['denied_requests'];
 $completionRate = $totalCount > 0 ? (int) round(($scoredCount / $totalCount) * 100) : 0;
 
 $normalizeApplicant = static function ($row) use ($jobTypes) {
@@ -245,6 +251,33 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
     .ead-stat-icon.is-amber { background: #fff4df; color: #bd7614; }
     .ead-stat-icon.is-green { background: #e9f8f2; color: #168668; }
     .ead-stat-icon.is-red { background: #fff0f0; color: #cf5656; }
+
+    .ead-stat-link {
+        display: block;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .ead-stat-link:hover,
+    .ead-stat-link:focus {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .ead-stat-link .ead-stat-card {
+        transition: box-shadow .18s ease, transform .18s ease;
+    }
+
+    .ead-stat-link:hover .ead-stat-card {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(36, 54, 75, .12);
+    }
+
+    .ead-stat-chevron {
+        margin-left: auto;
+        color: #b9c4d0;
+        font-size: 20px;
+    }
 
     .ead-stat-label {
         margin-bottom: 3px;
@@ -612,6 +645,12 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                                 <a class="btn ead-btn-ghost" href="<?= eh(base_url('EvaluatorAssigned/disqualified')) ?>">
                                     <i class="mdi mdi-account-remove-outline mr-1"></i> Disqualified applicants
                                 </a>
+                                <a class="btn ead-btn-ghost" href="<?= eh(base_url('EvaluatorAssigned/denied_requests')) ?>">
+                                    <i class="mdi mdi-file-cancel-outline mr-1"></i> Denied requests
+                                    <?php if ($deniedRequestCount > 0): ?>
+                                        <span class="badge badge-light ml-2" id="hero-denied-count"><?= $deniedRequestCount ?></span>
+                                    <?php endif; ?>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -632,7 +671,7 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
             <?php endif; ?>
 
             <div class="row">
-                <div class="col-sm-6 col-xl-3">
+                <div class="col-sm-6 col-xl ead-stat-col">
                     <div class="card ead-stat-card">
                         <div class="card-body">
                             <span class="ead-stat-icon is-blue"><i class="mdi mdi-account-multiple"></i></span>
@@ -644,7 +683,7 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                         </div>
                     </div>
                 </div>
-                <div class="col-sm-6 col-xl-3">
+                <div class="col-sm-6 col-xl ead-stat-col">
                     <div class="card ead-stat-card">
                         <div class="card-body">
                             <span class="ead-stat-icon is-amber"><i class="mdi mdi-progress-clock"></i></span>
@@ -656,7 +695,7 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                         </div>
                     </div>
                 </div>
-                <div class="col-sm-6 col-xl-3">
+                <div class="col-sm-6 col-xl ead-stat-col">
                     <div class="card ead-stat-card">
                         <div class="card-body">
                             <span class="ead-stat-icon is-green"><i class="mdi mdi-check-circle-outline"></i></span>
@@ -668,7 +707,7 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                         </div>
                     </div>
                 </div>
-                <div class="col-sm-6 col-xl-3">
+                <div class="col-sm-6 col-xl ead-stat-col">
                     <div class="card ead-stat-card">
                         <div class="card-body">
                             <span class="ead-stat-icon is-red"><i class="mdi mdi-message-alert-outline"></i></span>
@@ -679,6 +718,21 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="col-sm-6 col-xl ead-stat-col">
+                    <a class="ead-stat-link" href="<?= eh(base_url('EvaluatorAssigned/denied_requests')) ?>">
+                        <div class="card ead-stat-card">
+                            <div class="card-body">
+                                <span class="ead-stat-icon is-red"><i class="mdi mdi-file-cancel-outline"></i></span>
+                                <div>
+                                    <div class="ead-stat-label">Denied requests</div>
+                                    <div class="ead-stat-value" id="count-denied"><?= $deniedRequestCount ?></div>
+                                    <div class="ead-stat-help">Applicants to re-evaluate</div>
+                                </div>
+                                <i class="mdi mdi-chevron-right ead-stat-chevron" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    </a>
                 </div>
             </div>
 
@@ -701,6 +755,7 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                             <div class="ead-quick-links" aria-label="Dashboard sections">
                                 <a href="#pending-work"><i class="mdi mdi-progress-clock"></i> Pending work</a>
                                 <a href="#scored-work"><i class="mdi mdi-check-circle-outline"></i> Completed</a>
+                                <a href="<?= eh(base_url('EvaluatorAssigned/denied_requests')) ?>"><i class="mdi mdi-file-cancel-outline"></i> Denied requests</a>
                             </div>
                         </div>
                     </div>
@@ -926,15 +981,36 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                 return states;
             }
 
+            // DataTables keeps only the rows of the current page in the DOM, so
+            // reading the seed state with a plain jQuery selector missed every
+            // row on page 2 and up - the first poll then re-added those rows and
+            // the applicant showed twice. rows().nodes() walks every row the
+            // table holds, paged or not.
+            function collectStates(table, state, into) {
+                table.rows().nodes().to$().each(function () {
+                    var appId = $(this).attr('data-app-id');
+                    if (appId) {
+                        into[String(appId)] = state;
+                    }
+                });
+            }
+
             var currentStates = {};
-            $('#pendingApplicantsTable tbody tr[data-app-id]').each(function () {
-                currentStates[String($(this).data('app-id'))] = 'pending';
-            });
-            $('#scoredApplicantsTable tbody tr[data-app-id]').each(function () {
-                currentStates[String($(this).data('app-id'))] = 'scored';
-            });
+            collectStates(pendingTable, 'pending', currentStates);
+            collectStates(scoredTable, 'scored', currentStates);
+
+            function hasRow(table, appId) {
+                return table.rows(function (index, data, node) {
+                    return String($(node).attr('data-app-id')) === String(appId);
+                }).count() > 0;
+            }
 
             function addRow(table, item, state) {
+                // Never add an applicant the table already holds.
+                if (hasRow(table, item.appId)) {
+                    return;
+                }
+
                 var node = table.row.add(buildRow(item, state)).draw(false).node();
                 $(node)
                     .attr('data-app-id', item.appId)
@@ -953,12 +1029,15 @@ $nextPendingUrl = !empty($pending) ? $evaluationUrl($normalizeApplicant($pending
                 var pending = parseInt(counts.pending, 10) || 0;
                 var scored = parseInt(counts.scored, 10) || 0;
                 var queries = parseInt(counts.pending_queries, 10) || 0;
+                var denied = parseInt(counts.denied_requests, 10) || 0;
                 var rate = total > 0 ? Math.round((scored / total) * 100) : 0;
 
                 $('#count-total').text(total);
                 $('#count-pending').text(pending);
                 $('#count-scored').text(scored);
                 $('#count-queries').text(queries);
+                $('#count-denied').text(denied);
+                $('#hero-denied-count').text(denied);
                 $('#pending-table-count').text(pending);
                 $('#scored-table-count').text(scored);
                 $('#progress-scored-count').text(scored);

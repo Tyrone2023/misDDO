@@ -441,6 +441,7 @@
                                         <ul class="nav-second-level" aria-expanded="false">
                                             <li><a href="<?= base_url(); ?>EvaluatorAssigned#pendingApplicantsTable">Pending Assigned Applicants</a></li>
                                             <li><a href="<?= base_url(); ?>EvaluatorAssigned#scoredApplicantsTable">With Scores</a></li>
+                                            <li><a href="<?= base_url(); ?>EvaluatorAssigned/denied_requests">Denied Requests</a></li>
                                             <li><a href="<?= base_url(); ?>ApplicantQueryAssigned">My Applicants Query</a></li>
                                         </ul>
                                     </li>
@@ -913,10 +914,32 @@
                                     </ul>
                                 </li>
 
+                                <li class="menu-title">Users</li>
+                                <li>
+                                    <a href="<?= base_url(); ?>secretariat/encoders" class="waves-effect">
+                                        <i class="mdi mdi-account-multiple-plus-outline"></i>
+                                        <span>Manage Users</span>
+                                    </a>
+                                </li>
+
                                 <li class="menu-title">Account</li>
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="mdi mdi-message-alert-outline"></i><span>System Feedback Form</span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class="mdi mdi-help-circle-outline"></i><span>Help</span></a></li>
+                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
+
+                            <?php elseif ($this->session->position === 'Field Encoder') : ?>
+                                <!-- Field Encoder: score encoding only, nothing else. -->
+                                <li class="menu-title">Encoding</li>
+                                <li>
+                                    <a href="<?= base_url(); ?>secretariat/scores" class="waves-effect">
+                                        <i class="mdi mdi-clipboard-text-outline"></i>
+                                        <span>Encode Scores</span>
+                                    </a>
+                                </li>
+
+                                <li class="menu-title">Account</li>
+                                <li><a data-toggle="modal" data-id="<?= $this->session->id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
 
                             <?php elseif ($this->session->position === 'sds') : ?>
@@ -2084,6 +2107,7 @@
                                     <?php } ?>
                                     <?php if ($this->session->position === 'Evaluator' || $this->session->position === 'rater' || $this->session->position === 'raters') { ?>
                                         <li><a href="<?= base_url(); ?>EvaluatorAssigned/disqualified" class="waves-effect"><i class="mdi mdi-account-remove-outline"></i><span>Disqualified Applicants</span></a></li>
+                                        <li><a href="<?= base_url(); ?>EvaluatorAssigned/denied_requests" class="waves-effect"><i class="mdi mdi-file-cancel-outline"></i><span>Denied Requests</span></a></li>
                                     <?php } ?>
                                 <?php } ?>
                                 <!-- <li><a href="<?= base_url(); ?>Page/sbm_district_list"><i class="fas fa-user-plus"></i><span>SBM</span></a></li> -->

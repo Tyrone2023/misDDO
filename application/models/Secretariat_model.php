@@ -3,12 +3,16 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Secretariat_model extends CI_Model
 {
+    /** users.position value used for the Secretariat's score-encoding-only logins. */
+    const FIELD_ENCODER_POSITION = 'Field Encoder';
+
     public function __construct()
     {
         parent::__construct();
         $this->load->database();
         $this->ensure_table();
         $this->ensure_vacancy_table();
+        $this->ensure_field_encoder_access_table();
     }
 
     public function ensure_table(): void
@@ -793,7 +797,11 @@ class Secretariat_model extends CI_Model
             $data['record_no'] = $recordNo;
             $data['job_type'] = (int) $application->position;
             $data['fy'] = (int) $application->sy;
-            $data['eval_id1'] = $userId;
+            // eval_id1 belongs to the evaluator who scores Education through
+            // ALD. Leaving it at 0 keeps the Rate buttons on Pages/ma visible
+            // to the assigned evaluator - rp_reg_none only renders them when
+            // eval_id1 is 0 or matches the session.
+            $data['eval_id1'] = 0;
 
             $this->db->insert('hris_rating_none', $data);
             $rating = $this->db->where('id', (int) $this->db->insert_id())->get('hris_rating_none')->row();
@@ -812,12 +820,15 @@ class Secretariat_model extends CI_Model
 
         if ($interview !== null) {
             $updates['interview'] = $interview;
+            if ((int) ($rating->eval_id2 ?? 0) === 0) {
+                $updates['eval_id2'] = $userId;
+            }
         }
         if ($written !== null) {
             $updates['written'] = $written;
-        }
-        if ((int) ($rating->eval_id1 ?? 0) === 0) {
-            $updates['eval_id1'] = $userId;
+            if ((int) ($rating->eval_id3 ?? 0) === 0) {
+                $updates['eval_id3'] = $userId;
+            }
         }
 
         // An old application can carry duplicate rating rows. Keep the two
@@ -1777,6 +1788,11 @@ class Secretariat_model extends CI_Model
         $this->db
             ->where('job_id', $jobId)
             ->delete('hris_secretariat_vacancies');
+
+        // Field Encoder tags hang off the same vacancy; drop them with it.
+        $this->db
+            ->where('job_id', $jobId)
+            ->delete('hris_field_encoder_access');
     }
 
     public function count_by_status(array $jobTypes, string $status): int
@@ -2316,5 +2332,422 @@ class Secretariat_model extends CI_Model
         }
 
         return $stats;
+    }
+
+    /* ------------------------------------------------------------------
+     * Field Encoder accounts
+     *
+     * A Secretariat may create limited "Field Encoder" logins that can do
+     * nothing but encode Interview / Written Examination scores for the
+     * vacancies already assigned to that Secretariat. The accounts live in
+     * `users` with position 'Field Encoder'; `users.user_id` holds the owning
+     * Secretariat's `users.id`, which is what scopes every query below.
+     * ------------------------------------------------------------------ */
+
+    public function field_encoders(int $secretariatUserId): array
+    {
+        if ($secretariatUserId <= 0) {
+            return [];
+        }
+
+        return $this->db
+            ->select('id, username, fname, mname, lname, status')
+            ->from('users')
+            ->where('position', self::FIELD_ENCODER_POSITION)
+            ->where('user_id', (string) $secretariatUserId)
+            ->order_by('lname', 'asc')
+            ->order_by('fname', 'asc')
+            ->get()
+            ->result();
+    }
+
+    public function field_encoder(int $secretariatUserId, int $encoderId)
+    {
+        if ($secretariatUserId <= 0 || $encoderId <= 0) {
+            return null;
+        }
+
+        return $this->db
+            ->select('id, username, fname, mname, lname, status')
+            ->from('users')
+            ->where('id', $encoderId)
+            ->where('position', self::FIELD_ENCODER_POSITION)
+            ->where('user_id', (string) $secretariatUserId)
+            ->get()
+            ->row();
+    }
+
+    /** The Secretariat that owns a Field Encoder login, or 0 when unowned. */
+    public function field_encoder_owner(int $encoderId): int
+    {
+        if ($encoderId <= 0) {
+            return 0;
+        }
+
+        $row = $this->db
+            ->select('user_id')
+            ->from('users')
+            ->where('id', $encoderId)
+            ->where('position', self::FIELD_ENCODER_POSITION)
+            ->get()
+            ->row();
+
+        return $row ? (int) $row->user_id : 0;
+    }
+
+    public function username_taken(string $username, int $exceptId = 0): bool
+    {
+        $this->db->from('users')->where('username', $username);
+        if ($exceptId > 0) {
+            $this->db->where('id !=', $exceptId);
+        }
+
+        return (bool) $this->db->count_all_results();
+    }
+
+    public function create_field_encoder(int $secretariatUserId, array $fields): int
+    {
+        $this->db->insert('users', [
+            'username' => $fields['username'],
+            'password' => password_hash($fields['password'], PASSWORD_DEFAULT),
+            'position' => self::FIELD_ENCODER_POSITION,
+            'fname' => $fields['fname'],
+            'mname' => $fields['mname'],
+            'lname' => $fields['lname'],
+            'address' => '',
+            'sex' => '',
+            'image' => '',
+            'user_id' => (string) $secretariatUserId,
+            'status' => 1,
+            'sp' => 0,
+            'egroup' => 0,
+            'd_id' => 0,
+        ]);
+
+        return (int) $this->db->insert_id();
+    }
+
+    public function update_field_encoder(int $secretariatUserId, int $encoderId, array $fields): bool
+    {
+        if (empty($this->field_encoder($secretariatUserId, $encoderId))) {
+            return false;
+        }
+
+        $this->db
+            ->where('id', $encoderId)
+            ->where('position', self::FIELD_ENCODER_POSITION)
+            ->where('user_id', (string) $secretariatUserId)
+            ->update('users', [
+                'username' => $fields['username'],
+                'fname' => $fields['fname'],
+                'mname' => $fields['mname'],
+                'lname' => $fields['lname'],
+            ]);
+
+        return true;
+    }
+
+    public function set_field_encoder_password(int $secretariatUserId, int $encoderId, string $password): bool
+    {
+        if (empty($this->field_encoder($secretariatUserId, $encoderId))) {
+            return false;
+        }
+
+        $this->db
+            ->where('id', $encoderId)
+            ->where('position', self::FIELD_ENCODER_POSITION)
+            ->where('user_id', (string) $secretariatUserId)
+            ->update('users', ['password' => password_hash($password, PASSWORD_DEFAULT)]);
+
+        return true;
+    }
+
+    public function delete_field_encoder(int $secretariatUserId, int $encoderId): bool
+    {
+        if (empty($this->field_encoder($secretariatUserId, $encoderId))) {
+            return false;
+        }
+
+        $this->db
+            ->where('id', $encoderId)
+            ->where('position', self::FIELD_ENCODER_POSITION)
+            ->where('user_id', (string) $secretariatUserId)
+            ->delete('users');
+
+        return true;
+    }
+
+    /* ------------------------------------------------------------------
+     * Field Encoder access scope
+     *
+     * A Field Encoder borrows the Secretariat's vacancies, but the Secretariat
+     * decides which of those vacancies the account may open and which of the
+     * two scores it may encode there. One row per (encoder, vacancy) in
+     * hris_field_encoder_access; `encode_mode` is written / interview / both.
+     *
+     * An encoder with no row at all reaches nothing - the scope is opt-in.
+     * ------------------------------------------------------------------ */
+
+    /** Allowed values of hris_field_encoder_access.encode_mode. */
+    const ENCODE_MODES = ['written', 'interview', 'both'];
+
+    public function ensure_field_encoder_access_table(): void
+    {
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = false;
+        $existing = $this->db->query(
+            "select 1 from information_schema.TABLES
+             where TABLE_SCHEMA = database()
+               and TABLE_NAME = 'hris_field_encoder_access'"
+        );
+        $fresh = !$existing || $existing->num_rows() === 0;
+        $this->db->db_debug = $debug;
+
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS hris_field_encoder_access (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                encoder_user_id INT UNSIGNED NOT NULL,
+                job_id INT UNSIGNED NOT NULL,
+                encode_mode VARCHAR(10) NOT NULL DEFAULT 'both',
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_encoder_vacancy (encoder_user_id, job_id),
+                KEY idx_encoder (encoder_user_id),
+                KEY idx_job_id (job_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
+
+        if ($fresh) {
+            $this->backfill_field_encoder_access();
+        }
+    }
+
+    /**
+     * Field Encoders created before per-vacancy tagging existed reached every
+     * vacancy their Secretariat holds. Seed exactly that on the one run that
+     * creates the table, so the upgrade locks nobody out; from then on the
+     * scope is whatever the Secretariat ticks.
+     */
+    private function backfill_field_encoder_access(): void
+    {
+        $this->db->query("
+            insert ignore into hris_field_encoder_access (encoder_user_id, job_id, encode_mode, created_by)
+            select u.id, sv.job_id, 'both', sv.secretariat_user_id
+            from users u
+            join hris_secretariat_vacancies sv on sv.secretariat_user_id = CAST(u.user_id AS UNSIGNED)
+            join hris_jobvacancy j on j.jobID = sv.job_id
+            where u.position = '" . self::FIELD_ENCODER_POSITION . "'
+              and j.jvStatus != 'Closed'
+              and j.position not in (1, 5)
+        ");
+    }
+
+    public function normalize_encode_mode($mode): string
+    {
+        $mode = strtolower(trim((string) $mode));
+        return in_array($mode, self::ENCODE_MODES, true) ? $mode : 'both';
+    }
+
+    /** Vacancies a Secretariat may hand to a Field Encoder (score-eligible only). */
+    public function assignable_vacancies(int $secretariatUserId): array
+    {
+        $vacancies = [];
+        foreach ($this->tagging_vacancies($secretariatUserId) as $vacancy) {
+            // Teaching and promotion sheets use other rating tables/criteria,
+            // so they are outside what a Field Encoder can reach.
+            if (in_array((int) $vacancy->position, [1, 5], true)) {
+                continue;
+            }
+            $vacancies[] = $vacancy;
+        }
+
+        return $vacancies;
+    }
+
+    /** [job_id => encode_mode] for one Field Encoder. */
+    public function field_encoder_access(int $encoderId): array
+    {
+        if ($encoderId <= 0) {
+            return [];
+        }
+
+        $access = [];
+        $rows = $this->db
+            ->select('job_id, encode_mode')
+            ->from('hris_field_encoder_access')
+            ->where('encoder_user_id', $encoderId)
+            ->get()
+            ->result();
+
+        foreach ($rows as $row) {
+            $access[(int) $row->job_id] = $this->normalize_encode_mode($row->encode_mode);
+        }
+
+        return $access;
+    }
+
+    /** [encoder_id => [job_id => encode_mode]] for a whole list page. */
+    public function field_encoder_access_map(array $encoderIds): array
+    {
+        $encoderIds = array_values(array_filter(array_map('intval', $encoderIds)));
+        if (empty($encoderIds)) {
+            return [];
+        }
+
+        $map = [];
+        $rows = $this->db
+            ->select('encoder_user_id, job_id, encode_mode')
+            ->from('hris_field_encoder_access')
+            ->where_in('encoder_user_id', $encoderIds)
+            ->get()
+            ->result();
+
+        foreach ($rows as $row) {
+            $map[(int) $row->encoder_user_id][(int) $row->job_id] = $this->normalize_encode_mode($row->encode_mode);
+        }
+
+        return $map;
+    }
+
+    /**
+     * Replace a Field Encoder's whole scope with $access ([job_id => mode]).
+     * Job ids outside the Secretariat's own score-eligible vacancies are
+     * dropped, so an encoder can never be handed more than its owner has.
+     */
+    public function save_field_encoder_access(int $secretariatUserId, int $encoderId, array $access): bool
+    {
+        if (empty($this->field_encoder($secretariatUserId, $encoderId))) {
+            return false;
+        }
+
+        $allowed = [];
+        foreach ($this->assignable_vacancies($secretariatUserId) as $vacancy) {
+            $allowed[(int) $vacancy->jobID] = true;
+        }
+
+        $rows = [];
+        foreach ($access as $jobId => $mode) {
+            $jobId = (int) $jobId;
+            if ($jobId <= 0 || !isset($allowed[$jobId])) {
+                continue;
+            }
+            $rows[$jobId] = [
+                'encoder_user_id' => $encoderId,
+                'job_id' => $jobId,
+                'encode_mode' => $this->normalize_encode_mode($mode),
+                'created_by' => $secretariatUserId,
+                'created_at' => date('Y-m-d H:i:s'),
+            ];
+        }
+
+        $this->db->where('encoder_user_id', $encoderId)->delete('hris_field_encoder_access');
+        if (!empty($rows)) {
+            $this->db->insert_batch('hris_field_encoder_access', array_values($rows));
+        }
+
+        return true;
+    }
+
+    /** Drop the scope rows of a removed encoder / archived vacancy. */
+    public function remove_field_encoder_access(int $encoderId): void
+    {
+        if ($encoderId > 0) {
+            $this->db->where('encoder_user_id', $encoderId)->delete('hris_field_encoder_access');
+        }
+    }
+
+    /** encode_mode a Field Encoder holds on one vacancy, or '' when locked out. */
+    public function field_encoder_mode(int $encoderId, int $jobId): string
+    {
+        if ($encoderId <= 0 || $jobId <= 0) {
+            return '';
+        }
+
+        $row = $this->db
+            ->select('encode_mode')
+            ->from('hris_field_encoder_access')
+            ->where('encoder_user_id', $encoderId)
+            ->where('job_id', $jobId)
+            ->get()
+            ->row();
+
+        return $row ? $this->normalize_encode_mode($row->encode_mode) : '';
+    }
+
+    /* ------------------------------------------------------------------
+     * Score encoding activity
+     *
+     * Every save writes an audit row (action 'rate', field interview/written)
+     * through Audit_model. These read it back so the encoding screen can show
+     * who touched which score and when.
+     * ------------------------------------------------------------------ */
+
+    /** Recent encode / edit actions on one vacancy, newest first. */
+    public function score_activity(int $jobId, int $limit = 80): array
+    {
+        if ($jobId <= 0) {
+            return [];
+        }
+
+        return $this->db
+            ->select("t.id, t.created_at, t.user_id, t.username, t.fname, t.lname, t.position,
+                t.app_id, t.applicant_id, t.field, t.description,
+                COALESCE(ha.LastName, hs.LastName, '') AS app_last,
+                COALESCE(ha.FirstName, hs.FirstName, '') AS app_first", false)
+            ->from('hris_audit_trail t')
+            ->join('hris_applications a', 'a.appID = t.app_id', 'left')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL', 'left', false)
+            ->where('t.job_id', $jobId)
+            ->where('t.action', 'rate')
+            ->where_in('t.field', ['interview', 'written'])
+            ->order_by('t.id', 'desc')
+            ->limit($limit)
+            ->get()
+            ->result();
+    }
+
+    /**
+     * Latest actor per application and field for one vacancy, as
+     * [app_id][field] => ['name' => ..., 'when' => ..., 'position' => ...].
+     */
+    public function score_last_actions(int $jobId): array
+    {
+        if ($jobId <= 0) {
+            return [];
+        }
+
+        $latest = $this->db
+            ->select('app_id, field, MAX(id) AS latest_id', false)
+            ->from('hris_audit_trail')
+            ->where('job_id', $jobId)
+            ->where('action', 'rate')
+            ->where_in('field', ['interview', 'written'])
+            ->group_by(['app_id', 'field'])
+            ->get_compiled_select();
+
+        $rows = $this->db
+            ->select('t.app_id, t.field, t.username, t.fname, t.lname, t.position, t.created_at, t.description')
+            ->from('hris_audit_trail t')
+            ->join("($latest) latest", 'latest.latest_id = t.id', 'inner')
+            ->get()
+            ->result();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $name = trim(trim((string) $row->fname) . ' ' . trim((string) $row->lname));
+            if ($name === '') {
+                $name = (string) $row->username;
+            }
+            $map[(int) $row->app_id][(string) $row->field] = [
+                'name' => $name,
+                'username' => (string) $row->username,
+                'position' => (string) $row->position,
+                'when' => (string) $row->created_at,
+                'description' => (string) $row->description,
+            ];
+        }
+
+        return $map;
     }
 }

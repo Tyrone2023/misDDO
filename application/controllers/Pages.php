@@ -580,6 +580,10 @@ class Pages extends CI_Controller
             $this->load->view('templates/header');
             $this->load->view('pages/' . $page, $data);
             $this->load->view('templates/footer');
+        } elseif ($this->session->position == 'Field Encoder') {
+            // Field Encoders have no dashboard of their own - their whole
+            // account exists to encode Interview / Written Examination scores.
+            redirect(base_url() . 'secretariat/scores');
         } elseif ($this->session->position == 'Secretariat') {
             $page = "dashboard_secretariat";
 
@@ -3392,6 +3396,10 @@ class Pages extends CI_Controller
     elseif ($this->session->position === 'Secretariat') :
         $this->session->set_flashdata('success', 'Password successfully changed.');
         redirect(base_url());
+
+    elseif ($this->session->position === 'Field Encoder') :
+        $this->session->set_flashdata('success', 'Password successfully changed.');
+        redirect(base_url() . 'secretariat/scores');
 
     elseif ($this->session->position === 'Evaluator' || 
             $this->session->position == "Human Resource Admin" || 
@@ -8025,6 +8033,10 @@ public function rqa_municipality_print_shsv2()
 
         if (!empty($appIdForRating)) {
             $this->Reg->consolidate_rating_single($appIdForRating);
+            // Frees an eval_id1 claim left by the Secretariat's Interview /
+            // Written encoder on an application nobody has rated yet, so the
+            // assigned evaluator gets their Rate buttons back.
+            $this->Reg->release_unrated_eval_claim($appIdForRating);
             $this->Reg->auto_mark_rated($appIdForRating);
         }
 

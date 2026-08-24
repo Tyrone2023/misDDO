@@ -168,6 +168,7 @@ class EvaluatorAssigned extends CI_Controller
             'counts'          => $assignments['counts'],
             'jobTypes'        => $this->assignRater->job_types_map(),
             'pending_queries' => (int)$pending_queries,
+            'denied_requests' => count($this->assignRater->get_denied_requests($raterId)),
         ];
 
         $this->load->view('templates/head');
@@ -691,6 +692,39 @@ class EvaluatorAssigned extends CI_Controller
     }
 
     /**
+     * Rating / retention requests that were denied on applications assigned to
+     * the current evaluator. The scores were not carried over, so each row is a
+     * re-evaluation: the action opens the same rating page (Pages/ma) the
+     * dashboard uses.
+     */
+    public function denied_requests()
+    {
+        $this->guard();
+
+        $raterId = (int)($this->session->id ?? $this->session->userdata('id'));
+        if (!$raterId) {
+            redirect(base_url());
+            return;
+        }
+
+        $page = 'evaluator_denied_requests';
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $data = [
+            'title'    => 'Denied Requests',
+            'denied'   => $this->assignRater->get_denied_requests($raterId),
+            'jobTypes' => $this->assignRater->job_types_map(),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
      * Revert a disqualification: set dq back to 0, restore the application
      * status so the applicant reappears on the evaluator's main dashboard,
      * and remove the hris_app_dq record.  Only the assigned evaluator may
@@ -822,6 +856,7 @@ class EvaluatorAssigned extends CI_Controller
 
         $counts = $assignments['counts'];
         $counts['pending_queries'] = (int)$pending_queries;
+        $counts['denied_requests'] = count($this->assignRater->get_denied_requests($raterId));
 
         echo json_encode([
             'counts'  => $counts,

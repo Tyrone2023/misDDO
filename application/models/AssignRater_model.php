@@ -236,11 +236,52 @@ class AssignRater_model extends CI_Model
         ->group_by('appID')
         ->get_compiled_select();
 
+    // The rating page picks the table by vacancy: teaching without promotion
+    // scores on hris_applications_rating, promotion / position 5 on
+    // hris_rating_promotion and everything else on hris_rating_none. Pull all
+    // three so the Pending / With scores split reads the row the applicant is
+    // actually scored on instead of the teaching table only.
+    $rnSub = $this->db
+        ->select('
+            appID,
+            MAX(educ)         AS educ,
+            MAX(trainings)    AS trainings,
+            MAX(experience)   AS experience,
+            MAX(performance)  AS performance,
+            MAX(oa)           AS oa,
+            MAX(ae)           AS ae,
+            MAX(ald)          AS ald,
+            MAX(interview)    AS interview,
+            MAX(written)      AS written,
+            MAX(skills)       AS skills,
+            MAX(total_points) AS total_points,
+            COUNT(*)          AS rating_rows
+        ', false)
+        ->from('hris_rating_none')
+        ->group_by('appID')
+        ->get_compiled_select();
+
+    $rpSub = $this->db
+        ->select('
+            appID,
+            MAX(educ)         AS educ,
+            MAX(trainings)    AS trainings,
+            MAX(experience)   AS experience,
+            MAX(performance)  AS performance,
+            MAX(ppstco)       AS ppstco,
+            MAX(ppstpa)       AS ppstpa,
+            MAX(total_points) AS total_points,
+            COUNT(*)          AS rating_rows
+        ', false)
+        ->from('hris_rating_promotion')
+        ->group_by('appID')
+        ->get_compiled_select();
+
     $rows = $this->db
         ->select("
             ra.*,
             app.appID, app.appStatus, app.dq, app.pre_school, app.app_year, app.applicant_id, app.jobID,
-            jv.job_type, jv.jobTitle,
+            jv.job_type, jv.jobTitle, jv.position AS job_position, jv.promotion AS job_promotion,
             COALESCE(ha_id.record_no, ha_rec.record_no) AS record_no,
             COALESCE(ha_id.FirstName,  ha_rec.FirstName)  AS FirstName,
             COALESCE(ha_id.LastName,   ha_rec.LastName)   AS LastName,
@@ -253,7 +294,25 @@ class AssignRater_model extends CI_Model
             rar.demo_rating,
             rar.tr_rating,
             rar.total_points,
-            rar.rating_rows
+            rar.rating_rows,
+            rn.educ        AS none_educ,
+            rn.trainings   AS none_trainings,
+            rn.experience  AS none_experience,
+            rn.performance AS none_performance,
+            rn.oa          AS none_oa,
+            rn.ae          AS none_ae,
+            rn.ald         AS none_ald,
+            rn.interview   AS none_interview,
+            rn.written     AS none_written,
+            rn.skills      AS none_skills,
+            rn.rating_rows AS none_rows,
+            rp.educ        AS promo_educ,
+            rp.trainings   AS promo_trainings,
+            rp.experience  AS promo_experience,
+            rp.performance AS promo_performance,
+            rp.ppstco      AS promo_ppstco,
+            rp.ppstpa      AS promo_ppstpa,
+            rp.rating_rows AS promo_rows
         ", false)
     ->from('hris_rater_assignments ra')
     ->join('hris_applications app', 'app.appID = ra.app_id', 'left')
@@ -263,6 +322,8 @@ class AssignRater_model extends CI_Model
         ->join('hris_applicant ha_id', 'ha_id.id = app.applicant_id', 'left')
         ->join('hris_applicant ha_rec', 'ha_rec.record_no = app.applicant_id AND ha_id.id IS NULL', 'left')
         ->join("($rarSub) rar", 'rar.appID = ra.app_id', 'left')
+        ->join("($rnSub) rn", 'rn.appID = ra.app_id', 'left')
+        ->join("($rpSub) rp", 'rp.appID = ra.app_id', 'left')
         ->where('ra.rater_user_id', $raterId)
         ->where('(app.dq IS NULL OR app.dq != 2)', null, false)
         // Do not return assignments for vacancies that are closed.
@@ -278,13 +339,52 @@ class AssignRater_model extends CI_Model
     $counts  = ['total' => count($rows), 'pending' => 0, 'scored' => 0];
 
     // Treat placeholder scores (used as initial stub values) as "no rating".
-    // The user requested the cutoff to be 0.0001 and to ignore demo/TR ratings
-    // when deciding whether an applicant already has scores.
+    // The cutoff is 0.0001, and the criteria the evaluator does not score are
+    // ignored when deciding whether an applicant already has scores: demo / TR
+    // on the teaching table, interview / written / skills on hris_rating_none.
     $stubPlaceholders = [0.0001, 0.00001];
     $tolerance = 0.000001; // small epsilon to handle float comparisons
 
     foreach ($rows as $row) {
-        $hasRatingRow = ((int)($row->rating_rows ?? 0) > 0);
+        $jobPosition  = (int)($row->job_position ?? 0);
+        $isPromotion  = (int)($row->job_promotion ?? 0) === 1 || $jobPosition === 5;
+
+        if ($jobPosition === 1 && !$isPromotion) {
+            // Teaching: hris_applications_rating. Demo and TR ratings stay
+            // excluded per earlier request.
+            $hasRatingRow = ((int)($row->rating_rows ?? 0) > 0);
+            $values = [
+                $row->education   ?? null,
+                $row->training    ?? null,
+                $row->experience  ?? null,
+                $row->let_rating  ?? null,
+            ];
+        } elseif ($isPromotion) {
+            // Promotion / position 5: hris_rating_promotion.
+            $hasRatingRow = ((int)($row->promo_rows ?? 0) > 0);
+            $values = [
+                $row->promo_educ        ?? null,
+                $row->promo_trainings   ?? null,
+                $row->promo_experience  ?? null,
+                $row->promo_performance ?? null,
+                $row->promo_ppstco      ?? null,
+                $row->promo_ppstpa      ?? null,
+            ];
+        } else {
+            // Non-teaching: hris_rating_none. Interview, Written Examination
+            // and Skills are scored later by the Secretariat, so they must not
+            // hold an otherwise fully rated applicant in Pending.
+            $hasRatingRow = ((int)($row->none_rows ?? 0) > 0);
+            $values = [
+                $row->none_educ        ?? null,
+                $row->none_trainings   ?? null,
+                $row->none_experience  ?? null,
+                $row->none_performance ?? null,
+                $row->none_oa          ?? null,
+                $row->none_ae          ?? null,
+                $row->none_ald         ?? null,
+            ];
+        }
 
         // Missing rating row = definitely pending
         if (!$hasRatingRow) {
@@ -293,21 +393,16 @@ class AssignRater_model extends CI_Model
             continue;
         }
 
-        // Only consider education, training, experience, and LET rating for
-        // pending/with-score classification. Demo and TR ratings stay excluded
-        // per earlier request.
-        $values = [
-            (float)($row->education   ?? 0),
-            (float)($row->training    ?? 0),
-            (float)($row->experience  ?? 0),
-            (float)($row->let_rating  ?? 0),
-        ];
-
-        // The user wants an applicant kept in "Pending" if ANY of the four core
-        // components is still sitting at the stub placeholder (0.00001; keep
-        // 0.0001 for backward compatibility). Zero is treated as a real score.
+        // An applicant stays in "Pending" if ANY core component is still
+        // sitting at the stub placeholder (0.00001; keep 0.0001 for backward
+        // compatibility) or was never written. Zero is a real score.
         $hasStubValue = false;
         foreach ($values as $v) {
+            if ($v === null) {
+                $hasStubValue = true;
+                break;
+            }
+
             $vFloat = (float) $v;
 
             foreach ($stubPlaceholders as $stub) {
@@ -369,6 +464,65 @@ class AssignRater_model extends CI_Model
         ->group_by('ra.app_id')
         ->order_by('dq.vdate', 'desc')
         ->order_by('ra.app_id', 'desc')
+        ->get()
+        ->result();
+  }
+
+  /**
+   * Retention / rating requests that were denied on applications assigned to a
+   * given evaluator (hris_rating_request.stat = 2). The evaluator has to rate
+   * these from scratch, so the list doubles as their re-evaluation queue.
+   *
+   * Only the latest request per application counts: an application that was
+   * re-requested after a denial is judged on its current decision.
+   */
+  public function get_denied_requests(int $raterId): array
+  {
+    if ($raterId <= 0) {
+        return [];
+    }
+
+    $latest = $this->db
+        ->select('MAX(id) AS id', false)
+        ->from('hris_rating_request')
+        ->group_by('app_id')
+        ->get_compiled_select();
+
+    return $this->db
+        ->select("
+            ra.app_id,
+            ra.job_id,
+            app.appID, app.appStatus, app.dq, app.pre_school, app.app_year, app.applicant_id, app.jobID,
+            jv.job_type, jv.jobTitle, jv.jvStatus,
+            COALESCE(ha_id.record_no, ha_rec.record_no) AS record_no,
+            COALESCE(ha_id.FirstName,  ha_rec.FirstName)  AS FirstName,
+            COALESCE(ha_id.LastName,   ha_rec.LastName)   AS LastName,
+            COALESCE(ha_id.MiddleName, ha_rec.MiddleName) AS MiddleName,
+            COALESCE(ha_id.specialization, ha_rec.specialization) AS specialization,
+            rr.id     AS request_id,
+            rr.rdate  AS request_date,
+            rr.adate  AS decision_date,
+            rr.r_type AS request_scope,
+            rr.p_type AS request_ptype,
+            rr.deny_reason,
+            rr.res    AS denied_by,
+            TRIM(CONCAT(IFNULL(u.fname, ''), ' ', IFNULL(u.mname, ''), ' ', IFNULL(u.lname, ''))) AS denied_by_name
+        ", false)
+        ->from('hris_rating_request rr')
+        ->join("($latest) rrl", 'rrl.id = rr.id', 'inner', false)
+        ->join('hris_rater_assignments ra', 'ra.app_id = rr.app_id', 'inner')
+        ->join('hris_applications app', 'app.appID = rr.app_id', 'left')
+        ->join('hris_jobvacancy jv', 'jv.jobID = ra.job_id', 'left')
+        ->join('hris_applicant ha_id', 'ha_id.id = app.applicant_id', 'left')
+        ->join('hris_applicant ha_rec', 'ha_rec.record_no = app.applicant_id AND ha_id.id IS NULL', 'left')
+        ->join('users u', 'u.id = rr.res', 'left')
+        ->where('ra.rater_user_id', $raterId)
+        ->where('rr.stat', 2)
+        // A closed vacancy can no longer be rated, so it has nothing to re-evaluate.
+        ->where(' (jv.jvStatus IS NULL OR jv.jvStatus != ' . $this->db->escape('Closed') . ') ', null, false)
+        ->group_by('rr.app_id')
+        ->order_by('rr.adate', 'desc')
+        ->order_by('rr.id', 'desc')
         ->get()
         ->result();
   }

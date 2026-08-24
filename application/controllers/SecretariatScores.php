@@ -4,6 +4,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 /** Secretariat entry point for Interview and Written Examination scores. */
 class SecretariatScores extends CI_Controller
 {
+    /** Per-request cache of a Field Encoder's [job_id => encode_mode] scope. */
+    private $accessCache = null;
+
     public function __construct()
     {
         parent::__construct();
@@ -15,21 +18,85 @@ class SecretariatScores extends CI_Controller
 
     private function guard(): void
     {
-        if ($this->session->userdata('position') !== 'Secretariat') {
+        if (!in_array($this->session->userdata('position'), ['Secretariat', 'Field Encoder'], true)) {
             show_error('Only Secretariat users can encode Interview and Written Examination scores.', 403, 'Forbidden');
+            exit;
+        }
+
+        if ($this->session->userdata('position') === 'Field Encoder' && $this->user_id() <= 0) {
+            show_error('This Field Encoder account is not linked to a Secretariat.', 403, 'Forbidden');
             exit;
         }
     }
 
+    /**
+     * Whose vacancies this page works on. A Field Encoder has no scope of its
+     * own - it borrows the scope of the Secretariat that created the account.
+     */
     private function user_id(): int
     {
-        return (int) ($this->session->id ?? $this->session->userdata('id'));
+        $sessionId = (int) ($this->session->id ?? $this->session->userdata('id'));
+
+        if ($this->session->userdata('position') === 'Field Encoder') {
+            return $this->secretariat->field_encoder_owner($sessionId);
+        }
+
+        return $sessionId;
     }
 
     private function encoding_mode($value): string
     {
         $value = strtolower(trim((string) $value));
         return in_array($value, ['written', 'interview', 'both'], true) ? $value : 'both';
+    }
+
+    /** The logged-in account itself, as opposed to the scope owner. */
+    private function session_user_id(): int
+    {
+        return (int) ($this->session->id ?? $this->session->userdata('id'));
+    }
+
+    private function is_field_encoder(): bool
+    {
+        return $this->session->userdata('position') === 'Field Encoder';
+    }
+
+    /** [job_id => encode_mode] for a Field Encoder; empty for a Secretariat. */
+    private function encoder_access(): array
+    {
+        if ($this->accessCache === null) {
+            $this->accessCache = $this->is_field_encoder()
+                ? $this->secretariat->field_encoder_access($this->session_user_id())
+                : [];
+        }
+
+        return $this->accessCache;
+    }
+
+    /**
+     * What the current account may encode on one vacancy: 'written',
+     * 'interview', 'both', or '' when it may not open the vacancy at all.
+     * A Secretariat always holds 'both' over its own assigned vacancies.
+     */
+    private function allowed_mode(int $jobId): string
+    {
+        if (!$this->is_field_encoder()) {
+            return 'both';
+        }
+
+        $access = $this->encoder_access();
+        return $access[$jobId] ?? '';
+    }
+
+    /** Encoding modes the toolbar may offer for one vacancy. */
+    private function mode_options(int $jobId): array
+    {
+        $allowed = $this->allowed_mode($jobId);
+        if ($allowed === '') {
+            return [];
+        }
+
+        return $allowed === 'both' ? ['written', 'interview', 'both'] : [$allowed];
     }
 
     private function is_ajax_request(): bool
@@ -66,9 +133,9 @@ class SecretariatScores extends CI_Controller
         $vacancies = [];
         $selectedVacancy = null;
 
-        foreach ($this->secretariat->tagging_vacancies($userId) as $vacancy) {
-            // Teaching and promotion sheets use other rating tables/criteria.
-            if (in_array((int) $vacancy->position, [1, 5], true)) {
+        foreach ($this->secretariat->assignable_vacancies($userId) as $vacancy) {
+            // A Field Encoder only sees the vacancies tagged to its account.
+            if ($this->is_field_encoder() && $this->allowed_mode((int) $vacancy->jobID) === '') {
                 continue;
             }
 
@@ -79,9 +146,17 @@ class SecretariatScores extends CI_Controller
         }
 
         if ($jobId > 0 && empty($selectedVacancy)) {
-            $this->session->set_flashdata('danger', 'That vacancy is not available for Secretariat score encoding.');
+            $this->session->set_flashdata('danger', $this->is_field_encoder()
+                ? 'That vacancy is not tagged to your Field Encoder account.'
+                : 'That vacancy is not available for Secretariat score encoding.');
             redirect($this->list_url(0, $mode));
             return;
+        }
+
+        // The toolbar may only offer what the account is allowed to encode.
+        $modeOptions = $selectedVacancy ? $this->mode_options($jobId) : ['written', 'interview', 'both'];
+        if (!empty($modeOptions) && !in_array($mode, $modeOptions, true)) {
+            $mode = $modeOptions[0];
         }
 
         $applicants = $selectedVacancy
@@ -94,8 +169,11 @@ class SecretariatScores extends CI_Controller
             'selectedVacancy' => $selectedVacancy,
             'selectedJobId' => $jobId,
             'encodingMode' => $mode,
+            'modeOptions' => $modeOptions,
             'applicants' => $applicants,
             'scoreCounts' => $this->secretariat->score_entry_counts($userId),
+            'activity' => $selectedVacancy ? $this->secretariat->score_activity($jobId) : [],
+            'lastActions' => $selectedVacancy ? $this->secretariat->score_last_actions($jobId) : [],
         ];
 
         $this->load->view('templates/head');
@@ -148,6 +226,16 @@ class SecretariatScores extends CI_Controller
             $errors[] = 'Enter an Interview or Written Examination score.';
         }
 
+        // A Field Encoder may only write the score(s) tagged to it on this vacancy.
+        $allowed = $jobId > 0 ? $this->allowed_mode($jobId) : '';
+        if ($allowed === '') {
+            $errors[] = 'You are not allowed to encode scores for that vacancy.';
+        } elseif ($allowed === 'written' && $interviewInput !== '') {
+            $errors[] = 'Your account may only encode the Written Examination score for this vacancy.';
+        } elseif ($allowed === 'interview' && $writtenInput !== '') {
+            $errors[] = 'Your account may only encode the Interview score for this vacancy.';
+        }
+
         if (!empty($errors)) {
             $message = implode(' ', $errors);
             if ($this->is_ajax_request()) {
@@ -178,11 +266,23 @@ class SecretariatScores extends CI_Controller
         }
 
         $application = $result['application'];
+        $previous = $result['old'] ?? [];
+
         foreach (['interview' => $interview, 'written' => $written] as $field => $value) {
             if ($value === null) {
                 continue;
             }
+
             $label = $field === 'interview' ? 'Interview' : 'Written Examination';
+            $before = $previous[$field] ?? null;
+
+            // Separate a first encode from an edit so the activity trail reads
+            // as an action, not just a value. The action stays 'rate' - the
+            // audit lookups on Pages/ma key off it.
+            $description = $this->score_is_encoded($before)
+                ? 'Edited ' . $label . ' rating: ' . $this->score_text($before) . ' to ' . $this->score_text($value)
+                : 'Encoded ' . $label . ' rating: ' . $this->score_text($value);
+
             $this->Audit->log('rate', [
                 'entity_type' => 'rating',
                 'entity_id' => 'hris_rating_none',
@@ -190,7 +290,7 @@ class SecretariatScores extends CI_Controller
                 'applicant_id' => (string) $application->record_no,
                 'job_id' => (int) $application->jobID,
                 'field' => $field,
-                'description' => 'Encoded ' . $label . ' rating: ' . $value,
+                'description' => $description,
             ]);
         }
 
@@ -215,5 +315,53 @@ class SecretariatScores extends CI_Controller
 
         $this->session->set_flashdata('success', 'The score was saved and is now displayed on the MA page.');
         redirect($this->list_url($jobId, $mode));
+    }
+
+    /** 0.00001 is the "not yet encoded" sentinel the rating forms write. */
+    private function score_is_encoded($value): bool
+    {
+        return $value !== null && abs((float) $value - 0.00001) > 0.000001;
+    }
+
+    private function score_text($value): string
+    {
+        return rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
+    }
+
+    /**
+     * Encoding activity for one vacancy, as JSON, so the trail on the encoding
+     * screen can refresh after a save without reloading the page.
+     */
+    public function activity(): void
+    {
+        $this->guard();
+
+        $jobId = (int) $this->input->get('job_id');
+
+        if ($jobId <= 0 || $this->allowed_mode($jobId) === ''
+            || !$this->secretariat->secretariat_has_vacancy($this->user_id(), $jobId)) {
+            $this->json_response(['ok' => false, 'message' => 'That vacancy is not available.'], 403);
+            return;
+        }
+
+        $entries = [];
+        foreach ($this->secretariat->score_activity($jobId) as $row) {
+            $actor = trim(trim((string) $row->fname) . ' ' . trim((string) $row->lname));
+            $applicant = trim(trim((string) $row->app_last) . ', ' . trim((string) $row->app_first));
+
+            $entries[] = [
+                'id' => (int) $row->id,
+                'when' => (string) $row->created_at,
+                'actor' => $actor !== '' ? $actor : (string) $row->username,
+                'username' => (string) $row->username,
+                'role' => (string) $row->position,
+                'field' => (string) $row->field,
+                'app_id' => (int) $row->app_id,
+                'applicant' => trim($applicant, ', '),
+                'description' => (string) $row->description,
+            ];
+        }
+
+        $this->json_response(['ok' => true, 'entries' => $entries]);
     }
 }

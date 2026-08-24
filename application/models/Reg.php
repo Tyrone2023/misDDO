@@ -2327,6 +2327,41 @@ function sbfp_upload($record)
   }
 
   /**
+   * Release an eval_id1 claim on hris_rating_none that no score backs.
+   *
+   * eval_id1 belongs to the evaluator who scores Education through ALD;
+   * Interview and Written Examination are tracked by eval_id2 / eval_id3. The
+   * Secretariat's Interview / Written encoder used to stamp eval_id1 as well,
+   * which hid every Rate button from the assigned evaluator - rp_reg_none only
+   * renders them when eval_id1 is 0 or matches the session's own id.
+   *
+   * When every evaluator-owned criterion is still on the 0.00001 sentinel
+   * nobody has actually rated the applicant, so the claim has no owner and is
+   * cleared. Idempotent: a row already at 0, or one carrying real scores, is
+   * left untouched.
+   */
+  public function release_unrated_eval_claim($appId)
+  {
+      $appId = (int) $appId;
+
+      if ($appId <= 0) {
+          return false;
+      }
+
+      // 0.0001 is the legacy sentinel; a genuine 0 is a real score and must
+      // keep the claim.
+      $stubs = [0.00001, 0.0001];
+
+      $this->db->where('appID', $appId)->where('eval_id1 >', 0);
+
+      foreach (['educ', 'trainings', 'experience', 'performance', 'oa', 'ae', 'ald'] as $column) {
+          $this->db->where_in($column, $stubs);
+      }
+
+      return $this->db->update('hris_rating_none', ['eval_id1' => 0]);
+  }
+
+  /**
    * Consolidate duplicate rating rows (same appID + fy) by keeping the max value per component,
    * rewriting a single row, and deleting the extras.
    */
