@@ -81,6 +81,11 @@ $fmtDate = static function ($value) {
     return $stamp ? date('M j, Y', $stamp) : $value;
 };
 
+$evaluatorName = static function ($request) {
+    $name = trim((string) ($request->evaluator_name ?? ''));
+    return $name !== '' ? $name : '';
+};
+
 $fmtMax = static function ($value) {
     $value = (float) $value;
     return $value > 0 ? rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.') : '';
@@ -94,6 +99,9 @@ $fmtMax = static function ($value) {
     .sr-page .sr-head { border-bottom:1px solid var(--sr-line); margin-bottom:20px; padding:6px 0 16px; }
     .sr-page .sr-head h2 { color:var(--sr-ink); font-size:22px; font-weight:700; letter-spacing:-.01em; margin:0; }
     .sr-page .sr-head p { color:var(--sr-muted); font-size:13.5px; line-height:1.55; margin:6px 0 0; max-width:700px; }
+    .sr-page .sr-head-row { align-items:flex-start; display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; }
+    .sr-page .sr-head-link { align-items:center; border:1px solid #d6dbe4; border-radius:8px; color:#4a5566; display:inline-flex; font-size:12.5px; font-weight:600; gap:6px; padding:8px 13px; white-space:nowrap; }
+    .sr-page .sr-head-link:hover { background:#f7f8fb; border-color:#bcc4d1; color:var(--sr-accent); text-decoration:none; }
 
     .sr-page .sr-card { background:#fff; border:1px solid var(--sr-line); border-radius:12px; box-shadow:none; margin-bottom:18px; }
     .sr-page .sr-card .card-body { padding:20px 22px; }
@@ -128,6 +136,11 @@ $fmtMax = static function ($value) {
     .sr-page .sr-stat-pending .sr-stat-value { color:#b1770b; }
     .sr-page .sr-stat-granted .sr-stat-value { color:#1a7a4c; }
     .sr-page .sr-stat-denied .sr-stat-value { color:#b03636; }
+    .sr-page .sr-stat-link { display:block; text-decoration:none; transition:background .14s ease,border-color .14s ease,box-shadow .14s ease; }
+    .sr-page .sr-stat-link:hover, .sr-page .sr-stat-link:focus { background:#fff6f6; border-color:#e2b9b9; box-shadow:0 4px 12px rgba(176,54,54,.1); text-decoration:none; }
+    .sr-page .sr-stat-link .sr-stat-label { color:#b03636; }
+    .sr-page .sr-stat-link .sr-stat-label i { font-size:13px; opacity:.75; vertical-align:-1px; }
+    .sr-page .sr-stat-link:hover .sr-stat-note { color:#b03636; }
 
     .sr-page .sr-hint { color:var(--sr-muted); font-size:12.5px; line-height:1.55; margin:14px 0 0; }
     .sr-page .sr-hint strong { color:var(--sr-ink); font-weight:600; }
@@ -144,6 +157,10 @@ $fmtMax = static function ($value) {
     .sr-page .sr-chip-denied { background:#fbeaea; color:#b03636; }
     .sr-page .sr-chip-pending { background:#fdf3e0; color:#96650a; }
     .sr-page .sr-chip-warn { background:#fbeaea; color:#b03636; }
+    .sr-page .sr-chip-eval { background:#e8f1fb; color:#245b95; }
+    .sr-page .sr-chip-noeval { background:#f2f4f7; color:#77808d; }
+    .sr-page .sr-eval-cell { color:var(--sr-ink); font-size:12.5px; }
+    .sr-page .sr-eval-cell .sr-eval-none { color:#8b939e; font-style:italic; }
     .sr-page .sr-dq-reason { background:#fff1f1; border-left:3px solid #c9524e; border-radius:0 7px 7px 0; color:#8f2b2b; flex:1 0 100%; font-size:12.5px; line-height:1.5; padding:8px 10px; }
     .sr-page .sr-dq-reason strong { font-weight:650; }
     .sr-page .sr-dq-detail { color:#8f2b2b; font-size:12px; line-height:1.45; margin-bottom:6px; }
@@ -213,9 +230,14 @@ $fmtMax = static function ($value) {
     <div class="content">
         <div class="container-fluid">
 
-            <div class="sr-head">
-                <h2>Retention of Points</h2>
-                <p>Applicants asking to keep points they already earned. Copy the scores from one of their earlier applications, or encode the retained score yourself.</p>
+            <div class="sr-head sr-head-row">
+                <div>
+                    <h2>Retention of Points</h2>
+                    <p>Applicants asking to keep points they already earned. Copy the scores from one of their earlier applications, or encode the retained score yourself.</p>
+                </div>
+                <a href="<?= base_url('secretariat/retention/denied' . ($selectedJobId > 0 ? '?job_id=' . $selectedJobId : '')); ?>" class="sr-head-link">
+                    <i class="mdi mdi-close-circle-outline"></i>View denied requests
+                </a>
             </div>
 
             <?php foreach (['success' => 'alert-success', 'danger' => 'alert-danger'] as $flash => $class) : ?>
@@ -293,11 +315,21 @@ $fmtMax = static function ($value) {
                                 <div class="sr-stat-value"><?= (int) $counts['granted']; ?></div>
                                 <div class="sr-stat-note">Points retained</div>
                             </div>
-                            <div class="sr-stat sr-stat-denied">
-                                <div class="sr-stat-label">Denied</div>
-                                <div class="sr-stat-value"><?= (int) $counts['denied']; ?></div>
-                                <div class="sr-stat-note">Refused with a reason</div>
-                            </div>
+                            <?php if ((int) $counts['denied'] > 0) : ?>
+                                <a class="sr-stat sr-stat-denied sr-stat-link"
+                                   href="<?= base_url('secretariat/retention/denied?job_id=' . (int) $selectedVacancy->jobID); ?>"
+                                   title="Open the denied list for this vacancy">
+                                    <div class="sr-stat-label">Denied <i class="mdi mdi-arrow-top-right"></i></div>
+                                    <div class="sr-stat-value"><?= (int) $counts['denied']; ?></div>
+                                    <div class="sr-stat-note">Refused with a reason &mdash; view list</div>
+                                </a>
+                            <?php else : ?>
+                                <div class="sr-stat sr-stat-denied">
+                                    <div class="sr-stat-label">Denied</div>
+                                    <div class="sr-stat-value">0</div>
+                                    <div class="sr-stat-note">Refused with a reason</div>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <?php if ($noSource > 0) : ?>
@@ -345,6 +377,7 @@ $fmtMax = static function ($value) {
                             (string) ($request->applicant_id ?? ''),
                             (string) ($request->appID ?? ''),
                             (string) ($request->empEmail ?? ''),
+                            (string) ($request->evaluator_name ?? ''),
                         ])); ?>">
                             <div class="sr-req-head">
                                 <div>
@@ -357,6 +390,12 @@ $fmtMax = static function ($value) {
                                 </div>
                                 <div>
                                     <span class="sr-chip sr-chip-scope"><?= $ret_h($scopeLabel($request)); ?></span>
+                                    <?php $evalName = $evaluatorName($request); ?>
+                                    <?php if ($evalName !== '') : ?>
+                                        <span class="sr-chip sr-chip-eval ml-1" title="Evaluator assigned to this applicant">Evaluator: <?= $ret_h($evalName); ?></span>
+                                    <?php else : ?>
+                                        <span class="sr-chip sr-chip-noeval ml-1" title="No evaluator has been tagged for this applicant">No evaluator</span>
+                                    <?php endif; ?>
                                     <?php if ((int) $request->dq === 2) : ?>
                                         <span class="sr-chip sr-chip-warn ml-1">Disqualified</span>
                                     <?php endif; ?>
@@ -479,11 +518,12 @@ $fmtMax = static function ($value) {
                             <table class="table table-hover sr-resolved" id="retention-resolved">
                                 <thead>
                                     <tr>
-                                        <th style="width:26%">Applicant</th>
-                                        <th style="width:14%">Scope</th>
-                                        <th style="width:12%">Decision</th>
-                                        <th style="width:14%">Decided</th>
-                                        <th style="width:34%">Detail</th>
+                                        <th style="width:23%">Applicant</th>
+                                        <th style="width:15%">Evaluator</th>
+                                        <th style="width:13%">Scope</th>
+                                        <th style="width:10%">Decision</th>
+                                        <th style="width:13%">Decided</th>
+                                        <th style="width:26%">Detail</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -496,6 +536,10 @@ $fmtMax = static function ($value) {
                                                     No. <?= $ret_h($request->record_no); ?>
                                                     <?php if ($url !== '') : ?>&middot; <a href="<?= $ret_h($url); ?>" target="_blank" rel="noopener">View</a><?php endif; ?>
                                                 </div>
+                                            </td>
+                                            <td class="sr-eval-cell">
+                                                <?php $evalName = $evaluatorName($request); ?>
+                                                <?= $evalName !== '' ? $ret_h($evalName) : '<span class="sr-eval-none">Not tagged</span>'; ?>
                                             </td>
                                             <td><?= $ret_h($scopeLabel($request)); ?></td>
                                             <td>

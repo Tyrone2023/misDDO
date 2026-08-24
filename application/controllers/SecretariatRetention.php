@@ -125,6 +125,76 @@ class SecretariatRetention extends CI_Controller
     }
 
     /**
+     * Read-only register of denied retention requests.
+     *
+     * Kept apart from index() because the pending queue is a work screen and
+     * this is a record: nothing here can be acted on, so it spans every
+     * assigned vacancy by default instead of forcing a vacancy choice first.
+     *
+     * scope=mine narrows it to denials this account made (hris_rating_request.res),
+     * which Reg::deny_request_stat() stamps at the moment of the decision.
+     */
+    public function denied(): void
+    {
+        $this->guard();
+
+        $userId = $this->user_id();
+        $jobId = (int) $this->input->get('job_id');
+        $scope = strtolower(trim((string) $this->input->get('scope'))) === 'mine' ? 'mine' : 'all';
+
+        $counts = $this->secretariat->retention_counts($userId);
+        $vacancies = [];
+        $selectedVacancy = null;
+
+        foreach ($this->secretariat->tagging_vacancies($userId) as $vacancy) {
+            // Only vacancies that actually carry a denial belong in the picker.
+            if ((int) ($counts[(int) $vacancy->jobID]['denied'] ?? 0) > 0) {
+                $vacancies[] = $vacancy;
+            }
+
+            if ((int) $vacancy->jobID === $jobId) {
+                $selectedVacancy = $vacancy;
+            }
+        }
+
+        if ($jobId > 0 && !$selectedVacancy) {
+            $this->session->set_flashdata('danger', 'That vacancy is not assigned to your Secretariat account.');
+            redirect(base_url('secretariat/retention/denied'));
+            return;
+        }
+
+        // One query covers both chips: the full set is counted, then narrowed
+        // for display, so "All" and "Mine" always show a figure.
+        $allDenied = $this->secretariat->retention_denied($userId, $jobId);
+        $mineDenied = [];
+
+        foreach ($allDenied as $row) {
+            if ((int) $row->res === $userId) {
+                $mineDenied[] = $row;
+            }
+        }
+
+        $data = [
+            'title' => 'Denied Retention Requests',
+            'vacancies' => $vacancies,
+            'retentionCounts' => $counts,
+            'selectedVacancy' => $selectedVacancy,
+            'selectedJobId' => $jobId,
+            'scope' => $scope,
+            'requests' => $scope === 'mine' ? $mineDenied : $allDenied,
+            'allCount' => count($allDenied),
+            'mineCount' => count($mineDenied),
+            'jobTypeLabels' => $this->secretariat->job_types_map(),
+            'currentUserId' => $userId,
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/secretariat_retention_denied', $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
      * Resolve a request by copying an earlier application's scores.
      *
      * The copy routines and the request/status updates read app_id and id

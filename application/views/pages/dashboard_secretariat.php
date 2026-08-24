@@ -176,7 +176,7 @@ $positionGroups = [1 => 'Teaching', 2 => 'School Administration', 3 => 'Related 
                                 <?php if ($scoreEligible) : ?>
                                     <a href="<?= base_url('secretariat/scores?job_id=' . $jobId); ?>" class="sd-act"><i class="mdi mdi-clipboard-edit-outline"></i>Scores</a>
                                 <?php endif; ?>
-                                <a href="<?= base_url('secretariat/exams?job_id=' . $jobId); ?>" class="sd-act"><i class="mdi mdi-clipboard-text-outline"></i>Exam<?php if ((int) $vacancyExams['total'] > 0) : ?><span class="sd-pill"><?= (int) $vacancyExams['total']; ?></span><?php endif; ?></a>
+                                <!-- <a href="<?= base_url('secretariat/exams?job_id=' . $jobId); ?>" class="sd-act"><i class="mdi mdi-clipboard-text-outline"></i>Exam<?php if ((int) $vacancyExams['total'] > 0) : ?><span class="sd-pill"><?= (int) $vacancyExams['total']; ?></span><?php endif; ?></a> -->
                                 <a href="<?= base_url('secretariat/retention?job_id=' . $jobId); ?>" class="sd-act sd-act-warn"><i class="mdi mdi-file-restore-outline"></i>Retention<?php if ((int) $vacancyRetention['pending'] > 0) : ?><span class="sd-pill"><?= (int) $vacancyRetention['pending']; ?></span><?php endif; ?></a>
                             </div>
                         </div>

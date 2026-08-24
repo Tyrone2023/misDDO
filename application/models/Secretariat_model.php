@@ -1114,7 +1114,9 @@ class Secretariat_model extends CI_Model
                     WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
                     ELSE ''
                 END AS profile_route,
-                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.lname), '')) AS resolved_by", false)
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.lname), '')) AS resolved_by,
+                ra.rater_user_id, ra.assigned_at,
+                CONCAT_WS(' ', NULLIF(TRIM(ev.fname), ''), NULLIF(TRIM(ev.mname), ''), NULLIF(TRIM(ev.lname), '')) AS evaluator_name", false)
             ->from('hris_rating_request rr')
             // Inner join on purpose: a request pointing at an application that
             // is no longer in the system cannot be resolved either way, so it
@@ -1133,6 +1135,17 @@ class Secretariat_model extends CI_Model
             ->join('hris_applicant ha', 'ha.id = rr.applicant_id', 'left')
             ->join('hris_staff hs', 'ha.id IS NULL AND CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = rr.applicant_id', 'left', false)
             ->join('users u', 'u.id = rr.res', 'left')
+            // An application can be reassigned, so join only its latest
+            // evaluator tag - otherwise a reassigned applicant is listed once
+            // per evaluator they were ever given to.
+            ->join(
+                '(SELECT app_id, MAX(id) AS assignment_id FROM hris_rater_assignments GROUP BY app_id) latest_ra',
+                'latest_ra.app_id = a.appID',
+                'left',
+                false
+            )
+            ->join('hris_rater_assignments ra', 'ra.id = latest_ra.assignment_id', 'left')
+            ->join('users ev', 'ev.id = ra.rater_user_id', 'left')
             // A request belongs to the vacancy of the exact application it
             // references. Do not use rr.job_id here: old rows may contain the
             // vacancy whose ratings are being retained.
@@ -1164,6 +1177,87 @@ class Secretariat_model extends CI_Model
 
             $row->sources = $sources;
             $row->source_count = count($sources);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Every denied retention request across the vacancies assigned to one
+     * Secretariat account, newest decision first.
+     *
+     * Scoped through hris_secretariat_vacancies rather than the request rows so
+     * the list can never reach a vacancy the account was not given. Pass a
+     * jobId to narrow it to one vacancy; 0 returns every assigned vacancy.
+     *
+     * res carries the user who denied the request, which is what the "my denied
+     * only" filter reads. Rows are returned unfiltered on that column so the
+     * caller can show both counts without a second query.
+     */
+    public function retention_denied(int $userId, int $jobId = 0): array
+    {
+        if ($jobId > 0 && !$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $this->db
+            ->select("rr.id AS request_id, rr.app_id, rr.applicant_id, rr.r_type, rr.stat,
+                rr.deny_reason, rr.rdate, rr.adate, rr.fy, rr.p_type, rr.res,
+                a.appID, a.appStatus, a.dq, a.empEmail, a.pre_school, a.district, a.app_year,
+                j.jobID, j.jobTitle, j.position, j.job_type, j.sy, j.itemNo,
+                dq.reason AS dq_reason,
+                COALESCE(ha.record_no, hs.IDNumber, rr.applicant_id) AS record_no,
+                COALESCE(ha.id, hs.IDNumber, rr.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, hs.NameExtn, '') AS NameExtn,
+                CASE
+                    WHEN ha.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.lname), '')) AS resolved_by,
+                ra.rater_user_id,
+                CONCAT_WS(' ', NULLIF(TRIM(ev.fname), ''), NULLIF(TRIM(ev.mname), ''), NULLIF(TRIM(ev.lname), '')) AS evaluator_name", false)
+            ->from('hris_secretariat_vacancies sv')
+            ->join('hris_jobvacancy j', 'j.jobID = sv.job_id')
+            ->join('hris_applications a', 'a.jobID = j.jobID')
+            ->join('hris_rating_request rr', 'rr.app_id = a.appID')
+            ->join(
+                '(SELECT appID, MAX(id) AS latest_id FROM hris_app_dq GROUP BY appID) dq_latest',
+                'dq_latest.appID = a.appID',
+                'left',
+                false
+            )
+            ->join('hris_app_dq dq', 'dq.id = dq_latest.latest_id', 'left')
+            ->join('hris_applicant ha', 'ha.id = rr.applicant_id', 'left')
+            ->join('hris_staff hs', 'ha.id IS NULL AND CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = rr.applicant_id', 'left', false)
+            ->join('users u', 'u.id = rr.res', 'left')
+            ->join(
+                '(SELECT app_id, MAX(id) AS assignment_id FROM hris_rater_assignments GROUP BY app_id) latest_ra',
+                'latest_ra.app_id = a.appID',
+                'left',
+                false
+            )
+            ->join('hris_rater_assignments ra', 'ra.id = latest_ra.assignment_id', 'left')
+            ->join('users ev', 'ev.id = ra.rater_user_id', 'left')
+            ->where('sv.secretariat_user_id', $userId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->where('rr.stat', 2);
+
+        if ($jobId > 0) {
+            $this->db->where('j.jobID', $jobId);
+        }
+
+        $rows = $this->db
+            ->order_by('rr.adate', 'desc')
+            ->order_by('rr.id', 'desc')
+            ->get()
+            ->result();
+
+        foreach ($rows as $row) {
+            $row->p_type_resolved = (int) ($row->p_type ?: $row->position);
         }
 
         return $rows;
