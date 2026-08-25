@@ -463,7 +463,7 @@
                                                             <a href="#" data-toggle="modal" data-target=".educqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->educ != 0.00001){echo $rating->educ; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->educ != 0.00001){echo $rating->educ; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".educrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->educ != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".educqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php } ?>
@@ -532,7 +532,7 @@
                                                             <a href="#" data-toggle="modal" data-target=".certqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->trainings != 0.00001){echo $rating->trainings; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->trainings != 0.00001){echo $rating->trainings; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".certrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->trainings != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".certqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php } ?>
@@ -586,7 +586,7 @@
                                                             <a href="#" data-toggle="modal" data-target=".weqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->experience != 0.00001){echo $rating->experience; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->experience != 0.00001){echo $rating->experience; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".werating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->experience != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".weqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php } ?>
@@ -653,7 +653,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->performance != 0.00001){echo $rating->performance; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->performance != 0.00001){echo $rating->performance; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".performance"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->performance != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -702,7 +702,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->oa != 0.00001){echo $rating->oa; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->oa != 0.00001){echo $rating->oa; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".oa"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->oa != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -751,7 +751,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->ae != 0.00001){echo $rating->ae; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->ae != 0.00001){echo $rating->ae; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".ae"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ae != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -803,7 +803,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds'){if($rating->ald != 0.00001){echo $rating->ald; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->ald != 0.00001){echo $rating->ald; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".aldrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ald != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -861,7 +861,7 @@
                                                         <?php
                                                         if(!empty($rating)){
                                                             if($rating->interview != 0.00001){ ?>
-                                                                <?php if($open->status == 0 || $this->session->position == 'asds'){?>
+                                                                <?php if($open->status == 0 || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){?>
                                                                     <?= $rating->interview; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -870,7 +870,7 @@
                                                                 <span class="badge badge-purple noti-icon-badge">Not Yet Rated</span>
                                                         <?php } } ?>
 
-                                                        <?php if($this->session->position == 'asds'){  ?>
+                                                        <?php if($this->session->position == 'asds' || !empty($field_evaluator_bypass)){  ?>
                                                             <a href="#" data-toggle="modal" data-target=".interrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->interview != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                         <?php } ?> 
 
@@ -884,7 +884,7 @@
                                                         <?php
                                                             if(!empty($rating)){
                                                             if($rating->written != 0.00001){ ?>
-                                                                <?php if($open->status == 0  || $this->session->position == 'asds'){?>
+                                                                <?php if($open->status == 0  || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){?>
                                                                     <?= $rating->written; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -895,7 +895,7 @@
 
                                                       
 
-                                                        <?php if($this->session->position == 'asds'){  ?>
+                                                        <?php if($this->session->position == 'asds' || !empty($field_evaluator_bypass)){  ?>
                                                             <a href="#" data-toggle="modal" data-target=".writtenrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->written != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                         <?php } ?> 
 

@@ -865,6 +865,7 @@
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
                                         <li><a href="<?= base_url(); ?>secretariat/applicant-tagging">Applicant Evaluator Tagging</a></li>
+                                        <li><a href="<?= base_url(); ?>secretariat/field-evaluators">Field Evaluator Tagging</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/validated_applicant">Validated Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants">Endorse Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants_unassigned">Endorsed (No Evaluator)</a></li>
@@ -2066,6 +2067,18 @@
                             <?php elseif ($this->session->position === 'District' || $this->session->position === 'Evaluator' || $this->session->position === 'doceval' || $this->session->position === 'rater' || $this->session->position === 'raters') : ?>
                                 <?php
                                     $hasAssigned = $this->db->where('rater_user_id', $this->session->id)->count_all_results('hris_rater_assignments') > 0;
+                                    // Field Evaluator tag = vacancy-wide applicant list, separate from
+                                    // the applicants personally assigned to this evaluator. Queried here
+                                    // rather than through Secretariat_model because $this is the Loader
+                                    // inside a view; table_exists() covers the window on a fresh
+                                    // deployment before any Secretariat page has run ensure_table().
+                                    $isFieldEvaluator = $this->db->table_exists('hris_field_evaluator_access')
+                                        && $this->db
+                                            ->from('hris_field_evaluator_access fe')
+                                            ->join('hris_jobvacancy j', 'j.jobID = fe.job_id')
+                                            ->where('fe.evaluator_user_id', (int) $this->session->id)
+                                            ->where('j.jvStatus !=', 'Closed')
+                                            ->count_all_results() > 0;
                                     // Evaluators/raters land on the assigned-applicants dashboard even when
                                     // nothing is assigned yet; District/doceval keep the old landing page.
                                     $isEvaluator = in_array($this->session->position, ['Evaluator', 'rater', 'raters'], true);
@@ -2101,6 +2114,9 @@
                                 <?php } ?>
                                 <?php if ($this->session->position != 'District') { ?>
                                     <li class="menu-title">Applicants</li>
+                                    <?php if ($isFieldEvaluator) { ?>
+                                        <li><a href="<?= base_url(); ?>field-evaluator" class="waves-effect"><i class="mdi mdi-account-eye-outline"></i><span>All Applicants</span></a></li>
+                                    <?php } ?>
                                     <li><a href="<?= base_url(); ?>Pages/query_applicants" class="waves-effect"><i class="far fa-comment-dots"></i><span>Applicant's Query</span></a></li>
                                     <?php if ($hasAssigned) { ?>
                                         <li><a href="<?= base_url(); ?>ApplicantQueryAssigned" class="waves-effect"><i class="far fa-comment-dots"></i><span>My Applicant Queries</span></a></li>

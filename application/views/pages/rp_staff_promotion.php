@@ -356,7 +356,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->educ != 0.00001){echo $rating->educ; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->educ != 0.00001){echo $rating->educ; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".educrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->educ != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -415,7 +415,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->trainings != 0.00001){echo $rating->trainings; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->trainings != 0.00001){echo $rating->trainings; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".certrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->trainings != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -465,7 +465,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->experience != 0.00001){echo $rating->experience; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->experience != 0.00001){echo $rating->experience; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".werating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->experience != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -530,7 +530,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->performance != 0.00001){echo $rating->performance; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->performance != 0.00001){echo $rating->performance; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".performance"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->performance != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -579,7 +579,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->ppstco != 0.00001){echo $rating->ppstco; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->ppstco != 0.00001){echo $rating->ppstco; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".ppstcor"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ppstco != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -627,7 +627,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->ppstpa != 0.00001){echo $rating->ppstpa; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->ppstpa != 0.00001){echo $rating->ppstpa; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".ppstpar"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ppstpa != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             

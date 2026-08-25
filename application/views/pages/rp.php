@@ -643,8 +643,8 @@
                                                             <a href="#" data-toggle="modal" data-target=".educrate" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->education)){echo $rating->education; }  ?>
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->education)){echo $rating->education; }  ?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                             <a href="#" data-toggle="modal" data-target=".educrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->education)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".educrate" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php }} ?>
@@ -745,8 +745,8 @@
                                                             <a href="#" data-toggle="modal" data-target=".certqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->training)){echo $rating->training; }  ?>
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->training)){echo $rating->training; }  ?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                             <a href="#" data-toggle="modal" data-target=".certrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->training)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".certqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php }} ?>
@@ -806,8 +806,8 @@
                                                             <a href="#" data-toggle="modal" data-target=".weqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->experience)){echo $rating->experience; }  ?>
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->experience)){echo $rating->experience; }  ?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                             <a href="#" data-toggle="modal" data-target=".werating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->experience)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".weqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php }} ?>
@@ -862,8 +862,8 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->let_rating)){echo $rating->let_rating; } ?>
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->let_rating)){echo $rating->let_rating; } ?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                             <a href="#" data-toggle="modal" data-target=".lrrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->let_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php }} ?>
                                                             

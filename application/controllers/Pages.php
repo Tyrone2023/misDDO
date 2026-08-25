@@ -7992,6 +7992,7 @@ public function rqa_municipality_print_shsv2()
         $data['evaluator_qualification_gate'] = null;
 
         $sessionPosition = (string)$this->session->userdata('position');
+        $fieldEvaluatorOnly = false;
         if (in_array($sessionPosition, ['Evaluator', 'rater', 'raters'], true) && !empty($appIdForRating)) {
             $applicationForEvaluator = $this->Common->one_cond_row('hris_applications', 'appID', (int)$appIdForRating);
             $evaluatorId = (int)($this->session->id ?? $this->session->userdata('id'));
@@ -8002,8 +8003,16 @@ public function rqa_municipality_print_shsv2()
                 ->count_all_results();
 
             if (!$isAssigned) {
-                show_error('This application is not assigned to your evaluator account.', 403);
-                return;
+                // A Field Evaluator tagged on this vacancy may open and score any
+                // of its applications. Only the qualification decision stays with
+                // the evaluator the applicant is tagged to.
+                $this->load->model('Secretariat_model', 'secretariat');
+                if (!$this->secretariat->field_evaluator_can_view_application($evaluatorId, (int)$appIdForRating)) {
+                    show_error('This application is not assigned to your evaluator account.', 403);
+                    return;
+                }
+
+                $fieldEvaluatorOnly = true;
             }
 
             // pending      - review not done yet, rating stays locked
@@ -8021,12 +8030,21 @@ public function rqa_municipality_print_shsv2()
                 $gateState = 'qualified';
             }
 
+            // The rating views hide scores and Rate buttons behind the eval_id1
+            // claim of the tagged evaluator; a Field Evaluator works the whole
+            // vacancy, so they are exempt from that claim.
+            $data['field_evaluator_bypass'] = $fieldEvaluatorOnly;
+
             if ($gateState !== null) {
                 $data['evaluator_qualification_gate'] = [
                     'state' => $gateState,
                     'application' => $applicationForEvaluator,
                     'applicant' => $applicant,
                     'job' => $jobvacancy,
+                    // A Field Evaluator sees the stage for context but is not
+                    // held by it: no qualify / revert actions, and the rating
+                    // form stays open whatever the stage says.
+                    'field_evaluator' => $fieldEvaluatorOnly,
                 ];
             }
         }
@@ -8322,6 +8340,27 @@ public function rqa_municipality_print_shsv2()
 
         $data['user'] = $this->Common->one_cond_row('users', 'user_id', $param);
 
+        // Same exemption as pages/ma: the rating views hide scores and Rate
+        // buttons behind the eval_id1 claim of the applicant's own evaluator,
+        // which would leave a Field Evaluator with a blank rating column.
+        $data['field_evaluator_bypass'] = false;
+        $appIdForRating = (int) $this->uri->segment(6);
+        if (in_array((string) $this->session->userdata('position'), ['Evaluator', 'rater', 'raters'], true)
+            && $appIdForRating > 0) {
+            $evaluatorId = (int) ($this->session->id ?? $this->session->userdata('id'));
+            $isAssigned = $evaluatorId > 0 && (bool) $this->db
+                ->from('hris_rater_assignments')
+                ->where('app_id', $appIdForRating)
+                ->where('rater_user_id', $evaluatorId)
+                ->count_all_results();
+
+            if (!$isAssigned) {
+                $this->load->model('Secretariat_model', 'secretariat');
+                $data['field_evaluator_bypass'] = $this->secretariat
+                    ->field_evaluator_can_view_application($evaluatorId, $appIdForRating);
+            }
+        }
+
         $ratingLocked = isset($jobvacancy->jvStatus) && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Closed') === 0;
         $data['rating_request_allowed'] = isset($jobvacancy->jvStatus)
             && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Open') === 0
@@ -8393,6 +8432,18 @@ public function rqa_municipality_print_shsv2()
             ->where('app_id', $appID)
             ->where('rater_user_id', $evaluatorId)
             ->count_all_results();
+
+        if (!$assigned && $appID > 0 && $evaluatorId > 0) {
+            // A Field Evaluator tagged on the vacancy bypasses both checks: they
+            // may add or edit the evaluation of any application in that vacancy,
+            // at any stage, without waiting on the tagged evaluator's
+            // qualification decision. Reg::ensure_rate_row() creates the rating
+            // row when the application never reached endorsement.
+            $this->load->model('Secretariat_model', 'secretariat');
+            if ($this->secretariat->field_evaluator_can_view_application($evaluatorId, $appID)) {
+                return;
+            }
+        }
 
         if (!$assigned) {
             show_error('This application is not assigned to your evaluator account.', 403);

@@ -21,6 +21,11 @@ $isDisqualified = $gateState === 'disqualified';
 $isQualified = $gateState === 'qualified';
 $isPending = $gateState === 'pending';
 
+// A Field Evaluator sees the qualification stage for context only. The decision
+// belongs to the evaluator the applicant is tagged to, but the stage does not
+// hold them back: they may add or edit the evaluation whatever it says.
+$gateViewOnly = !empty($gate['field_evaluator']);
+
 // A closed vacancy freezes every qualification decision, revert included.
 $gateJobClosed = isset($gateJob->jvStatus) && strcasecmp(trim((string)$gateJob->jvStatus), 'Closed') === 0;
 
@@ -353,7 +358,17 @@ if ($isDisqualified) {
         <span class="eqg-panel-icon"><i class="mdi <?= $gateIcon ?>"></i></span>
         <div>
             <div class="eqg-panel-kicker">Qualification stage</div>
-            <?php if ($isDisqualified): ?>
+            <?php if ($gateViewOnly): ?>
+                <?php if ($isDisqualified): ?>
+                    <h4>Applicant marked Disqualified</h4>
+                <?php elseif ($isQualified): ?>
+                    <h4>Applicant marked Qualified</h4>
+                <?php else: ?>
+                    <h4>Qualification review not yet completed</h4>
+                <?php endif; ?>
+                <p>As Field Evaluator for this vacancy you can still add or edit the evaluation below.
+                   The qualified / disqualified decision belongs to the evaluator this applicant is tagged to.</p>
+            <?php elseif ($isDisqualified): ?>
                 <h4>Applicant marked Disqualified</h4>
                 <p>The document review and disqualification reason were saved. Rating remains unavailable for this application.</p>
             <?php elseif ($isQualified): ?>
@@ -365,18 +380,18 @@ if ($isDisqualified) {
             <?php endif; ?>
         </div>
     </div>
-    <?php if ($isPending): ?>
+    <?php if ($isPending && !$gateViewOnly): ?>
         <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#evaluatorQualificationModal">
             <i class="mdi mdi-clipboard-check-outline"></i> Qualification remarks
         </button>
-    <?php elseif ($isQualified && !$gateJobClosed): ?>
+    <?php elseif ($isQualified && !$gateJobClosed && !$gateViewOnly): ?>
         <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#evaluatorRevertQualificationModal">
             <i class="mdi mdi-account-remove-outline"></i> Revert to Disqualified
         </button>
     <?php endif; ?>
 </div>
 
-<?php if ($isPending): ?>
+<?php if ($isPending && !$gateViewOnly): ?>
     <div class="modal fade eqg-modal" id="evaluatorQualificationModal" tabindex="-1" role="dialog" aria-labelledby="evaluatorQualificationTitle" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -475,7 +490,7 @@ if ($isDisqualified) {
     </div>
 <?php endif; ?>
 
-<?php if ($isQualified && !$gateJobClosed): ?>
+<?php if ($isQualified && !$gateJobClosed && !$gateViewOnly): ?>
     <div class="modal fade eqg-modal eqg-modal-danger" id="evaluatorRevertQualificationModal" tabindex="-1" role="dialog" aria-labelledby="evaluatorRevertQualificationTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
@@ -548,7 +563,7 @@ if ($isDisqualified) {
         // to Endorsed for Rating. Document/profile viewing remains available.
         // A Qualified applicant is already endorsed, so the controls stay live -
         // the panel there only offers the revert-to-DQ action.
-        var ratingLockedByGate = <?= $isQualified ? 'false' : 'true' ?>;
+        var ratingLockedByGate = <?= ($isQualified || $gateViewOnly) ? 'false' : 'true' ?>;
 
         if (ratingLockedByGate) {
             document.querySelectorAll('[data-target]').forEach(function (control) {

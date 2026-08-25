@@ -13,6 +13,7 @@ class Secretariat_model extends CI_Model
         $this->ensure_table();
         $this->ensure_vacancy_table();
         $this->ensure_field_encoder_access_table();
+        $this->ensure_field_evaluator_access_table();
     }
 
     public function ensure_table(): void
@@ -1793,6 +1794,11 @@ class Secretariat_model extends CI_Model
         $this->db
             ->where('job_id', $jobId)
             ->delete('hris_field_encoder_access');
+
+        // Field Evaluator tags are scoped the same way.
+        $this->db
+            ->where('job_id', $jobId)
+            ->delete('hris_field_evaluator_access');
     }
 
     public function count_by_status(array $jobTypes, string $status): int
@@ -2672,6 +2678,279 @@ class Secretariat_model extends CI_Model
             ->row();
 
         return $row ? $this->normalize_encode_mode($row->encode_mode) : '';
+    }
+
+    /* ------------------------------------------------------------------
+     * Field Evaluator vacancy tagging
+     *
+     * A Secretariat may tag an existing Evaluator account as the "Field
+     * Evaluator" of one of its vacancies. That tag does not assign applicants
+     * and does not touch hris_rater_assignments - it only opens a vacancy-wide
+     * view for that evaluator: every applicant of the vacancy, who is tagged to
+     * evaluate each one, and a link into the application itself.
+     *
+     * One row per (evaluator, vacancy) in hris_field_evaluator_access. An
+     * evaluator with no row reaches nothing extra, so the scope is opt-in.
+     * ------------------------------------------------------------------ */
+
+    /** users.position values that may hold a Field Evaluator tag. */
+    const EVALUATOR_POSITIONS = ['Evaluator', 'rater', 'raters'];
+
+    public function ensure_field_evaluator_access_table(): void
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS hris_field_evaluator_access (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                evaluator_user_id INT UNSIGNED NOT NULL,
+                job_id INT UNSIGNED NOT NULL,
+                secretariat_user_id INT UNSIGNED NULL,
+                created_by INT UNSIGNED NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY uniq_evaluator_vacancy (evaluator_user_id, job_id),
+                KEY idx_evaluator (evaluator_user_id),
+                KEY idx_job_id (job_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
+    }
+
+    /** Field Evaluators already tagged on one of the Secretariat's vacancies. */
+    public function field_evaluator_tags(int $userId, int $jobId): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        return $this->db
+            ->select("fe.id AS tag_id, fe.evaluator_user_id, fe.created_at,
+                u.username, u.fname, u.mname, u.lname,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name,
+                COUNT(DISTINCT ra.app_id) AS assigned_total", false)
+            ->from('hris_field_evaluator_access fe')
+            ->join('users u', 'u.id = fe.evaluator_user_id')
+            ->join('hris_rater_assignments ra', 'ra.rater_user_id = fe.evaluator_user_id AND ra.job_id = fe.job_id', 'left', false)
+            ->where('fe.job_id', $jobId)
+            ->group_by(['fe.id', 'fe.evaluator_user_id', 'fe.created_at', 'u.username', 'u.fname', 'u.mname', 'u.lname'])
+            ->order_by('u.lname', 'asc')
+            ->order_by('u.fname', 'asc')
+            ->get()
+            ->result();
+    }
+
+    /** Tag one Evaluator account as Field Evaluator of one owned vacancy. */
+    public function tag_field_evaluator(int $userId, int $jobId, int $evaluatorId, ?int $createdBy): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return ['ok' => false, 'message' => 'That vacancy is not assigned to your Secretariat account.'];
+        }
+
+        $evaluator = $this->db
+            ->select('id, fname, mname, lname, username')
+            ->from('users')
+            ->where('id', $evaluatorId)
+            ->where_in('position', self::EVALUATOR_POSITIONS)
+            ->get()
+            ->row();
+
+        if (empty($evaluator)) {
+            return ['ok' => false, 'message' => 'Please select an eligible evaluator.'];
+        }
+
+        $name = trim(preg_replace('/\s+/', ' ', implode(' ', [
+            (string) $evaluator->fname,
+            (string) $evaluator->mname,
+            (string) $evaluator->lname,
+        ])));
+        $name = $name !== '' ? $name : (string) $evaluator->username;
+
+        $existing = $this->db
+            ->from('hris_field_evaluator_access')
+            ->where('evaluator_user_id', $evaluatorId)
+            ->where('job_id', $jobId)
+            ->count_all_results();
+
+        if ($existing) {
+            return [
+                'ok' => false,
+                'message' => $name . ' is already a Field Evaluator for this vacancy.',
+            ];
+        }
+
+        $this->db->insert('hris_field_evaluator_access', [
+            'evaluator_user_id' => $evaluatorId,
+            'job_id' => $jobId,
+            'secretariat_user_id' => $userId,
+            'created_by' => $createdBy,
+            'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return [
+            'ok' => true,
+            'message' => $name . ' was tagged as Field Evaluator for this vacancy.',
+            'evaluator_name' => $name,
+        ];
+    }
+
+    /** Remove a Field Evaluator tag from one of the Secretariat's vacancies. */
+    public function untag_field_evaluator(int $userId, int $jobId, int $evaluatorId): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return ['ok' => false, 'message' => 'That vacancy is not assigned to your Secretariat account.'];
+        }
+
+        $this->db
+            ->where('evaluator_user_id', $evaluatorId)
+            ->where('job_id', $jobId)
+            ->delete('hris_field_evaluator_access');
+
+        return ['ok' => true, 'message' => 'The Field Evaluator tag was removed.'];
+    }
+
+    /** Evaluator accounts a Secretariat may tag (position Evaluator/rater). */
+    public function taggable_field_evaluators(): array
+    {
+        return $this->db
+            ->select('id, username, fname, mname, lname')
+            ->from('users')
+            ->where_in('position', self::EVALUATOR_POSITIONS)
+            ->where('status', 1)
+            ->order_by('lname', 'asc')
+            ->order_by('fname', 'asc')
+            ->get()
+            ->result();
+    }
+
+    /** True when the account holds at least one Field Evaluator tag. */
+    public function is_field_evaluator(int $evaluatorId): bool
+    {
+        if ($evaluatorId <= 0) {
+            return false;
+        }
+
+        return (bool) $this->db
+            ->from('hris_field_evaluator_access fe')
+            ->join('hris_jobvacancy j', 'j.jobID = fe.job_id')
+            ->where('fe.evaluator_user_id', $evaluatorId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->count_all_results();
+    }
+
+    /** Vacancies one Field Evaluator may open, with their applicant totals. */
+    public function field_evaluator_vacancies(int $evaluatorId): array
+    {
+        if ($evaluatorId <= 0) {
+            return [];
+        }
+
+        return $this->db
+            ->select("j.jobID, j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.department,
+                COUNT(DISTINCT a.appID) AS applicant_total,
+                COUNT(DISTINCT CASE WHEN ra.id IS NOT NULL THEN a.appID END) AS tagged_total,
+                COUNT(DISTINCT CASE WHEN a.appID IS NOT NULL AND ra.id IS NULL THEN a.appID END) AS untagged_total,
+                COUNT(DISTINCT CASE WHEN a.dq = 2 THEN a.appID END) AS dq_total,
+                COUNT(DISTINCT CASE
+                    WHEN ra.rater_user_id = " . (int) $evaluatorId . " THEN a.appID
+                END) AS mine_total", false)
+            ->from('hris_field_evaluator_access fe')
+            ->join('hris_jobvacancy j', 'j.jobID = fe.job_id')
+            ->join('hris_applications a', 'a.jobID = j.jobID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.app_id = a.appID', 'left')
+            ->where('fe.evaluator_user_id', $evaluatorId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->group_by(['j.jobID', 'j.jobTitle', 'j.position', 'j.job_type', 'j.sy', 'j.itemNo', 'j.department'])
+            ->order_by('j.sy', 'desc')
+            ->order_by('j.jobTitle', 'asc')
+            ->get()
+            ->result();
+    }
+
+    public function field_evaluator_has_vacancy(int $evaluatorId, int $jobId): bool
+    {
+        if ($evaluatorId <= 0 || $jobId <= 0) {
+            return false;
+        }
+
+        return (bool) $this->db
+            ->from('hris_field_evaluator_access fe')
+            ->join('hris_jobvacancy j', 'j.jobID = fe.job_id')
+            ->where('fe.evaluator_user_id', $evaluatorId)
+            ->where('fe.job_id', $jobId)
+            ->where('j.jvStatus !=', 'Closed')
+            ->count_all_results();
+    }
+
+    /**
+     * The application's vacancy is one this account field-evaluates. Used by
+     * the rating page to let a Field Evaluator open an application that is
+     * tagged to somebody else; saving a rating stays gated on the real
+     * hris_rater_assignments row.
+     */
+    public function field_evaluator_can_view_application(int $evaluatorId, int $appId): bool
+    {
+        if ($evaluatorId <= 0 || $appId <= 0) {
+            return false;
+        }
+
+        return (bool) $this->db
+            ->from('hris_applications a')
+            ->join('hris_field_evaluator_access fe', 'fe.job_id = a.jobID')
+            ->where('a.appID', $appId)
+            ->where('fe.evaluator_user_id', $evaluatorId)
+            ->count_all_results();
+    }
+
+    /**
+     * Every applicant of one field-evaluated vacancy, with the evaluator tagged
+     * to each row joined in. Same shape as applicants_for_tagging so the view
+     * can build the very same profile links.
+     */
+    public function field_evaluator_applicants(int $evaluatorId, int $jobId): array
+    {
+        if (!$this->field_evaluator_has_vacancy($evaluatorId, $jobId)) {
+            return [];
+        }
+
+        $latestAssignment = $this->db
+            ->select('app_id, MAX(id) AS assignment_id', false)
+            ->from('hris_rater_assignments')
+            ->group_by('app_id')
+            ->get_compiled_select();
+
+        return $this->db
+            ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
+                a.app_year, a.district, a.pre_school, a.dq,
+                j.jobTitle, j.position, j.job_type, j.sy,
+                COALESCE(ha.record_no, ha2.record_no, hs.IDNumber, a.applicant_id) AS record_no,
+                COALESCE(ha.id, ha2.id, hs.IDNumber, a.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, ha2.NameExtn, hs.NameExtn, '') AS NameExtn,
+                COALESCE(ha.specialization, ha2.specialization, '') AS specialization,
+                CASE
+                    WHEN ha.id IS NOT NULL OR ha2.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                s.schoolName,
+                ra.id AS assignment_id, ra.rater_user_id, ra.assigned_at,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name,
+                u.username AS evaluator_username,
+                CASE WHEN ra.rater_user_id = " . (int) $evaluatorId . " THEN 1 ELSE 0 END AS is_mine", false)
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(a.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->join('schools s', 's.schoolID = CONVERT(CAST(a.pre_school AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci', 'left', false)
+            ->join("($latestAssignment) latest_ra", 'latest_ra.app_id = a.appID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.id = latest_ra.assignment_id', 'left')
+            ->join('users u', 'u.id = ra.rater_user_id', 'left')
+            ->where('a.jobID', $jobId)
+            ->order_by('ha.LastName', 'asc')
+            ->order_by('hs.LastName', 'asc')
+            ->order_by('a.appID', 'desc')
+            ->get()
+            ->result();
     }
 
     /* ------------------------------------------------------------------
