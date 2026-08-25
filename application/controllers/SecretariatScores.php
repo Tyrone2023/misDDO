@@ -159,6 +159,12 @@ class SecretariatScores extends CI_Controller
             $mode = $modeOptions[0];
         }
 
+        // Reconcile completed ratings before querying the rows so this page
+        // immediately shows Rated and Skills = 0 without a separate MA visit.
+        if ($selectedVacancy) {
+            $this->Reg->auto_mark_rated_for_job($jobId);
+        }
+
         $applicants = $selectedVacancy
             ? $this->secretariat->score_entry_applicants($userId, $jobId)
             : [];

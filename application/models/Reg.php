@@ -2410,8 +2410,9 @@ function sbfp_upload($record)
 
   /**
    * Automatically set an application to Rated when every required score is
-   * present. Non-teaching Skills is optional and therefore does not block the
-   * transition, though an encoded Skills score is still included in the total.
+   * present. Non-teaching Skills is not a rated component: it does not block
+   * the transition, is stored as zero once complete, and is excluded from the
+   * total.
    */
   public function auto_mark_rated($appId)
   {
@@ -2452,24 +2453,31 @@ function sbfp_upload($record)
                      ->row();
       if (!$rating) return false;
 
-      foreach ($fields as $f) {
-          if (!isset($rating->$f) || $this->rating_score_is_placeholder($rating->$f)) {
-              return false;
-          }
-      }
-
-      // All required components are present: keep the total synchronized. A
-      // real Skills score counts toward the total without being mandatory.
+      $complete = true;
       $total = 0.0;
       foreach ($fields as $f) {
+          if (!isset($rating->$f) || $this->rating_score_is_placeholder($rating->$f)) {
+              $complete = false;
+              continue;
+          }
           $total += (float)$rating->$f;
       }
-      if ($table === 'hris_rating_none'
-          && isset($rating->skills)
-          && !$this->rating_score_is_placeholder($rating->skills)) {
-          $total += (float) $rating->skills;
+
+      $alreadyRated = in_array((string) $app->appStatus, ['Rated', 'Confirmed'], true);
+      if (!$complete && !($table === 'hris_rating_none' && $alreadyRated)) {
+          return false;
       }
-      $this->db->where('id', (int) $rating->id)->update($table, ['total_points' => $total]);
+
+      $ratingUpdate = ['total_points' => $total];
+      if ($table === 'hris_rating_none') {
+          $ratingUpdate['skills'] = 0;
+      }
+      $this->db->where('id', (int) $rating->id)->update($table, $ratingUpdate);
+
+      // Preserve an existing workflow status while still normalizing Skills.
+      if (!$complete) {
+          return false;
+      }
 
       // Only promote the workflow from the rating stage; never overwrite
       // applicant actions like "Confirmed" during a page refresh.
@@ -2478,6 +2486,83 @@ function sbfp_upload($record)
       }
 
       return true;
+  }
+
+  /**
+   * Reconcile a Secretariat score-encoding vacancy before its list is shown.
+   * Completed Endorsed applications become Rated, while existing Rated or
+   * Confirmed rows are normalized to the same zero-Skills rule.
+   */
+  public function auto_mark_rated_for_job($jobId)
+  {
+      $jobId = (int) $jobId;
+      if ($jobId <= 0) return 0;
+
+      $job = $this->db
+                  ->select('position')
+                  ->get_where('hris_jobvacancy', ['jobID' => $jobId])
+                  ->row();
+      if (!$job || in_array((int) $job->position, [1, 5], true)) return 0;
+
+      $latestRating = $this->db
+                           ->select('appID, MAX(id) AS latest_id', false)
+                           ->from('hris_rating_none')
+                           ->group_by('appID')
+                           ->get_compiled_select();
+
+      $rows = $this->db
+                   ->select('a.appID, a.appStatus, r.*')
+                   ->from('hris_applications a')
+                   ->join("($latestRating) latest_rating", 'latest_rating.appID = a.appID')
+                   ->join('hris_rating_none r', 'r.id = latest_rating.latest_id')
+                   ->where('a.jobID', $jobId)
+                   ->where_in('a.appStatus', ['Endorsed for Rating', 'Rated', 'Confirmed'])
+                   ->get()
+                   ->result();
+
+      $fields = rating_score_fields('hris_rating_none');
+      $ratingUpdates = [];
+      $statusAppIds = [];
+
+      foreach ($rows as $rating) {
+          $complete = true;
+          $total = 0.0;
+
+          foreach ($fields as $field) {
+              if (!isset($rating->$field) || $this->rating_score_is_placeholder($rating->$field)) {
+                  $complete = false;
+                  continue;
+              }
+              $total += (float) $rating->$field;
+          }
+
+          $alreadyRated = in_array((string) $rating->appStatus, ['Rated', 'Confirmed'], true);
+          if (!$complete && !$alreadyRated) {
+              continue;
+          }
+
+          $ratingUpdates[] = [
+              'id' => (int) $rating->id,
+              'skills' => 0,
+              'total_points' => $total,
+          ];
+
+          if ($complete && (string) $rating->appStatus === 'Endorsed for Rating') {
+              $statusAppIds[] = (int) $rating->appID;
+          }
+      }
+
+      if (!empty($ratingUpdates)) {
+          $this->db->update_batch('hris_rating_none', $ratingUpdates, 'id');
+      }
+      if (!empty($statusAppIds)) {
+          $this->db
+               ->where_in('appID', $statusAppIds)
+               ->where('appStatus', 'Endorsed for Rating')
+               ->update('hris_applications', ['appStatus' => 'Rated']);
+      }
+
+      return count($ratingUpdates);
   }
 
   /** A zero score is valid; only NULL/blank and legacy sentinels are missing. */
