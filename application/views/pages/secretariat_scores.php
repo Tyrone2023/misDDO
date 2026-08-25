@@ -701,6 +701,10 @@ $score_field_actor = static function ($action) use ($score_h, $score_when, $scor
             });
             refreshRowTotal(row);
             refreshModeCount(form);
+            if (payload.application_status) {
+                var applicationStatus = row.querySelector('.sw-pill');
+                if (applicationStatus) applicationStatus.textContent = payload.application_status;
+            }
             setStatus(form, 'saved', payload.saved_at ? 'Saved ' + payload.saved_at : 'Saved');
             document.dispatchEvent(new CustomEvent('score:saved'));
         }).catch(function (error) {

@@ -181,7 +181,7 @@
                                                     <tr>
                                                         <th class="text-right">Status</th>
                                                         <td style="background: #9ddcf4;">
-                                                            <?php if($dq_hide->status == 0){?>
+                                                            <?php if($dq_hide->status == 0 || !in_array((string)$this->session->position, ['reg', 'user'], true)){?>
                                                             <?php $dqs = $this->Common->one_cond_row('hris_app_dq', 'appID', $aa->appID); ?>
                                                             <span class="badge badge-warning"><?php if($aa->dq == 2){ ?> 
                                                                  Disqualified : <?= $dqs->reason; ?> 

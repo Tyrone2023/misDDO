@@ -314,6 +314,7 @@ class SecretariatScores extends CI_Controller
                 'ok' => true,
                 'message' => count($saved) === 2 ? 'Both scores saved' : 'Score saved',
                 'app_id' => $appId,
+                'application_status' => $result['application_status'] ?? '',
                 'saved' => $saved,
                 'saved_at' => date('g:i:s A'),
                 // Lets each score box credit its own encoder without a reload.

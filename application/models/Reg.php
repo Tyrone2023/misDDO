@@ -1482,6 +1482,9 @@ class Reg extends CI_Model{
       $this->db->where('record_no', $this->input->post('record_no'));
       $res = $this->db->update('hris_rating_none', $data);
       $this->audit_rating('hris_rating_none', $educ);
+      if ($res) {
+          $this->auto_mark_rated((int) $this->input->post('app_id'));
+      }
       return $res;
     }
 
@@ -2406,43 +2409,87 @@ function sbfp_upload($record)
   }
 
   /**
-   * Automatically set application status to "Rated" when all rating components are filled
-   * (i.e., none remain at the placeholder 0.00001).
+   * Automatically set an application to Rated when every required score is
+   * present. Non-teaching Skills is optional and therefore does not block the
+   * transition, though an encoded Skills score is still included in the total.
    */
   public function auto_mark_rated($appId)
   {
-      if (empty($appId)) return;
+      $appId = (int) $appId;
+      if ($appId <= 0) return false;
 
       $app = $this->db->get_where('hris_applications', ['appID' => $appId])->row();
-      if (!$app) return;
+      if (!$app) return false;
 
-      $fy = $app->app_year ?? date('Y');
+      $job = $this->db
+                  ->select('position, promotion')
+                  ->get_where('hris_jobvacancy', ['jobID' => (int) $app->jobID])
+                  ->row();
+      if (!$job) return false;
 
-      $rating = $this->db->where('appID', $appId)
-                         ->where('fy', $fy)
-                         ->get('hris_applications_rating')
-                         ->row();
-      if (!$rating) return;
+      $position = (int) ($job->position ?? 0);
+      $promotion = (int) ($job->promotion ?? 0);
 
-      $fields = ['education','training','experience','let_rating','demo_rating','tr_rating'];
+      if ($position === 1 && $promotion === 0) {
+          $table = 'hris_applications_rating';
+      } elseif ($position === 5 || ($position === 1 && $promotion !== 0)) {
+          $table = 'hris_rating_promotion';
+      } else {
+          $table = 'hris_rating_none';
+      }
+
+      // These table-specific lists deliberately omit hris_rating_none.skills.
+      $fields = rating_score_fields($table);
+      if (empty($fields)) return false;
+
+      // Match the rating views, which display the latest row for an appID when
+      // a legacy application has duplicate rows or a mismatched record number.
+      $rating = $this->db
+                     ->where('appID', $appId)
+                     ->order_by('id', 'DESC')
+                     ->limit(1)
+                     ->get($table)
+                     ->row();
+      if (!$rating) return false;
+
       foreach ($fields as $f) {
-          if (!isset($rating->$f) || (float)$rating->$f == 0.00001) {
-              return; // still incomplete; do nothing
+          if (!isset($rating->$f) || $this->rating_score_is_placeholder($rating->$f)) {
+              return false;
           }
       }
 
-      // All components present: ensure total_points is up-to-date
-      $total = 0;
+      // All required components are present: keep the total synchronized. A
+      // real Skills score counts toward the total without being mandatory.
+      $total = 0.0;
       foreach ($fields as $f) {
           $total += (float)$rating->$f;
       }
-      $this->db->where('appID', $appId)->where('fy', $fy)->update('hris_applications_rating', ['total_points' => $total]);
+      if ($table === 'hris_rating_none'
+          && isset($rating->skills)
+          && !$this->rating_score_is_placeholder($rating->skills)) {
+          $total += (float) $rating->skills;
+      }
+      $this->db->where('id', (int) $rating->id)->update($table, ['total_points' => $total]);
 
       // Only promote the workflow from the rating stage; never overwrite
       // applicant actions like "Confirmed" during a page refresh.
       if ($app->appStatus === 'Endorsed for Rating') {
           $this->db->where('appID', $appId)->update('hris_applications', ['appStatus' => 'Rated']);
       }
+
+      return true;
+  }
+
+  /** A zero score is valid; only NULL/blank and legacy sentinels are missing. */
+  private function rating_score_is_placeholder($value)
+  {
+      if ($value === null || $value === '') {
+          return true;
+      }
+
+      $score = (float) $value;
+      return abs($score - 0.00001) < 0.000001
+          || abs($score - 0.0001) < 0.000001;
   }
 
   public function lock_applicant_application($table, $jobid,$emp){
@@ -3988,6 +4035,7 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
         }
         $this->db->update('hris_rating_none', ['written' => $written]);
         $this->calculate_rating_none_ies($appId);
+        $this->auto_mark_rated($appId);
         return true;
     }
 

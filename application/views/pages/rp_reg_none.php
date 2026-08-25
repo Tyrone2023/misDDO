@@ -354,7 +354,7 @@
                                                     <tr>
                                                         <th class="text-right">Status</th>
                                                         <td style="background: #9ddcf4;">
-                                                            <?php if($dq_hide->status == 0){?>
+                                                            <?php if($dq_hide->status == 0 || !in_array((string)$this->session->position, ['reg', 'user'], true)){?>
                                                             <?php $dqs = $this->Common->one_cond_row('hris_app_dq', 'appID', $aa->appID); ?>
                                                             <span class="badge badge-warning"><?php if($aa->dq == 2){ ?> 
                                                                  Disqualified : <?= $dqs->reason; ?> 
@@ -639,7 +639,7 @@
                                                             <a href="#" data-toggle="modal" data-target=".educrate" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->educ != 0.00001){echo $rating->educ; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){if($rating->educ != 0.00001){echo $rating->educ; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".educrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->educ != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".educrate" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php } ?>
@@ -706,7 +706,7 @@
                                                             <a href="#" data-toggle="modal" data-target=".certqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->trainings != 0.00001){echo $rating->trainings; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){if($rating->trainings != 0.00001){echo $rating->trainings; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".trainingsrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->trainings != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".certqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php } ?>
@@ -760,7 +760,7 @@
                                                             <a href="#" data-toggle="modal" data-target=".weqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->experience != 0.00001){echo $rating->experience; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){if($rating->experience != 0.00001){echo $rating->experience; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".workrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->experience != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".weqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php } ?>
@@ -829,7 +829,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->performance != 0.00001){echo $rating->performance; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){if($rating->performance != 0.00001){echo $rating->performance; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".performancerating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->performance != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?= $qs_button("per"); ?>
                                                             <?php } ?>
@@ -883,7 +883,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->oa != 0.00001){echo $rating->oa; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){if($rating->oa != 0.00001){echo $rating->oa; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".oa"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->oa != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?= $qs_button("oa"); ?>
                                                             <?php } ?>
@@ -934,7 +934,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass)){if($rating->ae != 0.00001){echo $rating->ae; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){if($rating->ae != 0.00001){echo $rating->ae; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".ae"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ae != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?= $qs_button("ae"); ?>
                                                             <?php } ?>

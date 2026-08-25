@@ -35,3 +35,12 @@ ERROR - 2026-08-25 04:25:58 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-25 04:26:03 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-25 04:26:09 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-25 04:26:14 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 04:52:24 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 04:52:37 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 04:53:01 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 10:53:19 --> Severity: Warning --> Undefined property: stdClass::$id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2754
+ERROR - 2026-08-25 10:53:31 --> Severity: Warning --> Undefined property: stdClass::$id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2754
+ERROR - 2026-08-25 05:01:55 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 05:03:10 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 05:08:52 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 05:12:03 --> 404 Page Not Found: Uploads/profile

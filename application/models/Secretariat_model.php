@@ -853,6 +853,16 @@ class Secretariat_model extends CI_Model
             ->where('appID', $appId)
             ->update('hris_rating_none');
 
+        // Skills is optional. Once every other non-teaching component has a
+        // real score, promote the workflow without making Secretariat click a
+        // separate Rated action.
+        $this->Reg->auto_mark_rated($appId);
+        $statusRow = $this->db
+            ->select('appStatus')
+            ->where('appID', $appId)
+            ->get('hris_applications')
+            ->row();
+
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
             return ['ok' => false, 'message' => 'The scores could not be saved. Please try again.'];
@@ -863,6 +873,7 @@ class Secretariat_model extends CI_Model
         return [
             'ok' => true,
             'application' => $application,
+            'application_status' => (string) ($statusRow->appStatus ?? $application->appStatus ?? ''),
             'old' => $old,
             'new' => ['interview' => $interview, 'written' => $written],
         ];
