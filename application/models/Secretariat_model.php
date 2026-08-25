@@ -677,6 +677,12 @@ class Secretariat_model extends CI_Model
             ->group_by('appID')
             ->get_compiled_select();
 
+        $latestRater = $this->db
+            ->select('app_id, MAX(id) AS latest_id', false)
+            ->from('hris_rater_assignments')
+            ->group_by('app_id')
+            ->get_compiled_select();
+
         return $this->db
             ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
                 a.app_year, a.pre_school, a.dq,
@@ -693,6 +699,8 @@ class Secretariat_model extends CI_Model
                     ELSE ''
                 END AS profile_route,
                 dq.reason AS dq_reason,
+                ra.rater_user_id,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name,
                 r.id AS rating_id, r.interview, r.written, r.total_points,
                 r.eval_id1, r.eval_id2, r.eval_id3", false)
             ->from('hris_applications a')
@@ -704,6 +712,9 @@ class Secretariat_model extends CI_Model
             ->join('hris_rating_none r', 'r.id = latest_rating.latest_id', 'left')
             ->join("($latestDq) latest_dq", 'latest_dq.appID = a.appID', 'left')
             ->join('hris_app_dq dq', 'dq.id = latest_dq.latest_id', 'left')
+            ->join("($latestRater) latest_rater", 'latest_rater.app_id = a.appID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.id = latest_rater.latest_id', 'left')
+            ->join('users u', 'u.id = ra.rater_user_id', 'left')
             ->where('a.jobID', $jobId)
             ->where_not_in('j.position', [1, 5])
             ->group_start()

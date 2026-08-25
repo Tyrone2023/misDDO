@@ -304,6 +304,7 @@ $score_field_actor = static function ($action) use ($score_h, $score_when, $scor
                                         <th class="text-center">#</th>
                                         <th>Applicant</th>
                                         <th>Status</th>
+                                        <th>Evaluator</th>
                                         <?php if ($showWritten) : ?><th class="text-center">Written <span class="sw-th-max">/ 20</span></th><?php endif; ?>
                                         <?php if ($showInterview) : ?><th class="text-center">Interview <span class="sw-th-max">/ 20</span></th><?php endif; ?>
                                         <?php if ($showWritten && $showInterview) : ?><th class="text-center">Total</th><?php endif; ?>
@@ -363,6 +364,9 @@ $score_field_actor = static function ($action) use ($score_h, $score_when, $scor
                                                 <?php if ($isDq) : ?>
                                                     <div class="sw-dq"><strong>DQ</strong><?= !empty($applicant->dq_reason) ? ': ' . $score_h($applicant->dq_reason) : ''; ?></div>
                                                 <?php endif; ?>
+                                            </td>
+                                            <td class="sw-evaluator">
+                                                <?= !empty($applicant->evaluator_name) ? $score_h($applicant->evaluator_name) : '&mdash;'; ?>
                                             </td>
                                             <?php if ($showWritten) : ?>
                                                 <td class="sw-score-cell">

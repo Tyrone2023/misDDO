@@ -26,7 +26,24 @@
                         ->row();
                 }
 
-                $rating = $this->Common->two_cond_row('hris_rating_none','record_no',$staff->record_no,'appID',$aa->appID ?? null);
+                $rating = null;
+                if (!empty($staff->record_no) && !empty($aa->appID)) {
+                    $rating = $this->db
+                        ->where('record_no', $staff->record_no)
+                        ->where('appID', $aa->appID)
+                        ->order_by('id', 'desc')
+                        ->limit(1)
+                        ->get('hris_rating_none')
+                        ->row();
+                }
+                if (empty($rating) && !empty($aa->appID)) {
+                    $rating = $this->db
+                        ->where('appID', $aa->appID)
+                        ->order_by('id', 'desc')
+                        ->limit(1)
+                        ->get('hris_rating_none')
+                        ->row();
+                }
 
                 // No row yet (applicant not endorsed, or copied from an application
                 // that had none). Render as an unrated applicant instead of letting
@@ -34,6 +51,14 @@
                 if (empty($rating)) {
                     $rating = blank_rating_row('hris_rating_none');
                 }
+
+                $ratingRecordNo = !empty($rating->record_no)
+                    ? $rating->record_no
+                    : (!empty($staff->record_no)
+                        ? $staff->record_no
+                        : (!empty($aa->empEmail)
+                            ? $aa->empEmail
+                            : ($aa->applicant_id ?? '')));
 
 
 
@@ -2451,7 +2476,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_let_rate/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                         
                                                                     <div class="row">
@@ -2510,7 +2535,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_training_rate/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                         
                                                                     <div class="row">
@@ -2573,7 +2598,7 @@
                                                                     <input type="hidden" name="job_type" value="<?= $job->job_type; ?>">
                                                                     <input type="hidden" name="job_fy" value="<?= $job->sy; ?>">
                                                                     <input type="hidden" name="dist" value="<?= $aa->district; ?>">
-                                                                    <input type="hidden" name="record" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record" value="<?= $ratingRecordNo; ?>">
                                                                   
                                                                     <div class="row">
                                                                         <div class="col-lg-12">	
@@ -3243,7 +3268,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_none/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="educ">
@@ -3311,7 +3336,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_none/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="trainings">
@@ -3379,7 +3404,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_none/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="experience">
@@ -3447,7 +3472,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_nonev2/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="performance">
@@ -3510,7 +3535,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_nonev2/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="oa">
@@ -3573,7 +3598,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_nonev2/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="ae">
@@ -3636,7 +3661,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_nonev2/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="ald">
@@ -3699,7 +3724,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_nonev2/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="interview">
@@ -3762,7 +3787,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_nonev2/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="written">
@@ -3825,7 +3850,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_nonev2/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="skills">
@@ -4110,7 +4135,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_none/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="educ">
@@ -4200,7 +4225,7 @@
                                                                 <form class="parsley-examples" action="<?= base_url(); ?>pages/update_rate_none/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/0/<?= $aa->appID; ?>" method="post">
                                                                     <input type="hidden" name="app_id" value="<?= $aa->appID; ?>">
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
-                                                                    <input type="hidden" name="record_no" value="<?= $staff->record_no; ?>">
+                                                                    <input type="hidden" name="record_no" value="<?= $ratingRecordNo; ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
                                                                     <input type="hidden" name="col" value="trainings">
