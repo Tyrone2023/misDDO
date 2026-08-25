@@ -267,6 +267,7 @@ class SecretariatScores extends CI_Controller
 
         $application = $result['application'];
         $previous = $result['old'] ?? [];
+        $actions = [];
 
         foreach (['interview' => $interview, 'written' => $written] as $field => $value) {
             if ($value === null) {
@@ -279,9 +280,15 @@ class SecretariatScores extends CI_Controller
             // Separate a first encode from an edit so the activity trail reads
             // as an action, not just a value. The action stays 'rate' - the
             // audit lookups on Pages/ma key off it.
-            $description = $this->score_is_encoded($before)
+            $isEdit = $this->score_is_encoded($before);
+            $description = $isEdit
                 ? 'Edited ' . $label . ' rating: ' . $this->score_text($before) . ' to ' . $this->score_text($value)
                 : 'Encoded ' . $label . ' rating: ' . $this->score_text($value);
+
+            $actions[$field] = [
+                'kind' => $isEdit ? 'edit' : 'encode',
+                'description' => $description,
+            ];
 
             $this->Audit->log('rate', [
                 'entity_type' => 'rating',
@@ -309,6 +316,10 @@ class SecretariatScores extends CI_Controller
                 'app_id' => $appId,
                 'saved' => $saved,
                 'saved_at' => date('g:i:s A'),
+                // Lets each score box credit its own encoder without a reload.
+                'actor' => $this->actor_label(),
+                'when' => date('M j, Y g:i A'),
+                'actions' => $actions,
             ]);
             return;
         }
@@ -321,6 +332,27 @@ class SecretariatScores extends CI_Controller
     private function score_is_encoded($value): bool
     {
         return $value !== null && abs((float) $value - 0.00001) > 0.000001;
+    }
+
+    /** Display name of the logged-in account, as the audit trail records it. */
+    private function actor_label(): string
+    {
+        $row = $this->db
+            ->select('username, fname, lname')
+            ->where('id', $this->session_user_id())
+            ->get('users')
+            ->row();
+
+        $name = $row ? trim(trim((string) $row->fname) . ' ' . trim((string) $row->lname)) : '';
+        if ($name !== '') {
+            return $name;
+        }
+
+        if ($row && trim((string) $row->username) !== '') {
+            return (string) $row->username;
+        }
+
+        return (string) $this->session->userdata('username');
     }
 
     private function score_text($value): string

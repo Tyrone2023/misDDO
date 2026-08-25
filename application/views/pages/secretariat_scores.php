@@ -37,37 +37,57 @@ $score_when = static function ($value) {
 $score_action_kind = static function ($description) {
     return stripos((string) $description, 'Edited') === 0 ? 'edit' : 'encode';
 };
+
+/**
+ * Who last touched ONE score field, rendered under that field's own box, so a
+ * row encoded by two people credits each of them where their score sits.
+ */
+$score_field_actor = static function ($action) use ($score_h, $score_when, $score_action_kind) {
+    if (empty($action)) {
+        return '<div class="sw-field-actor is-empty" data-field-actor>'
+            . '<div class="sw-fa-who"><i class="mdi mdi-account-off-outline"></i><span>Not encoded</span></div>'
+            . '<div class="sw-fa-when"></div></div>';
+    }
+
+    $who = trim((string) $action['name']) !== '' ? $action['name'] : $action['username'];
+    $icon = $score_action_kind($action['description']) === 'edit' ? 'mdi-pencil-outline' : 'mdi-account-check-outline';
+
+    return '<div class="sw-field-actor" data-field-actor title="' . $score_h($action['description']) . '">'
+        . '<div class="sw-fa-who"><i class="mdi ' . $icon . '"></i><span>' . $score_h($who) . '</span></div>'
+        . '<div class="sw-fa-when">' . $score_h($score_when($action['when'])) . '</div></div>';
+};
 ?>
 
 <style>
     .score-workspace { --sw-ink:#132c4a; --sw-muted:#6b7b91; --sw-line:#e5eaf2; --sw-blue:#2457d6; --sw-soft:#f6f9fd; }
-    .score-workspace .sw-hero { align-items:center; background:linear-gradient(135deg,#ffffff 0%,#f4f8ff 100%); border:1px solid var(--sw-line); border-radius:16px; box-shadow:0 5px 20px rgba(24,52,88,.05); display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; margin-bottom:14px; padding:18px 22px; }
+    .score-workspace .sw-hero { align-items:flex-end; background:linear-gradient(135deg,#ffffff 0%,#f4f8ff 100%); border:1px solid var(--sw-line); border-radius:14px; box-shadow:0 4px 16px rgba(24,52,88,.05); display:flex; flex-wrap:wrap; gap:12px 22px; justify-content:space-between; margin-bottom:12px; padding:14px 18px; }
+    .score-workspace .sw-hero-lead { flex:1 1 250px; min-width:0; }
     .score-workspace .sw-eyebrow { color:#7b8ca3; font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
-    .score-workspace .sw-title { color:var(--sw-ink); font-size:23px; font-weight:800; letter-spacing:-.3px; margin:4px 0 0; }
-    .score-workspace .sw-subtitle { color:var(--sw-muted); font-size:12.5px; margin:4px 0 0; }
-    .score-workspace .sw-hero-side { align-items:center; display:flex; flex-wrap:wrap; gap:8px; }
-    .score-workspace .sw-back { align-items:center; border:1px solid #dbe3ee; border-radius:9px; color:#3d5876; display:inline-flex; font-size:12px; font-weight:650; gap:5px; padding:8px 13px; transition:all .14s ease; }
+    .score-workspace .sw-title { color:var(--sw-ink); font-size:20px; font-weight:800; letter-spacing:-.3px; margin:3px 0 0; }
+    .score-workspace .sw-subtitle { color:var(--sw-muted); font-size:12px; margin:3px 0 0; }
+    .score-workspace .sw-back { align-items:center; background:#fff; border:1px solid #dbe3ee; border-radius:9px; color:#3d5876; display:inline-flex; font-size:12px; font-weight:650; gap:5px; height:36px; padding:0 13px; transition:all .14s ease; }
     .score-workspace .sw-back:hover { background:#f2f6fd; border-color:#b9cbe8; color:var(--sw-blue); text-decoration:none; }
 
     .score-workspace .sw-card { background:#fff; border:1px solid var(--sw-line); border-radius:16px; box-shadow:0 4px 18px rgba(31,58,91,.045); overflow:hidden; }
-    .score-workspace .sw-toolbar { display:grid; gap:14px; grid-template-columns:minmax(240px,1.3fr) auto minmax(210px,.9fr); padding:16px 18px; }
+    .score-workspace .sw-toolbar { align-items:flex-end; display:flex; flex-wrap:wrap; gap:10px 14px; padding:0; }
+    .score-workspace .sw-tool-vacancy { min-width:270px; }
     .score-workspace .sw-label { color:#7285a0; display:block; font-size:10px; font-weight:800; letter-spacing:.07em; margin-bottom:6px; text-transform:uppercase; }
-    .score-workspace .sw-select { background:#fff; border:1px solid #d9e1ec; border-radius:9px; color:var(--sw-ink); font-size:13px; font-weight:600; height:38px; padding:0 10px; width:100%; }
+    .score-workspace .sw-select { background:#fff; border:1px solid #d9e1ec; border-radius:9px; color:var(--sw-ink); font-size:13px; font-weight:600; height:36px; padding:0 10px; width:100%; }
     .score-workspace .sw-select:focus { border-color:var(--sw-blue); box-shadow:0 0 0 3px rgba(36,87,214,.1); outline:none; }
     .score-workspace .sw-mode { background:#eff3f9; border-radius:10px; display:inline-flex; padding:3px; }
-    .score-workspace .sw-mode .btn { background:transparent; border:0; border-radius:8px; color:#5a6d87; font-size:12px; font-weight:700; padding:7px 14px; white-space:nowrap; }
+    .score-workspace .sw-mode .btn { background:transparent; border:0; border-radius:8px; color:#5a6d87; font-size:12px; font-weight:700; padding:6px 13px; white-space:nowrap; }
     .score-workspace .sw-mode .btn:hover { color:var(--sw-blue); }
     .score-workspace .sw-mode .btn.active { background:#fff; box-shadow:0 2px 6px rgba(24,52,88,.12); color:var(--sw-blue); }
-    .score-workspace .sw-mode-locked { align-items:center; background:#eff3f9; border-radius:10px; color:#41577a; display:inline-flex; font-size:12px; font-weight:700; gap:6px; height:38px; padding:0 14px; white-space:nowrap; }
+    .score-workspace .sw-mode-locked { align-items:center; background:#eff3f9; border-radius:10px; color:#41577a; display:inline-flex; font-size:12px; font-weight:700; gap:6px; height:36px; padding:0 14px; white-space:nowrap; }
     .score-workspace .sw-mode-locked i { color:#7b8ca3; font-size:15px; }
     .score-workspace .sw-mode-locked span { color:#8b9ab0; font-size:10.5px; font-weight:600; }
-    .score-workspace .sw-search { position:relative; }
-    .score-workspace .sw-search i { color:#93a0b2; left:12px; position:absolute; top:33px; }
-    .score-workspace .sw-search input { background:#fff; border:1px solid #d9e1ec; border-radius:9px; font-size:13px; height:38px; padding-left:34px; width:100%; }
+    .score-workspace .sw-search { min-width:230px; position:relative; }
+    .score-workspace .sw-search i { color:#93a0b2; left:11px; position:absolute; top:50%; transform:translateY(-50%); }
+    .score-workspace .sw-search input { background:#fff; border:1px solid #d9e1ec; border-radius:20px; font-size:12px; height:32px; padding:0 12px 0 32px; width:100%; }
     .score-workspace .sw-search input:focus { border-color:var(--sw-blue); box-shadow:0 0 0 3px rgba(36,87,214,.1); outline:none; }
 
-    .score-workspace .sw-info { align-items:center; background:#fbfcfe; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:12px 22px; justify-content:space-between; padding:14px 18px; }
-    .score-workspace .sw-job { color:var(--sw-ink); font-size:15px; font-weight:800; }
+    .score-workspace .sw-info { align-items:center; background:#fbfcfe; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:8px 22px; justify-content:space-between; padding:10px 16px; }
+    .score-workspace .sw-job { color:var(--sw-ink); font-size:14px; font-weight:800; }
     .score-workspace .sw-job-meta { color:var(--sw-muted); font-size:11px; margin-top:2px; }
     .score-workspace .sw-meter { min-width:210px; }
     .score-workspace .sw-meter-top { align-items:baseline; color:var(--sw-muted); display:flex; font-size:11px; gap:6px; justify-content:space-between; margin-bottom:5px; }
@@ -79,8 +99,8 @@ $score_action_kind = static function ($description) {
     .score-workspace .sw-autosave.is-pending { background:#fff5e2; color:#96650c; }
     .score-workspace .sw-autosave.is-error { background:#fdeceb; color:#b8443c; }
 
-    .score-workspace .sw-filters { align-items:center; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:8px; padding:11px 18px; }
-    .score-workspace .sw-fchip { background:#fff; border:1px solid #dde4ee; border-radius:20px; color:#5a6d87; cursor:pointer; font-size:11.5px; font-weight:700; padding:6px 13px; transition:all .14s ease; }
+    .score-workspace .sw-filters { align-items:center; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:8px; padding:8px 16px; }
+    .score-workspace .sw-fchip { background:#fff; border:1px solid #dde4ee; border-radius:20px; color:#5a6d87; cursor:pointer; font-size:11.5px; font-weight:700; padding:5px 12px; transition:all .14s ease; }
     .score-workspace .sw-fchip:hover { border-color:#b9cbe8; color:var(--sw-blue); }
     .score-workspace .sw-fchip.active { background:var(--sw-blue); border-color:var(--sw-blue); color:#fff; }
     .score-workspace .sw-fchip b { font-weight:800; opacity:.8; }
@@ -88,28 +108,28 @@ $score_action_kind = static function ($description) {
     .score-workspace .sw-hint { color:#8b9ab0; font-size:11px; }
     .score-workspace .sw-hint kbd { background:#eef2f8; border:1px solid #dbe3ee; border-radius:4px; box-shadow:none; color:#4a5d76; font-size:10px; font-weight:700; padding:1px 5px; }
 
-    .score-workspace .sw-table-wrap { max-height:calc(100vh - 340px); min-height:320px; overflow:auto; }
-    .score-workspace .sw-table { margin:0; min-width:820px; }
-    .score-workspace .sw-table thead th { background:#f4f7fb; border-bottom:1px solid #dfe6f0; border-top:0; color:#6c7f96; font-size:10px; font-weight:800; letter-spacing:.06em; padding:11px 12px; position:sticky; text-transform:uppercase; top:0; z-index:2; }
-    .score-workspace .sw-table td { border-color:#eef2f8; padding:9px 12px; vertical-align:middle; }
+    .score-workspace .sw-table-wrap { max-height:calc(100vh - 255px); min-height:340px; overflow:auto; }
+    .score-workspace .sw-table { margin:0; min-width:960px; width:100%; }
+    .score-workspace .sw-table thead th { background:#f4f7fb; border-bottom:1px solid #dfe6f0; border-top:0; color:#6c7f96; font-size:9.5px; font-weight:800; letter-spacing:.06em; padding:8px 10px; position:sticky; text-transform:uppercase; top:0; z-index:2; }
+    .score-workspace .sw-table td { border-color:#eef2f8; padding:6px 10px; vertical-align:middle; }
+    .score-workspace .sw-th-max { color:#a3b0c0; font-weight:700; letter-spacing:0; }
     .score-workspace .sw-table tbody tr { transition:background .12s ease; }
     .score-workspace .sw-table tbody tr:hover { background:#fafcff; }
     .score-workspace .sw-table tbody tr.is-focused { background:#f2f7ff; box-shadow:inset 3px 0 0 var(--sw-blue); }
     .score-workspace .sw-row-number { color:#a3b0c0; font-size:11px; font-weight:700; text-align:center; width:48px; }
-    .score-workspace .sw-name { color:var(--sw-ink); font-size:13.5px; font-weight:750; }
+    .score-workspace .sw-name { color:var(--sw-ink); font-size:12.5px; font-weight:750; }
     .score-workspace .sw-meta { color:var(--sw-muted); font-size:10.5px; margin-top:2px; }
-    .score-workspace .sw-pill { border-radius:20px; display:inline-block; font-size:10px; font-weight:700; padding:4px 10px; }
+    .score-workspace .sw-pill { border-radius:20px; display:inline-block; font-size:9.5px; font-weight:700; padding:3px 9px; }
     .score-workspace .sw-pill-ok { background:#eef2f7; color:#57697f; }
     .score-workspace .sw-pill-dq { background:#fdeceb; color:#b8443c; }
     .score-workspace .sw-dq { color:#b34545; font-size:10px; line-height:1.3; margin-top:4px; max-width:300px; }
-    .score-workspace .sw-score-cell { text-align:center; width:130px; }
-    .score-workspace .sw-score-input { border:1px solid #d5deea; border-radius:9px; color:var(--sw-ink); font-size:16px; font-weight:750; height:40px; margin:auto; padding:5px 7px; text-align:center; transition:border-color .14s ease,box-shadow .14s ease,background .14s ease; width:94px; }
+    .score-workspace .sw-score-cell { text-align:center; width:190px; }
+    .score-workspace .sw-score-input { border:1px solid #d5deea; border-radius:9px; color:var(--sw-ink); font-size:17px; font-weight:750; height:38px; margin:auto; padding:4px 7px; text-align:center; transition:border-color .14s ease,box-shadow .14s ease,background .14s ease; width:112px; }
     .score-workspace .sw-score-input:hover { border-color:#bccbe0; }
     .score-workspace .sw-score-input:focus { background:#fff; border-color:var(--sw-blue); box-shadow:0 0 0 3px rgba(36,87,214,.12); outline:none; }
     .score-workspace .sw-score-input.is-filled { background:#f3faf6; border-color:#bfe3d0; }
     .score-workspace .sw-score-input.is-invalid { background-image:none; background-color:#fdf4f3; border-color:#dc4c4c; padding-right:7px; }
-    .score-workspace .sw-score-max { color:#a3b0c0; font-size:9px; letter-spacing:.03em; margin-top:3px; }
-    .score-workspace .sw-total { color:#a3b0c0; font-size:15px; font-weight:800; text-align:center; width:86px; }
+    .score-workspace .sw-total { color:#a3b0c0; font-size:16px; font-weight:800; text-align:center; width:84px; }
     .score-workspace .sw-total.has-value { color:#1f7a51; }
     .score-workspace .sw-save-state { align-items:center; color:#93a2b6; display:inline-flex; font-size:10.5px; font-weight:650; gap:4px; min-width:96px; }
     .score-workspace .sw-save-state i { font-size:14px; }
@@ -121,6 +141,13 @@ $score_action_kind = static function ($description) {
     .score-workspace .sw-actor span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .score-workspace .sw-actor-empty { color:#b3bece; font-weight:600; }
     .score-workspace .sw-actor-when { color:#a3b0c0; font-size:10px; margin-top:1px; }
+    .score-workspace .sw-field-actor { border-top:1px dashed #e5ecf6; margin:5px auto 0; max-width:176px; padding-top:4px; }
+    .score-workspace .sw-field-actor .sw-fa-who { align-items:center; color:#33547d; display:flex; font-size:10.5px; font-weight:750; gap:3px; justify-content:center; }
+    .score-workspace .sw-field-actor .sw-fa-who i { flex:0 0 auto; font-size:12px; }
+    .score-workspace .sw-field-actor .sw-fa-who span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .score-workspace .sw-field-actor .sw-fa-when { color:#a3b0c0; font-size:9.5px; margin-top:1px; text-align:center; }
+    .score-workspace .sw-field-actor.is-empty { border-top-color:#f1f4f9; }
+    .score-workspace .sw-field-actor.is-empty .sw-fa-who { color:#bcc6d4; font-weight:600; }
 
     .score-workspace .sw-trail { margin-top:16px; }
     .score-workspace .sw-trail-head { align-items:center; background:#fbfcfe; border-bottom:1px solid var(--sw-line); display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; padding:14px 18px; }
@@ -147,16 +174,15 @@ $score_action_kind = static function ($description) {
     .score-workspace .sw-ma-link { color:#7488a1; font-size:17px; }
     .score-workspace .sw-ma-link:hover { color:var(--sw-blue); }
     .score-workspace .sw-empty { color:var(--sw-muted); padding:52px 20px; text-align:center; }
-    .score-workspace .sw-foot { align-items:center; background:#fbfcfe; border-top:1px solid var(--sw-line); color:var(--sw-muted); display:flex; flex-wrap:wrap; font-size:11px; gap:8px 20px; justify-content:space-between; padding:11px 18px; }
+    .score-workspace .sw-foot { align-items:center; background:#fbfcfe; border-top:1px solid var(--sw-line); color:var(--sw-muted); display:flex; flex-wrap:wrap; font-size:10.5px; gap:6px 18px; justify-content:space-between; padding:8px 16px; }
 
     @media (max-width:1050px) {
-        .score-workspace .sw-toolbar { grid-template-columns:1fr 1fr; }
-        .score-workspace .sw-search { grid-column:1/-1; }
+        .score-workspace .sw-hero { align-items:flex-start; }
+        .score-workspace .sw-toolbar { width:100%; }
     }
     @media (max-width:680px) {
         .score-workspace .sw-hero { align-items:flex-start; flex-direction:column; }
-        .score-workspace .sw-toolbar { grid-template-columns:1fr; }
-        .score-workspace .sw-search { grid-column:auto; }
+        .score-workspace .sw-tool-vacancy, .score-workspace .sw-search { min-width:0; width:100%; }
         .score-workspace .sw-mode { width:100%; }
         .score-workspace .sw-mode .btn { flex:1; padding-left:6px; padding-right:6px; }
         .score-workspace .sw-table-wrap { max-height:none; }
@@ -168,24 +194,13 @@ $score_action_kind = static function ($description) {
     <div class="content">
         <div class="container-fluid">
             <div class="sw-hero">
-                <div>
+                <div class="sw-hero-lead">
                     <div class="sw-eyebrow">Recruitment</div>
                     <h2 class="sw-title">Score Encoding</h2>
                     <p class="sw-subtitle">Encode Interview and Written Examination scores. Every entry saves on its own.</p>
                 </div>
-                <div class="sw-hero-side">
-                    <?php if ($this->session->position !== 'Field Encoder') : ?>
-                        <a href="<?= base_url(); ?>" class="sw-back"><i class="mdi mdi-arrow-left"></i>Dashboard</a>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <?php if ($successMessage) : ?><div class="alert alert-success py-2"><?= $score_h($successMessage); ?></div><?php endif; ?>
-            <?php if ($dangerMessage) : ?><div class="alert alert-danger py-2"><?= $score_h($dangerMessage); ?></div><?php endif; ?>
-
-            <div class="sw-card mb-3">
                 <form method="get" action="<?= base_url('secretariat/scores'); ?>" class="sw-toolbar" id="score-toolbar-form">
-                    <div>
+                    <div class="sw-tool-vacancy">
                         <label class="sw-label" for="score-vacancy">Vacancy</label>
                         <select class="sw-select" name="job_id" id="score-vacancy">
                             <option value="">Select an assigned vacancy</option>
@@ -212,13 +227,14 @@ $score_action_kind = static function ($description) {
                             </div>
                         <?php endif; ?>
                     </div>
-                    <div class="sw-search">
-                        <label class="sw-label" for="score-applicant-search">Find applicant</label>
-                        <i class="mdi mdi-magnify"></i>
-                        <input type="search" id="score-applicant-search" placeholder="Name, ID, status, reason" autocomplete="off">
-                    </div>
+                    <?php if ($this->session->position !== 'Field Encoder') : ?>
+                        <a href="<?= base_url(); ?>" class="sw-back"><i class="mdi mdi-arrow-left"></i>Dashboard</a>
+                    <?php endif; ?>
                 </form>
             </div>
+
+            <?php if ($successMessage) : ?><div class="alert alert-success py-2"><?= $score_h($successMessage); ?></div><?php endif; ?>
+            <?php if ($dangerMessage) : ?><div class="alert alert-danger py-2"><?= $score_h($dangerMessage); ?></div><?php endif; ?>
 
             <?php if (empty($vacancies)) : ?>
                 <div class="alert alert-warning">No open score-eligible vacancy is assigned to your Secretariat account.</div>
@@ -275,7 +291,10 @@ $score_action_kind = static function ($description) {
                                 <button type="button" class="sw-fchip" data-filter="dq">Disqualified <b><?= $dqRows; ?></b></button>
                             <?php endif; ?>
                             <span class="sw-fspacer"></span>
-                            <span class="sw-hint"><kbd>Enter</kbd> save &amp; next &middot; <kbd>&uarr;</kbd><kbd>&darr;</kbd> move &middot; scores are 0&ndash;20</span>
+                            <div class="sw-search">
+                                <i class="mdi mdi-magnify"></i>
+                                <input type="search" id="score-applicant-search" placeholder="Find applicant — name, ID, status, reason" autocomplete="off" aria-label="Find applicant">
+                            </div>
                         </div>
 
                         <div class="sw-table-wrap">
@@ -285,10 +304,10 @@ $score_action_kind = static function ($description) {
                                         <th class="text-center">#</th>
                                         <th>Applicant</th>
                                         <th>Status</th>
-                                        <?php if ($showWritten) : ?><th class="text-center">Written</th><?php endif; ?>
-                                        <?php if ($showInterview) : ?><th class="text-center">Interview</th><?php endif; ?>
+                                        <?php if ($showWritten) : ?><th class="text-center">Written <span class="sw-th-max">/ 20</span></th><?php endif; ?>
+                                        <?php if ($showInterview) : ?><th class="text-center">Interview <span class="sw-th-max">/ 20</span></th><?php endif; ?>
                                         <?php if ($showWritten && $showInterview) : ?><th class="text-center">Total</th><?php endif; ?>
-                                        <th>Last action</th>
+                                        <th>Save state</th>
                                         <th class="text-center">View Application</th>
                                     </tr>
                                 </thead>
@@ -314,6 +333,8 @@ $score_action_kind = static function ($description) {
                                             ? (float) $applicant->interview + (float) $applicant->written
                                             : null;
                                         $searchText = strtolower($name . ' ' . $applicant->applicant_id . ' ' . $applicant->record_no . ' ' . $applicant->appStatus . ' ' . ($applicant->dq_reason ?? ''));
+                                        // Per-field audit rows: written and interview can belong to two different encoders.
+                                        $rowActions = $lastActions[(int) $applicant->appID] ?? [];
                                         $formId = 'score-form-' . (int) $applicant->appID;
                                         $profileUrl = '';
                                         if (!empty($applicant->profile_route) && !empty($applicant->profile_id)) {
@@ -346,13 +367,13 @@ $score_action_kind = static function ($description) {
                                             <?php if ($showWritten) : ?>
                                                 <td class="sw-score-cell">
                                                     <input form="<?= $formId; ?>" type="number" inputmode="decimal" min="0" max="20" step="0.01" name="written" data-field="written" data-last-saved="<?= $writtenEncoded ? $score_h((float) $applicant->written) : ''; ?>" data-counted="<?= $writtenEncoded ? '1' : '0'; ?>" class="form-control sw-score-input <?= $writtenEncoded ? 'is-filled' : ''; ?>" value="<?= $writtenEncoded ? $score_h((float) $applicant->written) : ''; ?>" aria-label="Written Examination score for <?= $score_h($name); ?>">
-                                                    <div class="sw-score-max">of 20</div>
+                                                    <?= $score_field_actor($rowActions['written'] ?? null); ?>
                                                 </td>
                                             <?php endif; ?>
                                             <?php if ($showInterview) : ?>
                                                 <td class="sw-score-cell">
                                                     <input form="<?= $formId; ?>" type="number" inputmode="decimal" min="0" max="20" step="0.01" name="interview" data-field="interview" data-last-saved="<?= $interviewEncoded ? $score_h((float) $applicant->interview) : ''; ?>" data-counted="<?= $interviewEncoded ? '1' : '0'; ?>" class="form-control sw-score-input <?= $interviewEncoded ? 'is-filled' : ''; ?>" value="<?= $interviewEncoded ? $score_h((float) $applicant->interview) : ''; ?>" aria-label="Interview score for <?= $score_h($name); ?>">
-                                                    <div class="sw-score-max">of 20</div>
+                                                    <?= $score_field_actor($rowActions['interview'] ?? null); ?>
                                                 </td>
                                             <?php endif; ?>
                                             <?php if ($showWritten && $showInterview) : ?>
@@ -360,28 +381,6 @@ $score_action_kind = static function ($description) {
                                             <?php endif; ?>
                                             <td>
                                                 <span class="sw-save-state <?= $modeComplete ? 'saved' : ''; ?>"><i class="mdi <?= $modeComplete ? 'mdi-check-circle-outline' : 'mdi-circle-edit-outline'; ?>"></i><span><?= $modeComplete ? 'Saved' : 'Ready'; ?></span></span>
-                                                <?php
-                                                // Newest of the two per-field audit rows for this application.
-                                                $rowActions = $lastActions[(int) $applicant->appID] ?? [];
-                                                $rowLast = null;
-                                                $rowLastField = '';
-                                                foreach ($rowActions as $actionField => $action) {
-                                                    if ($rowLast === null || strcmp((string) $action['when'], (string) $rowLast['when']) > 0) {
-                                                        $rowLast = $action;
-                                                        $rowLastField = $actionField;
-                                                    }
-                                                }
-                                                ?>
-                                                <?php if ($rowLast) : ?>
-                                                    <div class="sw-actor" data-row-actor title="<?= $score_h($rowLast['description']); ?>">
-                                                        <i class="mdi <?= $score_action_kind($rowLast['description']) === 'edit' ? 'mdi-pencil-outline' : 'mdi-plus-circle-outline'; ?>"></i>
-                                                        <span><?= $score_h(($rowLastField === 'interview' ? 'Interview' : 'Written') . ' by ' . ($rowLast['name'] !== '' ? $rowLast['name'] : $rowLast['username'])); ?></span>
-                                                    </div>
-                                                    <div class="sw-actor-when"><?= $score_h($score_when($rowLast['when'])); ?></div>
-                                                <?php else : ?>
-                                                    <div class="sw-actor sw-actor-empty" data-row-actor><i class="mdi mdi-minus"></i><span>No action yet</span></div>
-                                                    <div class="sw-actor-when"></div>
-                                                <?php endif; ?>
                                             </td>
                                             <td class="text-center">
                                                 <?php if ($profileUrl !== '') : ?><a href="<?= $score_h($profileUrl); ?>" class="sw-ma-link" target="_blank" rel="noopener" title="Open MA page"><i class="mdi mdi-open-in-new"></i></a><?php else : ?><span class="text-muted">&mdash;</span><?php endif; ?>
@@ -393,6 +392,7 @@ $score_action_kind = static function ($description) {
                         </div>
                         <div class="sw-foot">
                             <span><i class="mdi mdi-information-outline"></i> Leaving a box blank keeps the score already saved &mdash; it never clears it.</span>
+                            <span class="sw-hint"><kbd>Enter</kbd> save &amp; next &middot; <kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span>
                             <span><strong id="score-visible-count"><?= count($applicants); ?></strong> of <?= count($applicants); ?> applicant<?= count($applicants) === 1 ? '' : 's'; ?> shown</span>
                         </div>
                     <?php endif; ?>
@@ -495,6 +495,27 @@ $score_action_kind = static function ($description) {
             formStates.set(form, { timer: null, saving: false, queued: false, retried: false });
         }
         return formStates.get(form);
+    }
+
+    function escapeText(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // Credit the save to the account that made it, under that field's own box.
+    function stampFieldActor(input, payload, field) {
+        var cell = input.closest('td');
+        var box = cell ? cell.querySelector('[data-field-actor]') : null;
+        if (!box || !payload || !payload.actor) return;
+
+        var action = (payload.actions || {})[field] || {};
+        box.className = 'sw-field-actor';
+        box.title = action.description || '';
+        box.innerHTML = '<div class="sw-fa-who"><i class="mdi '
+            + (action.kind === 'edit' ? 'mdi-pencil-outline' : 'mdi-account-check-outline') + '"></i>'
+            + '<span>' + escapeText(payload.actor) + '</span></div>'
+            + '<div class="sw-fa-when">' + escapeText(payload.when || '') + '</div>';
     }
 
     function normalized(value) {
@@ -672,6 +693,7 @@ $score_action_kind = static function ($description) {
                 input.dataset.lastSaved = sent[field];
                 input.dataset.counted = '1';
                 input.classList.add('is-filled');
+                stampFieldActor(input, payload, field);
             });
             refreshRowTotal(row);
             refreshModeCount(form);
