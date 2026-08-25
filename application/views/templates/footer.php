@@ -69,7 +69,7 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-md-12">
-                                MANAGEMENT INFORMATION SYSTEM | DEPED DAVAO ORIENTAL DIVISION
+                                MANAGEMENT INFORMATION SYSTEM | DEPED DAVAO DE ORO DIVISION
                                 </div>
                             </div>
                         </div>

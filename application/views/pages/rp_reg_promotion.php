@@ -156,16 +156,12 @@
                                                 <thead>
                                                     <tr class="bg-info text-center text-white">
                                                         <th colspan="2">APPLICATION DETAILS &nbsp; &nbsp; &nbsp;
-                                                            <!-- <?php if(in_array(strtolower((string)$this->session->position), ['asds','sds','human resource admin','hr staff'], true)){ ?>
-                                                                <?php $this->load->view('pages/partials/application_tracking', [
-                                                                    'trk_app_id'       => $aa->appID ?? null,
-                                                                    'trk_applicant_id' => $this->uri->segment(3),
-                                                                    'trk_job_id'       => $this->uri->segment(4),
-                                                                    'trk_block'        => 'button',
-                                                                ]); ?>
-                                                            <?php }else{ ?>
-                                                                <a href="<?= base_url(); ?>Pages/application_history/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID; ?>/<?= $this->uri->segment(5); ?>"><i class="mdi mdi-notebook-multiple tooltips text-white" data-placement="top" data-toggle="tooltip" data-original-title="View Application Status"></i></a> &nbsp; &nbsp;
-                                                            <?php } ?> -->
+                                                            <?php $this->load->view('pages/partials/application_tracking', [
+                                                                'trk_app_id'       => $aa->appID ?? null,
+                                                                'trk_applicant_id' => $this->uri->segment(3),
+                                                                'trk_job_id'       => $this->uri->segment(4),
+                                                                'trk_block'        => 'button',
+                                                            ]); ?>
                                                         </th>
                                                     </tr>
                                                 </thead>

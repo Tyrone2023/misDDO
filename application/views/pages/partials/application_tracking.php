@@ -7,7 +7,7 @@
  * application (status changes, validations, ratings encoded, remarks…),
  * newest entry on top.
  *
- * Only ASDS, SDS and HR roles may open it.
+ * Only HR admin, SDS and ASDS may open it.
  *
  * Expected data:
  *   $trk_app_id       int    hris_applications.appID
@@ -22,7 +22,7 @@
 
 $CI =& get_instance();
 
-$allowedRoles = ['asds', 'sds', 'Human Resource Admin', 'HR Staff'];
+$allowedRoles = ['asds', 'sds', 'Human Resource Admin'];
 $sessionRole  = trim((string) $CI->session->position);
 
 $canTrack = false;
