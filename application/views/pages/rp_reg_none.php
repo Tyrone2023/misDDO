@@ -65,6 +65,8 @@
                 $inquery = $this->Common->one_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID);
                 $applicantInquery = $this->Common->two_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID, 'res', $user->username ?? $this->session->username);
                 $open = $this->Page_model->get_single_row_by_id('settings', 'id', 7); 
+                    $score_hide = $this->Page_model->setting_row('Hide Rating Scores', $open->status ?? 0);
+                    $exam_hide  = $this->Page_model->setting_row('Hide Interview and Exam', $open->status ?? 0);
                 $pt = $this->Common->one_cond_row('hris_positions','title',$job->jobTitle);
                 $ptp = $this->Common->one_cond_row('hris_position_points','id',$pt->bracket);
                 $dq_hide = $this->Common->one_cond_row('settings', 'id', 10);
@@ -368,9 +370,18 @@
                                                     <?php //if($open->status == 0){if($this->session->position == "reg" || $this->session->position == "asds"){ ?>
                                                     <?php if($open->status == 0){ ?>
                                                     <?php //if($this->session->position == "admin"){ ?>
-                                                    <?php if($rating->interview != 0.00001){ ?>
-                                                    <?php if($rating->written != 0.00001){ ?>
-                                                    <?php if($aa->appStatus == "Rated"){ ?>
+                                                    <?php
+                                                        /*
+                                                         * Two statuses may confirm now. "Rated" keeps the original rule and
+                                                         * still waits for the Interview and Written Examination scores;
+                                                         * "Endorsed for Rating" comes before those are encoded, so it is
+                                                         * offered on the status alone.
+                                                         */
+                                                        $examScored  = ($rating->interview != 0.00001 && $rating->written != 0.00001);
+                                                        $canConfirm  = ($aa->appStatus == "Rated" && $examScored)
+                                                                    || ($aa->appStatus == "Endorsed for Rating");
+                                                        if($canConfirm){
+                                                    ?>
                                                     <tr>
                                                         <th class="text-right">Action</th>
                                                         <td style="background: #bbecfe;">
@@ -383,7 +394,7 @@
                                                             
                                                         </td>
                                                     </tr>
-                                                    <?php }}}}} ?>
+                                                    <?php }}} ?>
                                                              
                                                     <?php if($aa->appStatus == 'Confirmed'){ ?>
                                                     <tr>
@@ -648,7 +659,7 @@
                                                         
                                                             <?php }else{
                                                            if($rating->educ != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= $rating->educ; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -715,7 +726,7 @@
                                                         
                                                             <?php }else{
                                                            if($rating->trainings != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= $rating->trainings; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -769,7 +780,7 @@
                                                         
                                                             <?php }else{
                                                            if($rating->experience != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= $rating->experience; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -838,7 +849,7 @@
                                                         
                                                             <?php }else{
                                                            if($rating->performance != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= $rating->performance; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -892,7 +903,7 @@
                                                         
                                                         <?php }else{
                                                            if($rating->oa != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= $rating->oa; ?>
                                                                 <?php }else{?>
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -943,7 +954,7 @@
                                                         
                                                         <?php }else{
                                                            if($rating->ae != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= $rating->ae; ?>
                                                                 <?php }else{?>
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -995,7 +1006,7 @@
                                                         
                                                             <?php }else{
                                                            if($rating->ald != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= $rating->ald; ?>
                                                                 <?php }else{?>
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -1044,7 +1055,7 @@
                                                         <?php
                                                         if(!empty($rating)){
                                                             if($rating->interview != 0.00001){ ?>
-                                                                <?php if($open->status == 0  || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
+                                                                <?php if($exam_hide->status == 0  || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                                     <?= $rating->interview; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -1065,7 +1076,7 @@
                                                         <?php
                                                             if(!empty($rating)){
                                                             if($rating->written != 0.00001){ ?>
-                                                                <?php if($open->status == 0  || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
+                                                                <?php if($exam_hide->status == 0  || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                                     <?= $rating->written; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -1092,7 +1103,7 @@
                                                         <?php
                                                             if(!empty($rating)){
                                                             if($rating->skills != 0.00001){ ?>
-                                                                <?php if($open->status == 0  || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){?>
+                                                                <?php if($exam_hide->status == 0  || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){?>
                                                                     <?= $rating->skills; ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>

@@ -3420,6 +3420,14 @@ class Pages extends CI_Controller
         }
 
         $data['title'] = "Other Settings";
+
+        // The confirmation switches were split out of settings id 7 - make sure
+        // both rows exist before listing, seeded from id 7 so an untouched
+        // installation keeps behaving exactly as it did. Idempotent.
+        $confirm = $this->Page_model->get_single_row_by_id('settings', 'id', 7);
+        $this->Page_model->setting_row('Hide Rating Scores', $confirm->status ?? 0);
+        $this->Page_model->setting_row('Hide Interview and Exam', $confirm->status ?? 0);
+
         $data['page'] = $this->Page_model->get_all_posts('settings');
 
 
@@ -3434,6 +3442,47 @@ class Pages extends CI_Controller
         $this->Page_model->close_open('3', 'id', 'settings', 'status', '4');
         $this->Page_model->insert_at('Update Other Settings', $this->db->insert_id());
         $this->session->set_flashdata('success', 'Successfully Updated');
+        redirect(base_url() . 'Pages/other_settings');
+    }
+
+    /**
+     * Confirmation group settings (settings ids 7, 9, 10).
+     * Saves the whole group in one submit so the toggles are not scattered
+     * across separate rows/confirm prompts.
+     */
+    public function update_settings_group()
+    {
+        $ids = $this->input->post('settings_id');
+
+        if (!is_array($ids) || empty($ids)) {
+            $this->session->set_flashdata('danger', 'No settings were submitted.');
+            redirect(base_url() . 'Pages/other_settings');
+        }
+
+        $posted  = $this->input->post('settings_status');
+        $posted  = is_array($posted) ? $posted : array();
+        $updated = 0;
+
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id <= 0) {
+                continue;
+            }
+
+            // only touch rows that really exist, never create new ones
+            if ((int) $this->db->where('id', $id)->count_all_results('settings') === 0) {
+                continue;
+            }
+
+            $status = (isset($posted[$id]) && (int) $posted[$id] === 1) ? 1 : 0;
+
+            $this->db->where('id', $id);
+            $this->db->update('settings', array('status' => $status));
+            $updated++;
+        }
+
+        $this->Page_model->insert_at('Update Confirmation Settings', $updated);
+        $this->session->set_flashdata('success', 'Confirmation settings successfully updated.');
         redirect(base_url() . 'Pages/other_settings');
     }
 
@@ -3592,6 +3641,89 @@ class Pages extends CI_Controller
 
         
         $data['title'] = "INDIVIDUAL EVALUATION SHEET(IES)";
+
+        $this->load->view('pages/' . $page, $data);
+    }
+
+    /**
+     * Certificate of rating for a confirmed application. Same evaluation sheet
+     * the applicant already agreed to, minus the applicant attestation - it is
+     * issued and signed by the HRMPSB Chair (ASDS) only.
+     *
+     * Pages/cert/{applicant}/{appID}/{jobID}
+     */
+    public function cert()
+    {
+        $id = $this->uri->segment(3);
+        $appId = $this->uri->segment(4);
+        $jobId = $this->uri->segment(5);
+
+        // Applicants may only pull their own certificate - same guard ma() uses.
+        if ($this->session->position == 'reg' || $this->session->position == 'user') {
+            if ($this->session->c_id != $id) {
+                redirect(base_url());
+            }
+        }
+
+        $job = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobId);
+        $application = $this->Common->one_cond_row('hris_applications', 'appID', $appId);
+
+        if (empty($job) || empty($application)) {
+            show_404();
+        }
+
+        // Issued only once the applicant has confirmed the evaluation result.
+        if ($application->appStatus != 'Confirmed') {
+            show_error('The certificate is available only after the evaluation result has been confirmed.', 403);
+            return;
+        }
+
+        // Same rating source the IES uses for this kind of vacancy.
+        if (($job->promotion ?? 0) == 1) {
+            $page = "ies_promotion";
+            $this->Reg->calculate_rating_promotion_ies($appId);
+            $data['rate'] = $this->Page_model->get_single_row_by_id('hris_rating_promotion', 'appID', $appId);
+        } elseif ($job->position == 1) {
+            $page = "ies_form";
+            $data['rate'] = $this->Page_model->get_single_row_by_id('hris_applications_rating', 'appID', $appId);
+        } else {
+            $page = "ies_form_none";
+            $data['rate'] = $this->Page_model->get_single_row_by_id('hris_rating_none', 'appID', $appId);
+        }
+
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php') || empty($data['rate'])) {
+            show_404();
+        }
+
+        // Applicants live in hris_applicant, staff applicants in hris_staff.
+        $ap = $this->Common->one_cond_row('hris_applicant', 'id', $id);
+        if (empty($ap)) {
+            $ap = $this->Common->one_cond_row('hris_staff', 'IDNumber', $id);
+        }
+
+        // Signed by the Assistant Schools Division Superintendent, using the
+        // e-signature they maintain under Pages/esignature. Prefer an asst_sds
+        // account that actually has one on file.
+        $this->ensure_user_esig_column();
+
+        $signatory = $this->db
+            ->from('users')
+            ->where('position', 'asst_sds')
+            ->where("COALESCE(esig, '') != ''", null, false)
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get()
+            ->row();
+
+        if (empty($signatory)) {
+            $signatory = $this->Common->one_cond_row('users', 'position', 'asst_sds');
+        }
+
+        $data['ap'] = $ap;
+        $data['job'] = $job;
+        $data['signatory'] = $signatory;
+        $data['certificate'] = true;
+        $data['title'] = "CERTIFICATE OF RATING";
 
         $this->load->view('pages/' . $page, $data);
     }
@@ -9922,10 +10054,10 @@ public function rqa_municipality_print_shsv2()
             //$data['data'] = $this->Common->one_cond_loop_order_by('hris_applications', 'empEmail', $this->session->username,'appID','Desc');
             //$data['data'] = $this->Common->two_cond('hris_applications', 'empEmail', $this->session->username, 'app_year', date('Y'));
             $data['data'] = $this->Common->two_join_two_cond('hris_applications', 'hris_jobvacancy', 'a.jobID,a.empEmail,a.app_year,a.district,a.district,
-            a.pre_school,a.applicant_id,a.appID,a.dq,b.jobID,b.jobTitle,b.jvStatus', 'a.jobID = b.jobID', 'empEmail', $this->session->username,'jvStatus','Open','jobTitle', 'ASC');
+            a.pre_school,a.applicant_id,a.appID,a.dq,a.appStatus,b.jobID,b.jobTitle,b.jvStatus', 'a.jobID = b.jobID', 'empEmail', $this->session->username,'jvStatus','Open','jobTitle', 'ASC');
         } elseif ($this->session->position == 'user') {
             $data['data'] = $this->Common->two_join_two_cond('hris_applications', 'hris_jobvacancy', 'a.jobID,a.empEmail,a.app_year,a.district,a.district,
-            a.pre_school,a.applicant_id,a.appID,a.dq,b.jobID,b.jobTitle,b.jvStatus', 'a.jobID = b.jobID', 'empEmail', $this->session->username,'jvStatus','Open','jobTitle', 'ASC');
+            a.pre_school,a.applicant_id,a.appID,a.dq,a.appStatus,b.jobID,b.jobTitle,b.jvStatus', 'a.jobID = b.jobID', 'empEmail', $this->session->username,'jvStatus','Open','jobTitle', 'ASC');
         } else {
             $data['data'] = $this->Common->one_cond('hris_applications', 'empEmail', $ee);
         }

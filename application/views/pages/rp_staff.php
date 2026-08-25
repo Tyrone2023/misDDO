@@ -16,6 +16,7 @@
                 <?php $applicantInquery = $this->Common->two_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID, 'res', $user->username ?? $this->session->username); ?>
                 <?php 
                     $open = $this->Page_model->get_single_row_by_id('settings', 'id', 7); 
+                    $score_hide = $this->Page_model->setting_row('Hide Rating Scores', $open->status ?? 0);
                     $settings = $this->Page_model->get_single_row_by_id('settings', 'id', 6);
                     $check = $this->Common->three_cond_count_row('hris_rating_request','job_id',$this->uri->segment(4),'app_id',$aa->appID,'applicant_id',$this->uri->segment(3));
                     $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID',$this->uri->segment(4));
@@ -73,7 +74,7 @@
                         && $hasRatingScore($rating->training ?? null)
                         && $hasRatingScore($rating->experience ?? null)
                         && $hasRatingScore($rating->let_rating ?? null);
-                    $showCoreRatingStatus = $isApplicantPosition && (int)($open->status ?? 0) === 1;
+                    $showCoreRatingStatus = $isApplicantPosition && (int)($score_hide->status ?? 0) === 1;
                     $hideCoreScores = $showCoreRatingStatus;
                     $hideDemoTrScores = $isApplicantPosition && (int)($demo_tr_hide->status ?? 0) === 1;
                     $canUploadDocuments = (int)($aa->stat ?? 1) === 0;

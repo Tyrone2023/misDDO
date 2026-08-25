@@ -43,7 +43,7 @@ $jobTypes = [
     <div class="inner">
         <?php $name = $ap->FirstName.' '.$ap->MiddleName.' '.$ap->LastName.' '.$ap->NameExtn; ?>
 
-        <h4>Annex G-1</h4>
+        <h4><?= empty($certificate) ? 'Annex G-1' : ''; ?></h4>
         <h1><?= $title; ?></h1>
         <ul class="info">
             <li><span class="n">Name of Applicant</span><span class="la">: <?= strtoupper($name); ?></span></li>
@@ -143,6 +143,9 @@ $jobTypes = [
 
 
 
+<?php if (!empty($certificate)) {
+            $this->load->view('pages/_ies_certification', ['job' => $job, 'signatory' => $signatory, 'ms' => $ms, 'name' => $name, 'jobTypes' => isset($jobTypes) ? $jobTypes : []]);
+        } else { ?>
         <p>I hereby attest to the conduct of the application and assesment process in accordance with the applicable guidelines; and acknowledge, upon discussion with the Human Resource Merit Promotion and Selection Board (HRMPSB), the results of the comparative assessment and the points given to me based on my qualifications and submitted documentary requirements for <b><?= $job->jobTitle; ?> <?= $jobTypes[$job->job_type] ?? ''; ?></b> under <b>DEPED <?= strtoupper($ms->division); ?></b>.</p>
         <p>Furthermore, I hereby affix my signature in this form to attest to the objective and judicious conduct of the HRMPSB evaluation through Open Ranking System.</p>
 
@@ -157,6 +160,7 @@ $jobTypes = [
         <h6>HRMPSB Chair</h6>
 
         <div class="blocker"></div>
+        <?php } ?>
 
     </div>
   </div>

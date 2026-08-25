@@ -109,6 +109,15 @@
                                                         </a>
 
                                                     <?php
+                                                    // Certificate of rating - issued once the applicant has
+                                                    // confirmed the evaluation result for this vacancy.
+                                                    if (($row->appStatus ?? '') == 'Confirmed') { ?>
+                                                        <a href="<?= base_url(); ?>Pages/cert/<?= $this->uri->segment(3); ?>/<?= $row->appID; ?>/<?= $row->jobID; ?>" target="_blank">
+                                                            <i class="fas fa-certificate noti-icon btn btn-success tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Certificate of Rating"></i>
+                                                        </a>
+                                                    <?php } ?>
+
+                                                    <?php
                                                     // Examination for this vacancy. Shown only to the applicant
                                                     // themselves, only where an exam has been published, and only
                                                     // while the application is still in the running - the exam

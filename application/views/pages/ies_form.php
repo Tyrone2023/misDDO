@@ -24,13 +24,13 @@ redirect(base_url().'log_in');
         <?php $ms = $this->Common->one_cond_row_select('mis_settings','division,settingsID','settingsID',1); ?>
         <?php $name = $ap->FirstName.' '.$ap->MiddleName.' '.$ap->LastName.' '.$ap->NameExtn; ?>
 
-        <h4>Annex G-1</h4>
+        <h4><?= empty($certificate) ? 'Annex G-1' : ''; ?></h4>
         <h1><?= $title; ?></h1>
         <ul class="info">
             <li><span class="n">Name of Applicant</span><span class="la">: <?= strtoupper($name); ?></span></li>
             <li><span class="n">Position Applied for</span><span class="la">: <?= strtoupper($job->jobTitle); ?></span></li>
             <li><span class="n">Schools Division Office</span><span class="la">: <?= strtoupper($ms->division); ?></span></li>
-            <li><span class="n">Contact Number:</span><span  class="la">: <?= $ap->empMobile; ?></span></li>
+            <li><span class="n">Contact Number:</span><span  class="la">: <?= $ap->empMobile ?? $ap->contactNo ?? ''; ?></span></li>
             <li><span class="n">Job Group/SG-Level:</span><span class="la">: </span></li>
         </ul>
 
@@ -110,6 +110,9 @@ redirect(base_url().'log_in');
 
 
 
+<?php if (!empty($certificate)) {
+            $this->load->view('pages/_ies_certification', ['job' => $job, 'signatory' => $signatory, 'ms' => $ms, 'name' => $name, 'jobTypes' => isset($jobTypes) ? $jobTypes : []]);
+        } else { ?>
         <p>I hereby attest to the conduct of the paplication and assesment process in accordance with the applicable guidelines; and acknowlede, upon discussion with the Human resouce Merit Promotion and Selection Board(HRMPSB), the results of the comparative assessment and the points given to me based on my qualifications and submitted documentary requirements for <b><?= $job->jobTitle; ?></b> under <b>DEPED <?= strtoupper($ms->division); ?></b>.</p>
         <p>Furthermore, I hereby affix my signature in this Form to attest to the objective and judicious conduct of the HRMPSB evaluation through Open Ranking System.</p>
 
@@ -124,6 +127,7 @@ redirect(base_url().'log_in');
         <h6>HRMPSB Chair</h6>
 
         <div class="blocker"></div>
+        <?php } ?>
 
     </div>
   </div>

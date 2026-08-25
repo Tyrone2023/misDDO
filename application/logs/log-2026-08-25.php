@@ -2079,3 +2079,24 @@ ERROR - 2026-08-25 07:14:29 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-25 13:14:52 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
 ERROR - 2026-08-25 13:14:52 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
 ERROR - 2026-08-25 07:15:11 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 15:22:57 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-25 15:22:57 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-25 15:24:15 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-25 15:24:15 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-08-25 09:24:55 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:24:55 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:00 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:01 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:01 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:34 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:34 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:37 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:39 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:46 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:25:46 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:26:21 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:26:21 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:26:23 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:26:25 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 09:26:25 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-25 15:57:18 --> Missing RQA sign record for jobID 73

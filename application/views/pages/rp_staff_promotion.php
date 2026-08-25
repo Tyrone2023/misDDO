@@ -17,6 +17,8 @@
                     $inquery = $this->Common->one_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID);
                     $applicantInquery = $this->Common->two_cond_count_row('hris_application_inquiry', 'application_id', $aa->appID, 'res', $user->username ?? $this->session->username);
                     $open = $this->Page_model->get_single_row_by_id('settings', 'id', 7);
+                    $score_hide = $this->Page_model->setting_row('Hide Rating Scores', $open->status ?? 0);
+                    $exam_hide  = $this->Page_model->setting_row('Hide Interview and Exam', $open->status ?? 0);
                     $pt = $this->Common->one_cond_row('hris_positions','title',$job->jobTitle);
                     //$ptp = $this->Common->one_cond_row('hris_position_points','id',$pt->bracket);
                     $dq_hide = $this->Common->one_cond_row('settings', 'id', 10);
@@ -364,7 +366,7 @@
                                                         
                                                             <?php }else{
                                                            if($rating->educ != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= number_format($rating->educ, 3); ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -423,7 +425,7 @@
                                                         
                                                             <?php }else{
                                                            if($rating->trainings != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= number_format($rating->trainings,3); ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -473,7 +475,7 @@
                                                         
                                                             <?php }else{
                                                            if($rating->experience != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= number_format($rating->experience,0); ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -538,7 +540,7 @@
                                                         
                                                         <?php }else{
                                                            if($rating->performance != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= number_format($rating->performance, 3); ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -587,7 +589,7 @@
                                                         
                                                         <?php }else{
                                                            if($rating->ppstco != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= number_format($rating->ppstco, 3); ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>
@@ -635,7 +637,7 @@
                                                         
                                                         <?php }else{
                                                            if($rating->ppstpa != 0.00001){ ?>
-                                                                <?php if($open->status == 0){?>
+                                                                <?php if($score_hide->status == 0){?>
                                                                     <?= number_format($rating->ppstpa, 3); ?>
                                                                 <?php }else{?> 
                                                                     <span class="badge badge-info noti-icon-badge">Rated</span>

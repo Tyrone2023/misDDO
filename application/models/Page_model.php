@@ -207,6 +207,26 @@ class Page_model extends CI_Model
         return $result;
     }
 
+    /**
+     * Fetch a settings row by its name, creating it once if it is not there yet.
+     * Used by the rating sheets so a newly split switch never comes back NULL on
+     * a database that has not seen the settings page yet. Idempotent: the row is
+     * only ever inserted when missing, never updated, reset or removed here.
+     */
+    public function setting_row($name, $default_status = 0)
+    {
+        $row = $this->db->get_where('settings', array('settings_name' => $name), 1)->row();
+
+        if (empty($row)) {
+            $this->db->insert('settings', array(
+                'settings_name' => $name,
+                'status'        => (int) $default_status
+            ));
+            $row = $this->db->get_where('settings', array('settings_name' => $name), 1)->row();
+        }
+
+        return $row;
+    }
     public function get_row_by_id($table, $val)
     {
         $query = $this->db->select('hris_staff, hris_plantilla')
