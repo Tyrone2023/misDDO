@@ -943,7 +943,7 @@
                                 <li><a data-toggle="modal" data-id="<?= $this->session->id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
 
-                            <?php elseif ($this->session->position === 'sds') : ?>
+                            <?php elseif ($this->session->position === 'sds' || $this->session->position === 'asst_sds') : ?>
 
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
                                 <!--<li>-->
@@ -1073,12 +1073,14 @@
                                         <span>RQA Recommendation</span>
                                     </a>
                                 </li>
+                                <?php if ($this->session->position === 'sds') : ?>
                                 <li>
                                     <a href="<?= base_url(); ?>Pages/rqa_approval" class="waves-effect">
                                         <i class="mdi mdi-check-decagram"></i>
                                         <span>RQA Approval</span>
                                     </a>
                                 </li>
+                                <?php endif; ?>
                                 <li>
                                     <a href="<?= base_url(); ?>Pages/rqa_issuance" class="waves-effect">
                                         <i class="mdi mdi-file-document-outline"></i>
@@ -1094,6 +1096,14 @@
 
                                 <li class="menu-title">Administration</li>
                                 <li><a href="<?= base_url(); ?>users" class="waves-effect"><i class="ion ion-ios-person-add"></i><span>Manage Users</span></a></li>
+                                <?php if ($this->session->position === 'asst_sds') : ?>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/esignature" class="waves-effect">
+                                        <i class="mdi mdi-draw"></i>
+                                        <span>Electronic Signature</span>
+                                    </a>
+                                </li>
+                                <?php endif; ?>
                                 <!--<li><a href="<?= base_url(); ?>Page/empReports" class="waves-effect"><i class="mdi mdi-equalizer "></i><span> Reports </span></a></li>-->
                                 <!--<li><a href="<?= base_url(); ?>Page/systemFeedback" class="waves-effect"><i class="fas fa-box "></i><span>System Feedback Form </span></a></li>-->
                                 <!--<li><a href="<?= base_url(); ?>Page/systemHelp" class="waves-effect"><i class=" fas fa-marker"></i><span>Help </span></a></li>-->

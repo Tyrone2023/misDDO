@@ -134,7 +134,8 @@
                                             'School Base Child Protection' => 'sbcp',
                                             'Mathematics Coordinator' => 'mathcoor',
                                             'Plan Supervisor' => 'plansup',
-                                            'District Supervisor' => 'District Supervisor'
+                                            'District Supervisor' => 'District Supervisor',
+                                            'Assistant Superintendent' => 'asst_sds'
                                         );
                                         foreach ($position as $row => $key) {
                                         ?>

@@ -72,6 +72,10 @@ $positionGroups = [1 => 'Teaching', 2 => 'School Administration', 3 => 'Related 
     .secretariat-dashboard .sd-act .sd-pill { background:rgba(0,0,0,.07); border-radius:9px; font-size:10px; font-weight:800; padding:1px 6px; }
     .secretariat-dashboard .sd-act-primary .sd-pill { background:rgba(255,255,255,.25); }
     .secretariat-dashboard .sd-act-warn .sd-pill { background:#fdebd0; color:#95610b; }
+    .secretariat-dashboard .sd-vac-reports { align-items:center; background:#fafcff; border-top:1px solid #eef2f8; display:flex; flex-wrap:wrap; gap:7px; padding:11px 18px 13px; }
+    .secretariat-dashboard .sd-reports-label { color:#8494a8; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; width:100%; }
+    .secretariat-dashboard .sd-report { align-items:center; background:#fff; border:1px solid #dbe3ee; border-radius:9px; color:#3d5876; display:inline-flex; font-size:12px; font-weight:650; gap:5px; padding:6px 11px; transition:all .14s ease; }
+    .secretariat-dashboard .sd-report:hover { background:#f2f6fd; border-color:#b9cbe8; color:var(--sd-blue); text-decoration:none; }
     .secretariat-dashboard .sd-empty { color:var(--sd-muted); padding:52px 20px; text-align:center; }
     .secretariat-dashboard .sd-links { align-items:center; display:flex; flex-wrap:wrap; gap:10px 8px; padding:14px 18px; }
     .secretariat-dashboard .sd-links a { align-items:center; border:1px solid #e6ebf3; border-radius:9px; color:#425a79; display:inline-flex; font-size:12px; gap:6px; padding:7px 12px; transition:all .14s ease; }
@@ -178,6 +182,12 @@ $positionGroups = [1 => 'Teaching', 2 => 'School Administration', 3 => 'Related 
                                 <?php endif; ?>
                                 <!-- <a href="<?= base_url('secretariat/exams?job_id=' . $jobId); ?>" class="sd-act"><i class="mdi mdi-clipboard-text-outline"></i>Exam<?php if ((int) $vacancyExams['total'] > 0) : ?><span class="sd-pill"><?= (int) $vacancyExams['total']; ?></span><?php endif; ?></a> -->
                                 <a href="<?= base_url('secretariat/retention?job_id=' . $jobId); ?>" class="sd-act sd-act-warn"><i class="mdi mdi-file-restore-outline"></i>Retention<?php if ((int) $vacancyRetention['pending'] > 0) : ?><span class="sd-pill"><?= (int) $vacancyRetention['pending']; ?></span><?php endif; ?></a>
+                            </div>
+                            <div class="sd-vac-reports">
+                                <span class="sd-reports-label">Reports</span>
+                                <a href="<?= base_url('secretariat/reports/shortlist/' . $jobId); ?>" target="_blank" class="sd-report"><i class="mdi mdi-format-list-numbered"></i>Shortlist</a>
+                                <a href="<?= base_url('secretariat/reports/shortlist-contact/' . $jobId); ?>" target="_blank" class="sd-report"><i class="mdi mdi-phone-outline"></i>Shortlist with Contact No.</a>
+                                <a href="<?= base_url('secretariat/reports/ier/' . $jobId); ?>" target="_blank" class="sd-report"><i class="mdi mdi-clipboard-check-outline"></i>IER (Qualified)</a>
                             </div>
                         </div>
                     <?php endforeach; ?>

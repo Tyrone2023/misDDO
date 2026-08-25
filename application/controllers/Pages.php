@@ -6071,7 +6071,7 @@ public function car_rqa_promotion()
      */
     private function rqa_issuance_can_manage()
     {
-        return in_array((string) $this->session->position, ['sds', 'Human Resource Admin', 'asds', 'Secretariat'], true);
+        return in_array((string) $this->session->position, ['sds', 'asst_sds', 'Human Resource Admin', 'asds', 'Secretariat'], true);
     }
 
     /**
@@ -8108,7 +8108,7 @@ public function rqa_municipality_print_shsv2()
 
         // Same audience as the Retained Rating Request list, plus the evaluator
         // assigned to the application - ma() already rejected unassigned ones.
-        $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'Evaluator', 'rater', 'raters'];
+        $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'asst_sds', 'Evaluator', 'rater', 'raters'];
 
         if (!in_array((string) $this->session->userdata('position'), $allowed, true)) {
             return null;
@@ -11831,7 +11831,7 @@ public function rqa_municipality_print_shsv2()
      */
     public function jobVacancy_announcement_update()
     {
-        $allowed = array('Human Resource Admin', 'HR Staff', 'Super Admin', 'asds', 'sds');
+        $allowed = array('Human Resource Admin', 'HR Staff', 'Super Admin', 'asds', 'sds', 'asst_sds');
 
         if (!in_array($this->session->userdata('position'), $allowed, true)) {
             $this->session->set_flashdata('danger', 'You are not allowed to post job vacancy announcements.');
@@ -13511,7 +13511,7 @@ public function retention_release_scores()
         return;
     }
 
-    $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'Evaluator', 'rater', 'raters'];
+    $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'asst_sds', 'Evaluator', 'rater', 'raters'];
     $position = (string) $this->session->userdata('position');
 
     if (empty($this->session->id) || !in_array($position, $allowed, true)) {
@@ -14478,5 +14478,146 @@ public function ier_group_munv2()
 
 
 
+
+
+    /**
+     * The e-signature filename lives on the users row, so the column is added
+     * on first visit the same way the other optional columns are handled.
+     */
+    private function ensure_user_esig_column()
+    {
+        $this->Common->ensure_columns('users', array(
+            'esig' => 'VARCHAR(255) NULL DEFAULT NULL'
+        ));
+    }
+
+    /**
+     * Positions allowed to maintain their own e-signature from the sidebar.
+     */
+    private function esignature_can_manage()
+    {
+        return in_array((string) $this->session->position, ['asst_sds'], true);
+    }
+
+    /**
+     * Builds the upload filename from the user's name so the stored file is
+     * readable instead of a random hash, e.g. "esig_edong_tyrone_t.png".
+     */
+    private function esig_file_name($user, $extension)
+    {
+        $parts = array($user->lname ?? '', $user->fname ?? '', $user->mname ?? '');
+        $name  = trim(implode(' ', array_filter(array_map('trim', $parts), 'strlen')));
+
+        $name = strtolower($name);
+        $name = preg_replace('/[^a-z0-9]+/', '_', $name);
+        $name = trim((string) $name, '_');
+
+        if ($name === '') {
+            $name = 'user_' . (int) $this->session->id;
+        }
+
+        return 'esig_' . $name . '.' . $extension;
+    }
+
+    /**
+     * E-Signature page. Shows the signature currently on file and the form
+     * that replaces it.
+     */
+    public function esignature()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        if (!$this->esignature_can_manage()) {
+            show_error('You are not allowed to open this page.', 403);
+            return;
+        }
+
+        $page = "esignature";
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $this->ensure_user_esig_column();
+
+        $data = array(
+            'title' => 'Electronic Signature',
+            'user'  => $this->Common->one_cond_row('users', 'id', $this->session->id)
+        );
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
+     * Stores the uploaded signature in uploads/esig and keeps only the newest
+     * file for the user. The previous file is removed after a successful
+     * upload so a failed upload never loses the signature already on file.
+     */
+    public function esignature_upload()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        if (!$this->esignature_can_manage()) {
+            show_error('You are not allowed to upload a signature.', 403);
+            return;
+        }
+
+        $this->ensure_user_esig_column();
+
+        $user = $this->Common->one_cond_row('users', 'id', $this->session->id);
+
+        if (empty($user)) {
+            $this->session->set_flashdata('danger', 'Your account could not be found.');
+            redirect(base_url() . 'Pages/esignature');
+            return;
+        }
+
+        $extension = 'png';
+        if (!empty($_FILES['userfile']['name'])) {
+            $ext = strtolower(pathinfo($_FILES['userfile']['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, array('jpg', 'jpeg'), true)) {
+                $extension = $ext;
+            }
+        }
+
+        $config['upload_path']   = './uploads/esig/';
+        $config['allowed_types'] = 'png|jpg|jpeg';
+        $config['max_size']      = 2048;
+        $config['file_name']     = $this->esig_file_name($user, $extension);
+        $config['overwrite']     = FALSE;
+
+        $this->load->library('upload', $config);
+        $this->upload->initialize($config);
+
+        if (!$this->upload->do_upload('userfile')) {
+            $this->session->set_flashdata('danger', strip_tags($this->upload->display_errors()));
+            redirect(base_url() . 'Pages/esignature');
+            return;
+        }
+
+        $upload_data = $this->upload->data();
+        $filename    = $upload_data['file_name'];
+
+        if (!empty($user->esig) && $user->esig !== $filename) {
+            $old_file = './uploads/esig/' . basename($user->esig);
+            if (is_file($old_file)) {
+                unlink($old_file);
+            }
+        }
+
+        $this->db->where('id', $this->session->id);
+        $this->db->update('users', array('esig' => $filename));
+
+        $this->session->set_flashdata('success', 'Electronic signature saved as ' . $filename . '.');
+        redirect(base_url() . 'Pages/esignature');
+    }
 
 }

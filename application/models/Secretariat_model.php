@@ -3051,4 +3051,255 @@ class Secretariat_model extends CI_Model
 
         return $map;
     }
+
+    /**
+     * Indexes the recruitment reports lean on.
+     *
+     * hris_applications and hris_applicant store empEmail in different
+     * character sets (utf8mb4 vs latin1), so joining them on email can never
+     * use an index - the reports fetch each side separately instead. These
+     * keys make those flat lookups, and the IER's per-row training/experience
+     * totals, index seeks rather than full table scans.
+     *
+     * Idempotent: only missing keys are added, nothing is dropped or altered.
+     */
+    public function ensure_report_indexes(): void
+    {
+        $wanted = [
+            'hris_applicant'    => ['idx_email_id'   => '(`empEmail`, `id`)'],
+            'hris_applications' => ['idx_job_status' => '(`jobID`, `appStatus`, `dq`)'],
+            'hris_experience'   => ['idx_idnum_stat' => '(`id_number`, `stat`)'],
+            'hris_trainings'    => ['idx_idnum_stat' => '(`IDNumber`, `stat`)'],
+        ];
+
+        $existing = $this->db
+            ->select('TABLE_NAME, INDEX_NAME')
+            ->from('information_schema.STATISTICS')
+            ->where('TABLE_SCHEMA', $this->db->database)
+            ->where_in('TABLE_NAME', array_keys($wanted))
+            ->get()
+            ->result();
+
+        $have = [];
+        foreach ($existing as $row) {
+            $have[$row->TABLE_NAME . '.' . $row->INDEX_NAME] = true;
+        }
+
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = false;
+
+        foreach ($wanted as $table => $indexes) {
+            foreach ($indexes as $name => $columns) {
+                if (isset($have[$table . '.' . $name])) {
+                    continue;
+                }
+
+                $this->db->query("ALTER TABLE `{$table}` ADD KEY `{$name}` {$columns}");
+            }
+        }
+
+        $this->db->db_debug = $debug;
+    }
+
+    /**
+     * Latest hris_applicant row per email, with the hris_staff record as the
+     * fallback for in-service applicants, keyed by lower-cased email.
+     *
+     * Deliberately two flat lookups instead of joining hris_applications to
+     * hris_applicant: see ensure_report_indexes() for why that join is slow.
+     */
+    private function applicant_details(array $emails): array
+    {
+        $emails = array_values(array_unique(array_filter(array_map('trim', $emails), 'strlen')));
+
+        if (!$emails) {
+            return [];
+        }
+
+        $columns = 'FirstName, MiddleName, LastName, NameExtn, empMobile, contactNo, bd, csEligibility';
+        $people = [];
+
+        foreach (array_chunk($emails, 500) as $chunk) {
+            $rows = $this->db
+                ->select('id, record_no, empEmail, ' . $columns)
+                ->from('hris_applicant')
+                ->where_in('empEmail', $chunk)
+                ->order_by('id', 'ASC')
+                ->get()
+                ->result();
+
+            // Ascending id, so a re-registered applicant's newest row is the
+            // last one written and wins - same rule as the MAX(id) dedupe.
+            foreach ($rows as $row) {
+                $people[strtolower(trim($row->empEmail))] = $row;
+            }
+        }
+
+        $missing = [];
+        foreach ($emails as $email) {
+            if (!isset($people[strtolower($email)])) {
+                $missing[] = $email;
+            }
+        }
+
+        foreach (array_chunk($missing, 500) as $chunk) {
+            $rows = $this->db
+                ->select('IDNumber, ' . $columns)
+                ->from('hris_staff')
+                ->where_in('IDNumber', $chunk)
+                ->get()
+                ->result();
+
+            foreach ($rows as $row) {
+                $row->id = $row->IDNumber;
+                $row->record_no = $row->IDNumber;
+                $people[strtolower(trim($row->IDNumber))] = $row;
+            }
+        }
+
+        return $people;
+    }
+
+    /**
+     * Shortlist contact column: the applicant's own empMobile alongside the
+     * contactNo on file, printed as "empMobile / contactNo".
+     *
+     * Either field can be blank, hold the same number as the other, or already
+     * hold two numbers separated by a slash, so the parts are split, trimmed
+     * and de-duplicated before being joined back up.
+     */
+    private function merge_contact_numbers(string ...$fields): string
+    {
+        $numbers = [];
+
+        foreach ($fields as $field) {
+            foreach (preg_split('#[/,]#', $field) as $part) {
+                $part = trim($part);
+
+                if ($part === '') {
+                    continue;
+                }
+
+                // Keyed on digits alone, so "0963 975 6150" and "09639756150"
+                // are not printed as two different numbers.
+                $digits = preg_replace('/\D+/', '', $part);
+                $numbers[$digits !== '' ? $digits : strtolower($part)] = $part;
+            }
+        }
+
+        return implode(' / ', $numbers);
+    }
+
+    private function sort_by_name(array $rows): array
+    {
+        usort($rows, static function ($a, $b) {
+            return strcasecmp(
+                $a->LastName . ' ' . $a->FirstName,
+                $b->LastName . ' ' . $b->FirstName
+            );
+        });
+
+        return $rows;
+    }
+
+    /**
+     * Shortlist rows for one assigned vacancy.
+     *
+     * Everything that moved past intake: any appStatus other than
+     * 'Application Submitted', and never a disqualified row (dq = 2).
+     */
+    public function shortlist_applicants(int $userId, int $jobId): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $applications = $this->db
+            ->select('appID, empEmail, appStatus')
+            ->from('hris_applications')
+            ->where('jobID', $jobId)
+            ->where('appStatus !=', 'Application Submitted')
+            ->where('dq !=', 2)
+            ->get()
+            ->result();
+
+        if (!$applications) {
+            return [];
+        }
+
+        $people = $this->applicant_details(array_column($applications, 'empEmail'));
+        $rows = [];
+
+        foreach ($applications as $application) {
+            $person = $people[strtolower(trim($application->empEmail))] ?? null;
+
+            if (!$person) {
+                continue;
+            }
+
+            $rows[] = (object) [
+                'appID'      => (int) $application->appID,
+                'appStatus'  => (string) $application->appStatus,
+                'record_no'  => (string) $person->record_no,
+                'FirstName'  => (string) $person->FirstName,
+                'MiddleName' => (string) $person->MiddleName,
+                'LastName'   => (string) $person->LastName,
+                'NameExtn'   => (string) $person->NameExtn,
+                'contact_no' => $this->merge_contact_numbers(
+                    (string) $person->empMobile,
+                    (string) $person->contactNo
+                ),
+            ];
+        }
+
+        return $this->sort_by_name($rows);
+    }
+
+    /**
+     * Qualified (dq = 1) applicants for one assigned vacancy, shaped for the
+     * shared IER sheet at views/pages/ha_all_by_jp_v2.php - that view reads
+     * jobID, code, id, bachelor, csEligibility and dq off each row.
+     */
+    public function ier_applicants(int $userId, int $jobId): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $applications = $this->db
+            ->select('appID, empEmail, jobID, dq')
+            ->from('hris_applications')
+            ->where('jobID', $jobId)
+            ->where('dq', 1)
+            ->get()
+            ->result();
+
+        if (!$applications) {
+            return [];
+        }
+
+        $people = $this->applicant_details(array_column($applications, 'empEmail'));
+        $rows = [];
+
+        foreach ($applications as $application) {
+            $person = $people[strtolower(trim($application->empEmail))] ?? null;
+
+            if (!$person) {
+                continue;
+            }
+
+            $rows[] = (object) [
+                'jobID'         => (int) $application->jobID,
+                'dq'            => (int) $application->dq,
+                'code'          => (string) $person->record_no,
+                'id'            => $person->id,
+                'bachelor'      => (string) $person->bd,
+                'csEligibility' => (string) $person->csEligibility,
+                'FirstName'     => (string) $person->FirstName,
+                'LastName'      => (string) $person->LastName,
+            ];
+        }
+
+        return $this->sort_by_name($rows);
+    }
 }

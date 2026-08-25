@@ -82,6 +82,11 @@ $route['secretariat/exams/(:num)/omr/scan'] = 'SecretariatExam/omr_scan/$1';
 $route['secretariat/exams/(:num)/omr/submit'] = 'SecretariatExam/omr_submit/$1';
 $route['secretariat/exams/(:num)/delete'] = 'SecretariatExam/delete/$1';
 
+// Printable reports for a vacancy assigned to the Secretariat.
+$route['secretariat/reports/shortlist/(:num)'] = 'SecretariatReports/shortlist/$1';
+$route['secretariat/reports/shortlist-contact/(:num)'] = 'SecretariatReports/shortlist_contact/$1';
+$route['secretariat/reports/ier/(:num)'] = 'SecretariatReports/ier/$1';
+
 // The applicant's side of the same exams, reached from the Manage column of
 // Pages/ja. (:num) is the application id for the gate, the attempt id once one
 // has been opened.
