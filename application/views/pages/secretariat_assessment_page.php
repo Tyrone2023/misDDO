@@ -40,33 +40,35 @@ $page_h = static function ($value) {
     <title><?= $page_h($title ?? 'Applicant Document'); ?></title>
 
     <style>
-        @page { size: A4; margin: 12mm 0; }
+        @page { size: A4; margin: 0; }
 
-        body { background: #eef1f6; margin: 0; padding: 0 0 40px; }
+        * { box-sizing: border-box; }
+        html { background: #e9eef5; }
+        body { background:linear-gradient(180deg,#e7edf5 0,#f2f5f9 380px); margin:0; min-height:100vh; padding:0 0 42px; }
 
         /* The sheet is a page on screen too, so what you edit is what prints. */
-        .ad-sheet { background: #fff; box-shadow: 0 8px 30px rgba(24, 49, 83, .13); margin: 22px auto; padding: 14mm 15mm; width: 210mm; }
+        .ad-sheet { background:#fff; box-shadow:0 14px 38px rgba(24,49,83,.16); display:flex; flex-direction:column; margin:24px auto; min-height:297mm; overflow:visible; padding:9mm 17.8mm 9mm; position:relative; width:210mm; }
         .ad-head { text-align: center; }
-        .ad-head img.ad-seal { height: 78px; width: 78px; }
-        .ad-head p { line-height: 1.25; margin: 4px 0 0; }
-        .ad-head .rp { font-size: 13pt; }
-        .ad-head .de { font-size: 19pt; }
-        .ad-head .r { display: block; font-size: 10pt; letter-spacing: .04em; }
-        .ad-head .ad-division { display: block; font-size: 11pt; font-weight: 700; letter-spacing: .03em; }
-        .ad-rule { background: #000; height: 2px; margin: 6px 0 18px; width: 100%; }
-        .ad-body { min-height: 140mm; }
+        .ad-head img.ad-seal { height:14mm; width:14mm; }
+        .ad-head p { line-height:1.02; margin:.6mm 0 0; }
+        .ad-head .rp { font-size:10.5pt; }
+        .ad-head .de { font-size:16pt; font-weight:400; }
+        .ad-head .r { display:block; font-family:"Bookman Old Style",Bookman,"Times New Roman",serif; font-size:9pt; letter-spacing:.03em; }
+        .ad-head .ad-division { display:block; font-family:"Bookman Old Style",Bookman,"Times New Roman",serif; font-size:9.5pt; font-weight:700; letter-spacing:.02em; }
+        .ad-rule { background:#111; height:2px; margin:2mm 0 4mm; width:100%; }
+        .ad-body { flex:1 0 auto; }
 
-        .ad-foot { margin-top: 26px; }
+        .ad-foot { margin-top:8mm; }
         .ad-foot img { display: block; width: 100%; }
         .ad-refbox { border-collapse: collapse; float: right; font-family: "Calibri", Arial, sans-serif; font-size: 9pt; margin-top: 6px; }
         .ad-refbox td { border: 1px solid #000; padding: 2px 7px; white-space: nowrap; }
 
         /* Toolbar: screen only. */
-        .ad-bar { align-items: center; background: #fff; border-bottom: 1px solid #dfe5ee; box-shadow: 0 2px 12px rgba(24, 49, 83, .07); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; padding: 11px 20px; position: sticky; top: 0; z-index: 20; }
-        .ad-bar-name { color: #183153; font-family: "Segoe UI", Arial, sans-serif; font-size: 14px; font-weight: 800; }
+        .ad-bar { align-items:center; backdrop-filter:blur(12px); background:rgba(255,255,255,.96); border-bottom:1px solid #dbe3ee; box-shadow:0 4px 18px rgba(24,49,83,.08); display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; padding:12px max(20px,calc((100vw - 1180px)/2)); position:sticky; top:0; z-index:20; }
+        .ad-bar-name { color: #183153; font-family: "Segoe UI", Arial, sans-serif; font-size: 15px; font-weight: 800; }
         .ad-bar-sub { color: #6b7a90; font-family: "Segoe UI", Arial, sans-serif; font-size: 12px; margin-top: 1px; }
         .ad-bar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-        .ad-btn { align-items: center; border: 1px solid #d5dde8; border-radius: 8px; background: #fff; color: #3d5876; cursor: pointer; display: inline-flex; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; font-weight: 600; gap: 6px; padding: 8px 14px; text-decoration: none; }
+        .ad-btn { align-items:center; border:1px solid #ced9e7; border-radius:8px; background:#fff; box-shadow:0 1px 2px rgba(24,49,83,.04); color:#334e6e; cursor:pointer; display:inline-flex; font-family:"Segoe UI",Arial,sans-serif; font-size:13px; font-weight:700; gap:6px; min-height:38px; padding:8px 14px; text-decoration:none; }
         .ad-btn:hover { background: #f2f6fd; border-color: #b9cbe8; color: #2457d6; }
         .ad-btn-primary { background: #2457d6; border-color: #2457d6; color: #fff; }
         .ad-btn-primary:hover { background: #1c48b8; border-color: #1c48b8; color: #fff; }
@@ -79,20 +81,24 @@ $page_h = static function ($value) {
         .ad-pill-draft { background: #fff3d8; color: #8a5b00; }
         .ad-pill-saved { background: #e8efff; color: #2457d6; }
         .ad-pill-released { background: #e2f6eb; color: #197447; }
-        .ad-hint { background: #eef6ff; border: 1px solid #d9eaff; border-radius: 9px; color: #31577d; font-family: "Segoe UI", Arial, sans-serif; font-size: 12px; margin: 14px auto 0; max-width: 210mm; padding: 10px 14px; }
+        .ad-hint { background:#f7fbff; border:1px solid #d6e6f7; border-radius:9px; color:#31577d; font-family:"Segoe UI",Arial,sans-serif; font-size:12px; margin:14px auto 0; max-width:210mm; padding:10px 14px; }
         .ad-flash { border-radius: 9px; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; margin: 12px auto 0; max-width: 210mm; padding: 10px 14px; }
         .ad-flash-ok { background: #e2f6eb; border: 1px solid #bfe6d1; color: #197447; }
         .ad-flash-bad { background: #fdeaea; border: 1px solid #f2c5c5; color: #a52c2c; }
 
         @media (max-width: 900px) {
-            .ad-sheet { padding: 16px; width: auto; }
+            body { background:#fff; }
+            .ad-bar { padding:10px 12px; }
+            .ad-bar-actions { gap:6px; }
+            .ad-btn { padding:7px 10px; }
+            .ad-sheet { box-shadow:none; margin:0; min-height:0; padding:18px 42px 24px 18px; width:100%; }
             .ad-hint, .ad-flash { max-width: none; }
         }
 
         @media print {
-            html, body { background: #fff; padding: 0; width: 210mm; }
+            html, body { background:#fff; height:auto; padding:0; width:210mm; }
             .ad-bar, .ad-hint, .ad-flash { display: none !important; }
-            .ad-sheet { box-shadow: none; margin: 0; padding: 0; width: 100%; }
+            .ad-sheet { box-shadow:none; margin:0; min-height:297mm; padding:9mm 17.8mm; width:210mm; }
         }
     </style>
 </head>

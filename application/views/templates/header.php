@@ -945,7 +945,7 @@
                                 <li><a data-toggle="modal" data-id="<?= $this->session->id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
 
-                            <?php elseif ($this->session->position === 'sds' || $this->session->position === 'asst_sds') : ?>
+                            <?php elseif (in_array($this->session->position, array('sds', 'asst_sds', 'HRMO'), true)) : ?>
 
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
                                 <!--<li>-->
@@ -1098,7 +1098,7 @@
 
                                 <li class="menu-title">Administration</li>
                                 <li><a href="<?= base_url(); ?>users" class="waves-effect"><i class="ion ion-ios-person-add"></i><span>Manage Users</span></a></li>
-                                <?php if ($this->session->position === 'asst_sds') : ?>
+                                <?php if (in_array($this->session->position, array('asst_sds', 'HRMO'), true)) : ?>
                                 <li>
                                     <a href="<?= base_url(); ?>Pages/esignature" class="waves-effect">
                                         <i class="mdi mdi-draw"></i>

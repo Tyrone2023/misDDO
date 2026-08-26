@@ -3668,21 +3668,12 @@ class Secretariat_model extends CI_Model
                 ->row()
                 ->total ?? 0);
 
-            $titles = [];
-            foreach ($this->db
-                ->select('trainingTitle')
-                ->where('stat', 1)
-                ->where('IDNumber', $applicantId)
-                ->get('hris_trainings')
-                ->result() as $row) {
-                $title = trim((string) $row->trainingTitle);
-                if ($title !== '') {
-                    $titles[] = $title;
-                }
-            }
-
-            $training = trim(($hours > 0 ? rtrim(rtrim(number_format($hours, 2, '.', ''), '0'), '.') . ' hours' : '')
-                . ($titles !== [] ? ($hours > 0 ? ' - ' : '') . implode('; ', $titles) : ''));
+            // Annex E/F is a one-page qualification summary. Listing every
+            // seminar title can make one table row several pages tall, while
+            // the source workbook asks only for the applicant's qualification.
+            $training = $hours > 0
+                ? rtrim(rtrim(number_format($hours, 2, '.', ''), '0'), '.') . ' hours of training'
+                : '';
 
             $span = $this->db
                 ->select('SUM(ny) AS years, SUM(nm) AS months', false)
@@ -3734,11 +3725,19 @@ class Secretariat_model extends CI_Model
             return $part !== '' && !in_array(strtoupper(str_replace([' ', '.', '/'], '', $part)), ['NA', 'NONE', '-', 'X'], true);
         };
 
+        // Older applicant rows can contain the checkbox value "1" in the
+        // village field. It is not an address component and used to print as
+        // a line by itself on Annex E/F.
+        $resVillage = trim((string) ($ctx->resVillage ?? ''));
+        if ($resVillage === '1') {
+            $resVillage = '';
+        }
+
         $address = array_values(array_filter([
             trim(implode(' ', array_filter([
                 (string) ($ctx->resHouseNo ?? ''),
                 (string) ($ctx->resStreet ?? ''),
-                (string) ($ctx->resVillage ?? ''),
+                $resVillage,
             ], $realPart))),
             trim(implode(', ', array_filter([
                 (string) ($ctx->resBarangay ?? ''),
@@ -3912,6 +3911,25 @@ class Secretariat_model extends CI_Model
             $stored = json_decode((string) $row->body, true);
             if (is_array($stored)) {
                 $doc = array_merge($defaults, $stored);
+
+                // Clean the same legacy village flag from documents saved
+                // before the address defaults were corrected. This changes
+                // only a standalone line equal to "1"; real house numbers
+                // and other address text are left intact.
+                if (trim((string) ($ctx->resVillage ?? '')) === '1') {
+                    if ($docType === 'assessment' && trim((string) ($doc['address1'] ?? '')) === '1') {
+                        $doc['address1'] = '';
+                    }
+
+                    if ($docType === 'letter') {
+                        $lines = preg_split('/\r\n|\r|\n/', (string) ($doc['address'] ?? ''));
+                        $lines = array_values(array_filter($lines, static function ($line) {
+                            return trim((string) $line) !== '1';
+                        }));
+                        $doc['address'] = implode("\n", $lines);
+                    }
+                }
+
                 $saved = true;
             }
         }

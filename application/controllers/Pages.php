@@ -6227,7 +6227,7 @@ public function car_rqa_promotion()
      */
     private function rqa_issuance_can_manage()
     {
-        return in_array((string) $this->session->position, ['sds', 'asst_sds', 'Human Resource Admin', 'asds', 'Secretariat'], true);
+        return in_array((string) $this->session->position, ['sds', 'asst_sds', 'HRMO', 'Human Resource Admin', 'asds', 'Secretariat'], true);
     }
 
     /**
@@ -8092,6 +8092,18 @@ public function rqa_municipality_print_shsv2()
         return $row;
     }
 
+    /**
+     * Roles that share ASDS-level controls on the applicant rating page.
+     */
+    private function rating_page_asds_equivalent()
+    {
+        return in_array(
+            (string) $this->session->userdata('position'),
+            ['asds', 'HRMO', 'asst_sds', 'sds'],
+            true
+        );
+    }
+
     // renren new code please don't touch
 
     public function ma($param = null)
@@ -8142,6 +8154,7 @@ public function rqa_municipality_print_shsv2()
         $data['staff'] = $applicant;
         $data['user'] = $this->Common->one_cond_row('users', 'user_id', $applicant->id);
         $data['online_demo_enabled'] = $this->online_demo_enabled() && $this->online_demo_allowed_for_job($jobvacancy);
+        $data['asds_equivalent_access'] = $this->rating_page_asds_equivalent();
 
         // Consolidate duplicate ratings and auto-mark as Rated when complete
         $appIdForRating = $this->uri->segment(6);
@@ -8268,7 +8281,7 @@ public function rqa_municipality_print_shsv2()
 
         $staffRoles = [
             'human resource admin', 'hr staff', 'super admin', 'admin',
-            'asds', 'asst_sds', 'sds', 'secretariat',
+            'asds', 'asst_sds', 'hrmo', 'sds', 'secretariat',
         ];
         if (in_array($position, $staffRoles, true)) {
             return true;
@@ -8396,7 +8409,7 @@ public function rqa_municipality_print_shsv2()
 
         // Same audience as the Retained Rating Request list, plus the evaluator
         // assigned to the application - ma() already rejected unassigned ones.
-        $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'asst_sds', 'Evaluator', 'rater', 'raters'];
+        $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'asst_sds', 'HRMO', 'Evaluator', 'rater', 'raters'];
 
         if (!in_array((string) $this->session->userdata('position'), $allowed, true)) {
             return null;
@@ -8785,7 +8798,7 @@ public function rqa_municipality_print_shsv2()
     {
         $this->Reg->educ_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        if ($this->session->position == 'asds') {
+        if ($this->rating_page_asds_equivalent()) {
             $this->redirect_back('#efile', base_url() . 'pages/ma/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
         } else {
             $this->redirect_back('#efile', base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
@@ -8796,7 +8809,7 @@ public function rqa_municipality_print_shsv2()
     {
         $this->Reg->educ_update_staff();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        if ($this->session->position == 'asds') {
+        if ($this->rating_page_asds_equivalent()) {
             $this->redirect_back('#efile', base_url() . 'pages/ma_staff/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
         } else {
             $this->redirect_back('#efile', base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id') . '#efile');
@@ -8808,7 +8821,7 @@ public function rqa_municipality_print_shsv2()
         $this->Reg->ai_update();
         $this->Reg->ai_sex_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        if ($this->session->position == 'asds') {
+        if ($this->rating_page_asds_equivalent()) {
             $this->redirect_back('', base_url() . 'pages/ma/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
         } else {
             $this->redirect_back('', base_url() . 'pages/ma/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
@@ -8820,7 +8833,7 @@ public function rqa_municipality_print_shsv2()
         $this->Reg->ai_update_staff();
         $this->Reg->ai_sex_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
-        if ($this->session->position == 'asds') {
+        if ($this->rating_page_asds_equivalent()) {
             $this->redirect_back('', base_url() . 'pages/ma_staff/' . $this->input->post('id') . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
         } else {
             $this->redirect_back('', base_url() . 'pages/ma_staff/' . $this->session->c_id . '/' . $this->input->post('jobID') . '/' . $this->input->post('school_id'));
@@ -11889,7 +11902,7 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_eval('eval_id2');
             $this->Reg->ap_track_apply('The demo rating has been encoded.', $this->input->post('app_id'));
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            if ($this->session->position == 'asds') {
+            if ($this->rating_page_asds_equivalent()) {
                 redirect(base_url() . 'pages/applicant_app/' . $this->input->post('record_no'));
             }
             redirect(base_url() . 'pages/evaluator_applicant/' . $this->uri->segment(4));
@@ -11921,7 +11934,7 @@ public function rqa_municipality_print_shsv2()
             $this->Reg->update_eval('eval_id3');
             $this->Reg->ap_track_apply("The teacher's reflection rating has been encoded.", $this->input->post('app_id'));
             $this->session->set_flashdata('success', 'Successfuly Saved');
-            if ($this->session->position == 'asds') {
+            if ($this->rating_page_asds_equivalent()) {
                 redirect(base_url() . 'pages/applicant_app/' . $this->input->post('record_no'));
             }
             redirect(base_url() . 'pages/evaluator_applicant/' . $this->uri->segment(4));
@@ -12127,7 +12140,7 @@ public function rqa_municipality_print_shsv2()
      */
     public function jobVacancy_announcement_update()
     {
-        $allowed = array('Human Resource Admin', 'HR Staff', 'Super Admin', 'asds', 'sds', 'asst_sds');
+        $allowed = array('Human Resource Admin', 'HR Staff', 'Super Admin', 'asds', 'sds', 'asst_sds', 'HRMO');
 
         if (!in_array($this->session->userdata('position'), $allowed, true)) {
             $this->session->set_flashdata('danger', 'You are not allowed to post job vacancy announcements.');
@@ -13807,7 +13820,7 @@ public function retention_release_scores()
         return;
     }
 
-    $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'asst_sds', 'Evaluator', 'rater', 'raters'];
+    $allowed = ['Human Resource Admin', 'HR Staff', 'Super Admin', 'Admin', 'asds', 'sds', 'asst_sds', 'HRMO', 'Evaluator', 'rater', 'raters'];
     $position = (string) $this->session->userdata('position');
 
     if (empty($this->session->id) || !in_array($position, $allowed, true)) {
@@ -14792,7 +14805,7 @@ public function ier_group_munv2()
      */
     private function esignature_can_manage()
     {
-        return in_array((string) $this->session->position, ['asst_sds'], true);
+        return in_array((string) $this->session->position, ['asst_sds', 'HRMO'], true);
     }
 
     /**

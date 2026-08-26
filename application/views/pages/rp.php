@@ -2,6 +2,9 @@
             <!-- Start Page Content here -->
             <!-- ============================================================== -->
 <?php
+    $asds_equivalent_access = !empty($asds_equivalent_access)
+        || in_array((string) $this->session->position, ['asds', 'HRMO', 'asst_sds', 'sds'], true);
+
     // Normalize the incoming applicant id (handles spaces and encoded chars)
     $applicantIdRaw   = $this->uri->segment(3);
     $applicantId      = trim(urldecode((string)$applicantIdRaw));
@@ -173,7 +176,7 @@
                         <div class="row">
                             <div class="col-12">
                                 <div class="page-title-box">
-                                    <?php //if($this->session->position == 'asds'){ ?>
+                                    <?php //if($asds_equivalent_access){ ?>
 
 
 
@@ -519,7 +522,7 @@
 
 
                                                     <tr class="bg-warning text-white">
-                                                        <th colspan="2" class="text-center" id="efile">EDUCATION (10)<?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } } ?> <?php if($this->session->position == 'asds'){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"><?php } ?></th>
+                                                        <th colspan="2" class="text-center" id="efile">EDUCATION (10)<?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } } ?> <?php if($asds_equivalent_access){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"><?php } ?></th>
                                                     </tr>
 
                                                     <tr id="tsc">
@@ -632,7 +635,7 @@
                                                         <th class="text-right">Rating</th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
                                                           
-                                                        <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){?>
+                                                        <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
                                                                                             
                                                             <?php if($hasRatingScore($rating->education)){echo $rating->education; } ?>
@@ -640,8 +643,8 @@
                                                             <a href="#" data-toggle="modal" data-target=".educrate" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->education)){echo $rating->education; }  ?>
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->education)){echo $rating->education; }  ?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $asds_equivalent_access || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                             <a href="#" data-toggle="modal" data-target=".educrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->education)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".educrate" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php }} ?>
@@ -734,7 +737,7 @@
                                                     <tr>
                                                         <th class="text-right">Rating</th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
-                                                        <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){?>
+                                                        <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
                                                                                             
                                                             <?php if($hasRatingScore($rating->training)){echo $rating->training; } ?>
@@ -742,8 +745,8 @@
                                                             <a href="#" data-toggle="modal" data-target=".certqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->training)){echo $rating->training; }  ?>
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->training)){echo $rating->training; }  ?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $asds_equivalent_access || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                             <a href="#" data-toggle="modal" data-target=".certrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->training)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".certqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php }} ?>
@@ -795,7 +798,7 @@
                                                         <th class="text-right">Rating</th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
 
-                                                          <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){?>
+                                                          <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
                                                                                             
                                                             <?php if($hasRatingScore($rating->experience)){echo $rating->experience; } ?>
@@ -803,8 +806,8 @@
                                                             <a href="#" data-toggle="modal" data-target=".weqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                         <?php }else{ ?>
 
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->experience)){echo $rating->experience; }  ?>
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->experience)){echo $rating->experience; }  ?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $asds_equivalent_access || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                             <a href="#" data-toggle="modal" data-target=".werating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->experience)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <a href="#" data-toggle="modal" data-target=".weqs" class="btn btn-sm btn-primary">Applicants QS</a>
                                                             <?php }} ?>
@@ -851,7 +854,7 @@
                                                     <tr>
                                                         <th class="text-right">Rating </th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
-                                                          <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){?>
+                                                          <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
 
                                                             <?php if($hasRatingScore($rating->let_rating)){echo $rating->let_rating; } ?>
@@ -859,8 +862,8 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->let_rating)){echo $rating->let_rating; } ?>
-                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'rater' || $this->session->position == 'Secretariat'){if($hasRatingScore($rating->let_rating)){echo $rating->let_rating; } ?>
+                                                            <?php if($this->session->position == 'Evaluator' || $rating->eval_id1 == $this->session->id || $asds_equivalent_access || $this->session->position == 'Secretariat' || !empty($field_evaluator_bypass)){?>
                                                             <a href="#" data-toggle="modal" data-target=".lrrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->let_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php }} ?>
                                                             
@@ -909,11 +912,11 @@
                                                             $renderRatingScore($rating->tr_rating, $hideDemoTrScores, $isApplicantPosition);
                                                         } ?>
 
-                                                        <?php if($this->session->position == 'asds' || $this->session->position == 'rater' || $this->session->position == 'Secretariat' || $this->session->position == 'Evaluator'){ 
+                                                        <?php if($asds_equivalent_access || $this->session->position == 'rater' || $this->session->position == 'Secretariat' || $this->session->position == 'Evaluator'){ 
                                                         if(!empty($rating)){
                                                         if($rating->eval_id3 == 0){?>
                                                             <a href="#" data-toggle="modal" data-target=".writtenrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->tr_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
-                                                        <?php }elseif($this->session->id == $rating->eval_id3 || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){ ?>
+                                                        <?php }elseif($this->session->id == $rating->eval_id3 || $asds_equivalent_access || $this->session->position == 'Secretariat'){ ?>
                                                             <a href="#" data-toggle="modal" data-target=".writtenrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->tr_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
 
                                                         <?php }}} ?>
@@ -923,7 +926,7 @@
                                                     <tr>
                                                         <th class="text-right">DEMO</th>
                                                         <td class="text-left" style="background: #9ddcf4; color:#464545">
-                                                        <!-- <?php if($this->session->position == 'asds'){ ?><?= ($rating->demo_rating != 0.00001) ? $rating->demo_rating : '' ; ?><?php } ?> -->
+                                                        <!-- <?php if($asds_equivalent_access){ ?><?= ($rating->demo_rating != 0.00001) ? $rating->demo_rating : '' ; ?><?php } ?> -->
                                                         <?php
                                                             if(!empty($rating)){
                                                                 $renderRatingScore($rating->demo_rating, $hideDemoTrScores, $isApplicantPosition);
@@ -933,11 +936,11 @@
                                                         
 
                                                         <?php 
-                                                        if($this->session->position == 'asds'  || $this->session->position == 'rater' || $this->session->position == 'Secretariat' || $this->session->position == 'Evaluator'){  
+                                                        if($asds_equivalent_access  || $this->session->position == 'rater' || $this->session->position == 'Secretariat' || $this->session->position == 'Evaluator'){  
                                                         if(!empty($rating)){
-                                                        if($rating->eval_id2 == 0 || $this->session->position == 'asds' || $this->session->position == 'Secretariat' || $demo_tr_hide->status == 0 || $this->session->position == 'Evaluator'){?>
+                                                        if($rating->eval_id2 == 0 || $asds_equivalent_access || $this->session->position == 'Secretariat' || $demo_tr_hide->status == 0 || $this->session->position == 'Evaluator'){?>
                                                             <a href="#" data-toggle="modal" data-target=".demo_rating_ic"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->demo_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
-                                                        <?php }elseif($this->session->id == $rating->eval_id2 || $this->session->position == 'asds' || $this->session->position == 'Secretariat'){ ?>
+                                                        <?php }elseif($this->session->id == $rating->eval_id2 || $asds_equivalent_access || $this->session->position == 'Secretariat'){ ?>
                                                             <a href="#" data-toggle="modal" data-target=".demo_rating_ic"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($hasRatingScore($rating->demo_rating)){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                         <?php }}} ?>
 </td>
@@ -975,7 +978,7 @@
 
 
                                                                    
-                                                                <?php if($this->session->position === 'Human Resource Admin' || $this->session->position === 'HR Staff' || $this->session->position === 'Super Admin' || $this->session->position === 'asds' || $this->session->position === 'Secretariat'){?>
+                                                                <?php if($this->session->position === 'Human Resource Admin' || $this->session->position === 'HR Staff' || $this->session->position === 'Super Admin' || $asds_equivalent_access || $this->session->position === 'Secretariat'){?>
                                                                     
                                                                     
 
@@ -985,7 +988,7 @@
                                                                     <?php if($aa->appStatus == "Endorsed for Rating" && $coreRatingComplete){ ?><a onclick="return confirm('Are you sure?')" class="btn btn-purple btn-sm" href="<?= base_url(); ?>Pages/rated/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $this->uri->segment(5); ?>/<?= $this->uri->segment(6); ?>/ma">Rated</a><?php } ?>
                                                                 <?php }} ?>
 
-                                                                <?php if($this->session->position==='Human Resource Admin' || $this->session->position==='HR Staff' || $this->session->position==='Super Admin' || $this->session->position==='asds' || $this->session->position==='doceval' || $this->session->position==='raters' || $this->session->position==='Secretariat') { ?>
+                                                                <?php if($this->session->position==='Human Resource Admin' || $this->session->position==='HR Staff' || $this->session->position==='Super Admin' || $asds_equivalent_access || $this->session->position==='doceval' || $this->session->position==='raters' || $this->session->position==='Secretariat') { ?>
                                                                 <?php if($aa->appStatus == "Validated" && $aa->dq == 0){ ?>
                                                                     <a href="#"  data-toggle="modal" data-target=".dq" class="btn btn-info btn-sm">Remarks</a>
                                                                     <a href="#"  data-toggle="modal" data-target=".remarks" class="btn btn-warning btn-sm">Remarks (Multiple application)</a>
@@ -1008,7 +1011,7 @@
                                                                     <?php if($aa->appStatus == "Rated"){ ?><a class="btn btn-info btn-sm" href="<?= base_url(); ?>Pages/confirmation/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>">Confirmation</a><?php } ?>
                                                                 <?php } ?>
 
-                                                                <?php if($this->session->position === 'Human Resource Admin' || $this->session->position === 'HR Staff' || $this->session->position === 'Super Admin' || $this->session->position === 'asds' || $this->session->position === 'doceval'){?>
+                                                                <?php if($this->session->position === 'Human Resource Admin' || $this->session->position === 'HR Staff' || $this->session->position === 'Super Admin' || $asds_equivalent_access || $this->session->position === 'doceval'){?>
 
                                                                  <?php // if($app_multi->num_rows() >= 2){ ?>
                                                                     <!-- <a class="btn btn-warning btn-sm" onclick='return confirm("Are you sure you want to endorse all applications of this applicant?")' href="<?= base_url(); ?>Pages/endorse_all_app/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $this->uri->segment(5); ?>/<?= $this->uri->segment(2); ?>">Endorse for Rating (All applications of this applicant)</a> -->

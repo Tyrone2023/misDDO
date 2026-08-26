@@ -21,3 +21,15 @@ ERROR - 2026-08-26 10:02:45 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-26 10:02:58 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-26 10:03:05 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-08-26 10:03:18 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-26 13:07:11 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-26 13:07:40 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-26 13:07:40 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-26 13:07:43 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-08-26 19:17:19 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-26 19:17:19 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-26 19:17:28 --> Severity: Warning --> Undefined property: stdClass::$id /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/rp_reg_none.php 2783
+ERROR - 2026-08-26 19:20:01 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-26 19:20:01 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-26 19:22:35 --> Query error: Column 'username' cannot be null - Invalid query: INSERT INTO `mis_logs` (`username`, `used_pass`, `transDate`, `logStat`, `logType`, `acctLevel`, `hostName`, `ipaddress`) VALUES (NULL, '', '2026-08-26 07:22:35 pm', 'success', 'logout', NULL, '192.168.254.102', '::1')
+ERROR - 2026-08-26 19:22:47 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-08-26 19:22:47 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18

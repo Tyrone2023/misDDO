@@ -3,6 +3,9 @@
             <!-- ============================================================== -->
              
                 <?php 
+                    $asds_equivalent_access = !empty($asds_equivalent_access)
+                        || in_array((string) $this->session->position, ['asds', 'HRMO', 'asst_sds', 'sds'], true);
+
                     $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID',$this->uri->segment(4));
                     $history = $this->Common->one_cond('hris_applications','empEmail',$staff->empEmail); 
 
@@ -82,7 +85,7 @@
                         <div class="row">
                             <div class="col-12">
                                 <div class="page-title-box">
-                                    <?php if($this->session->position == 'asds'){?>
+                                    <?php if($asds_equivalent_access){?>
                                     <?php if(!empty($rating_request_allowed)){?>
                                     <a target="_blank" href="<?= base_url(); ?>Pages/request_to_rr/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $aa->appID?>" class="btn btn-info">Request to Retain Rating</a>
                                     <?php } ?>
@@ -215,7 +218,7 @@
                                                         </td>
                                                     </tr>
                                                     <?php if(!empty($rating)){ ?>
-                                                    <?php //if($open->status == 0){if($this->session->position == "reg" || $this->session->position == "asds"){ ?>
+                                                    <?php //if($open->status == 0){if($this->session->position == "reg" || $asds_equivalent_access){ ?>
                                                     <?php if($open->status == 0){ ?>
                                                     <?php //if($this->session->position == "admin"){ ?>
                                                     <?php //if($rating->interview != 0.00001){ ?>
@@ -282,7 +285,7 @@
                                             <table class="table table-striped mb-0">
                                             <thead>
                                                     <tr class="bg-primary text-white">
-                                                        <th colspan="2" class="text-center">APPLICANT'S INFORMATION<?php if($this->session->c_id == $user->user_id || $this->session->position == 'asds'){?><a href="#" data-toggle="modal" data-target=".ai"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a></a><?php } ?></th>
+                                                        <th colspan="2" class="text-center">APPLICANT'S INFORMATION<?php if($this->session->c_id == $user->user_id || $asds_equivalent_access){?><a href="#" data-toggle="modal" data-target=".ai"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a></a><?php } ?></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -381,7 +384,7 @@
                                                         <th class="text-right">Rating</th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
                                                           
-                                                        <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
+                                                        <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
                                                                                             
                                                             <?php if($rating->educ != 0.00001){echo $rating->educ; } ?>
@@ -389,7 +392,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->educ != 0.00001){echo $rating->educ; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->educ != 0.00001){echo $rating->educ; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".educrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->educ != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -440,7 +443,7 @@
                                                     <tr>
                                                         <th class="text-right">Rating</th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
-                                                        <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
+                                                        <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
                                                                                             
                                                             <?php if($rating->trainings != 0.00001){echo $rating->trainings; } ?>
@@ -448,7 +451,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->trainings != 0.00001){echo $rating->trainings; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->trainings != 0.00001){echo $rating->trainings; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".certrating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->trainings != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -490,7 +493,7 @@
                                                         <th class="text-right">Rating</th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
 
-                                                          <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
+                                                          <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
                                                                                             
                                                             <?php if($rating->experience != 0.00001){echo $rating->experience; } ?>
@@ -498,7 +501,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->experience != 0.00001){echo $rating->experience; }  ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->experience != 0.00001){echo $rating->experience; }  ?>
                                                             <a href="#" data-toggle="modal" data-target=".werating"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->experience != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -555,7 +558,7 @@
                                                     <tr>
                                                         <th class="text-right">Rating </th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
-                                                          <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
+                                                          <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
 
                                                             <?php if($rating->performance != 0.00001){echo number_format($rating->performance, 2); } ?>
@@ -563,7 +566,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->performance != 0.00001){echo $rating->performance; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->performance != 0.00001){echo $rating->performance; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".performance"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->performance != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -604,7 +607,7 @@
                                                     <tr>
                                                         <th class="text-right">Rating </th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
-                                                          <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
+                                                          <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
 
                                                             <?php if($rating->ppstco != 0.00001){echo number_format($rating->ppstco, 2); } ?>
@@ -612,7 +615,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->ppstco != 0.00001){echo $rating->ppstco; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->ppstco != 0.00001){echo $rating->ppstco; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".ppstcor"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ppstco != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -652,7 +655,7 @@
                                                     <tr>
                                                         <th class="text-right">Rating </th>
                                                         <td class="text-left" style="background: #fde18e; color:#464545">
-                                                          <?php if($this->session->position == 'Evaluator' || $this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
+                                                          <?php if($this->session->position == 'Evaluator' || $asds_equivalent_access || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){?>
                                                             <?php if($rating->eval_id1 == 0){ ?>
 
                                                             <?php if($rating->ppstpa != 0.00001){echo number_format($rating->ppstpa, 2); } ?>
@@ -660,7 +663,7 @@
                                                             
                                                         <?php }else{ ?>
 
-                                                            <?php if($rating->eval_id1 == $this->session->id || $this->session->position == 'asds' || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->ppstpa != 0.00001){echo $rating->ppstpa; } ?>
+                                                            <?php if($rating->eval_id1 == $this->session->id || $asds_equivalent_access || !empty($field_evaluator_bypass) || $this->session->position == 'raters' || $this->session->position == 'Secretariat'){if($rating->ppstpa != 0.00001){echo $rating->ppstpa; } ?>
                                                             <a href="#" data-toggle="modal" data-target=".ppstpar"><i class="mdi mdi-notebook-outline btn btn-lg tooltips <?php if($rating->ppstpa != 0.00001){echo 'text-success'; } ?>" data-placement="top" data-toggle="tooltip" data-original-title="Rate"></i></a>
                                                             <?php } ?>
                                                             
@@ -727,14 +730,14 @@
                                                                    
                                                                
 
-                                                                <?php if($this->session->position==='Human Resource Admin' || $this->session->position==='HR Staff' || $this->session->position==='Super Admin' || $this->session->position==='asds' || $this->session->position==='doceval' || $this->session->position==='raters' || $this->session->position==='Secretariat') { ?>
+                                                                <?php if($this->session->position==='Human Resource Admin' || $this->session->position==='HR Staff' || $this->session->position==='Super Admin' || $asds_equivalent_access || $this->session->position==='doceval' || $this->session->position==='raters' || $this->session->position==='Secretariat') { ?>
                                                                                                                                     <?php if($aa->appStatus == "Endorsed for Rating"){ ?><a onclick="return confirm('Are you sure?')" class="btn btn-purple btn-sm" href="<?= base_url(); ?>Pages/rated/<?= $this->uri->segment(3); ?>/<?= $this->uri->segment(4); ?>/<?= $this->uri->segment(5); ?>/<?= $this->uri->segment(6); ?>/<?= $this->uri->segment(2); ?>">Rated</a><?php } ?>
 
                                                                     <?php if($aa->appStatus == "Application Submitted" && $aa->dq == 0){ ?>
                                                                     <a href="#"  data-toggle="modal" data-target=".dq" class="btn btn-info btn-sm">Remarks</a>
                                                                 <?php } } ?>
 
-                                                                <?php if($this->session->position==='asds' || $this->session->username==='Cyanne19' || $this->session->position==='Secretariat') { ?>
+                                                                <?php if($asds_equivalent_access || $this->session->username==='Cyanne19' || $this->session->position==='Secretariat') { ?>
                                                                 <?php if($aa->dq != 0){ ?>
                                                                     <a href="#"  data-toggle="modal" data-target=".dqedit" class="btn btn-info btn-sm">Edit Remarks</a>
                                                                     <?php 

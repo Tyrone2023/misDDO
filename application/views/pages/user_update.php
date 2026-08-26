@@ -108,6 +108,7 @@
                                                                                     'Mathematics Coordinator' => 'mathcoor',
                                                                                     'Plan Supervisor' => 'plansup',
                                                                                     'District Supervisor' => 'District Supervisor',
+                                                                                    'HRMO' => 'HRMO',
                                                                                     'Assistant Superintendent' => 'asst_sds'
                                                                             );
                                                                 foreach($position as $row => $key){

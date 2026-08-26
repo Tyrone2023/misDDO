@@ -103,9 +103,24 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         display: none;
     }
     .dropdown-submenu:hover .dropdown-menu { display: block; }
+    .dropdown-submenu.is-open > .dropdown-menu { display: block; }
+    .dropdown-submenu.hrp-flyout-left > .dropdown-menu {
+        left: auto;
+        right: 100%;
+    }
+    .dropdown-submenu.hrp-flyout-up > .dropdown-menu {
+        top: auto;
+        bottom: 0;
+    }
 
     /* toolbar dropdowns tuned to the card look */
-    .hrp-toolbar { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
+    .hrp-toolbar {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem;
+        align-items: center;
+    }
     .hrp-toolbar .btn-group > .hrp-btn { border-radius: 8px; }
     .hrp-toolbar .dropdown-menu {
         border: 1px solid #e9edf2;
@@ -119,8 +134,33 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         padding: .4rem .65rem;
         color: #5c6873;
     }
+    .hrp-toolbar .dropdown-submenu > .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+    .hrp-toolbar .dropdown-submenu > .dropdown-item::after {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        margin-left: auto;
+        content: "";
+        border-top: .3em solid transparent;
+        border-right: 0;
+        border-bottom: .3em solid transparent;
+        border-left: .3em solid;
+        transition: transform .15s ease;
+    }
     .hrp-toolbar .dropdown-item:hover { background: #f1f4f8; color: #313a46; }
     .hrp-toolbar .dropdown-menu .dropdown-menu { max-height: 300px; overflow-y: auto; overflow-x: hidden; min-width: 280px; }
+    .hrp-toolbar > .btn-group > .dropdown-menu.hrp-viewport-menu {
+        position: fixed !important;
+        top: var(--hrp-menu-top, 0) !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: var(--hrp-menu-left, 0) !important;
+        transform: none !important;
+    }
     .hrp-toolbar-group-label {
         font-size: .68rem;
         text-transform: uppercase;
@@ -128,6 +168,76 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         color: #98a6ad;
         font-weight: 600;
         margin-right: .15rem;
+    }
+
+    /* Keep the original report menus, but let them follow the available view. */
+    @media (max-width: 991.98px) {
+        .hrp-toolbar > .hrp-btn {
+            flex: 1 1 180px;
+            justify-content: center;
+            min-width: 0;
+            text-align: center;
+            white-space: normal;
+        }
+        .hrp-toolbar > .btn-group {
+            position: static;
+            flex: 1 1 220px;
+            min-width: 0;
+        }
+        .hrp-toolbar > .btn-group > .hrp-btn {
+            justify-content: center;
+            width: 100%;
+            min-width: 0;
+            text-align: center;
+            white-space: normal;
+        }
+        .hrp-toolbar > .btn-group > .dropdown-menu {
+            top: calc(100% + .45rem) !important;
+            right: 0 !important;
+            left: 0 !important;
+            width: 100%;
+            min-width: 0;
+            max-height: calc(100vh - 120px);
+            overflow-x: hidden;
+            overflow-y: auto;
+            transform: none !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .hrp-toolbar.hrp-dropdown-up > .btn-group.show > .dropdown-menu {
+            top: auto !important;
+            bottom: calc(100% + .45rem) !important;
+        }
+        .hrp-toolbar .dropdown-submenu:hover > .dropdown-menu { display: none; }
+        .hrp-toolbar .dropdown-submenu.is-open > .dropdown-menu { display: block; }
+        .hrp-toolbar .dropdown-submenu > .dropdown-menu {
+            position: static !important;
+            float: none;
+            width: 100%;
+            min-width: 0;
+            max-height: 42vh;
+            margin: .3rem 0 .4rem !important;
+            border: 1px solid #e3e9f1;
+            border-left: 3px solid #9bb8de;
+            border-radius: 8px;
+            box-shadow: none;
+            transform: none !important;
+        }
+        .hrp-toolbar .dropdown-submenu > .dropdown-item::after {
+            transform: rotate(90deg);
+        }
+        .hrp-toolbar .dropdown-submenu.is-open > .dropdown-item::after {
+            transform: rotate(-90deg);
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .hrp-toolbar > .hrp-btn,
+        .hrp-toolbar > .btn-group { flex-basis: 100%; }
+        .hrp-toolbar .dropdown-item {
+            padding: .55rem .7rem;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
     }
 
     /* application details column — one button, the fields live in the modal */
@@ -1671,6 +1781,150 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
 
     <script>
         $(document).ready(function() {
+
+            /* ---------- responsive report dropdowns ---------- */
+            var compactReportMenus = window.matchMedia('(max-width: 991.98px)');
+            var $reportToolbar = $('.hrp-toolbar');
+
+            function closeReportSubmenus($scope) {
+                $scope.filter('.dropdown-submenu').add($scope.find('.dropdown-submenu'))
+                    .removeClass('is-open hrp-flyout-left hrp-flyout-up')
+                    .children('.dropdown-item')
+                    .attr('aria-expanded', 'false');
+            }
+
+            // A compact view cannot fit a second fly-out beside the first menu.
+            // The first tap expands it in place; a second tap follows a real link.
+            $(document).on('click', '.hrp-toolbar .dropdown-submenu > .dropdown-item', function(e) {
+                var $trigger = $(this);
+                var $submenu = $trigger.parent('.dropdown-submenu');
+                var hasRealLink = ($trigger.attr('href') || '#') !== '#';
+
+                if (compactReportMenus.matches) {
+                    if (!$submenu.hasClass('is-open')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        closeReportSubmenus($submenu.siblings('.dropdown-submenu'));
+                        $submenu.addClass('is-open');
+                        $trigger.attr('aria-expanded', 'true');
+                        return;
+                    }
+
+                    if (!hasRealLink) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        $submenu.removeClass('is-open');
+                        $trigger.attr('aria-expanded', 'false');
+                    }
+                    return;
+                }
+
+                // Preserve normal destinations such as Qualified List Promotion.
+                if (!hasRealLink) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    $submenu.toggleClass('is-open');
+                    $trigger.attr('aria-expanded', $submenu.hasClass('is-open') ? 'true' : 'false');
+                }
+            });
+
+            // On wide views, flip only the submenu that would cross the viewport.
+            $(document).on('mouseenter focusin', '.hrp-toolbar .dropdown-submenu', function() {
+                if (compactReportMenus.matches) { return; }
+
+                var $submenu = $(this).removeClass('hrp-flyout-left hrp-flyout-up');
+                var menu = $submenu.children('.dropdown-menu').get(0);
+                if (!menu) { return; }
+
+                window.requestAnimationFrame(function() {
+                    var menuRect = menu.getBoundingClientRect();
+                    if (menuRect.right > window.innerWidth - 12) {
+                        $submenu.addClass('hrp-flyout-left');
+                    }
+                    if (menuRect.bottom > window.innerHeight - 12) {
+                        $submenu.addClass('hrp-flyout-up');
+                    }
+                });
+            });
+
+            function fitOpenReportMenu($group) {
+                var $menu = $group.children('.dropdown-menu');
+                var trigger = $group.children('.dropdown-toggle').get(0);
+                if (!$menu.length || !trigger || !$reportToolbar.length) { return; }
+
+                if (compactReportMenus.matches) {
+                    $menu.removeClass('hrp-viewport-menu');
+                    var toolbarRect = $reportToolbar.get(0).getBoundingClientRect();
+                    var roomBelow = window.innerHeight - toolbarRect.bottom - 12;
+                    var roomAbove = toolbarRect.top - 12;
+                    var openAbove = roomBelow < 260 && roomAbove > roomBelow;
+                    var availableRoom = openAbove ? roomAbove : roomBelow;
+
+                    $reportToolbar.toggleClass('hrp-dropdown-up', openAbove);
+                    $menu.css('max-height', Math.max(140, Math.floor(availableRoom)) + 'px');
+                    return;
+                }
+
+                // Bootstrap flips a tall menu above its button when the space below
+                // is a little short. At 100% zoom that can put the first reports
+                // underneath the fixed top bar. Clamp the original menu inside the
+                // visible viewport instead, while keeping nested fly-outs intact.
+                var menu = $menu.addClass('hrp-viewport-menu').get(0);
+                var triggerRect = trigger.getBoundingClientRect();
+                var topbar = document.querySelector('.navbar-custom');
+                var topbarBottom = topbar ? topbar.getBoundingClientRect().bottom : 0;
+                var safeTop = Math.max(12, Math.ceil(topbarBottom) + 10);
+
+                menu.style.setProperty('--hrp-menu-top', Math.ceil(triggerRect.bottom + 5) + 'px');
+                menu.style.setProperty('--hrp-menu-left', Math.floor(triggerRect.left) + 'px');
+
+                window.requestAnimationFrame(function() {
+                    if (!$group.hasClass('show')) { return; }
+
+                    var menuRect = menu.getBoundingClientRect();
+                    var top = triggerRect.bottom + 5;
+                    var left = triggerRect.left;
+                    var viewportBottom = window.innerHeight - 12;
+                    var viewportRight = window.innerWidth - 12;
+
+                    if (top + menuRect.height > viewportBottom) {
+                        top = viewportBottom - menuRect.height;
+                    }
+                    if (left + menuRect.width > viewportRight) {
+                        left = viewportRight - menuRect.width;
+                    }
+
+                    menu.style.setProperty('--hrp-menu-top', Math.max(safeTop, Math.floor(top)) + 'px');
+                    menu.style.setProperty('--hrp-menu-left', Math.max(12, Math.floor(left)) + 'px');
+                });
+            }
+
+            $reportToolbar.on('shown.bs.dropdown', '.btn-group', function() {
+                fitOpenReportMenu($(this));
+            });
+
+            $reportToolbar.on('hidden.bs.dropdown', '.btn-group', function() {
+                $reportToolbar.removeClass('hrp-dropdown-up');
+                var $menu = $(this).children('.dropdown-menu');
+                $menu.removeClass('hrp-viewport-menu').css('max-height', '');
+                if ($menu.length) {
+                    $menu.get(0).style.removeProperty('--hrp-menu-top');
+                    $menu.get(0).style.removeProperty('--hrp-menu-left');
+                }
+                closeReportSubmenus($(this));
+            });
+
+            $(window).on('resize', function() {
+                $reportToolbar.removeClass('hrp-dropdown-up');
+                $reportToolbar.children('.btn-group').children('.dropdown-menu').css('max-height', '');
+                closeReportSubmenus($reportToolbar);
+
+                var $openGroup = $reportToolbar.children('.btn-group.show');
+                if ($openGroup.length) {
+                    fitOpenReportMenu($openGroup.first());
+                }
+            });
 
             /* ---------- vacancies table ---------- */
             var $jv = $('#jv-table');
