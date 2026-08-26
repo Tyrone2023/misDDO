@@ -440,6 +440,7 @@ class Audit_model extends CI_Model
             'add_experience'       => ['Work Experience Added', 'mdi-briefcase-outline', 'info'],
             'update_experience'    => ['Work Experience Updated', 'mdi-pencil-outline', 'warning'],
             'delete_experience'    => ['Work Experience Removed', 'mdi-delete-outline', 'danger'],
+            'update_eligibility'   => ['Eligibility Updated', 'mdi-certificate-outline', 'warning'],
         ];
 
         $key = strtolower(trim((string) $action));

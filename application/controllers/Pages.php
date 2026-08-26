@@ -3495,6 +3495,8 @@ class Pages extends CI_Controller
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         ', '</div>');
         $this->form_validation->set_rules('FirstName', 'First Name', 'required');
+        $this->form_validation->set_rules('csEligibility', 'Civil Service Eligibility', 'max_length[45]');
+        $this->form_validation->set_rules('csEligibilityRating', 'Eligibility Rating', 'max_length[45]');
         //$this->form_validation->set_rules('termPeriodto', 'Term Period To', 'required');
 
         if ($this->form_validation->run() == FALSE) {
@@ -3516,10 +3518,32 @@ class Pages extends CI_Controller
             $this->load->view('templates/modal_com');
             $this->load->view('templates/footer');
         } else {
-            $this->Page_model->update_profile_reg();
+            $eligibilityBefore = $this->Page_model->get_single_row_by_id('hris_applicant', 'id', $param);
+            $profileUpdated = $this->Page_model->update_profile_reg();
             $id = $this->db->insert_id();
             $this->Reg->ai_sex_update();
             $this->Page_model->insert_at('Profile registration successfully ', $id);
+
+            $oldEligibility = trim((string) ($eligibilityBefore->csEligibility ?? ''));
+            $oldEligibilityRating = trim((string) ($eligibilityBefore->csEligibilityRating ?? ''));
+            $newEligibility = trim((string) $this->input->post('csEligibility'));
+            $newEligibilityRating = trim((string) $this->input->post('csEligibilityRating'));
+
+            if ($profileUpdated
+                && ($oldEligibility !== $newEligibility || $oldEligibilityRating !== $newEligibilityRating)) {
+                $oldSummary = ($oldEligibility !== '' ? $oldEligibility : 'Not specified')
+                    . ' / Rating: ' . ($oldEligibilityRating !== '' ? $oldEligibilityRating : 'Not specified');
+                $newSummary = ($newEligibility !== '' ? $newEligibility : 'Not specified')
+                    . ' / Rating: ' . ($newEligibilityRating !== '' ? $newEligibilityRating : 'Not specified');
+
+                $this->Audit->log('update_eligibility', [
+                    'entity_type' => 'applicant_profile',
+                    'entity_id' => $param,
+                    'applicant_id' => $param,
+                    'field' => 'eligibility',
+                    'description' => 'Eligibility changed from "' . $oldSummary . '" to "' . $newSummary . '" through the profile update form.',
+                ]);
+            }
 
             $this->Reg->educ_jhss_update();
             $this->Reg->educ_shss_update();
@@ -8122,6 +8146,7 @@ public function rqa_municipality_print_shsv2()
         // Consolidate duplicate ratings and auto-mark as Rated when complete
         $appIdForRating = $this->uri->segment(6);
         $data['evaluator_qualification_gate'] = null;
+        $data['can_edit_eligibility'] = $this->can_edit_applicant_eligibility($applicant, $appIdForRating);
 
         $sessionPosition = (string)$this->session->userdata('position');
         $fieldEvaluatorOnly = false;
@@ -8209,6 +8234,9 @@ public function rqa_municipality_print_shsv2()
         $this->load->view('templates/head');
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
+        if (!empty($data['can_edit_eligibility'])) {
+            $this->load->view('pages/partials/applicant_eligibility_modal', $data);
+        }
         if (!empty($data['evaluator_qualification_gate'])) {
             $this->load->view('pages/_evaluator_qualification_gate', $data);
         }
@@ -8219,6 +8247,134 @@ public function rqa_municipality_print_shsv2()
             $this->load->view('pages/_rating_locked');
         }
         $this->load->view('templates/footer');
+    }
+
+    /**
+     * Applicants may edit their own eligibility. Recruitment staff may edit any
+     * applicant they can open, while evaluators remain limited to applications
+     * assigned to them (including their Field Evaluator vacancies).
+     */
+    private function can_edit_applicant_eligibility($applicant, $appId = null)
+    {
+        if (empty($applicant) || empty($applicant->id)) {
+            return false;
+        }
+
+        $position = strtolower(trim((string) $this->session->userdata('position')));
+
+        if (in_array($position, ['reg', 'user'], true)) {
+            return (string) $this->session->userdata('c_id') === (string) $applicant->id;
+        }
+
+        $staffRoles = [
+            'human resource admin', 'hr staff', 'super admin', 'admin',
+            'asds', 'asst_sds', 'sds', 'secretariat',
+        ];
+        if (in_array($position, $staffRoles, true)) {
+            return true;
+        }
+
+        if (!in_array($position, ['evaluator', 'rater', 'raters'], true)) {
+            return false;
+        }
+
+        $appId = (int) $appId;
+        $evaluatorId = (int) ($this->session->id ?? $this->session->userdata('id'));
+        if ($appId <= 0 || $evaluatorId <= 0) {
+            return false;
+        }
+
+        $assigned = (bool) $this->db
+            ->from('hris_rater_assignments')
+            ->where('app_id', $appId)
+            ->where('rater_user_id', $evaluatorId)
+            ->count_all_results();
+
+        if ($assigned) {
+            return true;
+        }
+
+        return $this->secretariat->field_evaluator_can_view_application($evaluatorId, $appId);
+    }
+
+    /** Save the eligibility type/rating edited from an applicant rating page. */
+    public function update_applicant_eligibility()
+    {
+        if (strtoupper((string) $this->input->server('REQUEST_METHOD')) !== 'POST') {
+            show_error('Method Not Allowed', 405);
+            return;
+        }
+
+        $applicantId = (int) $this->input->post('id');
+        $appId = (int) $this->input->post('appID');
+        $applicant = $this->Common->one_cond_row('hris_applicant', 'id', $applicantId);
+        $application = $this->Common->one_cond_row('hris_applications', 'appID', $appId);
+
+        if (empty($applicant) || empty($application)) {
+            show_404();
+            return;
+        }
+
+        $sameApplicant = (int) ($application->applicant_id ?? 0) === $applicantId
+            || (string) ($application->empEmail ?? '') === (string) ($applicant->empEmail ?? '');
+        if (!$sameApplicant) {
+            show_error('The selected application does not belong to this applicant.', 400);
+            return;
+        }
+
+        if (!$this->can_edit_applicant_eligibility($applicant, $appId)) {
+            show_error('You are not allowed to edit this applicant\'s eligibility.', 403);
+            return;
+        }
+
+        $type = preg_replace('/\s+/', ' ', trim((string) $this->input->post('csEligibility')));
+        $rating = preg_replace('/\s+/', ' ', trim((string) $this->input->post('csEligibilityRating')));
+
+        if (mb_strlen($type) > 45 || mb_strlen($rating) > 45) {
+            $this->session->set_flashdata('danger', 'Eligibility type and rating must each be 45 characters or fewer.');
+            $this->redirect_back('#er');
+            return;
+        }
+
+        $oldType = trim((string) ($applicant->csEligibility ?? ''));
+        $oldRating = trim((string) ($applicant->csEligibilityRating ?? ''));
+
+        if ($type === $oldType && $rating === $oldRating) {
+            $this->session->set_flashdata('info', 'No eligibility changes were made.');
+            $this->redirect_back('#er');
+            return;
+        }
+
+        $updated = $this->db
+            ->where('id', $applicantId)
+            ->update('hris_applicant', [
+                'csEligibility' => $type,
+                'csEligibilityRating' => $rating,
+            ]);
+
+        if (!$updated) {
+            $this->session->set_flashdata('danger', 'The eligibility information could not be updated. Please try again.');
+            $this->redirect_back('#er');
+            return;
+        }
+
+        $oldSummary = ($oldType !== '' ? $oldType : 'Not specified')
+            . ' / Rating: ' . ($oldRating !== '' ? $oldRating : 'Not specified');
+        $newSummary = ($type !== '' ? $type : 'Not specified')
+            . ' / Rating: ' . ($rating !== '' ? $rating : 'Not specified');
+
+        $this->Audit->log('update_eligibility', [
+            'entity_type' => 'applicant_profile',
+            'entity_id' => $applicantId,
+            'app_id' => $appId,
+            'applicant_id' => $applicantId,
+            'job_id' => (int) $application->jobID,
+            'field' => 'eligibility',
+            'description' => 'Eligibility changed from "' . $oldSummary . '" to "' . $newSummary . '".',
+        ]);
+
+        $this->session->set_flashdata('success', 'Eligibility type and rating updated successfully.');
+        $this->redirect_back('#er');
     }
 
     /**
@@ -10071,6 +10227,14 @@ public function rqa_municipality_print_shsv2()
             $examJobIds[] = (int) $application->jobID;
         }
         $data['examCounts'] = $this->exams->published_counts_for_jobs($examJobIds);
+
+        // Documents the Secretariat has released for these applications, so the
+        // Manage column can offer the applicant their own copy.
+        $this->load->model('Secretariat_model', 'secretariat');
+        $data['issuedDocs'] = $this->secretariat->issued_documents(
+            array_map(static function ($application) { return (int) $application->appID; }, (array) $data['data'])
+        );
+        $data['issuedDocLabels'] = $this->secretariat->assessment_types();
 
         $this->load->view('templates/head');
         $this->load->view('templates/header');

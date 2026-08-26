@@ -14,6 +14,7 @@ class Secretariat_model extends CI_Model
         $this->ensure_vacancy_table();
         $this->ensure_field_encoder_access_table();
         $this->ensure_field_evaluator_access_table();
+        $this->ensure_assessment_table();
     }
 
     public function ensure_table(): void
@@ -3301,5 +3302,702 @@ class Secretariat_model extends CI_Model
         }
 
         return $this->sort_by_name($rows);
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Secretariat qualified / disqualified lists
+     * ------------------------------------------------------------------ */
+
+    /**
+     * Qualified (dq = 1) or disqualified (dq = 2) applicants of one vacancy
+     * assigned to the current Secretariat account.
+     *
+     * The qualified rows also carry the rating the evaluator encoded, read from
+     * the table the vacancy is actually scored on - hris_applications_rating
+     * for teaching, hris_rating_promotion for promotion / position 5 and
+     * hris_rating_none for everything else - so the qualified list shows the
+     * rated applicants alongside the ones still waiting for scores. The 0.00001
+     * stub written by the insert_rate_* methods reads as "not rated yet"; a
+     * genuine zero is a real score.
+     */
+    public function qualification_applicants(int $userId, int $jobId, int $dq): array
+    {
+        if (!in_array($dq, [1, 2], true) || !$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $latestAssignment = $this->db
+            ->select('app_id, MAX(id) AS latest_id', false)
+            ->from('hris_rater_assignments')
+            ->group_by('app_id')
+            ->get_compiled_select();
+
+        $latestDq = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_app_dq')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $latestTeaching = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_applications_rating')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $latestNone = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_rating_none')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $latestPromotion = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_rating_promotion')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $rows = $this->db
+            ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
+                a.app_year, a.district, a.pre_school, a.dq,
+                j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.promotion,
+                COALESCE(ha.record_no, ha2.record_no, hs.IDNumber, a.applicant_id) AS record_no,
+                COALESCE(ha.id, ha2.id, hs.IDNumber, a.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, ha2.NameExtn, hs.NameExtn, '') AS NameExtn,
+                COALESCE(ha.specialization, ha2.specialization, '') AS specialization,
+                CASE
+                    WHEN ha.id IS NOT NULL OR ha2.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                s.schoolName,
+                dq.reason AS dq_reason, dq.vdate AS dq_date,
+                ra.rater_user_id, ra.assigned_at,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name,
+                rt.id AS teach_row, rt.education AS teach_education, rt.training AS teach_training,
+                rt.experience AS teach_experience, rt.let_rating AS teach_let,
+                rt.demo_rating AS teach_demo, rt.tr_rating AS teach_tr, rt.total_points AS teach_total,
+                rn.id AS none_row, rn.educ AS none_educ, rn.trainings AS none_trainings,
+                rn.experience AS none_experience, rn.performance AS none_performance,
+                rn.oa AS none_oa, rn.ae AS none_ae, rn.ald AS none_ald,
+                rn.interview AS none_interview, rn.written AS none_written,
+                rn.skills AS none_skills, rn.total_points AS none_total,
+                rp.id AS promo_row, rp.educ AS promo_educ, rp.trainings AS promo_trainings,
+                rp.experience AS promo_experience, rp.performance AS promo_performance,
+                rp.ppstco AS promo_ppstco, rp.ppstpa AS promo_ppstpa, rp.total_points AS promo_total", false)
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(a.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->join('schools s', 's.schoolID = CONVERT(CAST(a.pre_school AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci', 'left', false)
+            ->join("($latestAssignment) latest_ra", 'latest_ra.app_id = a.appID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.id = latest_ra.latest_id', 'left')
+            ->join('users u', 'u.id = ra.rater_user_id', 'left')
+            ->join("($latestDq) latest_dq", 'latest_dq.appID = a.appID', 'left')
+            ->join('hris_app_dq dq', 'dq.id = latest_dq.latest_id', 'left')
+            ->join("($latestTeaching) latest_rt", 'latest_rt.appID = a.appID', 'left')
+            ->join('hris_applications_rating rt', 'rt.id = latest_rt.latest_id', 'left')
+            ->join("($latestNone) latest_rn", 'latest_rn.appID = a.appID', 'left')
+            ->join('hris_rating_none rn', 'rn.id = latest_rn.latest_id', 'left')
+            ->join("($latestPromotion) latest_rp", 'latest_rp.appID = a.appID', 'left')
+            ->join('hris_rating_promotion rp', 'rp.id = latest_rp.latest_id', 'left')
+            ->where('a.jobID', $jobId)
+            ->where('a.dq', $dq)
+            ->order_by('ha.LastName', 'asc')
+            ->order_by('hs.LastName', 'asc')
+            ->order_by('a.appID', 'desc')
+            ->get()
+            ->result();
+
+        foreach ($rows as $row) {
+            $this->attach_rating_state($row);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Flag one applicant row with the rating that belongs to its vacancy.
+     * Mirrors the Pending / With scores split used by the evaluator workload
+     * screen so both places agree on who counts as rated.
+     */
+    private function attach_rating_state($row): void
+    {
+        $position = (int) ($row->position ?? 0);
+        $isPromotion = (int) ($row->promotion ?? 0) === 1 || $position === 5;
+
+        if ($position === 1 && !$isPromotion) {
+            $hasRatingRow = !empty($row->teach_row);
+            $row->rating_total = (float) ($row->teach_total ?? 0);
+            $row->rating_source = 'Teaching';
+            $components = [
+                'Education'  => $row->teach_education ?? null,
+                'Training'   => $row->teach_training ?? null,
+                'Experience' => $row->teach_experience ?? null,
+                'LET'        => $row->teach_let ?? null,
+            ];
+        } elseif ($isPromotion) {
+            $hasRatingRow = !empty($row->promo_row);
+            $row->rating_total = (float) ($row->promo_total ?? 0);
+            $row->rating_source = 'Promotion';
+            $components = [
+                'Education'   => $row->promo_educ ?? null,
+                'Training'    => $row->promo_trainings ?? null,
+                'Experience'  => $row->promo_experience ?? null,
+                'Performance' => $row->promo_performance ?? null,
+                'PPST CO'     => $row->promo_ppstco ?? null,
+                'PPST PA'     => $row->promo_ppstpa ?? null,
+            ];
+        } else {
+            $hasRatingRow = !empty($row->none_row);
+            $row->rating_total = (float) ($row->none_total ?? 0);
+            $row->rating_source = 'Non-Teaching';
+            $components = [
+                'Education'   => $row->none_educ ?? null,
+                'Training'    => $row->none_trainings ?? null,
+                'Experience'  => $row->none_experience ?? null,
+                'Performance' => $row->none_performance ?? null,
+                'OA'          => $row->none_oa ?? null,
+                'AE'          => $row->none_ae ?? null,
+                'ALD'         => $row->none_ald ?? null,
+            ];
+            // Encoded by the Secretariat after the evaluator is done, so they
+            // are shown but never decide whether the applicant is rated.
+            $row->interview = $row->none_interview ?? null;
+            $row->written = $row->none_written ?? null;
+        }
+
+        $row->rating_components = $components;
+        $row->has_rating_row = $hasRatingRow;
+        $row->is_rated = $hasRatingRow && !$this->has_stub_score($components);
+    }
+
+    /**
+     * True when any core component is still the 0.00001 stub (0.0001 on legacy
+     * rows) or was never written. A genuine zero is a real score.
+     */
+    private function has_stub_score(array $components): bool
+    {
+        $stubs = [0.00001, 0.0001];
+        $tolerance = 0.000001;
+
+        foreach ($components as $value) {
+            if ($value === null || $value === '') {
+                return true;
+            }
+
+            foreach ($stubs as $stub) {
+                if (abs((float) $value - $stub) <= $tolerance) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /* ------------------------------------------------------------------ *
+     * Issued applicant documents (Evaluative Assessment / non-compliance
+     * letter). The evaluator's own review in hris_app_dq stays untouched -
+     * it seeds the first draft and remains the audit record. What the
+     * Secretariat edits and issues is kept here.
+     * ------------------------------------------------------------------ */
+
+    public function ensure_assessment_table(): void
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS hris_app_assessment (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                app_id INT UNSIGNED NOT NULL,
+                job_id INT UNSIGNED NOT NULL,
+                doc_type VARCHAR(30) NOT NULL,
+                body LONGTEXT NOT NULL,
+                issued_by INT UNSIGNED NULL,
+                issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                released TINYINT(1) NOT NULL DEFAULT 0,
+                released_at DATETIME NULL,
+                UNIQUE KEY uniq_app_doc (app_id, doc_type),
+                KEY idx_assessment_job (job_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
+    }
+
+    /** Documents this module issues, keyed by the doc_type stored on the row. */
+    public function assessment_types(): array
+    {
+        return [
+            'assessment' => 'Evaluative Assessment',
+            'letter'     => 'Letter to Applicants Non-Compliant of Documents',
+        ];
+    }
+
+    /**
+     * One application with everything the documents print: applicant, vacancy,
+     * school and the latest qualification review. Returns null when the
+     * application does not exist.
+     */
+    public function assessment_context(int $appId)
+    {
+        if ($appId <= 0) {
+            return null;
+        }
+
+        $latestDq = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_app_dq')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        return $this->db
+            ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.app_year,
+                a.district, a.pre_school, a.dq,
+                j.jobTitle, j.job_type, j.position, j.sy, j.itemNo, j.promotion, j.jvStatus,
+                COALESCE(ha.record_no, ha2.record_no, hs.IDNumber, a.applicant_id) AS record_no,
+                COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, ha2.NameExtn, hs.NameExtn, '') AS NameExtn,
+                COALESCE(ha.Sex, ha2.Sex, hs.Sex, '') AS Sex,
+                COALESCE(ha.id, ha2.id, a.applicant_id) AS profile_id,
+                COALESCE(ha.bd, ha2.bd, hs.bd, '') AS bd,
+                COALESCE(ha.csEligibility, ha2.csEligibility, hs.csEligibility, '') AS csEligibility,
+                COALESCE(ha.resHouseNo, ha2.resHouseNo, '') AS resHouseNo,
+                COALESCE(ha.resStreet, ha2.resStreet, '') AS resStreet,
+                COALESCE(ha.resVillage, ha2.resVillage, '') AS resVillage,
+                COALESCE(ha.resBarangay, ha2.resBarangay, '') AS resBarangay,
+                COALESCE(ha.resCity, ha2.resCity, '') AS resCity,
+                COALESCE(ha.resProvince, ha2.resProvince, '') AS resProvince,
+                s.schoolName,
+                dq.reason AS dq_reason, dq.vdate AS dq_date, dq.remarks AS dq_remarks,
+                dq.li, dq.da_pds, dq.prc, dq.trbd, dq.omni, dq.educ, dq.exp, dq.tr, dq.eli", false)
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(a.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->join('schools s', 's.schoolID = CONVERT(CAST(a.pre_school AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci', 'left', false)
+            ->join("($latestDq) latest_dq", 'latest_dq.appID = a.appID', 'left')
+            ->join('hris_app_dq dq', 'dq.id = latest_dq.latest_id', 'left')
+            ->where('a.appID', $appId)
+            ->limit(1)
+            ->get()
+            ->row();
+    }
+
+    /** Full name as printed on the documents. */
+    public function assessment_applicant_name($ctx): string
+    {
+        $name = trim(preg_replace('/\s+/', ' ', implode(' ', [
+            (string) ($ctx->FirstName ?? ''),
+            (string) ($ctx->MiddleName ?? ''),
+            (string) ($ctx->LastName ?? ''),
+            (string) ($ctx->NameExtn ?? ''),
+        ])));
+
+        return $name !== '' ? $name : 'Applicant #' . (int) ($ctx->appID ?? 0);
+    }
+
+    /**
+     * The HRMPSB Chair who signs the issued documents: the Assistant Schools
+     * Division Superintendent that maintains an e-signature, same signatory the
+     * certificate of rating uses. Falls back to the SDS named in mis_settings.
+     */
+    public function assessment_signatory(): array
+    {
+        $this->load->model('Common');
+        $this->Common->ensure_columns('users', ['esig' => 'VARCHAR(255) NULL DEFAULT NULL']);
+
+        $signatory = $this->db
+            ->from('users')
+            ->where('position', 'asst_sds')
+            ->where("COALESCE(esig, '') != ''", null, false)
+            ->order_by('id', 'DESC')
+            ->limit(1)
+            ->get()
+            ->row();
+
+        if (empty($signatory)) {
+            $signatory = $this->db->where('position', 'asst_sds')->limit(1)->get('users')->row();
+        }
+
+        if (!empty($signatory)) {
+            $mi = trim((string) ($signatory->mname ?? ''));
+            $mi = ($mi !== '') ? ' ' . strtoupper(substr($mi, 0, 1)) . '.' : '';
+
+            return [
+                'name'  => trim(strtoupper(trim((string) $signatory->fname) . $mi . ' ' . trim((string) $signatory->lname))),
+                'title' => 'Assistant Schools Division Superintendent',
+                'role'  => 'HRMPSB Chair',
+                'esig'  => trim((string) ($signatory->esig ?? '')),
+            ];
+        }
+
+        $settings = $this->db->where('settingsID', 1)->get('mis_settings')->row();
+
+        return [
+            'name'  => strtoupper(trim((string) ($settings->sds ?? ''))),
+            'title' => trim((string) ($settings->sdsPosition ?? 'Schools Division Superintendent')),
+            'role'  => 'HRMPSB Chair',
+            'esig'  => '',
+        ];
+    }
+
+    /**
+     * The applicant's own Education / Experience / Training / Eligibility, read
+     * from the same places the Annex D evaluation sheet reads them.
+     */
+    public function assessment_qualifications($ctx): array
+    {
+        $applicantId = (int) ($ctx->profile_id ?? 0);
+
+        $education = trim((string) ($ctx->bd ?? ''));
+        $eligibility = trim((string) ($ctx->csEligibility ?? ''));
+        $training = '';
+        $experience = '';
+
+        if ($applicantId > 0) {
+            $hours = (float) ($this->db
+                ->select('SUM(noHours) AS total', false)
+                ->where('stat', 1)
+                ->where('IDNumber', $applicantId)
+                ->get('hris_trainings')
+                ->row()
+                ->total ?? 0);
+
+            $titles = [];
+            foreach ($this->db
+                ->select('trainingTitle')
+                ->where('stat', 1)
+                ->where('IDNumber', $applicantId)
+                ->get('hris_trainings')
+                ->result() as $row) {
+                $title = trim((string) $row->trainingTitle);
+                if ($title !== '') {
+                    $titles[] = $title;
+                }
+            }
+
+            $training = trim(($hours > 0 ? rtrim(rtrim(number_format($hours, 2, '.', ''), '0'), '.') . ' hours' : '')
+                . ($titles !== [] ? ($hours > 0 ? ' - ' : '') . implode('; ', $titles) : ''));
+
+            $span = $this->db
+                ->select('SUM(ny) AS years, SUM(nm) AS months', false)
+                ->where('stat', 1)
+                ->where('id_number', $applicantId)
+                ->get('hris_experience')
+                ->row();
+
+            $years = (int) ($span->years ?? 0) + intdiv((int) ($span->months ?? 0), 12);
+            $months = (int) ($span->months ?? 0) % 12;
+
+            if ($years > 0 || $months > 0) {
+                $experience = $years . ' year' . ($years === 1 ? '' : 's')
+                    . ' and ' . $months . ' month' . ($months === 1 ? '' : 's');
+            }
+        }
+
+        return [
+            'education'   => $education,
+            'experience'  => $experience,
+            'training'    => $training,
+            'eligibility' => $eligibility,
+        ];
+    }
+
+    /**
+     * First draft of a document, following the division's own forms:
+     * ANNEX E (qualified) / ANNEX F (disqualified) for the Evaluative
+     * Assessment, and the Letter to Applicants Non-Compliant of Documents.
+     * Every value here is what the Secretariat sees before editing anything.
+     */
+    public function assessment_defaults($ctx, string $docType): array
+    {
+        $settings = $this->db->where('settingsID', 1)->get('mis_settings')->row();
+        $division = trim((string) ($settings->division ?? ''));
+        $jobTypes = $this->job_types_map();
+        $typeLabel = trim((string) ($jobTypes[(int) ($ctx->job_type ?? 0)] ?? ''));
+        $jobTitle = trim((string) ($ctx->jobTitle ?? ''));
+        $position = trim($jobTitle . ($typeLabel !== '' ? ' - ' . $typeLabel : ''));
+        $name = $this->assessment_applicant_name($ctx);
+        $isDq = ((int) ($ctx->dq ?? 0) === 2);
+        $courtesy = $this->assessment_courtesy($ctx);
+        $lastName = ucwords(strtolower(trim((string) ($ctx->LastName ?? ''))));
+
+        // Applicants type NA / N/A / none into address parts they do not have,
+        // so those never reach the printed letter.
+        $realPart = static function ($part) {
+            $part = trim((string) $part);
+            return $part !== '' && !in_array(strtoupper(str_replace([' ', '.', '/'], '', $part)), ['NA', 'NONE', '-', 'X'], true);
+        };
+
+        $address = array_values(array_filter([
+            trim(implode(' ', array_filter([
+                (string) ($ctx->resHouseNo ?? ''),
+                (string) ($ctx->resStreet ?? ''),
+                (string) ($ctx->resVillage ?? ''),
+            ], $realPart))),
+            trim(implode(', ', array_filter([
+                (string) ($ctx->resBarangay ?? ''),
+                (string) ($ctx->resCity ?? ''),
+                (string) ($ctx->resProvince ?? ''),
+            ], $realPart))),
+        ], static function ($line) { return trim($line) !== ''; }));
+
+        // The evaluator writes one reason per line; each line becomes its own
+        // row of the requirements table instead of a single paragraph.
+        $reasonLines = array_values(array_filter(array_map(
+            static function ($line) { return trim($line); },
+            preg_split('/\r\n|\r|\n/', (string) ($ctx->dq_reason ?? ''))
+        ), static function ($line) { return $line !== ''; }));
+
+        if ($docType === 'letter') {
+            $items = [];
+            foreach ($reasonLines as $line) {
+                $items[] = ['requirement' => $line, 'remarks' => ''];
+            }
+
+            if ($items === []) {
+                $items[] = ['requirement' => '', 'remarks' => ''];
+            }
+
+            $signatory = $this->assessment_signatory();
+
+            return [
+                'office'          => 'Office of the Schools Division Superintendent',
+                'date'            => date('F j, Y'),
+                'applicant'       => strtoupper($name),
+                'position_line'   => $jobTitle . ' Applicant',
+                'address'         => implode("\n", $address),
+                'salutation'      => 'Dear ' . $courtesy . ' ' . $lastName . ',',
+                'greeting'        => 'Greetings!',
+                'body1'           => 'This pertains to your application for the position of ' . $position
+                    . ' at Department of Education, Schools Division of ' . $division . '.',
+                'body2'           => 'Please be informed that after thorough checking and verifying the completeness, '
+                    . 'authenticity and veracity of the submitted documents to this Division through the Human Resource '
+                    . 'Management Office, this is to formally inform you that you have not been included in the pool of '
+                    . 'official applicants and cannot proceed to the next stage of the application process due to the '
+                    . 'non-compliance with the provision stipulated in DepEd Order No. 007, s. 2023 as regards to the '
+                    . 'Submission and Receipt of Application documents specifically on (Items 20.a to j) and Division '
+                    . 'Memorandum No. 155, s. 2026 Annex C: Checklist of Requirements, to wit:',
+                'items'           => $items,
+                'body3'           => 'Further, Section 21 of DepEd Order No. 007, s. 2023 states that individuals who fail '
+                    . 'to submit complete mandatory documents (Item 20.a to j) on the set deadline indicated in the '
+                    . 'official memorandum shall not be included in the pool of official applicants.',
+                'body4'           => 'We truly appreciate your enthusiasm and interest in joining our organization, and we '
+                    . 'wish you every success in your future endeavors.',
+                'body5'           => 'For more information regarding the result of your application, you may contact the '
+                    . 'Division HRMO at cellphone no. 09476063872.',
+                'closing'         => 'Very truly yours,',
+                'signatory'       => $signatory['name'],
+                'signatory_title' => $signatory['title'],
+                'signatory_role'  => $signatory['role'],
+            ];
+        }
+
+        $qualifications = $this->assessment_qualifications($ctx);
+        $criteria = [
+            'Education:'   => $qualifications['education'],
+            'Experience:'  => $qualifications['experience'],
+            'Training:'    => $qualifications['training'],
+            'Eligibility:' => $qualifications['eligibility'],
+        ];
+
+        $items = [];
+        foreach ($criteria as $criterion => $value) {
+            $items[] = [
+                'criterion' => $criterion,
+                'qs'        => '',
+                'yours'     => $value,
+                'remarks'   => '',
+            ];
+        }
+
+        $signatory = $this->assessment_signatory();
+        $evaluationDate = trim((string) ($ctx->dq_date ?? ''));
+        $evaluationDate = ($evaluationDate !== '' && strtotime($evaluationDate))
+            ? date('F j, Y', strtotime($evaluationDate))
+            : date('F j, Y');
+
+        $common = [
+            'annex'           => $isDq ? 'ANNEX F' : 'ANNEX E',
+            'office'          => 'PERSONNEL DIVISION',
+            'date'            => date('F j, Y'),
+            'applicant'       => strtoupper($name),
+            'address1'        => $address[0] ?? '',
+            'address2'        => $address[1] ?? '',
+            'salutation'      => 'Dear ' . $courtesy . ' ' . $lastName . ',',
+            'item_no'         => trim((string) ($ctx->itemNo ?? '')),
+            'items'           => $items,
+            'closing'         => 'Very truly yours,',
+            'signatory'       => $signatory['name'],
+            'signatory_title' => $signatory['title'],
+        ];
+
+        if ($isDq) {
+            return array_merge($common, [
+                'greeting' => '',
+                'intro'    => 'Please be informed of the results of the initial evaluation of your qualifications '
+                    . 'vis-a-vis the Civil Service Commission (CSC) approved-Qualification Standards (QS) of '
+                    . $position . ' position under ' . $division . ', as follows:',
+                'body2'    => 'While your qualifications made a favorable impression, we regret to inform you that you '
+                    . 'did not meet the minimum QS set for ' . $position . ' position. You may, however, continue to '
+                    . 'submit job applications in response to other vacancy announcements that we publish at '
+                    . 'www.csc.gov.ph/careers, DepEd bulletin boards, and official website www.depeddavaodeoro.ph.',
+                'body3'    => 'The results of the initial evaluation shall be released and posted for transparency '
+                    . 'purposes. You may refer to your assigned application code (' . trim((string) ($ctx->record_no ?? '')) . ') '
+                    . 'in the official posting of results.',
+                'thanks'   => 'Thank you and we wish you the best of luck in your future success.',
+            ]);
+        }
+
+        return array_merge($common, [
+            'greeting' => 'Congratulations!',
+            'intro'    => 'We are pleased to inform you that based on the initial evaluation, we have found your '
+                . 'qualifications to be substantial vis-a-vis the Civil Service Commission (CSC) approved '
+                . 'Qualification Standards (QS) of ' . $position . ' position under ' . $division . '. Below are the '
+                . 'results of the initial evaluation conducted by the undersigned dated ' . $evaluationDate . ':',
+            'body2'    => 'Please be advised of your assigned application code (' . trim((string) ($ctx->record_no ?? '')) . ') '
+                . 'which shall be used as you proceed with the next stage of the selection process. You may refer to '
+                . 'the official issuances of the ' . $division . ' for the additional announcements in this regard. '
+                . 'For inquiries, you may communicate with the Division HRMO.',
+            'body3'    => '',
+            'thanks'   => 'Thank you.',
+        ]);
+    }
+
+    /** Mr. / Ms. for the salutation, from the applicant's recorded sex. */
+    private function assessment_courtesy($ctx): string
+    {
+        $sex = strtolower(trim((string) ($ctx->Sex ?? '')));
+
+        if ($sex === 'male' || $sex === 'm' || $sex === '0') {
+            return 'Mr.';
+        }
+
+        if ($sex === 'female' || $sex === 'f' || $sex === '1') {
+            return 'Ms.';
+        }
+
+        return 'Mr./Ms.';
+    }
+
+    /** The stored row for one document, or null when nothing was issued yet. */
+    public function assessment_row(int $appId, string $docType)
+    {
+        return $this->db
+            ->where('app_id', $appId)
+            ->where('doc_type', $docType)
+            ->limit(1)
+            ->get('hris_app_assessment')
+            ->row();
+    }
+
+    /**
+     * The document as it should be shown: the saved version when there is one,
+     * otherwise a fresh draft. Missing keys on an older saved row fall back to
+     * the draft so a document never renders with holes in it.
+     */
+    public function assessment_document($ctx, string $docType): array
+    {
+        $defaults = $this->assessment_defaults($ctx, $docType);
+        $row = $this->assessment_row((int) $ctx->appID, $docType);
+        $doc = $defaults;
+        $saved = false;
+
+        if (!empty($row)) {
+            $stored = json_decode((string) $row->body, true);
+            if (is_array($stored)) {
+                $doc = array_merge($defaults, $stored);
+                $saved = true;
+            }
+        }
+
+        return [
+            'doc'         => $doc,
+            'saved'       => $saved,
+            'released'    => !empty($row) && (int) $row->released === 1,
+            'updated_at'  => $row->updated_at ?? null,
+            'released_at' => $row->released_at ?? null,
+        ];
+    }
+
+    /**
+     * Save the edited document. Only the keys the draft defines are kept, and
+     * every value is stored as plain text, so nothing a browser sends can come
+     * back out as markup.
+     */
+    public function save_assessment(int $appId, int $jobId, string $docType, array $body, int $userId): bool
+    {
+        $existing = $this->assessment_row($appId, $docType);
+        $payload = json_encode($body, JSON_UNESCAPED_UNICODE);
+
+        if ($payload === false) {
+            return false;
+        }
+
+        if (!empty($existing)) {
+            return (bool) $this->db
+                ->where('id', (int) $existing->id)
+                ->update('hris_app_assessment', ['body' => $payload, 'issued_by' => $userId]);
+        }
+
+        return (bool) $this->db->insert('hris_app_assessment', [
+            'app_id'    => $appId,
+            'job_id'    => $jobId,
+            'doc_type'  => $docType,
+            'body'      => $payload,
+            'issued_by' => $userId,
+        ]);
+    }
+
+    /**
+     * Release the document to the applicant, or take it back. A document that
+     * was never saved is written first, so releasing always publishes something.
+     */
+    public function set_assessment_release(int $appId, string $docType, bool $released): bool
+    {
+        $existing = $this->assessment_row($appId, $docType);
+
+        if (empty($existing)) {
+            return false;
+        }
+
+        return (bool) $this->db
+            ->where('id', (int) $existing->id)
+            ->update('hris_app_assessment', [
+                'released'    => $released ? 1 : 0,
+                'released_at' => $released ? date('Y-m-d H:i:s') : null,
+            ]);
+    }
+
+    /**
+     * doc_type => released map per application, for the lists and for the
+     * applicant's own Manage column. One query for the whole page.
+     */
+    public function issued_documents(array $appIds): array
+    {
+        $appIds = array_values(array_filter(array_map('intval', $appIds)));
+
+        if (empty($appIds)) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($this->db
+            ->select('app_id, doc_type, released, updated_at')
+            ->where_in('app_id', $appIds)
+            ->get('hris_app_assessment')
+            ->result() as $row) {
+            $map[(int) $row->app_id][(string) $row->doc_type] = [
+                'released'   => (int) $row->released === 1,
+                'updated_at' => $row->updated_at,
+            ];
+        }
+
+        return $map;
     }
 }

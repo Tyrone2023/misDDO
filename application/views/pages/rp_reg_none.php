@@ -799,7 +799,25 @@
                                                         <th colspan="2" class="text-center">ELIGIBILITY </th>
                                                     </tr>
 
-                                                   
+                                                    <tr>
+                                                        <th class="text-right">Eligibility Type</th>
+                                                        <td class="text-left" style="background: #bbb7eb; color:#464545">
+                                                            <?= htmlspecialchars((string) ($staff->csEligibility ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+                                                            <?php if (!empty($can_edit_eligibility)): ?>
+                                                                <button type="button" class="btn btn-sm btn-purple ml-2" data-toggle="modal" data-target="#applicantEligibilityModal">
+                                                                    <i class="mdi mdi-pencil-outline mr-1"></i>Edit eligibility
+                                                                </button>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="text-right">Eligibility Rating</th>
+                                                        <td class="text-left" style="background: #bbb7eb; color:#464545">
+                                                            <?= htmlspecialchars((string) ($staff->csEligibilityRating ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+                                                        </td>
+                                                    </tr>
+
+                                                    <tr>
                                                         <th class="text-right">Eligibility (Attachment)</th>
                                                         <td class="text-left" style="background: #bbb7eb; color:#464545">
                                                             <?php if($staff->eligibility != ""){?><a href="<?= base_url(); ?>Pages/pdf/<?= $staff->id; ?>/eligibility/?label=Eligibility (Attachment)" target="_blank" class="tooltips" data-placement="top" data-toggle="tooltip" data-original-title="View File Attachment"><i  class="fas fa-file-alt btn btn-lg"></i></a><?php } ?>

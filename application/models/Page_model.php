@@ -1674,6 +1674,7 @@ public function count_for_approval_leave4($table, $approver_username)
             //'skype' => $this->input->post('skype'),
             'umid' => $this->input->post('umid'),
             'csEligibility' => $this->input->post('csEligibility'),
+            'csEligibilityRating' => $this->input->post('csEligibilityRating'),
             'csLevel' => $this->input->post('csLevel'),
             'currentStatus' => $this->input->post('currentStatus'),
             'YearsAsJO' => $this->input->post('YearsAsJO'),

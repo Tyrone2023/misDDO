@@ -870,7 +870,9 @@
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants">Endorse Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants_unassigned">Endorsed (No Evaluator)</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/secretariat_endorsed">Endorsed &amp; Scored</a></li>
-                                        <li><a href="<?= base_url(); ?>Pages/secretariat_dq_applicants">Disqualified</a></li>
+                                        <li><a href="<?= base_url(); ?>secretariat/qualified">Qualified List</a></li>
+                                        <li><a href="<?= base_url(); ?>secretariat/disqualified">Disqualified List</a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/secretariat_dq_applicants">Disqualified (All Vacancies)</a></li>
                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
                                     </ul>
                                 </li>

@@ -109,6 +109,21 @@
                                                         </a>
 
                                                     <?php
+                                                    // Evaluative Assessment / letter of non-compliance, shown only
+                                                    // after the Secretariat releases the document.
+                                                    $issuedDocs = $issuedDocs ?? [];
+                                                    $issuedDocLabels = $issuedDocLabels ?? [];
+                                                    $rowDocs = $issuedDocs[(int) $row->appID] ?? [];
+                                                    foreach ($rowDocs as $docKey => $docState) {
+                                                        if (empty($docState['released'])) { continue; }
+                                                        $docLabel = $issuedDocLabels[$docKey] ?? 'Document';
+                                                    ?>
+                                                        <a href="<?= base_url(); ?>application-document/<?= (int) $row->appID; ?>/<?= htmlspecialchars($docKey, ENT_QUOTES, 'UTF-8'); ?>" target="_blank">
+                                                            <i class="fas <?= $docKey === 'letter' ? 'fa-envelope-open-text' : 'fa-file-alt'; ?> noti-icon btn <?= $docKey === 'letter' ? 'btn-danger' : 'btn-primary'; ?> tooltips" data-placement="top" data-toggle="tooltip" data-original-title="<?= htmlspecialchars($docLabel, ENT_QUOTES, 'UTF-8'); ?>"></i>
+                                                        </a>
+                                                    <?php } ?>
+
+                                                    <?php
                                                     // Certificate of rating - issued once the applicant has
                                                     // confirmed the evaluation result for this vacancy.
                                                     if (($row->appStatus ?? '') == 'Confirmed') { ?>

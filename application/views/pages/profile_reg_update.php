@@ -325,6 +325,17 @@
 								</div>
 
 								</div>
+								<div class="row">
+									<div class="col-lg-3">
+										<div class="form-group">
+											<label>Eligibility Rating</label>
+											<input type="text" class="form-control" name="csEligibilityRating" maxlength="45"
+												value="<?= htmlspecialchars((string) ($app->csEligibilityRating ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+												placeholder="e.g. 85.00">
+											<small class="form-text text-muted">Enter the rating shown on the eligibility certificate, if applicable.</small>
+										</div>
+									</div>
+								</div>
 
 
 									</div></div></div></div>
@@ -873,6 +884,3 @@
                 </div>
                 <!-- end content -->
 
-                
-
-               

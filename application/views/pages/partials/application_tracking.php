@@ -169,9 +169,9 @@ $h = function ($v) {
                                             </span>
                                         <?php endif; ?>
 
-                                        <!-- <?php if (trim((string) $e['actor_role']) !== ''): ?>
+                                        <?php if (trim((string) $e['actor_role']) !== ''): ?>
                                             <span class="app-track__role"><?= $h($e['actor_role']); ?></span>
-                                        <?php endif; ?> -->
+                                        <?php endif; ?>
 
                                         <span class="app-track__source app-track__source--<?= $h($e['source']); ?>">
                                             <?= $e['source'] === 'audit' ? 'Audit trail' : 'Status log'; ?>
