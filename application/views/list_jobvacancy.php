@@ -104,14 +104,6 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
     }
     .dropdown-submenu:hover .dropdown-menu { display: block; }
     .dropdown-submenu.is-open > .dropdown-menu { display: block; }
-    .dropdown-submenu.hrp-flyout-left > .dropdown-menu {
-        left: auto;
-        right: 100%;
-    }
-    .dropdown-submenu.hrp-flyout-up > .dropdown-menu {
-        top: auto;
-        bottom: 0;
-    }
 
     /* toolbar dropdowns tuned to the card look */
     .hrp-toolbar {
@@ -160,6 +152,32 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         bottom: auto !important;
         left: var(--hrp-menu-left, 0) !important;
         transform: none !important;
+        will-change: auto !important;
+    }
+
+    /* Wide view: the report menu scrolls inside the viewport and each fly-out is
+       pinned to the viewport as well, so no report row can land off-screen (or
+       behind .content-page's overflow:hidden) where it cannot be clicked. */
+    @media (min-width: 992px) {
+        .hrp-toolbar > .btn-group > .dropdown-menu.hrp-viewport-menu {
+            max-height: var(--hrp-menu-max-h, none);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .hrp-toolbar .dropdown-submenu > .dropdown-menu.hrp-flyout-fixed {
+            position: fixed !important;
+            top: var(--hrp-fly-top, 0) !important;
+            left: var(--hrp-fly-left, 0) !important;
+            right: auto !important;
+            bottom: auto !important;
+            margin: 0 !important;
+            transform: none !important;
+            max-height: var(--hrp-fly-max-h, 300px);
+        }
+        /* the caret has to admit it when the fly-out opened on the other side */
+        .hrp-toolbar .dropdown-submenu.hrp-flyout-left > .dropdown-item::after {
+            transform: scaleX(-1);
+        }
     }
     .hrp-toolbar-group-label {
         font-size: .68rem;
@@ -1787,8 +1805,16 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
             var $reportToolbar = $('.hrp-toolbar');
 
             function closeReportSubmenus($scope) {
-                $scope.filter('.dropdown-submenu').add($scope.find('.dropdown-submenu'))
-                    .removeClass('is-open hrp-flyout-left hrp-flyout-up')
+                var $subs = $scope.filter('.dropdown-submenu').add($scope.find('.dropdown-submenu'));
+
+                $subs.children('.dropdown-menu').each(function() {
+                    $(this).removeClass('hrp-flyout-fixed');
+                    this.style.removeProperty('--hrp-fly-top');
+                    this.style.removeProperty('--hrp-fly-left');
+                    this.style.removeProperty('--hrp-fly-max-h');
+                });
+
+                $subs.removeClass('is-open hrp-flyout-left')
                     .children('.dropdown-item')
                     .attr('aria-expanded', 'false');
             }
@@ -1826,26 +1852,52 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                     e.stopPropagation();
                     $submenu.toggleClass('is-open');
                     $trigger.attr('aria-expanded', $submenu.hasClass('is-open') ? 'true' : 'false');
+
+                    if ($submenu.hasClass('is-open')) {
+                        placeFlyout($submenu);
+                    }
                 }
             });
 
-            // On wide views, flip only the submenu that would cross the viewport.
-            $(document).on('mouseenter focusin', '.hrp-toolbar .dropdown-submenu', function() {
+            // On wide views the fly-out is pinned to the viewport, measured and
+            // placed in the same frame so it never moves once it is on screen.
+            // The old version also listened on focusin and re-placed a frame
+            // later, so the mousedown that focuses a report link shifted the
+            // fly-out out from under the pointer and the click never landed.
+            function placeFlyout($submenu) {
                 if (compactReportMenus.matches) { return; }
 
-                var $submenu = $(this).removeClass('hrp-flyout-left hrp-flyout-up');
-                var menu = $submenu.children('.dropdown-menu').get(0);
-                if (!menu) { return; }
+                var $fly = $submenu.children('.dropdown-menu');
+                if (!$fly.length) { return; }
 
-                window.requestAnimationFrame(function() {
-                    var menuRect = menu.getBoundingClientRect();
-                    if (menuRect.right > window.innerWidth - 12) {
-                        $submenu.addClass('hrp-flyout-left');
-                    }
-                    if (menuRect.bottom > window.innerHeight - 12) {
-                        $submenu.addClass('hrp-flyout-up');
-                    }
-                });
+                var gutter = 12;
+                var fly = $fly.addClass('hrp-flyout-fixed').get(0);
+                var room = Math.max(160, window.innerHeight - (gutter * 2));
+
+                fly.style.setProperty('--hrp-fly-max-h', Math.floor(Math.min(300, room)) + 'px');
+
+                var row = $submenu.get(0).getBoundingClientRect();
+                var flyRect = fly.getBoundingClientRect();
+                var viewWidth = document.documentElement.clientWidth;
+                var left = row.right;
+
+                // only swap sides when the fly-out truly cannot fit on the right
+                if (left + flyRect.width > viewWidth - gutter) {
+                    left = row.left - flyRect.width;
+                    $submenu.addClass('hrp-flyout-left');
+                } else {
+                    $submenu.removeClass('hrp-flyout-left');
+                }
+
+                left = Math.min(left, viewWidth - gutter - flyRect.width);
+                var top = Math.min(row.top, window.innerHeight - gutter - flyRect.height);
+
+                fly.style.setProperty('--hrp-fly-left', Math.floor(Math.max(gutter, left)) + 'px');
+                fly.style.setProperty('--hrp-fly-top', Math.floor(Math.max(gutter, top)) + 'px');
+            }
+
+            $(document).on('mouseenter', '.hrp-toolbar .dropdown-submenu', function() {
+                placeFlyout($(this));
             });
 
             function fitOpenReportMenu($group) {
@@ -1876,6 +1928,8 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                 var topbarBottom = topbar ? topbar.getBoundingClientRect().bottom : 0;
                 var safeTop = Math.max(12, Math.ceil(topbarBottom) + 10);
 
+                menu.style.setProperty('--hrp-menu-max-h',
+                    Math.max(180, Math.floor(window.innerHeight - safeTop - 12)) + 'px');
                 menu.style.setProperty('--hrp-menu-top', Math.ceil(triggerRect.bottom + 5) + 'px');
                 menu.style.setProperty('--hrp-menu-left', Math.floor(triggerRect.left) + 'px');
 
@@ -1886,7 +1940,7 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                     var top = triggerRect.bottom + 5;
                     var left = triggerRect.left;
                     var viewportBottom = window.innerHeight - 12;
-                    var viewportRight = window.innerWidth - 12;
+                    var viewportRight = document.documentElement.clientWidth - 12;
 
                     if (top + menuRect.height > viewportBottom) {
                         top = viewportBottom - menuRect.height;
@@ -1901,16 +1955,28 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
             }
 
             $reportToolbar.on('shown.bs.dropdown', '.btn-group', function() {
-                fitOpenReportMenu($(this));
+                var $group = $(this);
+                fitOpenReportMenu($group);
+
+                // the menu scrolls now, so an open fly-out has to follow its row
+                $group.children('.dropdown-menu').on('scroll.hrpFlyout', function() {
+                    $(this).children('.dropdown-submenu').each(function() {
+                        var $submenu = $(this);
+                        if ($submenu.hasClass('is-open') || $submenu.is(':hover')) {
+                            placeFlyout($submenu);
+                        }
+                    });
+                });
             });
 
             $reportToolbar.on('hidden.bs.dropdown', '.btn-group', function() {
                 $reportToolbar.removeClass('hrp-dropdown-up');
                 var $menu = $(this).children('.dropdown-menu');
-                $menu.removeClass('hrp-viewport-menu').css('max-height', '');
+                $menu.off('scroll.hrpFlyout').removeClass('hrp-viewport-menu').css('max-height', '');
                 if ($menu.length) {
                     $menu.get(0).style.removeProperty('--hrp-menu-top');
                     $menu.get(0).style.removeProperty('--hrp-menu-left');
+                    $menu.get(0).style.removeProperty('--hrp-menu-max-h');
                 }
                 closeReportSubmenus($(this));
             });

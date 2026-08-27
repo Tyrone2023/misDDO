@@ -525,6 +525,14 @@
                                 <?php } ?>
                                 <li><a href="<?= base_url(); ?>hrusers" class="waves-effect"><i class="ion ion-ios-person-add"></i><span>Manage Users</span></a></li>
                                 <li><a href="<?= base_url(); ?>Users/users_sub" class="waves-effect"><i class="fas fa-user-tie"></i><span>Manage Sub Users</span></a></li>
+                                <?php if ($this->session->position === 'Human Resource Admin') : ?>
+                                <li>
+                                    <a href="<?= base_url(); ?>Pages/esignature" class="waves-effect">
+                                        <i class="mdi mdi-draw"></i>
+                                        <span>Electronic Signature</span>
+                                    </a>
+                                </li>
+                                <?php endif; ?>
                                 <!--<li><a href="<?= base_url(); ?>Page/empReports" class="waves-effect"><i class="mdi mdi-equalizer "></i><span> Reports </span></a></li>-->
                                 <!--<li><a href="<?= base_url(); ?>Page/announcements" class="waves-effect"><i class="fab fa-buromobelexperte"></i><span>Announcements </span></a></li>-->
 

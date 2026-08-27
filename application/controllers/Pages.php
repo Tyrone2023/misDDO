@@ -14805,7 +14805,7 @@ public function ier_group_munv2()
      */
     private function esignature_can_manage()
     {
-        return in_array((string) $this->session->position, ['asst_sds', 'HRMO'], true);
+        return in_array((string) $this->session->position, ['asst_sds', 'HRMO', 'Human Resource Admin'], true);
     }
 
     /**

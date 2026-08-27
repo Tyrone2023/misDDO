@@ -224,6 +224,7 @@ $ad_items = (array) ($doc['items'] ?? []);
             <?php endif; ?>
             <?= $ad_field('signatory', $doc['signatory'] ?? '', 'span', 'ad-signame'); ?>
             <?= $ad_field('signatory_title', $doc['signatory_title'] ?? '', 'span', 'ad-sigtitle'); ?>
+            <?= $ad_field('signatory_role', $doc['signatory_role'] ?? '', 'span', 'ad-sigrole'); ?>
         </div>
     </div>
 

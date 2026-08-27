@@ -225,7 +225,7 @@ class SecretariatQualification extends CI_Controller
         } else {
             $fields = ['annex', 'office', 'date', 'applicant', 'address1', 'address2', 'salutation',
                 'greeting', 'intro', 'item_no', 'body2', 'body3', 'thanks', 'closing',
-                'signatory', 'signatory_title'];
+                'signatory', 'signatory_title', 'signatory_role'];
             $cells = ['criterion', 'qs', 'yours', 'remarks'];
         }
 

@@ -3246,10 +3246,7 @@ class Secretariat_model extends CI_Model
                 'MiddleName' => (string) $person->MiddleName,
                 'LastName'   => (string) $person->LastName,
                 'NameExtn'   => (string) $person->NameExtn,
-                'contact_no' => $this->merge_contact_numbers(
-                    (string) $person->empMobile,
-                    (string) $person->contactNo
-                ),
+                'contact_no' => trim((string) $person->contactNo),
             ];
         }
 
@@ -3602,9 +3599,10 @@ class Secretariat_model extends CI_Model
     }
 
     /**
-     * The HRMPSB Chair who signs the issued documents: the Assistant Schools
-     * Division Superintendent that maintains an e-signature, same signatory the
-     * certificate of rating uses. Falls back to the SDS named in mis_settings.
+     * The HRMPSB Member who signs the issued documents: the Human Resource
+     * Admin that maintains an e-signature, taken from the users table. Falls
+     * back to any Human Resource Admin on file, then to a blank name the
+     * Secretariat can type in.
      */
     public function assessment_signatory(): array
     {
@@ -3613,7 +3611,7 @@ class Secretariat_model extends CI_Model
 
         $signatory = $this->db
             ->from('users')
-            ->where('position', 'asst_sds')
+            ->where('position', 'Human Resource Admin')
             ->where("COALESCE(esig, '') != ''", null, false)
             ->order_by('id', 'DESC')
             ->limit(1)
@@ -3621,7 +3619,7 @@ class Secretariat_model extends CI_Model
             ->row();
 
         if (empty($signatory)) {
-            $signatory = $this->db->where('position', 'asst_sds')->limit(1)->get('users')->row();
+            $signatory = $this->db->where('position', 'Human Resource Admin')->limit(1)->get('users')->row();
         }
 
         if (!empty($signatory)) {
@@ -3630,18 +3628,16 @@ class Secretariat_model extends CI_Model
 
             return [
                 'name'  => trim(strtoupper(trim((string) $signatory->fname) . $mi . ' ' . trim((string) $signatory->lname))),
-                'title' => 'Assistant Schools Division Superintendent',
-                'role'  => 'HRMPSB Chair',
+                'title' => 'Administrative Officer IV',
+                'role'  => 'HRMPSB Member',
                 'esig'  => trim((string) ($signatory->esig ?? '')),
             ];
         }
 
-        $settings = $this->db->where('settingsID', 1)->get('mis_settings')->row();
-
         return [
-            'name'  => strtoupper(trim((string) ($settings->sds ?? ''))),
-            'title' => trim((string) ($settings->sdsPosition ?? 'Schools Division Superintendent')),
-            'role'  => 'HRMPSB Chair',
+            'name'  => '',
+            'title' => 'Administrative Officer IV',
+            'role'  => 'HRMPSB Member',
             'esig'  => '',
         ];
     }
@@ -3834,6 +3830,7 @@ class Secretariat_model extends CI_Model
             'closing'         => 'Very truly yours,',
             'signatory'       => $signatory['name'],
             'signatory_title' => $signatory['title'],
+            'signatory_role'  => $signatory['role'],
         ];
 
         if ($isDq) {
@@ -3928,6 +3925,17 @@ class Secretariat_model extends CI_Model
                         }));
                         $doc['address'] = implode("\n", $lines);
                     }
+                }
+
+                // Documents saved while the block was signed by the Assistant
+                // Schools Division Superintendent keep that old default. Refresh
+                // the signature block to the current signatory, but only while
+                // it still holds that exact default, so a title the Secretariat
+                // typed themselves is left alone.
+                if (trim((string) ($doc['signatory_title'] ?? '')) === 'Assistant Schools Division Superintendent') {
+                    $doc['signatory']       = $defaults['signatory'] ?? '';
+                    $doc['signatory_title'] = $defaults['signatory_title'] ?? '';
+                    $doc['signatory_role']  = $defaults['signatory_role'] ?? '';
                 }
 
                 $saved = true;
