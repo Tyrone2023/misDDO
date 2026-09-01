@@ -12171,7 +12171,7 @@ class Page extends CI_Controller
 		$this->Reg->ensure_training_columns();
 
 		$row = $this->Common->one_cond_row('hris_trainings', 'trainingID', $this->input->post('id'));
-		if ($this->Reg->block_when_records_locked($row->IDNumber ?? $this->input->post('id_number'), '#trainings')) {
+		if ($this->Reg->block_when_records_locked($row->IDNumber ?? $this->input->post('id_number'), '#trainings', 'details')) {
 			return;
 		}
 
@@ -12254,7 +12254,7 @@ class Page extends CI_Controller
 		$this->Reg->ensure_experience_columns();
 
 		$row = $this->Common->one_cond_row('hris_experience', 'id', $this->input->post('id'));
-		if ($this->Reg->block_when_records_locked($row->id_number ?? $this->input->post('id_number'), '#work')) {
+		if ($this->Reg->block_when_records_locked($row->id_number ?? $this->input->post('id_number'), '#work', 'details')) {
 			return;
 		}
 
@@ -12267,6 +12267,38 @@ class Page extends CI_Controller
 		}
 
 		$this->Reg->update_experience_dates();
+		$this->session->set_flashdata('success', 'Successfully updated');
+		redirect($_SERVER['HTTP_REFERER'] . '#work');
+	}
+
+	/**
+	 * Correct the company / office and the job title on an existing work
+	 * experience row. Scope 'details': the settings lock freezes attachments,
+	 * not the text, so this stays available while Add and Delete are closed.
+	 */
+	public function update_experience_details()
+	{
+		$this->Reg->ensure_experience_columns();
+
+		$row = $this->Common->one_cond_row('hris_experience', 'id', $this->input->post('id'));
+
+		if (empty($row)) {
+			$this->session->set_flashdata('danger', 'That work experience record no longer exists.');
+			redirect($_SERVER['HTTP_REFERER'] . '#work');
+			return;
+		}
+
+		if ($this->Reg->block_when_records_locked($row->id_number ?? $this->input->post('id_number'), '#work', 'details')) {
+			return;
+		}
+
+		if (trim((string) $this->input->post('title')) === '') {
+			$this->session->set_flashdata('danger', 'Company / office name is required.');
+			redirect($_SERVER['HTTP_REFERER'] . '#work');
+			return;
+		}
+
+		$this->Reg->update_experience_details();
 		$this->session->set_flashdata('success', 'Successfully updated');
 		redirect($_SERVER['HTTP_REFERER'] . '#work');
 	}
@@ -12299,7 +12331,7 @@ class Page extends CI_Controller
 		$this->Reg->ensure_experience_columns();
 
 		$row = $this->Common->one_cond_row('hris_experience', 'id', $this->uri->segment(3));
-		if ($this->Reg->block_when_records_locked($row->id_number ?? null, '#work')) {
+		if ($this->Reg->block_when_records_locked($row->id_number ?? null, '#work', 'details')) {
 			return;
 		}
 
@@ -12320,7 +12352,7 @@ class Page extends CI_Controller
 		$this->Reg->ensure_training_columns();
 
 		$row = $this->Common->one_cond_row('hris_trainings', 'trainingID', $this->uri->segment(3));
-		if ($this->Reg->block_when_records_locked($row->IDNumber ?? null, '#trainings')) {
+		if ($this->Reg->block_when_records_locked($row->IDNumber ?? null, '#trainings', 'details')) {
 			return;
 		}
 

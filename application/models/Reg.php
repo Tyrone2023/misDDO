@@ -848,14 +848,25 @@ class Reg extends CI_Model{
               'pre_school' => $this->input->post('school')
       );
 
-      $res = $this->db->insert('hris_applications', $data);
+      $res    = $this->db->insert('hris_applications', $data);
+      $appID  = $this->db->insert_id();
+      $vacancy = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->input->post('id'));
+
       $this->Audit->log('submit_application', [
           'entity_type'  => 'application',
-          'entity_id'    => $this->db->insert_id(),
-          'app_id'       => $this->db->insert_id(),
+          'entity_table' => 'hris_applications',
+          'entity_id'    => $appID,
+          'app_id'       => $appID,
           'applicant_id' => $this->session->c_id,
           'job_id'       => $this->input->post('id'),
-          'description'  => 'Applicant submitted an application.',
+          'field'        => 'application',
+          'description'  => 'Applicant applied to "'
+              . trim((string) ($vacancy->jobTitle ?? ('vacancy #' . $this->input->post('id'))))
+              . '" (item no. ' . trim((string) ($vacancy->itemNo ?? '-')) . ')'
+              . ', preferred district "' . $this->input->post('district') . '"'
+              . ', preferred school "' . $this->input->post('school') . '"'
+              . '; application #' . $appID . ' created on ' . $date . ' at ' . $t . '.',
+          'new_value'    => json_encode($data),
       ]);
       return $res;
     }
@@ -875,14 +886,23 @@ class Reg extends CI_Model{
               'pre_school' => '202401'
       );
 
-      $res = $this->db->insert('hris_applications', $data);
+      $res     = $this->db->insert('hris_applications', $data);
+      $appID   = $this->db->insert_id();
+      $vacancy = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->uri->segment(3));
+
       $this->Audit->log('submit_application', [
           'entity_type'  => 'application',
-          'entity_id'    => $this->db->insert_id(),
-          'app_id'       => $this->db->insert_id(),
+          'entity_table' => 'hris_applications',
+          'entity_id'    => $appID,
+          'app_id'       => $appID,
           'applicant_id' => $this->session->c_id,
           'job_id'       => $this->uri->segment(3),
-          'description'  => 'Applicant submitted a non-teaching application.',
+          'field'        => 'application',
+          'description'  => 'Applicant applied to the non-teaching vacancy "'
+              . trim((string) ($vacancy->jobTitle ?? ('vacancy #' . $this->uri->segment(3))))
+              . '" (item no. ' . trim((string) ($vacancy->itemNo ?? '-')) . ')'
+              . '; application #' . $appID . ' created on ' . $date . ' at ' . $t . '.',
+          'new_value'    => json_encode($data),
       ]);
       return $res;
     }
@@ -1185,7 +1205,7 @@ class Reg extends CI_Model{
       return $this->db->update('hris_jobvacancy', $data);
     }
 
-    public function remove_attach($column){
+    public function remove_attach($column, $removed_file = null){
 
       $data = array(
           $column => ''
@@ -1195,16 +1215,19 @@ class Reg extends CI_Model{
       $res = $this->db->update('hris_applicant', $data);
       $this->Audit->log('delete_document', [
           'entity_type'  => 'document',
+          'entity_table' => 'hris_applicant',
           'entity_id'    => $column,
           'applicant_id' => $this->uri->segment(3),
           'job_id'       => $this->uri->segment(4),
           'field'        => $column,
-          'description'  => 'Removed document / attachment: ' . $column . '.',
+          'description'  => 'Removed document / attachment "' . $column . '" from the applicant profile'
+              . ($removed_file ? '; file deleted: ' . $removed_file : '') . '.',
+          'old_value'    => $removed_file,
       ]);
       return $res;
     }
 
-    public function remove_attach_staff($column){
+    public function remove_attach_staff($column, $removed_file = null){
 
       $data = array(
           $column => ''
@@ -1214,16 +1237,19 @@ class Reg extends CI_Model{
       $res = $this->db->update('hris_staff', $data);
       $this->Audit->log('delete_document', [
           'entity_type'  => 'document',
+          'entity_table' => 'hris_staff',
           'entity_id'    => $column,
           'applicant_id' => $this->uri->segment(3),
           'job_id'       => $this->uri->segment(4),
           'field'        => $column,
-          'description'  => 'Removed document / attachment: ' . $column . '.',
+          'description'  => 'Removed document / attachment "' . $column . '" from the staff 201 profile'
+              . ($removed_file ? '; file deleted: ' . $removed_file : '') . '.',
+          'old_value'    => $removed_file,
       ]);
       return $res;
     }
 
-    public function remove_attach_app($column){
+    public function remove_attach_app($column, $removed_file = null){
 
       $data = array(
           $column => ''
@@ -1233,12 +1259,16 @@ class Reg extends CI_Model{
       $res = $this->db->update('hris_applications', $data);
       $this->Audit->log('delete_document', [
           'entity_type'  => 'document',
+          'entity_table' => 'hris_applications',
           'entity_id'    => $column,
           'app_id'       => $this->uri->segment(7),
           'applicant_id' => $this->uri->segment(3),
           'job_id'       => $this->uri->segment(4),
           'field'        => $column,
-          'description'  => 'Removed document / attachment: ' . $column . '.',
+          'description'  => 'Removed document / attachment "' . $column . '" from application #'
+              . $this->uri->segment(7)
+              . ($removed_file ? '; file deleted: ' . $removed_file : '') . '.',
+          'old_value'    => $removed_file,
       ]);
       return $res;
     }
@@ -3473,10 +3503,13 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
     public function ensure_experience_columns(){
 
       $this->Common->ensure_columns('hris_experience', array(
-          'date_from'  => 'date null',
-          'date_to'    => 'date null',
-          'created_at' => 'datetime null',
-          'updated_at' => 'datetime null'
+          'date_from'      => 'date null',
+          'date_to'        => 'date null',
+          'created_at'     => 'datetime null',
+          'updated_at'     => 'datetime null',
+          // A service record is read as "what post, at which office" - the
+          // company alone never said what the applicant actually did there.
+          'position_title' => 'varchar(255) null'
           ));
     }
 
@@ -3573,24 +3606,74 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
     }
 
     /**
-     * Server-side half of applicant_record_lock(): the encoding endpoints must
-     * refuse a write once the vacancy closed, not merely hide the buttons.
-     * Bounces back to the referring page with a message when locked.
+     * The division-wide switch (settings row 11) that closes the Add and
+     * Delete buttons on Work Experience and Trainings.
+     *
+     * Distinct from applicant_record_lock(): that one follows the vacancy,
+     * this one is turned on and off by hand for everybody at once.
      */
-    public function block_when_records_locked($applicant_id, $anchor = ''){
+    public function records_settings_locked(){
+
+      $setting = $this->Common->one_cond_row('settings', 'id', 11);
+
+      return (int) ($setting->status ?? 0) === 1;
+    }
+
+    /**
+     * Server-side half of the two record locks: the encoding endpoints must
+     * refuse a write, not merely hide the buttons. Bounces back to the
+     * referring page with a message when locked.
+     *
+     * Two scopes, because the locks do not mean the same thing:
+     *
+     *   'attachment' (default) - anything that creates, replaces or destroys a
+     *       file: adding a row, deleting a row, swapping the PDF. Blocked by
+     *       either lock.
+     *   'details' - correcting the text on a row that already exists (company,
+     *       job title, hours). The settings lock leaves this open, because it
+     *       exists to stop documents moving, not to freeze typos in place.
+     *       A closed vacancy still blocks it: what was ranked stays as ranked.
+     */
+    public function block_when_records_locked($applicant_id, $anchor = '', $scope = 'attachment'){
 
       $lock = $this->applicant_record_lock($applicant_id);
 
-      if (empty($lock['locked'])) {
-        return false;
+      if (!empty($lock['locked'])) {
+        $this->audit_block($applicant_id, $scope, $lock['reason']);
+
+        $this->session->set_flashdata('danger',
+            'This section is closed. ' . $lock['reason']);
+
+        redirect(($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor);
+
+        return true;
       }
 
-      $this->session->set_flashdata('danger',
-          'This section is closed. ' . $lock['reason']);
+      if ($scope !== 'details' && $this->records_settings_locked()) {
+        $reason = 'Adding, replacing and deleting attachments is currently disabled by the administrator.';
 
-      redirect(($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor);
+        $this->audit_block($applicant_id, $scope, $reason);
 
-      return true;
+        $this->session->set_flashdata('danger', $reason);
+
+        redirect(($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor);
+
+        return true;
+      }
+
+      return false;
+    }
+
+    /** A refused write is itself worth recording - it shows what was attempted. */
+    private function audit_block($applicant_id, $scope, $reason){
+
+      $this->Audit->log('blocked', array(
+          'entity_type'  => 'lock',
+          'entity_id'    => $scope,
+          'applicant_id' => $applicant_id,
+          'field'        => $scope,
+          'description'  => 'Refused a ' . $scope . ' change: ' . $reason,
+          ));
     }
 
     /**
@@ -3691,6 +3774,7 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
 
       $data = array(
           'title' => $this->input->post('title'),
+          'position_title' => $this->input->post('position_title'),
           'file' => $filename,
           'date_from' => $from ?: null,
           'date_to' => $to ?: null,
@@ -3701,18 +3785,65 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           'created_at' => $this->record_stamp(),
           );
         $res = $this->db->insert('hris_experience', $data);
+        $newId = $this->db->insert_id();
 
         $this->Audit->log('add_experience', [
             'entity_type'  => 'experience',
-            'entity_id'    => $this->db->insert_id(),
+            'entity_table' => 'hris_experience',
+            'entity_id'    => $newId,
             'applicant_id' => $this->input->post('id_number'),
             'field'        => 'experience',
-            'description'  => 'Added work experience "' . $data['title'] . '"'
+            'description'  => 'Added work experience: '
+                . ($data['position_title'] !== '' && $data['position_title'] !== null
+                    ? '"' . $data['position_title'] . '" at ' : '')
+                . '"' . $data['title'] . '"'
                 . ($from && $to ? ' (' . $from . ' to ' . $to . ')' : '')
-                . ', saved ' . $data['created_at'] . '.',
+                . ', attachment "' . $filename . '", saved ' . $data['created_at'] . '.',
+            'new_value'    => json_encode(array(
+                'position_title' => $data['position_title'],
+                'title'          => $data['title'],
+                'date_from'      => $data['date_from'],
+                'date_to'        => $data['date_to'],
+                'file'           => $filename,
+            )),
         ]);
 
         return $res;
+    }
+
+    /**
+     * Correct the descriptive half of a work experience row - the company and
+     * the job title held there. Deliberately separate from the attachment:
+     * these two stay editable while the settings lock only freezes the file.
+     */
+    public function update_experience_details(){
+
+      $id     = $this->input->post('id');
+      $before = $this->Audit->snapshot('hris_experience', 'id', $id);
+
+      $data = array(
+          'title'          => trim((string) $this->input->post('title')),
+          'position_title' => trim((string) $this->input->post('position_title')),
+          'updated_at'     => $this->record_stamp(),
+          );
+
+      $this->db->where('id', $id);
+      $res = $this->db->update('hris_experience', $data);
+
+      $this->Audit->log_changes('update_experience_details',
+          $this->Audit->diff($before, $data), array(
+              'entity_type'  => 'experience',
+              'entity_table' => 'hris_experience',
+              'entity_id'    => $id,
+              'applicant_id' => $before['id_number'] ?? $this->input->post('id_number'),
+              'label'        => 'work experience #' . $id,
+              'fields'       => array(
+                  'title'          => 'Company / Office',
+                  'position_title' => 'Job Title',
+              ),
+          ));
+
+      return $res;
     }
 
     /** Local "saved on" stamp; the encoding screens all read Manila time. */

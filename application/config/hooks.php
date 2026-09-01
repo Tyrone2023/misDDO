@@ -38,4 +38,13 @@ $hook['post_controller_constructor'] = array(
         'filename' => 'FieldEncoderGuard.php',
         'filepath' => 'hooks',
     ),
+    // Audit trail catch-all. begin() runs here because it is the last moment
+    // the device cookie can still be set; it registers a shutdown function to
+    // write the row, since redirect() exits before post_controller would run.
+    array(
+        'class'    => 'AuditRequest',
+        'function' => 'begin',
+        'filename' => 'AuditRequest.php',
+        'filepath' => 'hooks',
+    ),
 );

@@ -124,7 +124,9 @@ $h = function ($v) {
                                 $note      = trim((string) $e['note']);
                                 $searchable = strtolower(trim(
                                     $e['label'] . ' ' . $detail . ' ' . $note . ' ' .
-                                    $e['actor'] . ' ' . $e['actor_role'] . ' ' . $dateLabel
+                                    $e['actor'] . ' ' . $e['actor_role'] . ' ' . $dateLabel . ' ' .
+                                    ($e['responsible'] ?? '') . ' ' . ($e['subject'] ?? '') . ' ' .
+                                    ($e['ip'] ?? '') . ' ' . ($e['mac'] ?? '') . ' ' . ($e['device'] ?? '')
                                 ));
                             ?>
                             <?php if ($dateKey !== $lastDate): $lastDate = $dateKey; ?>
@@ -159,9 +161,17 @@ $h = function ($v) {
                                     <?php endif; ?>
 
                                     <div class="app-track__meta">
-                                        <?php if (trim((string) $e['actor']) !== ''): ?>
-                                            <span class="app-track__actor">
-                                                <i class="mdi mdi-account-circle-outline"></i><?= $h($e['actor']); ?>
+                                        <?php
+                                            // The stored "responsible" is the assembled, snapshotted
+                                            // form; fall back to the reconstructed actor for rows
+                                            // written before that column existed.
+                                            $responsible = trim((string) ($e['responsible'] ?? ''));
+                                            $actorName   = trim((string) $e['actor']);
+                                            $subject     = trim((string) ($e['subject'] ?? ''));
+                                        ?>
+                                        <?php if ($responsible !== '' || $actorName !== ''): ?>
+                                            <span class="app-track__actor" title="Person responsible for this entry">
+                                                <i class="mdi mdi-account-check-outline"></i><?= $h($responsible !== '' ? $responsible : $actorName); ?>
                                             </span>
                                         <?php else: ?>
                                             <span class="app-track__actor app-track__actor--unknown">
@@ -169,13 +179,49 @@ $h = function ($v) {
                                             </span>
                                         <?php endif; ?>
 
-                                        <?php if (trim((string) $e['actor_role']) !== ''): ?>
+                                        <?php if ($responsible === '' && trim((string) $e['actor_role']) !== ''): ?>
                                             <span class="app-track__role"><?= $h($e['actor_role']); ?></span>
+                                        <?php endif; ?>
+
+                                        <?php if ($subject !== ''): ?>
+                                            <span class="app-track__subject" title="Record this entry was made against">
+                                                <i class="mdi mdi-folder-account-outline"></i><?= $h($subject); ?>
+                                            </span>
+                                        <?php endif; ?>
+
+                                        <?php if (isset($e['on_self']) && $e['on_self'] !== null): ?>
+                                            <span class="app-track__scope app-track__scope--<?= $e['on_self'] ? 'self' : 'other' ?>"
+                                                  title="<?= $e['on_self']
+                                                      ? 'The record owner made this change themselves.'
+                                                      : 'Made by someone other than the record owner.'; ?>">
+                                                <i class="mdi <?= $e['on_self'] ? 'mdi-account-arrow-left-outline' : 'mdi-account-supervisor-outline'; ?>"></i><?= $e['on_self'] ? 'Own record' : 'On behalf'; ?>
+                                            </span>
                                         <?php endif; ?>
 
                                         <span class="app-track__source app-track__source--<?= $h($e['source']); ?>">
                                             <?= $e['source'] === 'audit' ? 'Audit trail' : 'Status log'; ?>
                                         </span>
+
+                                        <?php
+                                            // Where the action came from. The device id is the
+                                            // durable one; a MAC only exists when the browser
+                                            // was on the same network as the server.
+                                            $origin = [];
+                                            if (!empty($e['ip']))     { $origin[] = 'IP ' . $e['ip']; }
+                                            if (!empty($e['mac']))    { $origin[] = 'MAC ' . $e['mac']; }
+                                            if (!empty($e['device'])) { $origin[] = 'Device ' . substr($e['device'], 0, 12); }
+                                        ?>
+                                        <?php if ($origin): ?>
+                                            <span class="app-track__origin" title="<?= $h(implode(' &middot; ', $origin)); ?>">
+                                                <i class="mdi mdi-devices"></i><?= $h(implode(' · ', $origin)); ?>
+                                            </span>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($e['sealed'])): ?>
+                                            <span class="app-track__sealed" title="This entry is hash-chained and cannot be altered without detection.">
+                                                <i class="mdi mdi-shield-check-outline"></i>Sealed
+                                            </span>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </li>
@@ -208,6 +254,30 @@ $h = function ($v) {
     line-height:1.5;
     transition:background .15s ease,box-shadow .15s ease;
 }
+.app-track__subject,.app-track__scope{
+    display:inline-flex;
+    align-items:center;
+    gap:.25rem;
+    font-size:.72rem;
+    white-space:nowrap;
+}
+.app-track__subject{color:#6c757d;}
+.app-track__subject .mdi,.app-track__scope .mdi{font-size:.95rem;}
+.app-track__scope--self{color:#6c757d;}
+.app-track__scope--other{
+    color:#b9860b;
+    font-weight:600;
+}
+.app-track__origin,.app-track__sealed{
+    display:inline-flex;
+    align-items:center;
+    gap:.25rem;
+    font-size:.72rem;
+    color:#6c757d;
+    white-space:nowrap;
+}
+.app-track__origin .mdi,.app-track__sealed .mdi{font-size:.95rem;}
+.app-track__sealed{color:#1abc9c;}
 .app-track-btn:hover,.app-track-btn:focus{
     background:#fff;
     color:#188ae2;

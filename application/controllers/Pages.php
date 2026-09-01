@@ -2937,6 +2937,18 @@ class Pages extends CI_Controller
                 $logType = 'login';
                 $this->Page_model->insert_logs($logStat, $logType);
 
+                // mis_logs keeps the raw sign-in record; the trail keeps the
+                // device and address the session was opened from, so later
+                // actions in it can be tied back to a machine.
+                $this->Audit->log('login', [
+                    'entity_type'  => 'session',
+                    'entity_id'    => $user_id['id'],
+                    'applicant_id' => $user_id['user_id'],
+                    'field'        => 'login',
+                    'description'  => 'Signed in as "' . $user_id['username'] . '" ('
+                        . $user_id['position'] . ').',
+                ]);
+
                 if ($this->session->sp == 0) {
                     if ($this->session->position == "user") {
                         redirect(base_url() . 'Pages/view_employee');
@@ -2961,6 +2973,16 @@ class Pages extends CI_Controller
                 $this->session->set_flashdata('failed', 'Username/Password not match');
                 $logStat = 'failed';
                 $this->Page_model->insert_logs_failed($logStat);
+
+                // A run of these from one device is the signal worth having.
+                $this->Audit->log('login_failed', [
+                    'entity_type' => 'session',
+                    'entity_id'   => $this->input->post('username', true),
+                    'field'       => 'login',
+                    'description' => 'Failed sign-in attempt for username "'
+                        . $this->input->post('username', true) . '".',
+                ]);
+
                 redirect(base_url() . 'log_in');
             }
         }
@@ -3013,6 +3035,16 @@ class Pages extends CI_Controller
         $logStat = 'success';
         $logType = 'logout';
         $this->Page_model->insert_logs_out($logStat, $logType);
+
+        // Logged before the session is torn down, while the actor is known.
+        $this->Audit->log('logout', [
+            'entity_type'  => 'session',
+            'entity_id'    => $this->session->id,
+            'applicant_id' => $this->session->c_id,
+            'field'        => 'logout',
+            'description'  => 'Signed out of the session opened as "'
+                . $this->session->username . '".',
+        ]);
 
         $this->session->unset_userdata('id');
         $this->session->unset_userdata('username');
@@ -3153,6 +3185,30 @@ class Pages extends CI_Controller
                     $id = $this->db->insert_id();
                     $this->Page_model->update_app_count();
                     $this->Page_model->insert_reg_user($id);
+
+                    // The first entry in this applicant's trail: everything
+                    // they do afterwards hangs off the identity created here.
+                    $this->Audit->log('register', [
+                        'entity_type'  => 'applicant',
+                        'entity_table' => 'hris_applicant',
+                        'entity_id'    => $id,
+                        'applicant_id' => $id,
+                        'user_id'      => $id,
+                        'field'        => 'registration',
+                        'description'  => 'Applicant self-registered as "'
+                            . trim($fname . ' ' . $mname . ' ' . $lname) . '" (record no. '
+                            . $r_no . ', email ' . $email . ', contact ' . $contact
+                            . '); account created and credentials emailed.',
+                        'new_value'    => json_encode([
+                            'record_no'  => $r_no,
+                            'FirstName'  => $fname,
+                            'MiddleName' => $mname,
+                            'LastName'   => $lname,
+                            'empEmail'   => $email,
+                            'contactNo'  => $contact,
+                            'BirthDate'  => $bd,
+                        ]),
+                    ]);
 
                     $division = 'DepEd';
                     $settings1 = $this->PersonnelModel->mis_settings();
@@ -3519,10 +3575,22 @@ class Pages extends CI_Controller
             $this->load->view('templates/footer');
         } else {
             $eligibilityBefore = $this->Page_model->get_single_row_by_id('hris_applicant', 'id', $param);
+            $profileBefore = $this->Audit->snapshot('hris_applicant', 'id', $param);
             $profileUpdated = $this->Page_model->update_profile_reg();
             $id = $this->db->insert_id();
             $this->Reg->ai_sex_update();
             $this->Page_model->insert_at('Profile registration successfully ', $id);
+
+            // Field-level trail: "updated profile" says nothing a month later,
+            // so record which values actually moved and what they moved from.
+            $this->Audit->log_changes('update_profile',
+                $this->Audit->diff($profileBefore, $this->Audit->snapshot('hris_applicant', 'id', $param)), [
+                    'entity_type'  => 'applicant',
+                    'entity_table' => 'hris_applicant',
+                    'entity_id'    => $param,
+                    'applicant_id' => $param,
+                    'label'        => 'the applicant profile',
+                ]);
 
             $oldEligibility = trim((string) ($eligibilityBefore->csEligibility ?? ''));
             $oldEligibilityRating = trim((string) ($eligibilityBefore->csEligibilityRating ?? ''));
@@ -8171,13 +8239,17 @@ public function rqa_municipality_print_shsv2()
                 ->where('app_id', (int)$appIdForRating)
                 ->where('rater_user_id', $evaluatorId)
                 ->count_all_results();
+            $isFieldEvaluatorForVacancy = $evaluatorId > 0
+                && $this->secretariat->field_evaluator_can_view_application(
+                    $evaluatorId,
+                    (int)$appIdForRating
+                );
 
             if (!$isAssigned) {
                 // A Field Evaluator tagged on this vacancy may open and score any
                 // of its applications. Only the qualification decision stays with
                 // the evaluator the applicant is tagged to.
-                $this->load->model('Secretariat_model', 'secretariat');
-                if (!$this->secretariat->field_evaluator_can_view_application($evaluatorId, (int)$appIdForRating)) {
+                if (!$isFieldEvaluatorForVacancy) {
                     show_error('This application is not assigned to your evaluator account.', 403);
                     return;
                 }
@@ -8202,8 +8274,10 @@ public function rqa_municipality_print_shsv2()
 
             // The rating views hide scores and Rate buttons behind the eval_id1
             // claim of the tagged evaluator; a Field Evaluator works the whole
-            // vacancy, so they are exempt from that claim.
-            $data['field_evaluator_bypass'] = $fieldEvaluatorOnly;
+            // vacancy, so they are exempt from that claim. This also has to be
+            // true for their own assigned applicants so Interview and Written
+            // Examination remain editable there as well.
+            $data['field_evaluator_bypass'] = $isFieldEvaluatorForVacancy;
 
             if ($gateState !== null) {
                 $data['evaluator_qualification_gate'] = [
@@ -8649,17 +8723,12 @@ public function rqa_municipality_print_shsv2()
         if (in_array((string) $this->session->userdata('position'), ['Evaluator', 'rater', 'raters'], true)
             && $appIdForRating > 0) {
             $evaluatorId = (int) ($this->session->id ?? $this->session->userdata('id'));
-            $isAssigned = $evaluatorId > 0 && (bool) $this->db
-                ->from('hris_rater_assignments')
-                ->where('app_id', $appIdForRating)
-                ->where('rater_user_id', $evaluatorId)
-                ->count_all_results();
-
-            if (!$isAssigned) {
-                $this->load->model('Secretariat_model', 'secretariat');
-                $data['field_evaluator_bypass'] = $this->secretariat
+            // The vacancy-level Field Evaluator tag grants the score controls
+            // whether this applicant is assigned to this evaluator or to a
+            // different evaluator.
+            $data['field_evaluator_bypass'] = $evaluatorId > 0
+                && $this->secretariat
                     ->field_evaluator_can_view_application($evaluatorId, $appIdForRating);
-            }
         }
 
         $ratingLocked = isset($jobvacancy->jvStatus) && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Closed') === 0;
@@ -8752,7 +8821,7 @@ public function rqa_municipality_print_shsv2()
         }
 
         $application = $this->Common->one_cond_row('hris_applications', 'appID', $appID);
-        $ratingStatuses = ['Endorsed for Rating', 'Rated'];
+        $ratingStatuses = ['Endorsed for Rating', 'Rated', 'Confirmed'];
         if (!$application || !in_array((string)$application->appStatus, $ratingStatuses, true) || (int)$application->dq === 2) {
             show_error('Complete the qualification review before entering applicant ratings.', 409);
             exit;
@@ -12298,10 +12367,11 @@ public function rqa_municipality_print_shsv2()
         $id = $this->uri->segment(3);
         $reg = $this->Common->one_cond_row('hris_applicant', 'id', $id);
         $this->Page_model->insert_at('Removed Attachment', $id);
+        $removed = $reg->{$col} ?? null;
         if (!empty($reg->$col)) {
         unlink("uploads/regfile/" . $reg->{$col});
         }
-        $this->Reg->remove_attach($col);
+        $this->Reg->remove_attach($col, $removed);
         $this->session->set_flashdata('success', 'Successfuly Removed');
         redirect(base_url() . 'pages/ma/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->uri->segment(5));
     }
@@ -12312,13 +12382,14 @@ public function rqa_municipality_print_shsv2()
       $id = $this->uri->segment(3);
       $reg = $this->Common->one_cond_row('hris_staff', 'IDNumber', $id);
       $this->Page_model->insert_at('Removed Attachment', $id);
+      $removed = $reg->{$col} ?? null;
 
       $file = "uploads/regfile/" . $reg->{$col};
       if (is_file($file)) {
         unlink($file);
     }
 
-    $this->Reg->remove_attach_staff($col);
+    $this->Reg->remove_attach_staff($col, $removed);
     $this->session->set_flashdata('success', 'Successfully Removed');
 
     redirect(base_url() . 'pages/ma_staff/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->uri->segment(5));
@@ -12329,10 +12400,11 @@ public function rqa_municipality_print_shsv2()
         $col = $this->uri->segment(6);
         $id = $this->uri->segment(7);
         $reg = $this->Common->one_cond_row('hris_applications', 'appID', $id);
+        $removed = $reg->{$col} ?? null;
         if (!empty($reg->$col)) {
         unlink("uploads/regfile/" . $reg->{$col});
         }
-        $this->Reg->remove_attach_app($col);
+        $this->Reg->remove_attach_app($col, $removed);
         $this->session->set_flashdata('success', 'Successfuly Removed');
         redirect(base_url() . 'pages/ma/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->uri->segment(5));
     }
@@ -12342,10 +12414,11 @@ public function rqa_municipality_print_shsv2()
         $col = $this->uri->segment(6);
         $id = $this->uri->segment(7);
         $reg = $this->Common->one_cond_row('hris_applications', 'appID', $id);
+        $removed = $reg->{$col} ?? null;
         if (!empty($reg->$col)) {
         unlink("uploads/regfile/" . $reg->{$col});
         }
-        $this->Reg->remove_attach_app($col);
+        $this->Reg->remove_attach_app($col, $removed);
         $this->session->set_flashdata('success', 'Successfuly Removed');
         redirect(base_url() . 'pages/ma_staff/' . $this->uri->segment(3) . '/' . $this->uri->segment(4) . '/' . $this->uri->segment(5));
     }

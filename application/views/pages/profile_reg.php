@@ -10,7 +10,19 @@
                 // time is what the ranking was built on.
                 $recordLock   = !empty($record_lock['locked']);
                 $lockReason   = $recordLock ? (string) $record_lock['reason'] : '';
-                $recordsOpen  = ($setting->status == 0) && !$recordLock;
+
+                // Two different locks, two different meanings.
+                //   $recordsOpen     - may add or delete a row, i.e. may bring an
+                //                      attachment in or take one out. Closed by
+                //                      either the settings switch or the vacancy.
+                //   $detailsEditable - may correct the text on a row that already
+                //                      exists (company, job title, hours). The
+                //                      settings switch leaves this open; only a
+                //                      closed vacancy freezes it, so what was
+                //                      ranked stays as it was ranked.
+                $settingsLock    = ($setting->status != 0);
+                $recordsOpen     = !$settingsLock && !$recordLock;
+                $detailsEditable = !$recordLock;
 
                 // "Saved on" stamp for a record. Rows encoded before the column
                 // existed carry none, so those read as a dash.
@@ -39,6 +51,16 @@
                         . ' Records are shown for reference only and can no longer be added, edited or deleted.</div>'
                         . '</div>';
                 };
+
+                // The softer of the two: the file is frozen, the text is not.
+                $attach_notice = function ($what) {
+                    return '<div class="alert alert-info d-flex align-items-center mb-3" role="alert">'
+                        . '<i class="mdi mdi-paperclip-off mr-2 font-18"></i>'
+                        . '<div><strong>Attachments for ' . $what . ' are locked.</strong>'
+                        . ' Records can no longer be added or removed, and files cannot be replaced.'
+                        . ' Existing details may still be corrected.</div>'
+                        . '</div>';
+                };
              ?>
 
             <style>
@@ -56,6 +78,15 @@
                 /* Editable badges should read as controls, not as static labels. */
                 .profile-record-table a.badge { cursor: pointer; }
                 .profile-record-table a.badge:hover { filter: brightness(.9); }
+                /* Text cells that open an edit modal: readable first, clickable second. */
+                .profile-record-table a.xp-editable {
+                    color: inherit;
+                    border-bottom: 1px dashed #adb5bd;
+                    text-decoration: none;
+                }
+                .profile-record-table a.xp-editable:hover { color: #3f6ad8; border-bottom-color: #3f6ad8; }
+                .profile-record-table a.xp-editable .mdi { opacity: 0; transition: opacity .15s ease; }
+                .profile-record-table a.xp-editable:hover .mdi { opacity: 1; }
                 .profile-record-table .btn-lg { padding: 0; line-height: 1; }
             </style>
 
@@ -506,10 +537,14 @@
                                                                     <br />
                                                                     <?php if($recordLock): ?>
                                                                         <?= $lock_notice('Trainings and seminars'); ?>
+                                                                    <?php elseif($settingsLock): ?>
+                                                                        <?= $attach_notice('trainings and seminars'); ?>
                                                                     <?php endif; ?>
                                                                     <?php
+                                                                        // Deleting a training destroys its certificate, so it follows
+                                                                        // the attachment lock; editing the hours does not.
                                                                         $canDeleteTrainings = $recordsOpen && !in_array($this->session->position, ['Evaluator','rater','raters']);
-                                                                        $canManageTrainings = $canDeleteTrainings;
+                                                                        $canManageTrainings = $detailsEditable && !in_array($this->session->position, ['Evaluator','rater','raters']);
                                                                         $canRateTrainings = !$recordLock && ($this->session->position == 'asds' || $this->session->position == 'raters' || ($this->session->position == 'Evaluator' && !empty($isAssignedEvaluator)));
                                                                     ?>
                                                                     <?php if($canRateTrainings): ?>
@@ -562,7 +597,8 @@
                                                                                         <?php if ($canRateTrainings){ ?>
                                                                                             <a data-toggle="modal" data-id="<?= $row->trainingID; ?>" data-appid="<?= $row->noHours; ?>" class="open-AddBookDialog badge badge-primary" href=".ivan"><?= $row->noHours; ?></a>
                                                                                         <?php }else{ ?>
-                                                                                            <?php if (!$recordLock && ($setting->status == 0 || !empty($isAssignedEvaluator))){ ?>
+                                                                                            <?php // Hours are a detail, so the settings lock leaves them open. ?>
+                                                                                            <?php if ($detailsEditable){ ?>
                                                                                                 <a data-toggle="modal" data-id="<?= $row->trainingID; ?>" data-appid="<?= $row->noHours; ?>" class="open-AddBookDialog badge badge-primary" href=".ivan"><?= $row->noHours; ?></a>
                                                                                             <?php }else{ ?>
                                                                                                 <span class="badge badge-success"><?= $row->noHours; ?></span>
@@ -649,19 +685,25 @@
                                                                     <br />
                                                                     <?php if($recordLock): ?>
                                                                         <?= $lock_notice('Work experience'); ?>
+                                                                    <?php elseif($settingsLock): ?>
+                                                                        <?= $attach_notice('work experience'); ?>
                                                                     <?php endif; ?>
                                                                     <?php
                                                                         $canRateExperience = !$recordLock && ($this->session->position == 'asds' || $this->session->position == 'raters' || ($this->session->position == 'Evaluator' && !empty($isAssignedEvaluator)));
-                                                                        $canEditExperienceDates = !$recordLock && ($this->session->position == 'asds' || $this->session->position == 'raters' || $this->session->position == 'Evaluator' || $setting->status == 0);
+                                                                        // Company, job title and dates are details, so the settings
+                                                                        // lock does not close them - only a closed vacancy does.
+                                                                        $canEditExperienceDates = $detailsEditable;
+                                                                        $canEditExperienceInfo  = $detailsEditable;
                                                                     ?>
-                                                                    <?php if($canEditExperienceDates): ?>
-                                                                        <p class="text-muted mb-2">Tip: Click the <strong>inclusive dates</strong> of a row to correct them. The length of service is computed from the range.</p>
+                                                                    <?php if($canEditExperienceInfo): ?>
+                                                                        <p class="text-muted mb-2">Tip: Click the <strong>company name</strong>, <strong>job title</strong> or <strong>inclusive dates</strong> of a row to correct them. The length of service is computed from the date range.</p>
                                                                     <?php endif; ?>
                                                                     <div class="table-responsive">
                                                                     <table class="table table-hover align-middle profile-record-table mb-0">
                                                                         <thead class="thead-light">
                                                                                 <tr>
                                                                                     <th>Company Name</th>
+                                                                                    <th>Job Title</th>
                                                                                     <th class="text-nowrap">From</th>
                                                                                     <th class="text-nowrap">To</th>
                                                                                     <th class="text-center text-nowrap">Length of Service</th>
@@ -690,16 +732,36 @@
                                                                                         $xpTotalMonths += $xpSpan;
                                                                                     }
                                                                                 ?>
+                                                                                <?php
+                                                                                    $xpJobTitle = trim((string) ($row->position_title ?? ''));
+
+                                                                                    // One control spans both date cells: clicking either opens the
+                                                                                    // same "inclusive dates" modal pre-filled with the stored range.
+                                                                                    $dateAttrs = 'data-id="' . (int) $row->id . '"'
+                                                                                        . ' data-from="' . html_escape((string) $xpFrom) . '"'
+                                                                                        . ' data-to="' . html_escape((string) $xpTo) . '"'
+                                                                                        . ' data-title="' . html_escape((string) $row->title) . '"';
+
+                                                                                    // Both text cells open the same "details" modal.
+                                                                                    $infoAttrs = 'data-id="' . (int) $row->id . '"'
+                                                                                        . ' data-company="' . html_escape((string) $row->title) . '"'
+                                                                                        . ' data-job="' . html_escape($xpJobTitle) . '"';
+                                                                                ?>
                                                                                 <tr>
-                                                                                    <td><?= html_escape($row->title); ?></td>
-                                                                                    <?php
-                                                                                        // One control spans both date cells: clicking either opens the
-                                                                                        // same "inclusive dates" modal pre-filled with the stored range.
-                                                                                        $dateAttrs = 'data-id="' . (int) $row->id . '"'
-                                                                                            . ' data-from="' . html_escape((string) $xpFrom) . '"'
-                                                                                            . ' data-to="' . html_escape((string) $xpTo) . '"'
-                                                                                            . ' data-title="' . html_escape((string) $row->title) . '"';
-                                                                                    ?>
+                                                                                    <td>
+                                                                                        <?php if($canEditExperienceInfo){ ?>
+                                                                                            <a data-toggle="modal" <?= $infoAttrs; ?> class="open-xp-info xp-editable" href=".xpinfo" title="Click to correct the company / office name"><?= html_escape($row->title); ?> <i class="mdi mdi-pencil-outline text-muted ml-1"></i></a>
+                                                                                        <?php }else{ ?>
+                                                                                            <?= html_escape($row->title); ?>
+                                                                                        <?php } ?>
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <?php if($canEditExperienceInfo){ ?>
+                                                                                            <a data-toggle="modal" <?= $infoAttrs; ?> class="open-xp-info xp-editable<?= $xpJobTitle === '' ? ' text-warning' : ''; ?>" href=".xpinfo" title="Click to set the job title held at this office"><?= $xpJobTitle !== '' ? html_escape($xpJobTitle) : 'Set job title'; ?> <i class="mdi mdi-pencil-outline text-muted ml-1"></i></a>
+                                                                                        <?php }else{ ?>
+                                                                                            <?= $xpJobTitle !== '' ? html_escape($xpJobTitle) : '<span class="text-muted">&mdash;</span>'; ?>
+                                                                                        <?php } ?>
+                                                                                    </td>
                                                                                     <td class="text-nowrap">
                                                                                         <?php if($canEditExperienceDates){ ?>
                                                                                             <a data-toggle="modal" <?= $dateAttrs; ?> class="open-xp-dates badge badge-<?= $xpFrom ? 'success' : 'warning'; ?>" href=".ivy"><?= $xpFrom ? date('M d, Y', strtotime($xpFrom)) : 'Set date'; ?></a>
@@ -753,13 +815,13 @@
                                                                                 <?php } ?>
                                                                                 <?php if(empty($experience)){ ?>
                                                                                 <tr>
-                                                                                    <td colspan="8" class="text-center text-muted py-4">No work experience recorded yet.</td>
+                                                                                    <td colspan="9" class="text-center text-muted py-4">No work experience recorded yet.</td>
                                                                                 </tr>
                                                                                 <?php } ?>
                                                                             </tbody>
                                                                             <tfoot>
                                                                                 <tr class="bg-light">
-                                                                                    <th colspan="3" class="text-right">Total Relevant Experience</th>
+                                                                                    <th colspan="4" class="text-right">Total Relevant Experience</th>
                                                                                     <th class="text-center text-nowrap">
                                                                                         <span class="badge badge-purple"><?= intdiv($xpTotalMonths, 12); ?> yr <?= $xpTotalMonths % 12; ?> mo</span>
                                                                                     </th>
@@ -993,6 +1055,12 @@
                                                                 <textarea name="title" class="form-control" rows="3" placeholder="e.g. Department of Education - Davao Oriental" required></textarea>
                                                             </div>
 
+                                                            <div class="form-group">
+                                                                <label class="font-weight-semibold">Job Title / Position Held <span class="text-danger">*</span></label>
+                                                                <input name="position_title" type="text" class="form-control" maxlength="255" placeholder="e.g. Administrative Assistant II" value="<?= set_value('position_title'); ?>" required>
+                                                                <small class="form-text text-muted">The post actually held at this office, as written on the service record.</small>
+                                                            </div>
+
                                                             <div class="form-row">
                                                                 <div class="form-group col-md-6">
                                                                     <label class="font-weight-semibold">Inclusive Date &mdash; From <span class="text-danger">*</span></label>
@@ -1021,6 +1089,43 @@
                                                         <div class="modal-footer">
                                                             <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
                                                             <button type="submit" name="submit" class="btn btn-primary waves-effect waves-light">Save Experience</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                                <!-- /.modal-content -->
+                                            </div>
+                                            <!-- /.modal-dialog -->
+                                        </div>
+                                        <!-- /.modal -->
+
+                                        <div class="modal fade xpinfo" tabindex="-1" role="dialog" aria-labelledby="xpInfoLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <?php echo form_open('Page/update_experience_details', array('class' => 'parsley-examples')); ?>
+                                                        <div class="modal-header bg-info text-white">
+                                                            <h5 class="modal-title" id="xpInfoLabel"><i class="mdi mdi-briefcase-edit-outline mr-1"></i> Edit Work Experience</h5>
+                                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                        </div>
+
+                                                        <div class="modal-body">
+                                                            <input type="hidden" value="<?= $this->uri->segment(2); ?>" name="id_number">
+                                                            <input type="hidden" name="id" value="" id="xp_info_id">
+
+                                                            <div class="form-group">
+                                                                <label class="font-weight-semibold">Company / Office Name <span class="text-danger">*</span></label>
+                                                                <textarea name="title" id="xp_info_company" class="form-control" rows="3" required></textarea>
+                                                            </div>
+
+                                                            <div class="form-group mb-0">
+                                                                <label class="font-weight-semibold">Job Title / Position Held</label>
+                                                                <input name="position_title" id="xp_info_job" type="text" maxlength="255" class="form-control" value="">
+                                                                <small class="form-text text-muted">The post actually held at this office, as written on the service record.</small>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                                                            <button type="submit" name="submit" class="btn btn-primary waves-effect waves-light">Save Details</button>
                                                         </div>
                                                     </form>
                                                 </div>
@@ -1255,6 +1360,16 @@
                                                     document.getElementById('xp_dates_title').textContent = trigger.getAttribute('data-title') || '';
 
                                                     refreshRange('editxp');
+                                                });
+
+                                                // Same idea for the company / job title modal.
+                                                document.addEventListener('click', function (e) {
+                                                    var trigger = e.target && e.target.closest ? e.target.closest('.open-xp-info') : null;
+                                                    if (!trigger) return;
+
+                                                    document.getElementById('xp_info_id').value = trigger.getAttribute('data-id') || '';
+                                                    document.getElementById('xp_info_company').value = trigger.getAttribute('data-company') || '';
+                                                    document.getElementById('xp_info_job').value = trigger.getAttribute('data-job') || '';
                                                 });
                                             })();
                                         </script>

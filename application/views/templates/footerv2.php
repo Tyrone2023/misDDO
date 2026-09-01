@@ -107,5 +107,60 @@
                     });
             </script>
       
+                <script>
+                    /*
+                     * Device fingerprint for the audit trail.
+                     *
+                     * The device id cookie is the primary identifier; this is the
+                     * corroborating one, so a device whose cookie was cleared can
+                     * still be recognised. Stable, low-entropy signals only - no
+                     * canvas or font probing, nothing that identifies a person
+                     * rather than a machine.
+                     */
+                    (function () {
+                        try {
+                            if (document.cookie.indexOf('mis_dfp=') !== -1) return;
+
+                            var n = window.navigator || {};
+                            var s = window.screen || {};
+                            var tz = '';
+                            try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+
+                            var seed = [
+                                n.userAgent || '',
+                                n.platform || '',
+                                n.language || '',
+                                (n.languages || []).join(','),
+                                n.hardwareConcurrency || '',
+                                n.deviceMemory || '',
+                                n.maxTouchPoints || '',
+                                s.width + 'x' + s.height + 'x' + (s.colorDepth || ''),
+                                new Date().getTimezoneOffset(),
+                                tz
+                            ].join('|');
+
+                            // FNV-1a, twice over, for a 16-char hex digest. A hash
+                            // is enough: the server only ever compares it.
+                            function fnv(str, offset) {
+                                var h = offset;
+                                for (var i = 0; i < str.length; i++) {
+                                    h ^= str.charCodeAt(i);
+                                    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+                                }
+                                return ('00000000' + h.toString(16)).slice(-8);
+                            }
+
+                            var fp = fnv(seed, 2166136261) + fnv(seed.split('').reverse().join(''), 16777619);
+
+                            document.cookie = 'mis_dfp=' + fp
+                                + ';path=/;max-age=' + (10 * 365 * 24 * 3600)
+                                + ';SameSite=Lax'
+                                + (location.protocol === 'https:' ? ';Secure' : '');
+                        } catch (e) {
+                            /* A missing fingerprint costs one corroborating signal, nothing more. */
+                        }
+                    })();
+                </script>
+
 </body>
 </html>
