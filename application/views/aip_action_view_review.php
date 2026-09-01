@@ -107,7 +107,8 @@
                                                                     <a href="<?= base_url(); ?>Page/generate_app_admin_sned/<?= $row->school_id.'/'.$row->fy.'/'.$row->b_code.'/'.$row->id; ?>" class="btn btn-info" target="_blank">Evaluate APP</a> &nbsp;
                                                                 <?php } ?>
                                                                 <a data-toggle="modal" data-field="<?= $row->fy; ?>" data-id="<?= $row->school_id; ?>" data-bcode="<?= $row->b_code; ?>" class="open-AddBookDialog btn btn-purple" href="#rca">Evaluate RCA</a>&nbsp;
-                                                                <?php if($row->status != 1){?>
+                                                                <?php // Already reviewed (status 3) rows are listed on Page/aip_reviewed for reference only. ?>
+                                                                <?php if($row->status != 1 && $row->status != 3){?>
                                                                     <a href="<?= base_url(); ?>Page/approved_aip_review/<?= $row->id; ?>/<?= $row->school_id; ?>" class="btn btn-warning" onclick="return confirm('Are you sure?')">Approved</a>&nbsp;
                                                                 <?php } ?>
                                                                 <?php //} else { ?> 
@@ -150,6 +151,7 @@
                                                     <?= form_open('Page/open_aip'); ?>
                                                         <input type="hidden" name="id" id="id">
                                                         <input type="hidden" name="school_id" id="field">
+                                                        <input type="hidden" name="from" value="<?= isset($from) ? $from : 'aip_sub_review'; ?>">
                                                         <div class="form-group">
                                                             <label>Reason</label>
                                                             <textarea required name="remarks" id="" class="form-control"></textarea>

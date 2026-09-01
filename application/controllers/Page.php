@@ -5894,7 +5894,7 @@ class Page extends CI_Controller
 		// The unlock action is reachable from several worklists now, so come back to
 		// the one it was fired from. Whitelisted because it lands in a redirect().
 		$from = $this->input->post('from');
-		$allowed = array('aip_sub', 'aip_requested', 'aip_sub_review', 'aip_sub_funds', 'aip_sub_sgod_chief');
+		$allowed = array('aip_sub', 'aip_requested', 'aip_sub_review', 'aip_reviewed', 'aip_sub_funds', 'aip_sub_sgod_chief');
 
 		$this->session->set_flashdata('success', 'The plan has been unlocked. The school can edit and re-submit it.');
 
@@ -6025,6 +6025,23 @@ class Page extends CI_Controller
 		$fys = $this->session->cur_fy;
 
 		$result['data'] = $this->SGODModel->two_cond('sgod_aip_submit', 'fy', $fys, 'status', 0);
+		$result['from'] = 'aip_sub_review';
+
+		$this->load->view('templates/head');
+		$this->load->view('templates/header');
+		$this->load->view('aip_action_view_review', $result);
+	}
+
+	// Plans the review stage has already signed off on (status 3 = 'AIP Reviewed').
+	// Same list layout as aip_sub_review, but read-only for the review action:
+	// the Approved button is hidden for rows already at status 3.
+	function aip_reviewed()
+	{
+		$result['title'] = "REVIEWED PLANS";
+		$fys = $this->session->cur_fy;
+
+		$result['data'] = $this->SGODModel->two_cond('sgod_aip_submit', 'fy', $fys, 'status', 3);
+		$result['from'] = 'aip_reviewed';
 
 		$this->load->view('templates/head');
 		$this->load->view('templates/header');
