@@ -17,7 +17,7 @@ redirect(base_url().'log_in');
     <title><?= $title; ?></title>
 </head>
 <body>
-<?php 
+<?php
         $jobTypes = [
             1 => '- Elementary',
             2 => '- Secondary',
@@ -44,7 +44,7 @@ redirect(base_url().'log_in');
             <span class="r">Schools Division of Davao De Oro</span>
         </p>
 </div>
-    
+
 <div class="blocker"></div>
 
   <div class="wrap">
@@ -75,6 +75,7 @@ redirect(base_url().'log_in');
                 <th rowspan="2">Application Code</th>
                 <th rowspan="2">Address</th>
                 <th colspan="9">COMPARATIVE ASSESSMENT RESULTS</th>
+                <th rowspan="2">Remarks</th>
                 <th colspan="2">For Background<br />Investigation<br />(Y/N)</th>
                 <th rowspan="2">For<br />Appointment<br /><i>(To filled-out by the<br />Appointing<br />Officer/Authority,<br />Please sign opposite<br />the name of the applicant)</th>
                 <th rowspan="2">For<br />Appointment<br/><i>Please identify period of<br /> Probation (6 months or 1<br /> year) in accordance with<br /> Section F of<br /> DO 019,s.2022</i></th>
@@ -92,7 +93,7 @@ redirect(base_url().'log_in');
                 <th>Yes</th>
                 <th>No</th>
             </tr>
-            <?php 
+            <?php
             //$data = array("CRODUA, IRENEO O JR.","AMIGO, EDGARDO V.","JANNDEL BUOT","EDONG, JOSELITO");
             $no = 1;
             foreach($car as $row){
@@ -122,6 +123,7 @@ redirect(base_url().'log_in');
                 <td><?= ($row->ald != 0.00001) ? $row->ald : ""; ?></td>
                 <td><?= number_format($row->interview+$row->written+$row->skills, 2); ?></td>
                 <td><?= number_format(($row->total_points != 0.00001) ? $row->total_points : "", 3); ?></td>
+                <td class="remarks-cell"><textarea class="remarks-input" rows="1" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>"><?= htmlspecialchars($remarks_map[(string) $row->record_no] ?? $ap->empPosition ?? "", ENT_QUOTES); ?></textarea></td>
                 <!-- <td <?php if($ap->asht == 1){echo "style='background-color:#FFF4B7'";}elseif($ap->asht == 2){echo "style='background-color:#C2FFC7'";} ?>><?= $et[$ap->asht] ?? ''; ?></td> -->
                 <td></td>
                 <td></td>
@@ -132,10 +134,10 @@ redirect(base_url().'log_in');
         </table>
 
         <!-- <p class="prep">Prepared by the HRMPSB <span>Appointment conferred by:</span><br />(All members should affix signature) </p>
-        
+
 
         <table class="sign">
-            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if($rqa_sign->nr == 1){?>
+            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if(($rqa_sign->nr ?? 0) == 1){?>
                 <tr>
                     <td><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><br />Member</td>
                     <td><span><?= $sign->m2n; ?></span><br /><?= $sign->m2p; ?><br />Member</td>
@@ -169,9 +171,9 @@ redirect(base_url().'log_in');
                 </tr>
             <?php } ?>
         </table> -->
-        
+
         <!-- <table class="sign">
-            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if($rqa_sign->nr == 1){?>
+            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if(($rqa_sign->nr ?? 0) == 1){?>
                 <tr>
                     <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m1_sign; ?>.png" alt=""><?php if ($sign->m1n): ?><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><br />Member<?php endif; ?></td>
                     <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m2_sign; ?>.png" alt=""><?php if ($sign->m2n): ?><span><?= $sign->m2n; ?></span><br /><?= $sign->m2p; ?><br />Member<?php endif; ?></td>
@@ -205,12 +207,12 @@ redirect(base_url().'log_in');
                 </tr>
             <?php } ?>
         </table> -->
-        
+
 
     </div>
   </div>
 
-  
+
     <!-- <p class="down aa"><b>Notes and Instruction for the HRMO:</b></p>
     <p class="down">A)For the purpose of posting the CAR, column C(Name of the applicant) and columns L to P (Remarks to probation status) shall be concealed in accordance with RA no. 10163 (Data Privacy Act.)</p>
     <p class="down">The only information that shall be made public are the Application Code, Comparative Assessment Results(Component from Education to PPST NCOIs) and the total scores of the applicants.</p>
@@ -220,6 +222,8 @@ redirect(base_url().'log_in');
  -->
 
 
-    
+
+<?php $this->load->view("pages/rqa_remarks_js"); ?>
+
 </body>
 </html>

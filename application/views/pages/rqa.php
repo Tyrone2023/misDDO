@@ -54,29 +54,34 @@
                                         <?php }elseif($job->position == 2){ ?>
                                                 <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative/<?= $this->input->get('jobID'); ?>">RQA Printable View</a>
                                                 <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_posting/<?= $this->input->get('jobID'); ?>">RQA For Posting</a>
-                                                <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative/<?= $this->input->get('jobID'); ?>/1">RQA Printable View w/ eSignature</a>
-                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_posting/<?= $this->input->get('jobID'); ?>/1">RQA For Posting w/ eSignature</a>
+                                                <a class="btn sm btn-warning" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_remarks/<?= $this->input->get('jobID'); ?>">RQA with Remarks</a>
+                                                <!-- <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative/<?= $this->input->get('jobID'); ?>/1">RQA Printable View w/ eSignature</a>
+                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_posting/<?= $this->input->get('jobID'); ?>/1">RQA For Posting w/ eSignature</a> -->
                                                 <a class="btn sm btn-purple" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_region/<?= $this->input->get('jobID'); ?>">RQA For Region</a>
 
                                         <?php }elseif($job->position == 3){ ?>
                                                 <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_related/<?= $this->input->get('jobID'); ?>">RQA Printable View</a>
                                                 <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_related_posting/<?= $this->input->get('jobID'); ?>">RQA For Posting</a>
-                                                <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_related/<?= $this->input->get('jobID'); ?>/1">RQA Printable View w/ eSignature</a>
-                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_related_posting/<?= $this->input->get('jobID'); ?>/1">RQA For Posting w/ eSignature</a>
+                                                <a class="btn sm btn-warning" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_related_remarks/<?= $this->input->get('jobID'); ?>">RQA with Remarks</a>
+                                                <!-- <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_related/<?= $this->input->get('jobID'); ?>/1">RQA Printable View w/ eSignature</a>
+                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_related_posting/<?= $this->input->get('jobID'); ?>/1">RQA For Posting w/ eSignature</a> -->
                                         <?php }elseif($job->position == 4){ ?>
                                                 <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative/<?= $this->input->get('jobID'); ?>">RQA Printable View</a>
                                                 <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_posting/<?= $this->input->get('jobID'); ?>">RQA For Posting</a>
-                                                <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative/<?= $this->input->get('jobID'); ?>/1">RQA Printable View w/ eSignature</a>
-                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_posting/<?= $this->input->get('jobID'); ?>/1">RQA For Posting w/ eSignature</a>
+                                                <a class="btn sm btn-warning" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_remarks/<?= $this->input->get('jobID'); ?>">RQA with Remarks</a>
+                                                <!-- <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative/<?= $this->input->get('jobID'); ?>/1">RQA Printable View w/ eSignature</a>
+                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_posting/<?= $this->input->get('jobID'); ?>/1">RQA For Posting w/ eSignature</a> -->
                                                 <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_mun/<?= $this->input->get('jobID'); ?>/0">RQA Municipality</a>
-                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_mun/<?= $this->input->get('jobID'); ?>/1">RQA Municipality For Posting w/ eSignature</a>
-                                                
+                                                <a class="btn sm btn-info" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_mun_remarks/<?= $this->input->get('jobID'); ?>">RQA Municipality with Remarks</a>
+                                                <!-- <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_administrative_mun/<?= $this->input->get('jobID'); ?>/1">RQA Municipality For Posting w/ eSignature</a> -->
+
 
                                         <?php }else{ ?>
                                                 <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_non/<?= $this->input->get('jobID'); ?>">RQA Printable View non-teaching</a>
                                                 <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa1_none/<?= $this->input->get('jobID'); ?>">RQA For Posting</a>
-                                                <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_non/<?= $this->input->get('jobID'); ?>/1">RQA Printable View non-teaching w/ eSignature</a>
-                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa1_none/<?= $this->input->get('jobID'); ?>/1">RQA For Posting w/ eSignature</a>
+                                                <a class="btn sm btn-warning" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_non_remarks/<?= $this->input->get('jobID'); ?>">RQA with Remarks</a>
+                                                <!-- <a class="btn sm btn-primary" target="_blank" href="<?= base_url(); ?>Pages/car_rqa_non/<?= $this->input->get('jobID'); ?>/1">RQA Printable View non-teaching w/ eSignature</a>
+                                                <a class="btn sm btn-success" target="_blank" href="<?= base_url(); ?>Pages/car_rqa1_none/<?= $this->input->get('jobID'); ?>/1">RQA For Posting w/ eSignature</a> -->
                                         <?php } ?>
 
                                         <?php } ?>

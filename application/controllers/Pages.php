@@ -7157,6 +7157,108 @@ public function car_rqa_promotion()
         $this->load->view('pages/' . $page, $data);
     }
 
+    public function car_rqa_administrative_remarks()
+    {
+        $page = "car_rqa_form_administrative_remarks";
+
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $jobID = $this->uri->segment(3);
+        $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
+        $data['car'] = $this->Common->rqa_non($jobID);
+        $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
+        $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['jobID'] = $jobID;
+        $data['remarks_map'] = $this->Common->rqa_remarks_map($jobID);
+
+
+        if($job->ttype == 1){
+            $data['title'] = "COMPARATIVE ASSESSMENT RESULT FOR EXPANDED RECLASSIFICATION (CAReER)";
+        }else{
+            $data['title'] = "COMPARATIVE ASSESSMENT RESULT (CAR)";
+        }
+
+
+        $this->load->view('pages/' . $page, $data);
+    }
+
+    public function car_rqa_related_remarks()
+    {
+        $page = "car_rqa_form_related_remarks";
+
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $jobID = $this->uri->segment(3);
+        $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
+        $data['car'] = $this->Common->rqa_non($jobID);
+        $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
+        $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['jobID'] = $jobID;
+        $data['remarks_map'] = $this->Common->rqa_remarks_map($jobID);
+
+        $data['title'] = "COMPARATIVE ASSESSMENT RESULT (CAR)";
+
+        $this->load->view('pages/' . $page, $data);
+    }
+
+    public function car_rqa_non_remarks()
+    {
+        $page = "car_rqa_form_non_remarks";
+
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $jobID = $this->uri->segment(3);
+        $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
+        $data['car'] = $this->Common->rqa('hris_rating_none', $jobID);
+        $data['settings'] = $this->SettingsModel->get_mis_settings();
+
+        $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
+        $data['sign'] = $this->get_rqa_sign($job);
+        $data['jobID'] = $jobID;
+        $data['remarks_map'] = $this->Common->rqa_remarks_map($jobID);
+
+        $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
+
+        $this->load->view('pages/' . $page, $data);
+    }
+
+    /**
+     * Autosave endpoint for the "RQA with Remarks" printable views.  The note is
+     * stored per (vacancy, application code) in hris_rqa_remarks, so nothing in
+     * the rating tables is touched.
+     */
+    public function save_rqa_remark()
+    {
+        $result = array('status' => 'error', 'message' => 'Invalid request.');
+
+        if ($this->session->logged_in == false) {
+            $result['message'] = 'Session expired. Please log in again.';
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
+        $jobID     = (int) $this->input->post('jobID');
+        $record_no = trim((string) $this->input->post('record_no'));
+        $remarks   = trim((string) $this->input->post('remarks'));
+
+        if ($jobID <= 0 || $record_no === '') {
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
+        $userID = $this->session->id ?? $this->session->userdata('id');
+        $this->Common->save_rqa_remark($jobID, $record_no, $remarks, $userID ?: null);
+
+        $result = array('status' => 'success', 'message' => 'Saved');
+        $this->output->set_content_type('application/json')->set_output(json_encode($result));
+    }
+
     public function car_rqa_administrative_region()
     {
         $page = "car_rqa_form_for_region";
@@ -7833,6 +7935,43 @@ public function car_rqa_administrative_mun()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+
+    // Preload applicants and staff
+    $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
+    $data['staff'] = $this->Page_model->get_all_staff_indexed();
+
+    if($job->ttype == 1){
+        $data['title'] = "COMPARATIVE ASSESSMENT RESULT FOR EXPANDED RECLASSIFICATION (CAReER)";
+    }else{
+       $data['title'] = "COMPARATIVE ASSESSMENT RESULT (CAR)";
+    }
+
+    $this->load->view('pages/' . $page, $data);
+
+    ob_end_flush();
+}
+
+public function car_rqa_administrative_mun_remarks()
+{
+    ob_start(); // Stream output to avoid timeout
+
+    $page = "car_rqa_form_administrative_mun_remarks";
+    if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+        show_404();
+    }
+
+    $jobID = $this->uri->segment(3);
+    //$mun = $this->input->get('mun');
+
+    $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
+    $data['settings'] = $this->SettingsModel->get_mis_settings();
+
+    $data['grouped_applicants'] = $this->Reg->get_grouped_applicants_by_mun($jobID);
+
+    $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
+    $data['sign'] = $this->get_rqa_sign($job);
+    $data['jobID'] = $jobID;
+    $data['remarks_map'] = $this->Common->rqa_remarks_map($jobID);
 
     // Preload applicants and staff
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();

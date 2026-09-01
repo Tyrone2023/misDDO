@@ -25,19 +25,19 @@
         $pt = $this->Common->one_cond_row('hris_positions','title',$job->jobTitle);
         $ptp = $this->Common->one_cond_row('hris_position_points','id',$pt->bracket);
 
-        
     ?>
-    <div class="hwrap">
+
+<div class="hwrap">
     <img class="logo" src="<?= base_url(); ?>assets/images/ke.png" alt="">
         <p class="textwrap">
         <span class="rp">Republic of the Philippines</span>
             <span class="de">Department of Education</span>
             <span class="r">Region XI</span>
-            <span class="r">Schools Division of Davao Oriental</span>
+            <span class="r">Schools Division of Davao De Oro</span>
         </p>
 </div>
 <div class="blocker"></div>
-    
+
   <div class="wrap">
     <div class="inner">
         <h5>Annex I</h5>
@@ -66,7 +66,6 @@
                 <th rowspan="2">Application Code</th>
                 <!-- <th rowspan="2">Address</th> -->
                 <th colspan="9">COMPARATIVE ASSESSMENT RESULTS</th>
-                <th rowspan="2">Remarks</th>
                 <th colspan="2">For Background<br />Investigation<br />(Y/N)</th>
                 <th rowspan="2">For<br />Appointment<br /><i>(To filled-out by the<br />Appointing<br />Officer/Authority,<br />Please sign opposite<br />the name of the applicant)</th>
                 <th rowspan="2">For<br />Appointment<br/><i>Please identify period of<br /> Probation (6 months or 1<br /> year) in accordance with<br /> Section F of<br /> DO 019,s.2022</i></th>
@@ -113,47 +112,8 @@
                 <td></td>
                 <td></td>
                 <td></td>
-                <td></td>
             </tr>
             <?php }} ?>
-        </table>
-        
-        <p class="prep">Prepared by the HRMPSB <span>Appointment conferred by:</span><br />(All members should affix signature) </p>
-
-        <table class="sign">
-            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if($rqa_sign->nr == 1){?>
-                <tr>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m1_sign; ?>.png" alt=""><?php if ($sign->m1n): ?><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><br />Member<?php endif; ?></td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m2_sign; ?>.png" alt=""><?php if ($sign->m2n): ?><span><?= $sign->m2n; ?></span><br /><?= $sign->m2p; ?><br />Member<?php endif; ?></td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m3_sign; ?>.png" alt=""><?php if ($sign->m3n): ?><span><?= $sign->m3n; ?></span><br /><?= $sign->m3p; ?><br />Member<?php endif; ?></td>
-                    <td style="color:#fff;"><span style="border:0 !important"><?= $sign->sdsn; ?></span><br /><?= $sign->sdsp; ?></td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->sds_sign; ?>.png" alt=""><span><?= $sign->sdsn; ?></span><br /><?= $sign->sdsp; ?><br /><br /></td>
-                </tr>
-                <tr>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m4_sign; ?>.png" alt=""><?php if ($sign->m4n): ?><span><?= $sign->m4n; ?></span><br /><?= $sign->m4p; ?><br />Member<?php endif; ?></td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m5_sign; ?>.png" alt=""><<?php if ($sign->m5n): ?><span><?= $sign->m5n; ?></span><br /><?= $sign->m5p; ?><br />Member<?php endif; ?></td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->asds_sign; ?>.png" alt=""><span><?= $sign->asdsn; ?></span><br /><?= $sign->asdsp; ?><br />Chairperson</td>
-                    <td></td>
-                    <td></td>
-                </tr>
-            <?php }else{ ?>
-                <tr>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m1_sign; ?>.png" alt=""><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><br />Member</td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m2_sign; ?>.png" alt=""><span><?= $sign->m2n; ?></span><br /><?= $sign->m2p; ?><br />Member</td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m3_sign; ?>.png" alt=""><span><?= $sign->m3n; ?></span><br /><?= $sign->m3p; ?><br />Member</td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m4_sign; ?>.png" alt=""><span><?= $sign->m4n; ?></span><br /><?= $sign->m4p; ?><br />Member</td>
-                    <td></td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->sds_sign; ?>.png" alt=""><span><?= $sign->sdsn; ?></span><br /><?= $sign->sdsp; ?><br /><br /></td>
-                </tr>
-                <tr>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m5_sign; ?>.png" alt=""><span><?= $sign->m5n; ?></span><br /><?= $sign->m5p; ?><br />Member</td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m6_sign; ?>.png" alt=""><span><?= $sign->m6n; ?></span><br /><?= $sign->m6p; ?><br />Member</td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m7s; ?>.png" alt=""><span><?= $sign->m7n; ?></span><br /><?= $sign->m7p; ?><br />Member</td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m8s; ?>.png" alt=""><span><?= $sign->m8n; ?></span><br /><?= $sign->m8p; ?><br />Member</td>
-                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->asds_sign; ?>.png" alt=""><span><?= $sign->asdsn; ?></span><br /><?= $sign->asdsp; ?><br />Chairperson</td>
-                    <td></td>
-                </tr>
-            <?php } ?>
         </table>
 
         

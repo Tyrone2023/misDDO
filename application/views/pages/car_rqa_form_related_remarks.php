@@ -14,6 +14,7 @@ redirect(base_url().'log_in');
     <link rel="shortcut icon" href="<?= base_url(); ?>assets/images/hris.ico">
     <link href="<?= base_url(); ?>assets/css/renren_style.css" rel="stylesheet" type="text/css" />
     <title><?= $title; ?></title>
+    <link href="https://db.onlinewebfonts.com/a/0nH393RJctHgt1f2YvZvyruY" rel="stylesheet" type="text/css"/>
 </head>
 <body>
     <?php 
@@ -23,10 +24,6 @@ redirect(base_url().'log_in');
             3 => '- Junior High School',
             4 => '- Senior High School'
         ];
-
-        $pt = $this->Common->one_cond_row('hris_positions','title',$job->jobTitle);
-        $ptp = $this->Common->one_cond_row('hris_position_points','id',$pt->bracket);
-
     ?>
 
 <div class="hwrap">
@@ -35,15 +32,14 @@ redirect(base_url().'log_in');
         <span class="rp">Republic of the Philippines</span>
             <span class="de">Department of Education</span>
             <span class="r">Region XI</span>
-            <span class="r">Schools Division of Davao De Oro</span>
+            <span class="r">Schools Division of Davao Oriental</span>
         </p>
 </div>
 <div class="blocker"></div>
-
   <div class="wrap">
     <div class="inner">
-        <h5>Annex 1-1</h5>
-        <h1><?= $title; ?><br />PER MUNICIPALITY</h1>
+        <h5>Annex I</h5>
+        <h1 style="font-size:20px"><?= $title; ?></h1>
 
         <table class="toptable">
             <tr>
@@ -55,8 +51,8 @@ redirect(base_url().'log_in');
             </tr>
             <tr>
                 <td>Office/Bureau/Service/Unit where the vacancy exists</td>
-                <td class="wb"><?= $job->assign; ?></td>
-                 <td class="ren"></td>
+                <td class="wb">Division of Davao Oriental</td>
+                <td class="ren"></td>
                 <td>Date of Final Deliberation:</td>
                 <td class="wb"><?= $sign->pdate; ?></td>
             </tr>
@@ -64,75 +60,78 @@ redirect(base_url().'log_in');
 
         <table class="data">
             <tr>
-                <th rowspan="2">No.</th>
-                <th rowspan="2">Fullname</th>
+                <th rowspan="2" colspan="2">Name of Applicant</th>
                 <th rowspan="2">Application Code</th>
                 <th rowspan="2">Address</th>
-                <th rowspan="2">Contact</th>
                 <th colspan="9">COMPARATIVE ASSESSMENT RESULTS</th>
+                <th rowspan="2">Remarks</th>
                 <th colspan="2">For Background<br />Investigation<br />(Y/N)</th>
                 <th rowspan="2">For<br />Appointment<br /><i>(To filled-out by the<br />Appointing<br />Officer/Authority,<br />Please sign opposite<br />the name of the applicant)</th>
                 <th rowspan="2">For<br />Appointment<br/><i>Please identify period of<br /> Probation (6 months or 1<br /> year) in accordance with<br /> Section F of<br /> DO 019,s.2022</i></th>
             </tr>
             <tr>
-                <th>Education <br />(<?= $ptp->educ; ?> pts)</th>
-                <th>Training <br />(<?= $ptp->tr; ?> pts)</th>
-                <th>Experience <br /> (<?= $ptp->exp; ?> pts)</th>
-                <th>Performance<br /> (<?= $ptp->per; ?> pts)</th>
-                <th>Outstanding<br/>Accomplishments<br /> (<?= $ptp->oa; ?> pts)</th>
-                <th>Application of <br />Education<br /> (<?= $ptp->ae; ?> pts)</th>
-                <th>Application of <br />L&D <br /> (<?= $ptp->ald; ?> pts)</th>
-                <th>Potential<br /> (<?= $ptp->potential; ?> pts)</th>
+                <th>Education <br />(10 pts)</th>
+                <th>Training <br />(10 pts)</th>
+                <th>Experience <br /> (10 pts)</th>
+                <th>Performance<br /> (20 pts)</th>
+                <th>Outstanding<br/>Accomplishments<br /> (5 pts)</th>
+                <th>Application of <br />Education<br /> (15 pts)</th>
+                <th>Application of <br />L&D <br /> (10 pts)</th>
+                <th>Potential<br /> (20 pts)</th>
                 <th>Total<br />(100 pts)</th>
                 <th>Yes</th>
                 <th>No</th>
             </tr>
-            <?php foreach ($grouped_applicants as $municipality => $group): ?>
+            <?php 
+            //$data = array("CRODUA, IRENEO O JR.","AMIGO, EDGARDO V.","JANNDEL BUOT","EDONG, JOSELITO");
+            $no = 1;
+            foreach($car as $row){
+                $b = $this->Common->one_cond_row('hris_applicant', 'record_no', $row->record_no);
+                if(!empty($b)){
+                    $ap = $this->Common->one_cond_row('hris_applicant', 'record_no', $row->record_no);
+                }else{
+                    $ap = $this->Common->one_cond_row('hris_staff', 'IDNumber', $row->record_no);
+                }
+                if(!empty($ap)){
+            ?>
             <tr>
-                <td colspan="16" style="text-align:left"><?= strtoupper(htmlspecialchars($municipality)); ?></td>
-            </tr>
-            <?php $c=1; foreach ($group as $person): ?>
-            <!-- <?php $oa = $this->Common->two_cond_count_row('hris_applications','empEmail', $person->renren,'app_year',date('Y')-1); ?> -->
-            <tr>
-                <!-- <?php $multi = $this->Common->one_cond_count_row('hris_rating_none','appID',$person->appID); ?> -->
-                <td><?= $c++; ?></td>
-                <td style="white-space: nowrap; text-align:left"><?= strtoupper($person->FirstName . ' ' . $person->LastName); ?></td>
-                <td <?php //if($multi->num_rows() > 1){echo 'style="background-color:#0054ff !important"';} ?> ><?= strtoupper($person->code); ?></td>
-                <td><?= strtoupper($person->brgy); ?></td>
-                <td><?= strtoupper($person->contactNo); ?></td>
-                <td><?= ($person->educ != 0.00001) ? $person->educ : ""; ?></td>
-                <td><?= ($person->trainings != 0.00001) ? $person->trainings : ""; ?></td>
-                <td><?= ($person->experience != 0.00001) ? $person->experience : ""; ?></td>
-                <td><?= ($person->performance != 0.00001) ? number_format($person->performance, 2) : ''; ?></td>
-                <td><?= ($person->oa != 0.00001) ? $person->oa : ""; ?></td>
-                <td><?= ($person->ae != 0.00001) ? $person->ae : ""; ?></td>
-                <td><?= ($person->ald != 0.00001) ? $person->ald : ""; ?></td>
-                <td><?= number_format($person->interview+$person->written+$person->skills, 2); ?></td>
-                <td><?= ($person->total_points != 0.00001) ? number_format($person->total_points, 3) : ''; ?></td>
+                <td><?= $no++; ?></td>
+                <td class="name"><?= strtoupper($ap->FirstName).' '.strtoupper($ap->MiddleName).' '.strtoupper($ap->LastName).' '.strtoupper($ap->NameExtn); ?></td>
+                <td><?= $row->record_no; ?> </td>
+                <td><?= $ap->resBarangay; ?></td>
+                <td><?= ($row->educ != 0.00001) ? $row->educ : ""; ?></td>
+                <td><?= ($row->trainings != 0.00001) ? $row->trainings : ""; ?></td>
+                <td><?= ($row->experience != 0.00001) ? $row->experience : ""; ?></td>
+                <td><?= ($row->performance != 0.00001) ? number_format($row->performance, 2) : ""; ?></td>
+                <td><?= ($row->oa != 0.00001) ? $row->oa : ""; ?></td>
+                <td><?= ($row->ae != 0.00001) ? $row->ae : ""; ?></td>
+                <td><?= ($row->ald != 0.00001) ? $row->ald : ""; ?></td>
+                <td><?= number_format($row->interview+$row->written+$row->skills, 2); ?></td>
+                <td><?= number_format(($row->total_points != 0.00001) ? $row->total_points : "", 3); ?></td>
+                <td class="remarks-cell"><textarea class="remarks-input" rows="1" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>"><?= htmlspecialchars($remarks_map[(string) $row->record_no] ?? $ap->empPosition ?? "", ENT_QUOTES); ?></textarea></td>
                 <td></td>
                 <td></td>
                 <td></td>
                 <td></td>
             </tr>
-            <?php endforeach; ?>
-        <?php endforeach; ?>
-
+            <?php }} ?>
         </table>
         
-        <!-- <p class="prep">Prepared by the HRMPSB <span>Appointment conferred by:</span><br />(All members should affix signature) </p>
+        <p class="prep">Prepared by the HRMPSB <span>Appointment conferred by:</span><br />(All members should affix signature) </p>
+
         <table class="sign">
-            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if($rqa_sign->nr == 1){?>
+            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if(($rqa_sign->nr ?? 0) == 1){?>
                 <tr>
-                    <td><?php if($this->uri->segment(4) == 0){?><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m1_sign; ?>.png" alt=""><?php } ?><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><?= $sign->m1p ? '<br>Member' : '' ?></td>
-                    <td><?php if($this->uri->segment(4) == 0){?><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m2_sign; ?>.png" alt=""><?php } ?><span><?= $sign->m2n; ?></span><br /><?= $sign->m2p; ?><?= $sign->m2p ? '<br>Member' : '' ?></td>
-                    <td><?php if($this->uri->segment(4) == 0){?><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m3_sign; ?>.png" alt=""><?php } ?><span><?= $sign->m3n; ?></span><br /><?= $sign->m3p; ?><?= $sign->m3p ? '<br>Member' : '' ?></td>
-                    <td></td>
-                    <td><?php if($this->uri->segment(4) == 0){?><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->sds_sign; ?>.png" alt=""><?php } ?><span><?= $sign->sdsn; ?></span><br /><?= $sign->sdsp; ?><br /><br /></td>
+                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m1_sign; ?>.png" alt=""><?php if ($sign->m1n): ?><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><br />Member<?php endif; ?></td>
+                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m2_sign; ?>.png" alt=""><?php if ($sign->m2n): ?><span><?= $sign->m2n; ?></span><br /><?= $sign->m2p; ?><br />Member<?php endif; ?></td>
+                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m3_sign; ?>.png" alt=""><?php if ($sign->m3n): ?><span><?= $sign->m3n; ?></span><br /><?= $sign->m3p; ?><br />Member<?php endif; ?></td>
+                    <td style="color:#fff;"><span style="border:0 !important"><?= $sign->sdsn; ?></span><br /><?= $sign->sdsp; ?></td>
+                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->sds_sign; ?>.png" alt=""><span><?= $sign->sdsn; ?></span><br /><?= $sign->sdsp; ?><br /><br /></td>
                 </tr>
                 <tr>
-                    <td><?php if($this->uri->segment(4) == 0){?><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m4_sign; ?>.png" alt=""><?php } ?><span><?= $sign->m4n; ?></span><br /><?= $sign->m4p; ?><?= $sign->m4p ? '<br>Member' : '' ?></td>
-                    <td><?php if($this->uri->segment(4) == 0){?><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m5_sign; ?>.png" alt=""><?php } ?><span><?= $sign->m5n; ?></span><br /><?= $sign->m5p; ?><?= $sign->m5p ? '<br>Member' : '' ?></td>
-                    <td><?php if($this->uri->segment(4) == 0){?><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->asds_sign; ?>.png" alt=""><?php } ?><span><?= $sign->asdsn; ?></span><br /><?= $sign->asdsp; ?><br />Chairperson</td>
+                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m4_sign; ?>.png" alt=""><?php if ($sign->m4n): ?><span><?= $sign->m4n; ?></span><br /><?= $sign->m4p; ?><br />Member<?php endif; ?></td>
+                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m5_sign; ?>.png" alt=""><?php if ($sign->m5n): ?><span><?= $sign->m5n; ?></span><br /><?= $sign->m5p; ?><br />Member<?php endif; ?></td>
+                    <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->asds_sign; ?>.png" alt=""><span><?= $sign->asdsn; ?></span><br /><?= $sign->asdsp; ?><br />Chairperson</td>
                     <td></td>
                     <td></td>
                 </tr>
@@ -154,8 +153,7 @@ redirect(base_url().'log_in');
                     <td></td>
                 </tr>
             <?php } ?>
-        </table> -->
-
+        </table>
         
 
     </div>
@@ -167,10 +165,12 @@ redirect(base_url().'log_in');
     <p class="down">The only information that shall be made public are the Application Code, Comparative Assessment Results(Component from Education to PPST NCOIs) and the total scores of the applicants.</p>
     <p class="down">b)If the information does not apply to the applicant, please put N/A</p>
     <p class="down dd">C) Applicants who failed to appear in any phase of the Open Ranking process and other evaluative assessments, and/or have withdrawn their application shall be provided with a notation beside the application code(e.g., withdrawn application, etc.)</p>
+
  -->
 
 
-
     
+<?php $this->load->view("pages/rqa_remarks_js"); ?>
+
 </body>
 </html>

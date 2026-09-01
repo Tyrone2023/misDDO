@@ -107,3 +107,82 @@ ERROR - 2026-09-01 04:48:12 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-09-01 04:48:17 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-09-01 04:48:25 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-09-01 04:48:26 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 13:51:16 --> Missing RQA sign record for jobID 73
+ERROR - 2026-09-01 13:51:33 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 140
+ERROR - 2026-09-01 13:51:33 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 176
+ERROR - 2026-09-01 07:51:33 --> 404 Page Not Found: Assets/isig
+ERROR - 2026-09-01 13:51:52 --> Missing RQA sign record for jobID 73
+ERROR - 2026-09-01 13:52:09 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 140
+ERROR - 2026-09-01 13:52:09 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 176
+ERROR - 2026-09-01 07:52:09 --> 404 Page Not Found: Assets/isig
+ERROR - 2026-09-01 13:52:48 --> Missing RQA sign record for jobID 73
+ERROR - 2026-09-01 13:53:06 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative_posting.php 124
+ERROR - 2026-09-01 07:53:06 --> 404 Page Not Found: Assets/isig
+ERROR - 2026-09-01 13:55:51 --> Missing RQA sign record for jobID 73
+ERROR - 2026-09-01 13:55:58 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative_mun.php 117
+ERROR - 2026-09-01 07:55:58 --> 404 Page Not Found: Assets/isig
+ERROR - 2026-09-01 13:58:30 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 13:58:38 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 140
+ERROR - 2026-09-01 13:58:38 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 176
+ERROR - 2026-09-01 07:58:38 --> 404 Page Not Found: Assets/isig
+ERROR - 2026-09-01 13:59:05 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 13:59:06 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 140
+ERROR - 2026-09-01 13:59:06 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 176
+ERROR - 2026-09-01 07:59:06 --> 404 Page Not Found: Assets/isig
+ERROR - 2026-09-01 13:59:19 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 13:59:20 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_for_region.php 122
+ERROR - 2026-09-01 07:59:20 --> 404 Page Not Found: Assets/isig
+ERROR - 2026-09-01 14:00:05 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:00:06 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative_posting.php 122
+ERROR - 2026-09-01 14:00:07 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:00:09 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 138
+ERROR - 2026-09-01 14:00:09 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 174
+ERROR - 2026-09-01 14:05:17 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:05:28 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:05:29 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 138
+ERROR - 2026-09-01 14:05:29 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 174
+ERROR - 2026-09-01 14:05:36 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:05:45 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:05:46 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 138
+ERROR - 2026-09-01 14:05:46 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 174
+ERROR - 2026-09-01 14:05:52 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:08:45 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:08:52 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 138
+ERROR - 2026-09-01 14:08:52 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 174
+ERROR - 2026-09-01 14:08:57 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:13:33 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:13:34 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative_remarks.php 140
+ERROR - 2026-09-01 14:13:34 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative_remarks.php 176
+ERROR - 2026-09-01 14:13:40 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:13:41 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative_remarks.php 140
+ERROR - 2026-09-01 14:13:41 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative_remarks.php 176
+ERROR - 2026-09-01 14:13:48 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:13:59 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:14:13 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:14:14 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 138
+ERROR - 2026-09-01 14:14:14 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 174
+ERROR - 2026-09-01 14:22:30 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:23:07 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:26:12 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:26:12 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:26:12 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:26:24 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:27:45 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:29:20 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:29:21 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:29:21 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:29:21 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:29:44 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:29:52 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:30:08 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:32:17 --> Missing RQA sign record for jobID 73
+ERROR - 2026-09-01 14:32:35 --> Missing RQA sign record for jobID 73
+ERROR - 2026-09-01 14:32:48 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-01 14:32:48 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:32:48 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:32:49 --> Missing RQA sign record for jobID 74
+ERROR - 2026-09-01 14:33:19 --> Missing RQA sign record for jobID 73
+ERROR - 2026-09-01 14:34:32 --> Missing RQA sign record for jobID 73
+ERROR - 2026-09-01 14:34:50 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 138
+ERROR - 2026-09-01 14:34:50 --> Severity: Warning --> Attempt to read property "nr" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/car_rqa_form_administrative.php 174
+ERROR - 2026-09-01 14:34:50 --> Missing RQA sign record for jobID 73

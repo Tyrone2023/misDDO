@@ -48,6 +48,65 @@ class Common extends CI_Model
         $this->db->db_debug = $debug;
     }
 
+    /**
+     * The "RQA with Remarks" printable views need somewhere to keep an editable
+     * note per applicant without writing into the rating tables.  Keyed on
+     * (jobID, record_no) so the same applicant can carry a different remark on
+     * another vacancy.
+     */
+    public function ensure_rqa_remarks_table()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS hris_rqa_remarks (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                jobID INT UNSIGNED NOT NULL,
+                record_no VARCHAR(50) NOT NULL,
+                remarks TEXT NULL DEFAULT NULL,
+                updated_by INT UNSIGNED NULL,
+                updated_at DATETIME NULL DEFAULT NULL,
+                UNIQUE KEY uniq_rqa_remark (jobID, record_no),
+                KEY idx_rqa_remark_job (jobID)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
+    }
+
+    /** record_no => remarks for one vacancy, so a view reads them in one query. */
+    public function rqa_remarks_map($jobID)
+    {
+        $this->ensure_rqa_remarks_table();
+
+        $map = array();
+        $q = $this->db->query(
+            "select record_no, remarks from hris_rqa_remarks where jobID = ?",
+            array($jobID)
+        );
+
+        if ($q) {
+            foreach ($q->result() as $row) {
+                $map[(string) $row->record_no] = $row->remarks;
+            }
+        }
+
+        return $map;
+    }
+
+    public function save_rqa_remark($jobID, $record_no, $remarks, $userID = null)
+    {
+        $this->ensure_rqa_remarks_table();
+
+        $this->db->query(
+            "insert into hris_rqa_remarks (jobID, record_no, remarks, updated_by, updated_at)
+             values (?, ?, ?, ?, NOW())
+             on duplicate key update
+                remarks = VALUES(remarks),
+                updated_by = VALUES(updated_by),
+                updated_at = NOW()",
+            array($jobID, $record_no, $remarks, $userID)
+        );
+
+        return $this->db->affected_rows() >= 0;
+    }
+
     public function one_cond_between($table, $col, $val, $con, $minvalue, $maxvalue)
     {
         $this->db->where($col, $val);
