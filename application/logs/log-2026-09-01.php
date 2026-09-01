@@ -75,3 +75,35 @@ ERROR - 2026-09-01 10:32:09 --> Severity: Warning --> Attempt to read property "
 ERROR - 2026-09-01 10:32:09 --> Severity: Warning --> Attempt to read property "tli" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/ppmp_generate.php 70
 ERROR - 2026-09-01 10:32:09 --> Severity: Warning --> Attempt to read property "tst" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/ppmp_generate.php 71
 ERROR - 2026-09-01 10:32:09 --> Severity: error --> Exception: Unsupported operand types: string * string /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/ppmp_generate.php 75
+ERROR - 2026-09-01 04:33:11 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:11 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:15 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:18 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:22 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:27 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:45 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:48 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:50 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:51 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:35:58 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:36:36 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:37:16 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:46:02 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:46:04 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:46:08 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:46:58 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:47:01 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:47:03 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:47:05 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:47:09 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:47:17 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:47:25 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:47:26 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:47:53 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:48:02 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:48:03 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:48:06 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:48:12 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:48:17 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:48:25 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-09-01 04:48:26 --> 404 Page Not Found: Uploads/profile

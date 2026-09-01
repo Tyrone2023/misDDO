@@ -389,7 +389,7 @@ class SGODModel extends CI_Model
 		$this->db->where("fy", $fy);
 		$this->db->where("b_code", $bcode);
 		$this->db->where("category", $cat);
-		$this->db->where("budget_source", 'MOOE');
+		//$this->db->where("budget_source", 'MOOE');
 		$result = $this->db->get($table);
 		return $result->result();
 	}
@@ -747,7 +747,7 @@ class SGODModel extends CI_Model
 		$this->db->where('fy', $val2);
 		$this->db->where('b_code', $val3);
 		$this->db->where('category', $val4);
-		$this->db->where('budget_source', 'MOOE');
+		//$this->db->where('budget_source', 'MOOE');
 
 		$result = $this->db->get($table);
 		return $result->result();

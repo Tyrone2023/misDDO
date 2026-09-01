@@ -65,13 +65,20 @@
 
     <table>
         <?php 
-            $mb = '.'.$abp->mb;
-            $mr = '.'.$abp->mr;
-            $tlip = '.'.$abp->tli;
-            $tst = '.'.$abp->tst;
+            // $abp (sgod_app_percentage) is missing until the school encodes the APP
+            // breakdown, and $ssa is missing when the batch has no allocation row. Fall back
+            // to an empty object so the page degrades to zeros instead of fataling on
+            // "string * string" when the percentages are concatenated into decimals below.
+            $abp = !empty($abp) ? $abp : (object) array('mb' => 0, 'mr' => 0, 'tli' => 0, 'tst' => 0);
+            $ssa = !empty($ssa) ? $ssa : (object) array('alloc_amount' => 0);
+
+            $mb = (float) ('.'.$abp->mb);
+            $mr = (float) ('.'.$abp->mr);
+            $tlip = (float) ('.'.$abp->tli);
+            $tst = (float) ('.'.$abp->tst);
 
 
-            $mooe = $ssa->alloc_amount; 
+            $mooe = (float) $ssa->alloc_amount; 
             $mandatory = $mooe*$mb;
             $minor = $mooe*$mr;
             $tli = $mooe*$tlip;

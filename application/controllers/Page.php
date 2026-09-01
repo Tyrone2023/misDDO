@@ -6637,6 +6637,20 @@ class Page extends CI_Controller
 		$result['abp'] = $this->SGODModel->one_cond_row('sgod_app_percentage', 'b_code', $_SESSION['aip']);
 		$result['ssa'] = $this->SGODModel->three_cond_row('sgod_school_allocation', 'schoolID', $school_id, 'alloc_batch', $b_code, 'alloc_year', $fy);
 
+		// The whole PPMP is computed from the APP percentage breakdown (sgod_app_percentage)
+		// and the batch allocation. Without either one the view has nothing to compute with,
+		// so send the school back to the APP page where the breakdown is encoded instead of
+		// rendering a page of zeros.
+		if (empty($result['abp'])) {
+			$this->session->set_flashdata('danger', 'Encode the APP percentage breakdown for this batch first, then generate the PPMP.');
+			redirect(base_url() . 'Page/view_app');
+		}
+
+		if (empty($result['ssa'])) {
+			$this->session->set_flashdata('danger', 'No allocation was found for this batch and fiscal year, so the PPMP cannot be generated.');
+			redirect(base_url() . 'Page/view_app');
+		}
+
 		$this->load->view('ppmp_generate', $result);
 	}
 
