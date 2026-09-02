@@ -68,6 +68,131 @@ class Common extends CI_Model
                 KEY idx_rqa_remark_job (jobID)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
         ");
+
+        $this->ensure_columns('hris_rqa_remarks', $this->rqa_cell_fields());
+    }
+
+    /**
+     * The RQA sheets also carry columns the panel fills in by hand - Background
+     * Investigation Yes/No and the two "For Appointment" columns. They belong to
+     * the same (vacancy, application code) key the remark already uses, so they
+     * live as extra columns on the same row rather than in a second table.
+     */
+    private function rqa_cell_fields()
+    {
+        return array(
+            'remarks_col'  => 'VARCHAR(255) NULL DEFAULT NULL',
+            'bg_yes'       => 'VARCHAR(30) NULL DEFAULT NULL',
+            'bg_no'        => 'VARCHAR(30) NULL DEFAULT NULL',
+            'appointment'  => 'VARCHAR(255) NULL DEFAULT NULL',
+            'appointment2' => 'VARCHAR(255) NULL DEFAULT NULL'
+        );
+    }
+
+    /** Field names a save request is allowed to write. */
+    public function rqa_cell_field_names()
+    {
+        return array_keys($this->rqa_cell_fields());
+    }
+
+    /**
+     * (jobID, record_no) => row carrying every hand-filled cell, so a view reads
+     * the whole sheet in one query.
+     */
+    public function rqa_cells_map($jobID)
+    {
+        $this->ensure_rqa_remarks_table();
+
+        $map = array();
+        $q = $this->db->query(
+            "select record_no, remarks_col, bg_yes, bg_no, appointment, appointment2
+               from hris_rqa_remarks where jobID = ?",
+            array($jobID)
+        );
+
+        if ($q) {
+            foreach ($q->result() as $row) {
+                $map[(string) $row->record_no] = $row;
+            }
+        }
+
+        return $map;
+    }
+
+    public function save_rqa_cell($jobID, $record_no, $field, $value, $userID = null)
+    {
+        if (!in_array($field, $this->rqa_cell_field_names(), true)) {
+            return false;
+        }
+
+        $this->ensure_rqa_remarks_table();
+
+        // field is whitelisted above, so it is safe to interpolate
+        $this->db->query(
+            "insert into hris_rqa_remarks (jobID, record_no, `$field`, updated_by, updated_at)
+             values (?, ?, ?, ?, NOW())
+             on duplicate key update
+                `$field` = VALUES(`$field`),
+                updated_by = VALUES(updated_by),
+                updated_at = NOW()",
+            array($jobID, $record_no, $value, $userID)
+        );
+
+        return $this->db->affected_rows() >= 0;
+    }
+
+    /**
+     * Sheet-level fields of an RQA report: the Plantilla Item Number and the
+     * Date of Final Deliberation printed in the header. One row per vacancy.
+     */
+    public function ensure_rqa_sheet_table()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS hris_rqa_sheet (
+                jobID INT UNSIGNED NOT NULL PRIMARY KEY,
+                item_no VARCHAR(150) NULL DEFAULT NULL,
+                deliberation_date VARCHAR(100) NULL DEFAULT NULL,
+                updated_by INT UNSIGNED NULL,
+                updated_at DATETIME NULL DEFAULT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
+    }
+
+    public function rqa_sheet_field_names()
+    {
+        return array('item_no', 'deliberation_date');
+    }
+
+    /** Header overrides for one vacancy, or null when nothing was typed yet. */
+    public function rqa_sheet($jobID)
+    {
+        $this->ensure_rqa_sheet_table();
+
+        return $this->db
+            ->where('jobID', (int) $jobID)
+            ->get('hris_rqa_sheet')
+            ->row();
+    }
+
+    public function save_rqa_sheet($jobID, $field, $value, $userID = null)
+    {
+        if (!in_array($field, $this->rqa_sheet_field_names(), true)) {
+            return false;
+        }
+
+        $this->ensure_rqa_sheet_table();
+
+        $this->db->query(
+            "insert into hris_rqa_sheet (jobID, `$field`, updated_by, updated_at)
+             values (?, ?, ?, NOW())
+             on duplicate key update
+                `$field` = VALUES(`$field`),
+                updated_by = VALUES(updated_by),
+                updated_at = NOW()",
+            array($jobID, $value, $userID)
+        );
+
+        return $this->db->affected_rows() >= 0;
     }
 
     /** record_no => remarks for one vacancy, so a view reads them in one query. */

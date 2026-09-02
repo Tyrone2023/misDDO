@@ -49,14 +49,14 @@
                 <td class="wb"><?= $job->jobTitle; ?> <?= $jobTypes[$job->job_type] ?? ''; ?></td>
                 <td class="ren"></td>
                 <td>Plantilla Item Number:</td>
-                <td class="wb"></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="item_no" value="<?= htmlspecialchars(($sheet->item_no ?? '') !== '' ? $sheet->item_no : ($job->itemNo ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
             <tr>
                 <td>Office/Bureau/Service/Unit where the vacancy exists</td>
                 <td class="wb"><?= $job->assign; ?></td>
                 <td class="ren"></td>
                 <td>Date of Final Deliberation:</td>
-                <td class="wb"><?= $sign->pdate; ?></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="deliberation_date" value="<?= htmlspecialchars(($sheet->deliberation_date ?? '') !== '' ? $sheet->deliberation_date : ($sign->pdate ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
         </table>
 
@@ -108,15 +108,16 @@
                 <td><?= ($row->ald != 0.00001) ? $row->ald : ""; ?></td>
                 <td><?= number_format($row->interview+$row->written+$row->skills, 2); ?></td>
                 <td><?= number_format(($row->total_points != 0.00001) ? $row->total_points : "", 3); ?></td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_yes" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_yes ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_no" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_no ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="appointment" value="<?= htmlspecialchars($cells[(string) $row->record_no]->appointment ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="appointment2" value="<?= htmlspecialchars($cells[(string) $row->record_no]->appointment2 ?? '', ENT_QUOTES); ?>"></td>
             </tr>
             <?php }} ?>
         </table>
 
-        
+        <?php // per-vacancy signatories - maintained on VacancySignatories/index/{jobID} ?>
+        <?php $this->load->view('pages/_rqa_signatories', array('vsign' => isset($vsign) ? $vsign : array())); ?>
 
     </div>
   </div>
@@ -132,5 +133,7 @@
 
 
     
+
+<?php $this->load->view('pages/rqa_editable_js'); ?>
 </body>
 </html>

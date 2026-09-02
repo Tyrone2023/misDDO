@@ -59,6 +59,18 @@ class Pages extends CI_Controller
         return $this->rqa_sign_defaults($sign);
     }
 
+    /**
+     * Per-vacancy signatories (hris_vacancy_signatories), in printing order.
+     * Maintained from Page/jobVacancy > Actions > Signatories. Empty array when
+     * the vacancy has none, in which case the report prints no signature block.
+     */
+    private function get_vacancy_signatories($jobID)
+    {
+        $this->load->model('Vacancy_signatory_model', 'vsign_model');
+
+        return $this->vsign_model->get_by_job((int) $jobID);
+    }
+
     private function rqa_sign_defaults($sign = null)
     {
         $defaults = [
@@ -96,12 +108,27 @@ class Pages extends CI_Controller
         ];
 
         if (empty($sign)) {
-            return (object) $defaults;
+            $blank = (object) $defaults;
+            $blank->has_names = false;
+
+            return $blank;
         }
 
         foreach ($defaults as $field => $value) {
             if (!isset($sign->$field)) {
                 $sign->$field = $value;
+            }
+        }
+
+        // Whether this SY-wide panel actually names anybody. A vacancy posted
+        // with sign = 0 falls back to a row that can be entirely blank, and the
+        // reports used to print a bare "Member / Member / Chairperson" skeleton
+        // for it; with no names there is nothing to sign, so print nothing.
+        $sign->has_names = false;
+        foreach (['m1n', 'm2n', 'm3n', 'm4n', 'm5n', 'm6n', 'm7n', 'm8n', 'sdsn', 'asdsn'] as $field) {
+            if (trim((string) $sign->$field) !== '') {
+                $sign->has_names = true;
+                break;
             }
         }
 
@@ -3838,6 +3865,10 @@ class Pages extends CI_Controller
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload all applicants and staff into memory
     $applicants = $this->Page_model->get_all_applicants_indexed();
@@ -3872,6 +3903,10 @@ public function car_rqa_promotion()
 
         //$job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($data['job']);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         // Preload all applicants and staff into memory
         $applicants = $this->Page_model->get_all_applicants_indexed();
@@ -3908,6 +3943,10 @@ public function car_rqa_promotion()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
     $data['staff'] = $this->Page_model->get_all_staff_indexed();
@@ -7099,6 +7138,10 @@ public function car_rqa_promotion()
         
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
 
@@ -7120,6 +7163,10 @@ public function car_rqa_promotion()
         $data['car'] = $this->Common->rqa_non($jobID);
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         
         if($job->ttype == 1){
@@ -7145,6 +7192,10 @@ public function car_rqa_promotion()
         $data['car'] = $this->Common->rqa_non($jobID);
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
 
         if($job->ttype == 1){
@@ -7170,6 +7221,10 @@ public function car_rqa_promotion()
         $data['car'] = $this->Common->rqa_non($jobID);
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
         $data['jobID'] = $jobID;
         $data['remarks_map'] = $this->Common->rqa_remarks_map($jobID);
 
@@ -7197,6 +7252,10 @@ public function car_rqa_promotion()
         $data['car'] = $this->Common->rqa_non($jobID);
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
         $data['jobID'] = $jobID;
         $data['remarks_map'] = $this->Common->rqa_remarks_map($jobID);
 
@@ -7220,6 +7279,10 @@ public function car_rqa_promotion()
 
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
         $data['jobID'] = $jobID;
         $data['remarks_map'] = $this->Common->rqa_remarks_map($jobID);
 
@@ -7259,6 +7322,63 @@ public function car_rqa_promotion()
         $this->output->set_content_type('application/json')->set_output(json_encode($result));
     }
 
+    /**
+     * Autosave for the hand-filled columns of the RQA sheets - Background
+     * Investigation Yes/No and the two "For Appointment" columns. Stored per
+     * (vacancy, application code) in hris_rqa_remarks alongside the remark, so
+     * the rating tables are never touched.
+     */
+    public function save_rqa_cell()
+    {
+        $result = array('status' => 'error', 'message' => 'Invalid request.');
+
+        if ($this->session->logged_in == false) {
+            $result['message'] = 'Session expired. Please log in again.';
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
+        $jobID     = (int) $this->input->post('jobID');
+        $record_no = trim((string) $this->input->post('record_no'));
+        $field     = trim((string) $this->input->post('field'));
+        $value     = trim((string) $this->input->post('value'));
+
+        if ($jobID <= 0 || $record_no === '' || !$this->Common->save_rqa_cell($jobID, $record_no, $field, $value, $this->session->id ?: null)) {
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
+        $result = array('status' => 'success', 'message' => 'Saved');
+        $this->output->set_content_type('application/json')->set_output(json_encode($result));
+    }
+
+    /**
+     * Autosave for the RQA header fields (Plantilla Item Number, Date of Final
+     * Deliberation), kept per vacancy in hris_rqa_sheet.
+     */
+    public function save_rqa_sheet()
+    {
+        $result = array('status' => 'error', 'message' => 'Invalid request.');
+
+        if ($this->session->logged_in == false) {
+            $result['message'] = 'Session expired. Please log in again.';
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
+        $jobID = (int) $this->input->post('jobID');
+        $field = trim((string) $this->input->post('field'));
+        $value = trim((string) $this->input->post('value'));
+
+        if ($jobID <= 0 || !$this->Common->save_rqa_sheet($jobID, $field, $value, $this->session->id ?: null)) {
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
+        $result = array('status' => 'success', 'message' => 'Saved');
+        $this->output->set_content_type('application/json')->set_output(json_encode($result));
+    }
+
     public function car_rqa_administrative_region()
     {
         $page = "car_rqa_form_for_region";
@@ -7272,6 +7392,10 @@ public function car_rqa_promotion()
         $data['car'] = $this->Common->rqa_non($jobID);
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT FOR EXPANDED RECLASSIFICATION (CAReER)";
@@ -7297,6 +7421,10 @@ public function car_rqa_promotion()
         $data['car'] = $this->Common->rqa_non($jobID);
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT (CAR)";
 
@@ -7316,6 +7444,10 @@ public function car_rqa_promotion()
         $data['car'] = $this->Common->rqa_non($jobID);
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT (CAR)";
 
@@ -7357,6 +7489,10 @@ public function car_rqa_promotion()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload all applicants and staff
     $data['all_applicants'] = $this->Page_model->get_all_applicants_indexed(); // record_no => object
@@ -7389,6 +7525,10 @@ public function car_rqa1_promotion()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload all applicants and staff
     $data['all_applicants'] = $this->Page_model->get_all_applicants_indexed(); // record_no => object
@@ -7420,6 +7560,10 @@ public function car_rqa1_promotion_region()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload all applicants and staff
     $data['all_applicants'] = $this->Page_model->get_all_applicants_indexed(); // record_no => object
@@ -7451,6 +7595,10 @@ public function car_rqa1_promotion_region()
         $data['settings'] = $this->SettingsModel->get_mis_settings();
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT (CAR)";
 
@@ -7470,6 +7618,10 @@ public function car_rqa1_promotion_region()
         $data['car'] = $this->Page_model->car_nlet($jobID);
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
         $data['settings'] = $this->SettingsModel->get_mis_settings();
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
@@ -7490,6 +7642,10 @@ public function car_rqa1_promotion_region()
         $data['car'] = $this->Page_model->car_nlet($jobID);
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
         $data['settings'] = $this->SettingsModel->get_mis_settings();
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
@@ -7512,6 +7668,10 @@ public function car_rqa1_promotion_region()
 
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
 
@@ -7533,6 +7693,10 @@ public function car_rqa1_promotion_region()
 
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
 
@@ -7675,6 +7839,10 @@ public function car_rqa1_promotion_region()
     $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
     $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job, 0, false);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
     $data['settings'] = $this->SettingsModel->get_mis_settings();
 
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
@@ -7696,6 +7864,10 @@ public function rqa_cluster_list_np()
     $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
     $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job, 0, false);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
     $data['settings'] = $this->SettingsModel->get_mis_settings();
 
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
@@ -7771,6 +7943,10 @@ public function rqa_cluster_list_np()
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $this->uri->segment(3));
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->uri->segment(3));
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($this->uri->segment(3));
+        $data['sheet'] = $this->Common->rqa_sheet($this->uri->segment(3));
+        $data['cells'] = $this->Common->rqa_cells_map($this->uri->segment(3));
+        $data['jobID'] = $this->uri->segment(3);
         $this->load->view('pages/car_rqa_form_jhs', $data);
     }
 
@@ -7783,6 +7959,10 @@ public function rqa_cluster_list_np()
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $this->uri->segment(3));
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->uri->segment(3));
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($this->uri->segment(3));
+        $data['sheet'] = $this->Common->rqa_sheet($this->uri->segment(3));
+        $data['cells'] = $this->Common->rqa_cells_map($this->uri->segment(3));
+        $data['jobID'] = $this->uri->segment(3);
                 $data['settings'] = $this->SettingsModel->get_mis_settings();
         $this->load->view('pages/car_rqa_form_jhsv2', $data);
     }
@@ -7796,6 +7976,10 @@ public function rqa_cluster_list_np()
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $this->uri->segment(3));
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->uri->segment(3));
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($this->uri->segment(3));
+        $data['sheet'] = $this->Common->rqa_sheet($this->uri->segment(3));
+        $data['cells'] = $this->Common->rqa_cells_map($this->uri->segment(3));
+        $data['jobID'] = $this->uri->segment(3);
                 $data['settings'] = $this->SettingsModel->get_mis_settings();
         $this->load->view('pages/car_rqa_form_jhs', $data);
     }
@@ -7810,6 +7994,10 @@ public function rqa_cluster_list_np()
 
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $this->uri->segment(3));
         $data['sign'] = $this->get_rqa_sign($job);
+        $data['vsign'] = $this->get_vacancy_signatories($this->uri->segment(3));
+        $data['sheet'] = $this->Common->rqa_sheet($this->uri->segment(3));
+        $data['cells'] = $this->Common->rqa_cells_map($this->uri->segment(3));
+        $data['jobID'] = $this->uri->segment(3);
         
         $this->load->view('pages/car_rqa_form_jhs', $data);
     }
@@ -7823,6 +8011,10 @@ public function rqa_cluster_list_np()
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $this->uri->segment(3));
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $this->uri->segment(3));
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($this->uri->segment(3));
+        $data['sheet'] = $this->Common->rqa_sheet($this->uri->segment(3));
+        $data['cells'] = $this->Common->rqa_cells_map($this->uri->segment(3));
+        $data['jobID'] = $this->uri->segment(3);
                 $data['settings'] = $this->SettingsModel->get_mis_settings();
         $this->load->view('pages/car_rqa_form_jhsv2', $data);
     }
@@ -7844,6 +8036,10 @@ public function rqa_cluster_list_np()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload applicants and staff
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
@@ -7873,6 +8069,10 @@ public function rqa_municipality_print_jhs()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload applicants and staff
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
@@ -7904,6 +8104,10 @@ public function rqa_municipality_print_jhsv2()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload applicants and staff
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
@@ -7935,6 +8139,10 @@ public function car_rqa_administrative_mun()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload applicants and staff
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
@@ -7970,6 +8178,10 @@ public function car_rqa_administrative_mun_remarks()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
     $data['jobID'] = $jobID;
     $data['remarks_map'] = $this->Common->rqa_remarks_map($jobID);
 
@@ -8007,6 +8219,10 @@ public function rqa_municipality_print_shs()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload applicants and staff
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
@@ -8038,6 +8254,10 @@ public function rqa_municipality_print_shsv2()
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
     $data['sign'] = $this->get_rqa_sign($job);
+    $data['vsign'] = $this->get_vacancy_signatories($jobID);
+    $data['sheet'] = $this->Common->rqa_sheet($jobID);
+    $data['cells'] = $this->Common->rqa_cells_map($jobID);
+    $data['jobID'] = $jobID;
 
     // Preload applicants and staff
     $data['applicants'] = $this->Page_model->get_all_applicants_indexed();
@@ -8066,6 +8286,10 @@ public function rqa_municipality_print_shsv2()
 
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
         $data['settings'] = $this->SettingsModel->get_mis_settings();
 
 
@@ -8092,6 +8316,10 @@ public function rqa_municipality_print_shsv2()
 
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
         $data['settings'] = $this->SettingsModel->get_mis_settings();
 
 
@@ -8119,6 +8347,10 @@ public function rqa_municipality_print_shsv2()
 
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
 
@@ -8140,6 +8372,10 @@ public function rqa_municipality_print_shsv2()
         $data['car'] = $this->Page_model->rqa_mun_spec($jobID, $mun, $spec);
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
 
@@ -8162,6 +8398,10 @@ public function rqa_municipality_print_shsv2()
 
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
 
@@ -8183,6 +8423,10 @@ public function rqa_municipality_print_shsv2()
 
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
+        $data['vsign'] = $this->get_vacancy_signatories($jobID);
+        $data['sheet'] = $this->Common->rqa_sheet($jobID);
+        $data['cells'] = $this->Common->rqa_cells_map($jobID);
+        $data['jobID'] = $jobID;
 
         $data['title'] = "COMPARATIVE ASSESSMENT RESULT - REGISTRY OF QUALIFIED APPLICANTS (CAR - RQA)";
 

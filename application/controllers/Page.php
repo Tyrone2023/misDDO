@@ -3671,6 +3671,13 @@ class Page extends CI_Controller
 		$result['pos_title'] = $this->Common->no_cond_order_by('hris_positions', 'title', 'ASC');
 		$result['groups'] = $this->position_groups();
 
+		// signatory count per vacancy, for the badge on the Actions menu entry
+		$this->load->model('Vacancy_signatory_model', 'vsign_model');
+		$jobIDs = array();
+		foreach ($result['data'] as $jv) {
+			$jobIDs[] = (int) $jv->jobID;
+		}
+		$result['signatory_counts'] = $this->vsign_model->counts_by_job($jobIDs);
 
 		$this->load->view('list_jobvacancy', $result);
 

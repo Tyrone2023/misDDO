@@ -48,14 +48,14 @@ redirect(base_url().'log_in');
                 <td class="wb"><?= $job->jobTitle; ?> <?= $jobTypes[$job->job_type] ?? ''; ?></td>
                 <td class="ren"></td>
                 <td>Plantilla Item Number:</td>
-                <td class="wb"></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="item_no" value="<?= htmlspecialchars(($sheet->item_no ?? '') !== '' ? $sheet->item_no : ($job->itemNo ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
             <tr>
                 <td>Office/Bureau/Service/Unit where the vacancy exists</td>
                 <td class="wb">Division of <?php echo $settings->division; ?></td>
                 <td class="ren"></td>
                 <td>Date of Final Deliberation:</td>
-                <td class="wb"><?= $sign->pdate; ?></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="deliberation_date" value="<?= htmlspecialchars(($sheet->deliberation_date ?? '') !== '' ? $sheet->deliberation_date : ($sign->pdate ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
         </table>
 
@@ -105,18 +105,22 @@ redirect(base_url().'log_in');
         <td><?= ($row->ppstco != 0.00001) ? number_format($row->ppstco, 3) : ""; ?></td>
         <td><?= ($row->ppstpa != 0.00001) ? number_format($row->ppstpa, 3) : ""; ?></td>
         <td><?= $row->total_points ? number_format($row->total_points, 3) : ""; ?></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
+        <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="remarks_col" value="<?= htmlspecialchars($cells[(string) $row->code]->remarks_col ?? '', ENT_QUOTES); ?>"></td>
+        <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="bg_yes" value="<?= htmlspecialchars($cells[(string) $row->code]->bg_yes ?? '', ENT_QUOTES); ?>"></td>
+        <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="bg_no" value="<?= htmlspecialchars($cells[(string) $row->code]->bg_no ?? '', ENT_QUOTES); ?>"></td>
+        <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="appointment" value="<?= htmlspecialchars($cells[(string) $row->code]->appointment ?? '', ENT_QUOTES); ?>"></td>
     </tr>
 <?php endforeach; ?>
 
         </table>
         
+        <?php /* a per-vacancy signatory panel (VacancySignatories/index/{jobID})
+                 replaces the SY-wide hris_rqa_sign block below; without one
+                 the report keeps printing exactly what it printed before */ ?>
+        <?php if (empty($vsign) && !empty($sign->has_names)) : ?>
         <p class="prep">Prepared by the HRMPSB <span>Appointment conferred by:</span><br />(All members should affix signature) </p>
         
-        <?php $rqa_sign = $this->Common->one_cond_row('settings', 'id', 8); if($rqa_sign->status == 0){?>
+        <?php $rqa_sign = $this->Common->one_cond_row('settings', 'id', 8); if(($rqa_sign->status ?? null) == 0){?>
         <table class="sign">
             <tr>
                 <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m1_sign; ?>.png" alt=""><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><br />Member</td>
@@ -139,6 +143,10 @@ redirect(base_url().'log_in');
 
         
 
+        <?php endif; ?>
+
+        <?php $this->load->view('pages/_rqa_signatories', array('vsign' => isset($vsign) ? $vsign : array())); ?>
+
     </div>
   </div>
 
@@ -153,5 +161,7 @@ redirect(base_url().'log_in');
 
 
     
+
+<?php $this->load->view('pages/rqa_editable_js'); ?>
 </body>
 </html>

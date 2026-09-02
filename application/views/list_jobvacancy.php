@@ -86,6 +86,10 @@ foreach ($pos_title as $row) {
     ];
 }
 
+// per-vacancy signatory counts, handed over by the controller in one query so
+// the Actions menu can badge them without a query per row
+$signatory_counts = isset($signatory_counts) && is_array($signatory_counts) ? $signatory_counts : array();
+
 $is_hr = ($this->session->position === 'Human Resource Admin'
     || $this->session->position === 'HR Staff'
     || $this->session->position === 'Super Admin'
@@ -931,6 +935,12 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
 
                                                             <a class="hrp-action-item" href="<?= base_url(); ?>Pages/edit_vacancy/<?= $row->jobID; ?>">
                                                                 <i class="mdi mdi-file-document-edit-outline hrp-i-purple"></i> Edit Job Vacancy
+                                                            </a>
+
+                                                            <?php // signatories printed on this vacancy's RQA/CAR reports ?>
+                                                            <a class="hrp-action-item" href="<?= base_url(); ?>VacancySignatories/index/<?= $row->jobID; ?>">
+                                                                <i class="mdi mdi-draw hrp-i-teal"></i> Signatories
+                                                                <?php if (!empty($signatory_counts[$row->jobID])) : ?><span class="hrp-item-count"><?= (int) $signatory_counts[$row->jobID]; ?></span><?php endif; ?>
                                                             </a>
 
                                                             <?php if ($row->a_stat == 0) { ?>

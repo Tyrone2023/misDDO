@@ -42,14 +42,14 @@
                 <td class="wb"><?= $job->jobTitle; ?> <?= $jobTypes[$job->job_type] ?? ''; ?></td>
                 <td class="ren"></td>
                 <td>Plantilla Item Number:</td>
-                <td class="wb"></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="item_no" value="<?= htmlspecialchars(($sheet->item_no ?? '') !== '' ? $sheet->item_no : ($job->itemNo ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
             <tr>
                 <td>Office/Bureau/Service/Unit where the vacancy exists</td>
  <td class="wb">Division of <?php echo $settings->division; ?></td>
                 <td class="ren"></td>
                 <td>Date of Final Deliberation:</td>
-                <td class="wb"></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="deliberation_date" value="<?= htmlspecialchars(($sheet->deliberation_date ?? '') !== '' ? $sheet->deliberation_date : ($sign->pdate ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
         </table>
 
@@ -98,8 +98,12 @@
 
         </table>
         
+        <?php /* a per-vacancy signatory panel (VacancySignatories/index/{jobID})
+                 replaces the SY-wide hris_rqa_sign block below; without one
+                 the report keeps printing exactly what it printed before */ ?>
+        <?php if (empty($vsign) && !empty($sign->has_names)) : ?>
         <p class="prep">Prepared by the HRMPSB <span>Appointment conferred by:</span><br />(All members should affix signature) </p>
-        <?php $rqa_sign = $this->Common->one_cond_row('settings', 'id', 8); if($rqa_sign->status == 0){?>
+        <?php $rqa_sign = $this->Common->one_cond_row('settings', 'id', 8); if(($rqa_sign->status ?? null) == 0){?>
         <table class="sign">
         <tr>
                 <td><span><?= strtoupper($sign->m1n); ?></span><br /><?= $sign->m1p; ?><br />Member</td>
@@ -113,6 +117,10 @@
         <?php } ?>
 
         
+
+        <?php endif; ?>
+
+        <?php $this->load->view('pages/_rqa_signatories', array('vsign' => isset($vsign) ? $vsign : array())); ?>
 
     </div>
   </div>
@@ -128,5 +136,7 @@
 
 
     
+
+<?php $this->load->view('pages/rqa_editable_js'); ?>
 </body>
 </html>

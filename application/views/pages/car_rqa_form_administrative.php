@@ -58,14 +58,14 @@ redirect(base_url().'log_in');
                 <td class="wb"><?= $job->jobTitle; ?> <?= $jobTypes[$job->job_type] ?? ''; ?></td>
                 <td class="ren"></td>
                 <td>Plantilla Item Number:</td>
-                <td class="wb"></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="item_no" value="<?= htmlspecialchars(($sheet->item_no ?? '') !== '' ? $sheet->item_no : ($job->itemNo ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
             <tr>
                 <td>Office/Bureau/Service/Unit where the vacancy exists</td>
                 <td class="wb"><?= $job->assign; ?></td>
                 <td class="ren"></td>
                 <td>Date of Final Deliberation:</td>
-                <td class="wb"><?= $sign->pdate; ?></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="deliberation_date" value="<?= htmlspecialchars(($sheet->deliberation_date ?? '') !== '' ? $sheet->deliberation_date : ($sign->pdate ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
         </table>
 
@@ -123,10 +123,10 @@ redirect(base_url().'log_in');
                 <td><?= number_format($row->interview+$row->written+$row->skills, 2); ?></td>
                 <td><?= number_format(($row->total_points != 0.00001) ? $row->total_points : "", 3); ?></td>
                 <!-- <td <?php if($ap->asht == 1){echo "style='background-color:#FFF4B7'";}elseif($ap->asht == 2){echo "style='background-color:#C2FFC7'";} ?>><?= $et[$ap->asht] ?? ''; ?></td> -->
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_yes" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_yes ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_no" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_no ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="appointment" value="<?= htmlspecialchars($cells[(string) $row->record_no]->appointment ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="appointment2" value="<?= htmlspecialchars($cells[(string) $row->record_no]->appointment2 ?? '', ENT_QUOTES); ?>"></td>
             </tr>
             <?php }} ?>
         </table>
@@ -135,7 +135,7 @@ redirect(base_url().'log_in');
         
 
         <table class="sign">
-            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if($rqa_sign->nr == 1){?>
+            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if(($rqa_sign->nr ?? null) == 1){?>
                 <tr>
                     <td><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><br />Member</td>
                     <td><span><?= $sign->m2n; ?></span><br /><?= $sign->m2p; ?><br />Member</td>
@@ -171,7 +171,7 @@ redirect(base_url().'log_in');
         </table> -->
         
         <!-- <table class="sign">
-            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if($rqa_sign->nr == 1){?>
+            <?php $rqa_sign = $this->Common->one_cond_row('hris_rqa_sign', 'id', $job->sign); if(($rqa_sign->nr ?? null) == 1){?>
                 <tr>
                     <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m1_sign; ?>.png" alt=""><?php if ($sign->m1n): ?><span><?= $sign->m1n; ?></span><br /><?= $sign->m1p; ?><br />Member<?php endif; ?></td>
                     <td><img class="isig" src="<?= base_url(); ?>assets/isig/<?= $sign->m2_sign; ?>.png" alt=""><?php if ($sign->m2n): ?><span><?= $sign->m2n; ?></span><br /><?= $sign->m2p; ?><br />Member<?php endif; ?></td>
@@ -205,7 +205,9 @@ redirect(base_url().'log_in');
                 </tr>
             <?php } ?>
         </table> -->
-        
+
+        <?php // per-vacancy signatories - maintained on VacancySignatories/index/{jobID} ?>
+        <?php $this->load->view('pages/_rqa_signatories', array('vsign' => isset($vsign) ? $vsign : array())); ?>
 
     </div>
   </div>
@@ -221,5 +223,7 @@ redirect(base_url().'log_in');
 
 
     
+
+<?php $this->load->view('pages/rqa_editable_js'); ?>
 </body>
 </html>

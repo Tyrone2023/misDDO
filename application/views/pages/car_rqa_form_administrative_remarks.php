@@ -58,14 +58,14 @@ redirect(base_url().'log_in');
                 <td class="wb"><?= $job->jobTitle; ?> <?= $jobTypes[$job->job_type] ?? ''; ?></td>
                 <td class="ren"></td>
                 <td>Plantilla Item Number:</td>
-                <td class="wb"></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="item_no" value="<?= htmlspecialchars(($sheet->item_no ?? '') !== '' ? $sheet->item_no : ($job->itemNo ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
             <tr>
                 <td>Office/Bureau/Service/Unit where the vacancy exists</td>
                 <td class="wb"><?= $job->assign; ?></td>
                 <td class="ren"></td>
                 <td>Date of Final Deliberation:</td>
-                <td class="wb"><?= $sign->pdate; ?></td>
+                <td class="wb"><input type="text" class="rqa-edit rqa-sheet-edit" data-field="deliberation_date" value="<?= htmlspecialchars(($sheet->deliberation_date ?? '') !== '' ? $sheet->deliberation_date : ($sign->pdate ?? ''), ENT_QUOTES); ?>"></td>
             </tr>
         </table>
 
@@ -125,10 +125,10 @@ redirect(base_url().'log_in');
                 <td><?= number_format(($row->total_points != 0.00001) ? $row->total_points : "", 3); ?></td>
                 <td class="remarks-cell"><textarea class="remarks-input" rows="1" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>"><?= htmlspecialchars($remarks_map[(string) $row->record_no] ?? $ap->empPosition ?? "", ENT_QUOTES); ?></textarea></td>
                 <!-- <td <?php if($ap->asht == 1){echo "style='background-color:#FFF4B7'";}elseif($ap->asht == 2){echo "style='background-color:#C2FFC7'";} ?>><?= $et[$ap->asht] ?? ''; ?></td> -->
-                <td></td>
-                <td></td>
-                <td></td>
-                <td></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_yes" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_yes ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_no" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_no ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="appointment" value="<?= htmlspecialchars($cells[(string) $row->record_no]->appointment ?? '', ENT_QUOTES); ?>"></td>
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="appointment2" value="<?= htmlspecialchars($cells[(string) $row->record_no]->appointment2 ?? '', ENT_QUOTES); ?>"></td>
             </tr>
             <?php }} ?>
         </table>
@@ -209,6 +209,9 @@ redirect(base_url().'log_in');
         </table> -->
 
 
+        <?php // per-vacancy signatories - maintained on VacancySignatories/index/{jobID} ?>
+        <?php $this->load->view('pages/_rqa_signatories', array('vsign' => isset($vsign) ? $vsign : array())); ?>
+
     </div>
   </div>
 
@@ -225,5 +228,7 @@ redirect(base_url().'log_in');
 
 <?php $this->load->view("pages/rqa_remarks_js"); ?>
 
+
+<?php $this->load->view('pages/rqa_editable_js'); ?>
 </body>
 </html>
