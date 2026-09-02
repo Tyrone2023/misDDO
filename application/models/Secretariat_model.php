@@ -3750,9 +3750,11 @@ class Secretariat_model extends CI_Model
         ), static function ($line) { return $line !== ''; }));
 
         if ($docType === 'letter') {
+            // The evaluator's comment is the remark on the row; the requirement
+            // it belongs to is left blank for the Secretariat to type in.
             $items = [];
             foreach ($reasonLines as $line) {
-                $items[] = ['requirement' => $line, 'remarks' => ''];
+                $items[] = ['requirement' => '', 'remarks' => $line];
             }
 
             if ($items === []) {
@@ -3776,8 +3778,8 @@ class Secretariat_model extends CI_Model
                     . 'Management Office, this is to formally inform you that you have not been included in the pool of '
                     . 'official applicants and cannot proceed to the next stage of the application process due to the '
                     . 'non-compliance with the provision stipulated in DepEd Order No. 007, s. 2023 as regards to the '
-                    . 'Submission and Receipt of Application documents specifically on (Items 20.a to j) and Division '
-                    . 'Memorandum No. 155, s. 2026 Annex C: Checklist of Requirements, to wit:',
+                    . 'Submission and Receipt of Application documents specifically on (Items 20.a to j) Division Memorandum No. 814, s. 
+                    2026 and Division Memorandum No. 840, s. 2026 Annex C: Checklist of Requirements, to wit:',
                 'items'           => $items,
                 'body3'           => 'Further, Section 21 of DepEd Order No. 007, s. 2023 states that individuals who fail '
                     . 'to submit complete mandatory documents (Item 20.a to j) on the set deadline indicated in the '

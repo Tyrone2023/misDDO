@@ -11,7 +11,7 @@
  * $doc       array  the document body (see Secretariat_model::assessment_defaults)
  * $docType   string 'assessment' or 'letter'
  * $editable  bool   true in the modal, false when printing
- * $esig      string signature file kept under uploads/esig, print only
+ * $esig      string signature file kept under uploads/esig
  *
  * Every value is printed as escaped text and collected back as plain text, so
  * nothing typed into the document can come back out as markup.
@@ -138,7 +138,7 @@ $ad_items = (array) ($doc['items'] ?? []);
         <?= $ad_field('closing', $doc['closing'] ?? '', 'span', 'ad-lead'); ?>
 
         <div class="ad-sign">
-            <?php if (!$editable && $esig !== '' && is_file(FCPATH . 'uploads/esig/' . basename($esig))) : ?>
+            <?php if ($esig !== '' && is_file(FCPATH . 'uploads/esig/' . basename($esig))) : ?>
                 <img class="ad-isig" src="<?= base_url(); ?>uploads/esig/<?= rawurlencode(basename($esig)); ?>" alt="">
             <?php endif; ?>
             <?= $ad_field('signatory', $doc['signatory'] ?? '', 'span', 'ad-signame'); ?>
@@ -219,7 +219,7 @@ $ad_items = (array) ($doc['items'] ?? []);
         <?= $ad_field('closing', $doc['closing'] ?? '', 'span', 'ad-lead'); ?>
 
         <div class="ad-sign">
-            <?php if (!$editable && $esig !== '' && is_file(FCPATH . 'uploads/esig/' . basename($esig))) : ?>
+            <?php if ($esig !== '' && is_file(FCPATH . 'uploads/esig/' . basename($esig))) : ?>
                 <img class="ad-isig" src="<?= base_url(); ?>uploads/esig/<?= rawurlencode(basename($esig)); ?>" alt="">
             <?php endif; ?>
             <?= $ad_field('signatory', $doc['signatory'] ?? '', 'span', 'ad-signame'); ?>
