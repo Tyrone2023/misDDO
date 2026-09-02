@@ -96,7 +96,7 @@ redirect(base_url().'log_in');
         <th>No</th>
     </tr>
 
-<?php flush(); $no = 1; $ic=1;?>
+<?php flush(); $no = 1; ?>
 <?php foreach ($car as $row): ?>
     <?php
         // $ap = $applicants[$row->record_no] ?? $staff[$row->IDNumber] ?? null;
@@ -110,8 +110,6 @@ redirect(base_url().'log_in');
         // Mobile number
         // $mobile = isset($ap->contactNo) ? strtoupper($ap->contactNo) : '';
 
-        // Check existing applicant
-        $oa = $this->Common->two_cond_count_row('hris_applications', 'empEmail', $row->empEmail, 'app_year', '2024');
     ?>
     <tr>
         <td><?= $no++; ?></td>
@@ -128,7 +126,7 @@ redirect(base_url().'log_in');
         <td><?= ($row->ppstco != 0.00001) ? number_format($row->ppstco, 3) : ""; ?></td>
         <td><?= ($row->ppstpa != 0.00001) ? number_format($row->ppstpa, 3) : ""; ?></td>
         <td><?= $row->total_points ? number_format($row->total_points, 3) : ""; ?></td>
-        <td style="font-style:italic">Rank <?= $ic++;  ?></td>
+        <td></td>
         <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="bg_yes" value="<?= htmlspecialchars($cells[(string) $row->code]->bg_yes ?? '', ENT_QUOTES); ?>"></td>
         <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="bg_no" value="<?= htmlspecialchars($cells[(string) $row->code]->bg_no ?? '', ENT_QUOTES); ?>"></td>
         <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="appointment" value="<?= htmlspecialchars($cells[(string) $row->code]->appointment ?? '', ENT_QUOTES); ?>"></td>

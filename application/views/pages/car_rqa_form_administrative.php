@@ -75,6 +75,7 @@ redirect(base_url().'log_in');
                 <th rowspan="2">Application Code</th>
                 <th rowspan="2">Address</th>
                 <th colspan="9">COMPARATIVE ASSESSMENT RESULTS</th>
+                <th rowspan="2">Remarks</th>
                 <th colspan="2">For Background<br />Investigation<br />(Y/N)</th>
                 <th rowspan="2">For<br />Appointment<br /><i>(To filled-out by the<br />Appointing<br />Officer/Authority,<br />Please sign opposite<br />the name of the applicant)</th>
                 <th rowspan="2">For<br />Appointment<br/><i>Please identify period of<br /> Probation (6 months or 1<br /> year) in accordance with<br /> Section F of<br /> DO 019,s.2022</i></th>
@@ -122,6 +123,7 @@ redirect(base_url().'log_in');
                 <td><?= ($row->ald != 0.00001) ? $row->ald : ""; ?></td>
                 <td><?= number_format($row->interview+$row->written+$row->skills, 2); ?></td>
                 <td><?= number_format(($row->total_points != 0.00001) ? $row->total_points : "", 3); ?></td>
+                <td></td>
                 <!-- <td <?php if($ap->asht == 1){echo "style='background-color:#FFF4B7'";}elseif($ap->asht == 2){echo "style='background-color:#C2FFC7'";} ?>><?= $et[$ap->asht] ?? ''; ?></td> -->
                 <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_yes" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_yes ?? '', ENT_QUOTES); ?>"></td>
                 <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_no" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_no ?? '', ENT_QUOTES); ?>"></td>

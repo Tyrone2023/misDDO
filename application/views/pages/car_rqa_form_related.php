@@ -108,7 +108,7 @@ redirect(base_url().'log_in');
                 <td><?= ($row->ald != 0.00001) ? $row->ald : ""; ?></td>
                 <td><?= number_format($row->interview+$row->written+$row->skills, 2); ?></td>
                 <td><?= number_format(($row->total_points != 0.00001) ? $row->total_points : "", 3); ?></td>
-                <td><?= $ap->empPosition; ?></td>
+                <td></td>
                 <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_yes" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_yes ?? '', ENT_QUOTES); ?>"></td>
                 <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="bg_no" value="<?= htmlspecialchars($cells[(string) $row->record_no]->bg_no ?? '', ENT_QUOTES); ?>"></td>
                 <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->record_no, ENT_QUOTES); ?>" data-field="appointment" value="<?= htmlspecialchars($cells[(string) $row->record_no]->appointment ?? '', ENT_QUOTES); ?>"></td>
