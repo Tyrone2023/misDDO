@@ -4,7 +4,7 @@
 <?php
 /*
  * Signatories of one job vacancy - CRUD over hris_vacancy_signatories.
- * The order set here is the order the names print on the RQA reports
+ * The grid position set here is where each name prints on the RQA reports
  * (Pages/car_rqa_administrative and Pages/car_rqa_administrative_posting).
  */
 
@@ -16,9 +16,13 @@ $jobID      = (int) $job->jobID;
 $groupName  = isset($groups[(int) $job->position]) ? $groups[(int) $job->position] : '';
 $typeLabel  = isset($jobTypes[(int) $job->job_type]) ? $jobTypes[(int) $job->job_type] : '';
 $withEsig   = 0;
+$withLabel  = 0;
 foreach ($rows as $r) {
     if (trim((string) $r->esig) !== '') {
         $withEsig++;
+    }
+    if (trim((string) $r->print_label) !== '') {
+        $withLabel++;
     }
 }
 $total = count($rows);
@@ -55,18 +59,27 @@ $total = count($rows);
         font-weight: 700;
         font-size: 12px;
     }
-    .vs-move {
-        display: inline-flex;
-        flex-direction: column;
+    .vs-layout-control {
+        display: grid;
+        grid-template-columns: 24px 44px 24px;
+        grid-template-rows: 21px 28px 21px;
+        align-items: center;
+        justify-content: center;
         line-height: 1;
     }
-    .vs-move a {
+    .vs-layout-control a {
         color: #8a94a6;
         font-size: 15px;
         line-height: 1;
+        text-align: center;
     }
-    .vs-move a:hover { color: #3b4ab0; }
-    .vs-move span.disabled { color: #dfe3ea; font-size: 15px; line-height: 1; }
+    .vs-layout-control a:hover { color: #3b4ab0; }
+    .vs-layout-control a.disabled { color: #dfe3ea; pointer-events: none; }
+    .vs-layout-up { grid-column: 2; grid-row: 1; }
+    .vs-layout-left { grid-column: 1; grid-row: 2; }
+    .vs-layout-slot { grid-column: 2; grid-row: 2; font-size: 10px; font-weight: 700; color: #3b4ab0; }
+    .vs-layout-right { grid-column: 3; grid-row: 2; }
+    .vs-layout-down { grid-column: 2; grid-row: 3; }
     .vs-file-hint { font-size: 11.5px; color: #8a94a6; }
 </style>
 
@@ -87,8 +100,8 @@ $total = count($rows);
                             <h3 class="hrp-hero-title"><i class="mdi mdi-file-sign"></i> <?= html_escape($job->jobTitle); ?></h3>
                             <p class="hrp-hero-sub">
                                 Signatories printed at the foot of this vacancy's
-                                <strong>RQA / CAR</strong> reports, in the order listed below &mdash; the
-                                first row signs first. Each signatory may carry an e-signature image
+                                <strong>RQA / CAR</strong> reports in a flexible five-column grid.
+                                Each signatory may carry a heading and an e-signature image
                                 stored in <strong>uploads/esig</strong>.
                             </p>
                             <p class="hrp-hero-sub" style="margin-top:.35rem;">
@@ -106,6 +119,10 @@ $total = count($rows);
                             <div class="hrp-stat">
                                 <span class="hrp-stat-value"><?= number_format($withEsig); ?></span>
                                 <span class="hrp-stat-label">With e-sig</span>
+                            </div>
+                            <div class="hrp-stat">
+                                <span class="hrp-stat-value"><?= number_format($withLabel); ?></span>
+                                <span class="hrp-stat-label">With label</span>
                             </div>
                         </div>
                     </div>
@@ -139,7 +156,7 @@ $total = count($rows);
                                 <p class="hrp-card-sub">
                                     <?= number_format($total); ?> signator<?= $total == 1 ? 'y' : 'ies'; ?> on file
                                     <span class="hrp-dotsep">&bull;</span>
-                                    printed left to right, top to bottom, in this order
+                                    arranged in a five-column print grid; arrows move a signatory one cell
                                 </p>
                             </div>
                             <div class="hrp-card-actions">
@@ -171,8 +188,9 @@ $total = count($rows);
                                 <table class="table hrp-table nowrap" style="width:100%;">
                                     <thead>
                                         <tr>
-                                            <th style="width:60px;" class="text-center">Order</th>
+                                            <th style="width:125px;" class="text-center">Placement</th>
                                             <th>Name</th>
+                                            <th>Heading / Label</th>
                                             <th>Position / Designation</th>
                                             <th>Role in Panel</th>
                                             <th class="text-center">E-Signature</th>
@@ -180,25 +198,17 @@ $total = count($rows);
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php $last = count($rows) - 1; ?>
                                         <?php foreach ($rows as $i => $s) : ?>
                                             <?php $initials = strtoupper(mb_substr(trim((string) $s->name), 0, 2)); ?>
+                                            <?php $slot = max(1, (int) $s->print_slot); $layoutRow = (int) ceil($slot / 5); $layoutCol = (($slot - 1) % 5) + 1; ?>
                                             <tr>
                                                 <td class="text-center">
-                                                    <div class="hrp-actions justify-content-center">
-                                                        <span class="vs-order"><?= (int) $s->signatory_order; ?></span>
-                                                        <span class="vs-move">
-                                                            <?php if ($i > 0) : ?>
-                                                                <a href="<?= base_url(); ?>VacancySignatories/move/<?= (int) $s->id; ?>/up" title="Move up"><i class="mdi mdi-chevron-up"></i></a>
-                                                            <?php else : ?>
-                                                                <span class="disabled"><i class="mdi mdi-chevron-up"></i></span>
-                                                            <?php endif; ?>
-                                                            <?php if ($i < $last) : ?>
-                                                                <a href="<?= base_url(); ?>VacancySignatories/move/<?= (int) $s->id; ?>/down" title="Move down"><i class="mdi mdi-chevron-down"></i></a>
-                                                            <?php else : ?>
-                                                                <span class="disabled"><i class="mdi mdi-chevron-down"></i></span>
-                                                            <?php endif; ?>
-                                                        </span>
+                                                    <div class="vs-layout-control">
+                                                        <a href="javascript:void(0);" class="vs-layout-btn vs-layout-up<?= $layoutRow === 1 ? ' disabled' : ''; ?>" data-id="<?= (int) $s->id; ?>" data-direction="up" title="Move to the row above"><i class="mdi mdi-chevron-up"></i></a>
+                                                        <a href="javascript:void(0);" class="vs-layout-btn vs-layout-left<?= $layoutCol === 1 ? ' disabled' : ''; ?>" data-id="<?= (int) $s->id; ?>" data-direction="left" title="Move left"><i class="mdi mdi-chevron-left"></i></a>
+                                                        <span class="vs-layout-slot">R<?= $layoutRow; ?> C<?= $layoutCol; ?></span>
+                                                        <a href="javascript:void(0);" class="vs-layout-btn vs-layout-right<?= $layoutCol === 5 ? ' disabled' : ''; ?>" data-id="<?= (int) $s->id; ?>" data-direction="right" title="Move right"><i class="mdi mdi-chevron-right"></i></a>
+                                                        <a href="javascript:void(0);" class="vs-layout-btn vs-layout-down<?= $layoutRow === 10 ? ' disabled' : ''; ?>" data-id="<?= (int) $s->id; ?>" data-direction="down" title="Move to the row below"><i class="mdi mdi-chevron-down"></i></a>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -206,9 +216,16 @@ $total = count($rows);
                                                         <span class="hrp-avatar"><?= html_escape($initials); ?></span>
                                                         <span class="hrp-title-text">
                                                             <span class="hrp-title-name"><?= html_escape($s->name); ?></span>
-                                                            <span class="hrp-title-sub">Prints <?= ($i === 0) ? 'first' : 'in slot ' . ($i + 1); ?></span>
+                                                            <span class="hrp-title-sub">Print slot <?= $slot; ?></span>
                                                         </span>
                                                     </div>
+                                                </td>
+                                                <td>
+                                                    <?php if (trim((string) $s->print_label) !== '') : ?>
+                                                        <strong><?= html_escape($s->print_label); ?></strong>
+                                                    <?php else : ?>
+                                                        <span class="hrp-muted">&mdash;</span>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
                                                     <?php if (trim((string) $s->designation) !== '') : ?>
@@ -243,6 +260,8 @@ $total = count($rows);
                                                            data-designation="<?= html_escape($s->designation); ?>"
                                                            data-role="<?= html_escape($s->sign_role); ?>"
                                                            data-order="<?= (int) $s->signatory_order; ?>"
+                                                           data-slot="<?= $slot; ?>"
+                                                           data-label="<?= html_escape($s->print_label); ?>"
                                                            data-esig="<?= html_escape($s->esig); ?>">
                                                             <i class="mdi mdi-pencil-outline"></i>
                                                         </a>
@@ -292,6 +311,13 @@ $total = count($rows);
                     </div>
 
                     <div class="hrp-field">
+                        <label class="hrp-label" for="vs-label">Heading / Label above the signature</label>
+                        <input type="text" class="form-control" name="print_label" id="vs-label" maxlength="200"
+                               placeholder="e.g. Approving Authority:">
+                        <span class="hrp-help">Optional text printed directly above this signatory.</span>
+                    </div>
+
+                    <div class="hrp-field">
                         <label class="hrp-label" for="vs-designation">Position / Designation</label>
                         <input type="text" class="form-control" name="designation" id="vs-designation" maxlength="200"
                                placeholder="e.g. Chief Education Supervisor, CID">
@@ -312,9 +338,9 @@ $total = count($rows);
                     </div>
 
                     <div class="hrp-field">
-                        <label class="hrp-label" for="vs-order">Print Order</label>
-                        <input type="number" class="form-control" name="signatory_order" id="vs-order" min="1" value="<?= (int) $next; ?>">
-                        <span class="hrp-help">Lowest number prints first. Orders are renumbered 1&hellip;n after saving.</span>
+                        <label class="hrp-label" for="vs-slot">Print Position</label>
+                        <input type="number" class="form-control" name="print_slot" id="vs-slot" min="1" max="50" value="<?= (int) $next_slot; ?>">
+                        <span class="hrp-help">Positions 1&ndash;5 are row 1, 6&ndash;10 are row 2, and so on. An occupied position is swapped.</span>
                     </div>
 
                     <div class="hrp-field mb-0">
@@ -388,13 +414,13 @@ $total = count($rows);
     <script>
         $(document).ready(function () {
 
-            var nextOrder = <?= (int) $next; ?>;
+            var nextSlot = <?= (int) $next_slot; ?>;
 
             $('#vs-add-btn').on('click', function () {
                 $('#vs-modal-title').text('Add Signatory');
                 $('#vs-form')[0].reset();
                 $('#vs-id').val('');
-                $('#vs-order').val(nextOrder);
+                $('#vs-slot').val(nextSlot);
                 $('#vs-current-esig').html('');
                 $('#vs-modal').modal('show');
             });
@@ -410,7 +436,8 @@ $total = count($rows);
                 $('#vs-name').val($b.attr('data-name'));
                 $('#vs-designation').val($b.attr('data-designation'));
                 $('#vs-role').val($b.attr('data-role'));
-                $('#vs-order').val($b.attr('data-order'));
+                $('#vs-label').val($b.attr('data-label'));
+                $('#vs-slot').val($b.attr('data-slot'));
 
                 $('#vs-current-esig').html(
                     esig === ''
@@ -430,6 +457,27 @@ $total = count($rows);
                     e.preventDefault();
                     alert('Signatory name is required.');
                 }
+            });
+
+            $(document).on('click', '.vs-layout-btn', function () {
+                var $button = $(this);
+                if ($button.hasClass('disabled')) { return; }
+
+                $button.addClass('disabled');
+                $.post('<?= base_url(); ?>VacancySignatories/move_layout', {
+                    id: $button.attr('data-id'),
+                    direction: $button.attr('data-direction')
+                }).done(function (response) {
+                    if (response && response.status === 'success') {
+                        window.location.reload();
+                        return;
+                    }
+                    alert((response && response.message) || 'The signatory could not be moved.');
+                    $button.removeClass('disabled');
+                }).fail(function () {
+                    alert('The signatory could not be moved. Please try again.');
+                    $button.removeClass('disabled');
+                });
             });
 
             <?php if (!empty($sources)) : ?>

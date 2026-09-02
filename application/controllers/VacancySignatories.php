@@ -6,7 +6,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
  *
  * Works for every vacancy regardless of position group - the module is keyed on
  * hris_jobvacancy.jobID only. What is saved here is printed at the foot of the
- * RQA reports (Pages/car_rqa_administrative and .../_posting) in the order set
+ * RQA reports (Pages/car_rqa_administrative and .../_posting) in the layout set
  * on this page. Signature images are stored in uploads/esig, alongside the
  * per-user signatures kept by Pages/esignature.
  */
@@ -99,6 +99,7 @@ class VacancySignatories extends CI_Controller
         $data['job']    = $job;
         $data['rows']   = $this->vsign->get_by_job($jobID);
         $data['next']   = $this->vsign->max_order($jobID) + 1;
+        $data['next_slot'] = $this->vsign->next_available_slot($jobID, $this->vsign->max_slot($jobID) + 1);
         $data['groups'] = array(
             1 => 'Teaching',
             2 => 'School Administration',
@@ -142,15 +143,17 @@ class VacancySignatories extends CI_Controller
             redirect($back);
         }
 
-        $order = $this->input->post('signatory_order');
-        $order = ($order === null || trim((string) $order) === '')
-            ? $this->vsign->max_order($jobID) + 1
-            : (int) $order;
+        $order = $this->vsign->max_order($jobID) + 1;
+        $slot = (int) $this->input->post('print_slot');
+        if ($slot < 1 || $slot > 50) {
+            $slot = $this->vsign->next_available_slot($jobID, $this->vsign->max_slot($jobID) + 1);
+        }
 
         $fields = array(
             'name'            => $name,
             'designation'     => trim((string) $this->input->post('designation')),
             'sign_role'       => trim((string) $this->input->post('sign_role')),
+            'print_label'     => mb_substr(trim((string) $this->input->post('print_label')), 0, 200),
             'signatory_order' => $order
         );
 
@@ -175,7 +178,11 @@ class VacancySignatories extends CI_Controller
 
         if ($id) {
             $old = !empty($existing->esig) ? $existing->esig : '';
+            // Keep its legacy sequence number until the layout move has
+            // completed; normalize_orders() then makes it match the grid.
+            $fields['signatory_order'] = (int) $existing->signatory_order;
             $this->vsign->update($id, $fields);
+            $this->vsign->move_to_slot($id, $slot);
 
             if (!empty($fields['esig']) && $old !== '' && $old !== $fields['esig']) {
                 $this->delete_esig_file($old);
@@ -186,7 +193,11 @@ class VacancySignatories extends CI_Controller
         } else {
             $fields['job_id']     = $jobID;
             $fields['created_by'] = (int) $this->session->id;
-            $this->vsign->insert($fields);
+            // Insert temporarily after the occupied layout, then swap into the
+            // requested position. This avoids duplicate cells at every point.
+            $fields['print_slot'] = $this->vsign->next_available_slot($jobID, $this->vsign->max_slot($jobID) + 1);
+            $newID = $this->vsign->insert($fields);
+            $this->vsign->move_to_slot($newID, $slot);
 
             $this->Page_model->insert_at('Added vacancy signatory: ' . $name, $jobID);
             $this->session->set_flashdata('success', 'Signatory added.');
@@ -239,6 +250,64 @@ class VacancySignatories extends CI_Controller
     }
 
     /**
+     * AJAX endpoint used by the arrows directly on the printable CAR/RQA.
+     * Directions move through a five-column layout and swap occupied cells.
+     */
+    public function move_layout()
+    {
+        if (!$this->can_manage()) {
+            return $this->json_result(false, 'You are not allowed to arrange vacancy signatories.');
+        }
+
+        $id = (int) $this->input->post('id');
+        $direction = trim((string) $this->input->post('direction'));
+        $row = $this->vsign->get_by_id($id);
+
+        if (empty($row) || !in_array($direction, array('left', 'right', 'up', 'down'), true)) {
+            return $this->json_result(false, 'Invalid signatory or direction.');
+        }
+
+        if (!$this->vsign->move_in_layout($id, $direction)) {
+            return $this->json_result(false, 'That signatory cannot move farther in this direction.');
+        }
+
+        return $this->json_result(true, 'Layout saved.');
+    }
+
+    /** Save the optional text printed immediately above one signatory. */
+    public function save_label()
+    {
+        if (!$this->can_manage()) {
+            return $this->json_result(false, 'You are not allowed to edit vacancy signatories.');
+        }
+
+        $id = (int) $this->input->post('id');
+        $row = $this->vsign->get_by_id($id);
+        if (empty($row)) {
+            return $this->json_result(false, 'Signatory not found.');
+        }
+
+        $label = mb_substr(trim((string) $this->input->post('print_label')), 0, 200);
+        if (!$this->vsign->update($id, array('print_label' => $label))) {
+            return $this->json_result(false, 'The label could not be saved.');
+        }
+
+        return $this->json_result(true, 'Label saved.');
+    }
+
+    private function json_result($success, $message)
+    {
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode(array(
+                'status'  => $success ? 'success' : 'error',
+                'message' => $message
+            )));
+
+        return null;
+    }
+
+    /**
      * Copy an existing signatory list into this vacancy so a panel that signs
      * several postings does not have to be re-encoded each time. Existing rows
      * are kept; the copies are appended after them.
@@ -266,17 +335,29 @@ class VacancySignatories extends CI_Controller
         }
 
         $order = $this->vsign->max_order($jobID);
+        // Keep the copied panel's blank cells and relative placement. When the
+        // destination already has entries, begin at the next full print row.
+        $slotOffset = $this->vsign->max_slot($jobID) > 0
+            ? (int) ceil($this->vsign->max_slot($jobID) / 5) * 5
+            : 0;
 
         foreach ($source as $row) {
             $order++;
+            $sourceSlot = max(1, (int) $row->print_slot);
+            $copySlot = $slotOffset + $sourceSlot;
+            if ($copySlot > 50) {
+                $copySlot = $this->vsign->next_available_slot($jobID, 1);
+            }
             $this->vsign->insert(array(
                 'job_id'          => $jobID,
                 'name'            => $row->name,
                 'designation'     => $row->designation,
                 'sign_role'       => $row->sign_role,
+                'print_label'     => $row->print_label,
                 // the image file is shared, not duplicated on disk
                 'esig'            => $row->esig,
                 'signatory_order' => $order,
+                'print_slot'      => $copySlot,
                 'created_by'      => (int) $this->session->id
             ));
         }
