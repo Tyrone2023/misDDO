@@ -328,3 +328,11 @@ if (!empty($vsign_rows)) :
 <?php endif; ?>
 
 <?php endif; ?>
+
+<?php
+// Keeps the signature block on the same sheet as the closing roster rows.
+// Loaded outside the block above so the reports that still render the legacy
+// .prep / table.sign footer get it too. Excel exports are plain HTML sheets.
+if (empty($is_excel_export)) {
+    $this->load->view('pages/_rqa_print_fit');
+}
