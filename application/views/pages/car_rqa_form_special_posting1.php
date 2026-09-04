@@ -44,7 +44,7 @@ redirect(base_url().'log_in');
                 <th rowspan="2">No.</th>
                 <th rowspan="2">Application Code</th>
                 <th colspan="7">COMPARATIVE ASSESSMENT RESULTS</th>
-                
+                <th rowspan="2">Remarks</th>
             </tr>
             <tr>
                 <th>Education <br />(10 pts)</th>
@@ -73,7 +73,7 @@ redirect(base_url().'log_in');
                 <td><?= $row->demo_rating ? $row->demo_rating : ""; ?></td>
                 <td><?= $row->tr_rating ? $row->tr_rating : ""; ?></td>
                 <td><?= $row->total_points ? $row->total_points : ""; ?></td>
-             
+                <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars((string) $row->appID, ENT_QUOTES); ?>" data-field="remarks_col" value="<?= htmlspecialchars($cells[(string) $row->appID]->remarks_col ?? '', ENT_QUOTES); ?>"></td>
             </tr>
             <?php }} ?>
         </table>

@@ -108,9 +108,6 @@ redirect(base_url().'log_in');
 
         // Mobile number
         // $mobile = isset($ap->contactNo) ? strtoupper($ap->contactNo) : '';
-
-        // Check existing applicant
-        $oa = $this->Common->two_cond_count_row('hris_applications', 'empEmail', $row->empEmail, 'app_year', '2024');
     ?>
     <tr>
         <td><?= $no++; ?></td>
@@ -126,7 +123,7 @@ redirect(base_url().'log_in');
         <td><?= ($row->demo_rating != 0.00001) ? $row->demo_rating : ""; ?></td>
         <td><?= ($row->tr_rating != 0.00001) ? $row->tr_rating : ""; ?></td>
         <td><?= $row->total_points ? number_format($row->total_points, 2) : ""; ?></td>
-        <td style="font-size:8px"><?php if ($oa->num_rows() >= 1) echo "SY 2024-2025 Applicant"; ?></td>
+        <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="remarks_col" value="<?= htmlspecialchars($cells[(string) $row->code]->remarks_col ?? '', ENT_QUOTES); ?>"></td>
         <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="bg_yes" value="<?= htmlspecialchars($cells[(string) $row->code]->bg_yes ?? '', ENT_QUOTES); ?>"></td>
         <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="bg_no" value="<?= htmlspecialchars($cells[(string) $row->code]->bg_no ?? '', ENT_QUOTES); ?>"></td>
         <td class="rqa-cell"><input type="text" class="rqa-edit rqa-cell-edit" data-record="<?= htmlspecialchars($row->code, ENT_QUOTES); ?>" data-field="appointment" value="<?= htmlspecialchars($cells[(string) $row->code]->appointment ?? '', ENT_QUOTES); ?>"></td>
