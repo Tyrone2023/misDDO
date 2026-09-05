@@ -788,6 +788,36 @@ class EvaluatorAssigned extends CI_Controller
             ->where('appID', $appID)
             ->delete('hris_app_dq');
 
+        // The disqualification also produced the Secretariat's issued
+        // documents (the Evaluative Assessment / Annex F and the Letter to
+        // Applicants Non-Compliant of Documents) in hris_app_assessment.
+        // Now that the applicant is no longer disqualified, those letters are
+        // stale - drop them so they no longer surface on the applicant's
+        // application list or the rating page.
+        $assessmentDeleted = $this->db
+            ->where('app_id', $appID)
+            ->delete('hris_app_assessment');
+
+        // Release the evaluator claim on the rating row. The applicant may
+        // already have been rated before being disqualified; when they are
+        // re-endorsed for rating the existing scores should be visible to
+        // whoever opens the page, not locked behind the previous evaluator's
+        // eval_id1 claim. Resetting it to 0 makes the rating display again.
+        $ratingClaimReleased = $this->db
+            ->where('appID', $appID)
+            ->where('eval_id1 >', 0)
+            ->update('hris_rating_none', ['eval_id1' => 0]);
+
+        $ratingClaimReleasedPromo = $this->db
+            ->where('appID', $appID)
+            ->where('eval_id1 >', 0)
+            ->update('hris_rating_promotion', ['eval_id1' => 0]);
+
+        $ratingClaimReleasedApp = $this->db
+            ->where('appID', $appID)
+            ->where('eval_id1 >', 0)
+            ->update('hris_applications_rating', ['eval_id1' => 0]);
+
         $trackingSaved = $this->db->insert('hris_applications_track', [
             'jobID'        => (int)$application->jobID,
             'empEmail'     => (string)($application->empEmail ?? ''),
@@ -801,7 +831,10 @@ class EvaluatorAssigned extends CI_Controller
             'app_id'       => $appID,
         ]);
 
-        if (!$dqReset || !$dqRowDeleted || !$trackingSaved || $this->db->trans_status() === false) {
+        if (!$dqReset || !$dqRowDeleted || $assessmentDeleted === false
+            || $ratingClaimReleased === false || $ratingClaimReleasedPromo === false
+            || $ratingClaimReleasedApp === false || !$trackingSaved
+            || $this->db->trans_status() === false) {
             $this->db->trans_rollback();
             $this->session->set_flashdata('danger', 'The disqualification could not be reverted. Please try again.');
             redirect(base_url('EvaluatorAssigned/disqualified'));

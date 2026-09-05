@@ -8683,6 +8683,12 @@ public function rqa_municipality_print_shsv2()
             // assigned evaluator gets their Rate buttons back.
             $this->Reg->release_unrated_eval_claim($appIdForRating);
             $this->Reg->auto_mark_rated($appIdForRating);
+
+            // Safety net: drop any issued assessment letters if the applicant
+            // is no longer disqualified. Stale letters (Annex F / Non-Compliant
+            // letter) would otherwise still surface on this rating page and on
+            // the applicant's job list.
+            $this->secretariat->purge_stale_assessments([(int) $appIdForRating]);
         }
 
         // Retention request raised for this application, so it can be granted or
@@ -10696,9 +10702,14 @@ public function rqa_municipality_print_shsv2()
         // Documents the Secretariat has released for these applications, so the
         // Manage column can offer the applicant their own copy.
         $this->load->model('Secretariat_model', 'secretariat');
-        $data['issuedDocs'] = $this->secretariat->issued_documents(
-            array_map(static function ($application) { return (int) $application->appID; }, (array) $data['data'])
-        );
+
+        // Safety net: drop any issued assessment letters from applicants that
+        // are no longer disqualified (e.g. reverted before the revert action
+        // cleaned them up). Stale letters would otherwise still surface here.
+        $jaAppIds = array_map(static function ($application) { return (int) $application->appID; }, (array) $data['data']);
+        $this->secretariat->purge_stale_assessments($jaAppIds);
+
+        $data['issuedDocs'] = $this->secretariat->issued_documents($jaAppIds);
         $data['issuedDocLabels'] = $this->secretariat->assessment_types();
 
         $this->load->view('templates/head');

@@ -4028,4 +4028,51 @@ class Secretariat_model extends CI_Model
 
         return $map;
     }
+
+    /**
+     * Drop every issued document for an application. Used when an applicant
+     * is no longer disqualified - the Evaluative Assessment (Annex F) and the
+     * Letter to Applicants Non-Compliant of Documents are stale and should not
+     * surface on the applicant's job list or rating page.
+     */
+    public function delete_assessment_for_app(int $appId): int
+    {
+        if ($appId <= 0) {
+            return 0;
+        }
+
+        $this->db->where('app_id', $appId);
+        $this->db->delete('hris_app_assessment');
+
+        return (int) $this->db->affected_rows();
+    }
+
+    /**
+     * Sweep a set of applications and remove issued documents from any that are
+     * no longer disqualified (dq != 2). Returns the number of rows removed.
+     * Called from the ja / ma page loads as a safety net for applicants that
+     * were reverted before the revert action cleaned up, or through another
+     * path that left orphan letters behind.
+     */
+    public function purge_stale_assessments(array $appIds): int
+    {
+        $appIds = array_values(array_filter(array_map('intval', $appIds)));
+        if (empty($appIds)) {
+            return 0;
+        }
+
+        $stale = $this->db
+            ->select('appID')
+            ->where_in('appID', $appIds)
+            ->where('dq !=', 2)
+            ->get('hris_applications')
+            ->result();
+
+        $removed = 0;
+        foreach ($stale as $app) {
+            $removed += $this->delete_assessment_for_app((int) $app->appID);
+        }
+
+        return $removed;
+    }
 }

@@ -7,13 +7,14 @@
  * the leftover space and the browser pushes it onto a fresh sheet, which then
  * prints with signatures only and no applicant rows on it.
  *
- * On beforeprint this measures the print layout and, only when that would
- * happen, tightens the roster rows and the signature block one step at a time
- * until the signatures land on the same sheet as the last rows. If even the
- * tightest step cannot fit them, the closing rows are kept with the signatures
- * so the final sheet still carries data.
+ * On beforeprint the signature block is therefore moved into a last, borderless
+ * row of the roster table, inside a tbody that also carries the final rows, so
+ * the browser can only move the signatures together with those rows - the last
+ * sheet always shows applicant data. The DOM is restored on afterprint.
  *
- * Reports that already print correctly are measured once and left untouched.
+ * The measured squeeze (STEPS below) stays for the reports that close with the
+ * .down notes instead of a signature block; it tightens the rows one step at a
+ * time when the closing text would not fit on the last sheet.
  *
  * Loaded from pages/_rqa_signatories.php - every CAR / RQA report includes it.
  */
@@ -23,6 +24,16 @@
     .data tr { page-break-inside: avoid; break-inside: avoid; }
     .prep { page-break-after: avoid; break-after: avoid; }
     .sign, .sign tr { page-break-inside: avoid; break-inside: avoid; }
+
+    /* The closing rows and the signatures are one unbreakable unit while the
+       sheet is being printed - see group() below. */
+    tbody.rqa-keep { page-break-inside: avoid; break-inside: avoid; }
+    table.data.rqa-keeping, table.data td.rqa-keep-cell { border: 0 !important; }
+    table.data td.rqa-keep-cell {
+        padding: 0 !important;
+        text-align: left !important;
+        vertical-align: top !important;
+    }
 }
 </style>
 <script>
@@ -54,9 +65,10 @@
         var css = '';
 
         if (scale < 1) {
-            css += '.data th, .data td { padding:' + px(Math.max(1, 3 * scale)) + ' '
+            css += '.data th, .data td:not(.rqa-keep-cell) { padding:' + px(Math.max(1, 3 * scale)) + ' '
                  + px(Math.max(2, 5 * scale)) + ' !important; line-height:1.15 !important; }'
-                 + '.data th, .data td, .data th *, .data td * { font-size:' + px(12 * scale) + ' !important; }'
+                 + '.data th, .data td:not(.rqa-keep-cell), .data th *, .data td:not(.rqa-keep-cell) * '
+                 + '{ font-size:' + px(12 * scale) + ' !important; }'
                  + '.vsig-wrap { margin-top:' + px(20 * scale) + ' !important; }'
                  + 'table.vsig td { padding:' + px(8 * scale) + ' 5px ' + px(18 * scale) + ' 5px !important; }'
                  + '.vsig-img, .vsig-space { height:' + px(42 * scale) + ' !important; }'
@@ -163,7 +175,105 @@
         apply(STEPS[STEPS.length - 1], true);
     }
 
-    window.addEventListener('beforeprint', fit);
-    window.addEventListener('afterprint', function () { apply(1, false); });
+    /*
+     * Chrome honours break-inside: avoid but ignores break-after: avoid on
+     * table rows, so CSS alone cannot tie the closing rows to the block that
+     * follows the table. For the print run the signature block is therefore
+     * moved into a last, borderless row of the roster table, inside a tbody
+     * that also holds the final rows - one unbreakable unit, so the signatures
+     * always print on a sheet that carries applicant rows. Everything is put
+     * back on afterprint.
+     */
+    var KEEP_ROWS = 5;
+    var grouped = null;
+
+    function footerNodes(table) {
+        var nodes = document.querySelectorAll('.vsig-wrap, .prep, table.sign');
+        var found = [];
+        for (var i = 0; i < nodes.length; i++) {
+            // Only what closes the report - never a block above the table.
+            if (table.compareDocumentPosition(nodes[i]) & 4) { found.push(nodes[i]); }
+        }
+        return found;
+    }
+
+    function columnCount(body) {
+        var cells = body.rows.length ? body.rows[0].cells : [];
+        var total = 0;
+        for (var i = 0; i < cells.length; i++) { total += cells[i].colSpan || 1; }
+        return total || 1;
+    }
+
+    function group() {
+        if (grouped) { return; }
+
+        var tables = document.querySelectorAll('table.data');
+        var table = tables.length ? tables[tables.length - 1] : null;
+        if (!table || !table.tBodies.length) { return; }
+
+        var body = table.tBodies[table.tBodies.length - 1];
+        var footer = footerNodes(table);
+
+        // Nothing to rescue on a report with no signatures, and a roster that
+        // is only a couple of rows long is left exactly as it is.
+        if (!footer.length || body.rows.length <= KEEP_ROWS + 2) { return; }
+
+        var keep = [];
+        for (var i = body.rows.length - KEEP_ROWS; i < body.rows.length; i++) {
+            keep.push(body.rows[i]);
+        }
+
+        var host = document.createElement('tbody');
+        host.className = 'rqa-keep';
+
+        var cell = document.createElement('td');
+        cell.className = 'rqa-keep-cell';
+        cell.colSpan = columnCount(body);
+
+        var row = document.createElement('tr');
+        row.appendChild(cell);
+
+        grouped = { table: table, body: body, host: host, rows: keep, footer: [] };
+
+        for (i = 0; i < keep.length; i++) { host.appendChild(keep[i]); }
+        for (i = 0; i < footer.length; i++) {
+            grouped.footer.push({
+                node: footer[i],
+                parent: footer[i].parentNode,
+                next: footer[i].nextSibling
+            });
+            cell.appendChild(footer[i]);
+        }
+
+        host.appendChild(row);
+        table.appendChild(host);
+        table.className += ' rqa-keeping';
+    }
+
+    function ungroup() {
+        if (!grouped) { return; }
+
+        for (var i = 0; i < grouped.rows.length; i++) {
+            grouped.body.appendChild(grouped.rows[i]);
+        }
+        for (i = 0; i < grouped.footer.length; i++) {
+            var item = grouped.footer[i];
+            item.parent.insertBefore(item.node, item.next);
+        }
+        if (grouped.host.parentNode) {
+            grouped.host.parentNode.removeChild(grouped.host);
+        }
+        grouped.table.className = grouped.table.className.replace(/ ?rqa-keeping/, '');
+        grouped = null;
+    }
+
+    window.addEventListener('beforeprint', function () {
+        group();
+        fit();
+    });
+    window.addEventListener('afterprint', function () {
+        apply(1, false);
+        ungroup();
+    });
 })();
 </script>

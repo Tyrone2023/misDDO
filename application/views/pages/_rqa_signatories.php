@@ -153,7 +153,12 @@ if (!empty($vsign_rows)) :
     @media print {
         .vsig-editor, .vsig-tools, .vsig-empty { display: none !important; }
         .vsig-wrap { margin-top: 20px; page-break-inside: avoid; break-inside: avoid; }
-        table.vsig tr { page-break-inside: avoid; break-inside: avoid; }
+        /* The whole grid stays together - a second row of signatories must never
+           be pushed on its own to the next sheet. */
+        table.vsig, table.vsig tbody, table.vsig tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
         table.vsig, table.vsig td { border: 0 !important; }
         table.vsig td { padding: 8px 5px 18px 5px; }
         .vsig-img { height: 42px; }
