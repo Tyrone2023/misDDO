@@ -524,7 +524,7 @@ $scoreText = static function ($value) {
             // sq-table-wrap div, so the dom only adds the top and bottom bars.
             dom: '<"row sq-dt-top"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 text-md-right"i>>' +
                  '<"sq-dt-table"rt>' +
-                 '<"row sq-dt-bottom"<"col-sm-12 d-flex justify-content-between flex-wrap"p>>',
+                 '<"row sq-dt-bottom"<"col-sm-12 text-right"p>>',
             columnDefs: [
                 { orderable: false, targets: [6] },
                 { visible: false, searchable: true, targets: [7] }
