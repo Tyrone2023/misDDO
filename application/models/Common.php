@@ -1011,8 +1011,25 @@ class Common extends CI_Model
 
     public function rqa_non($jobID)
     {
-
-        $query = $this->db->query("SELECT * FROM hris_applications a join hris_rating_none r on a.appID=r.appID where jobID='" . $jobID . "'  and dq=1 ORDER BY total_points DESC");
+        // Duplicate prevention: an applicant may have more than one row in
+        // hris_rating_none for the same appID (legacy duplicates, retention
+        // copies, etc.). Keep only the row with the highest total_points per
+        // appID so each applicant appears once on the RQA list, ranked by
+        // their best score. Ties on total_points are broken by the latest id.
+        $jobID = (int) $jobID;
+        $sql = "SELECT a.*, r.*
+                FROM hris_applications a
+                JOIN hris_rating_none r ON a.appID = r.appID
+                WHERE a.jobID = ? AND a.dq = 1
+                  AND r.id = (
+                      SELECT r2.id
+                      FROM hris_rating_none r2
+                      WHERE r2.appID = r.appID
+                      ORDER BY r2.total_points DESC, r2.id DESC
+                      LIMIT 1
+                  )
+                ORDER BY r.total_points DESC";
+        $query = $this->db->query($sql, [$jobID]);
         return $query->result();
     }
 

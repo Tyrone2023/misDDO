@@ -38,6 +38,15 @@ $hook['post_controller_constructor'] = array(
         'filename' => 'FieldEncoderGuard.php',
         'filepath' => 'hooks',
     ),
+    // Verifier logins are limited to secretariat/disqualified and the documents
+    // issued for those applicants; most Pages methods carry no role check of
+    // their own, so the restriction is enforced here.
+    array(
+        'class'    => 'VerifierGuard',
+        'function' => 'check_access',
+        'filename' => 'VerifierGuard.php',
+        'filepath' => 'hooks',
+    ),
     // Audit trail catch-all. begin() runs here because it is the last moment
     // the device cookie can still be set; it registers a shutdown function to
     // write the row, since redirect() exits before post_controller would run.

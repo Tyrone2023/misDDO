@@ -953,6 +953,20 @@
                                 <li><a data-toggle="modal" data-id="<?= $this->session->id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
 
+                            <?php elseif ($this->session->position === 'Verifier') : ?>
+                                <!-- Verifier: disqualified applicant review only, nothing else. -->
+                                <li class="menu-title">Review</li>
+                                <li>
+                                    <a href="<?= base_url(); ?>secretariat/disqualified" class="waves-effect">
+                                        <i class="mdi mdi-view-dashboard-outline"></i>
+                                        <span>Dashboard</span>
+                                    </a>
+                                </li>
+
+                                <li class="menu-title">Account</li>
+                                <li><a data-toggle="modal" data-id="<?= $this->session->id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="mdi mdi-lock-reset"></i><span>Change Password</span></a></li>
+                                <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="mdi mdi-logout-variant"></i><span>Logout</span></a></li>
+
                             <?php elseif (in_array($this->session->position, array('sds', 'asst_sds', 'HRMO'), true)) : ?>
 
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
@@ -1062,7 +1076,8 @@
                                         <li><a href="<?= base_url(); ?>Pages/rated_applicants">Rated Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/confirmed_applicants">Confirmed Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/query_applicants">Applicant's Query</a></li>
-                                        <li><a href="<?= base_url(); ?>Pages/dq_applicants">Disqualified Applicants</a></li>
+                                        <!-- <li><a href="<?= base_url(); ?>Pages/dq_applicants">Disqualified Applicants</a></li> -->
+                                        <li><a href="<?= base_url(); ?>secretariat/disqualified">Disqualified List</a></li>
                                         <li><a href="<?= base_url(); ?>Page/jobArchieved">Archived Vacancies</a></li>
                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/request_rating">Retained Rating Request</a></li>

@@ -127,6 +127,7 @@
                                             'Evaluator' => 'Evaluator',
                                             'Document Evaluator' => 'doceval',
                                             'Secretariat' => 'Secretariat',
+                                            'Verifier' => 'Verifier',
                                             'SGOD User' => 'sgod',
                                             'School Health Nutrition Section' => 'SHNS',
                                             'Private School' => 'private',

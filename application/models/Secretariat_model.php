@@ -533,6 +533,56 @@ class Secretariat_model extends CI_Model
             ->result();
     }
 
+    /**
+     * All open vacancies with the same workload stats as tagging_vacancies(),
+     * but not scoped to any one user. Used by the Verifier role, which reviews
+     * disqualified applicants across every vacancy.
+     */
+    public function all_open_vacancies(): array
+    {
+        return $this->db
+            ->select("j.jobID, j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.department,
+                COUNT(DISTINCT a.appID) AS applicant_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.appStatus = 'Application Submitted' AND a.dq != 2 THEN a.appID
+                END) AS submitted_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.appStatus = 'Validated' AND a.dq != 2 THEN a.appID
+                END) AS validated_total,
+                COUNT(DISTINCT CASE
+                    WHEN a.appStatus IN ('Endorsed for Rating', 'Rated', 'Confirmed') AND a.dq != 2 THEN a.appID
+                END) AS evaluated_total,
+                COUNT(DISTINCT CASE WHEN a.dq = 2 THEN a.appID END) AS dq_total,
+                COUNT(DISTINCT CASE WHEN ra.id IS NOT NULL THEN a.appID END) AS tagged_total,
+                COUNT(DISTINCT CASE WHEN a.appID IS NOT NULL AND ra.id IS NULL THEN a.appID END) AS untagged_total,
+                COUNT(DISTINCT CASE
+                    WHEN ra.id IS NULL AND a.dq != 2 AND a.appStatus IN ('Application Submitted', 'Validated') THEN a.appID
+                END) AS pending_total", false)
+            ->from('hris_jobvacancy j')
+            ->join('hris_applications a', 'a.jobID = j.jobID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.app_id = a.appID', 'left')
+            ->where('j.jvStatus !=', 'Closed')
+            ->group_by(['j.jobID', 'j.jobTitle', 'j.position', 'j.job_type', 'j.sy', 'j.itemNo', 'j.department'])
+            ->order_by('j.sy', 'desc')
+            ->order_by('j.jobTitle', 'asc')
+            ->get()
+            ->result();
+    }
+
+    /**
+     * Whether a vacancy is open (not Closed). Used by the Verifier role, which
+     * is not scoped to per-user assignments but still must not reach archived
+     * vacancies.
+     */
+    public function vacancy_is_open(int $jobId): bool
+    {
+        return (bool) $this->db
+            ->from('hris_jobvacancy')
+            ->where('jobID', $jobId)
+            ->where('jvStatus !=', 'Closed')
+            ->count_all_results();
+    }
+
     public function secretariat_has_vacancy(int $userId, int $jobId): bool
     {
         return (bool) $this->db
@@ -3320,6 +3370,110 @@ class Secretariat_model extends CI_Model
     public function qualification_applicants(int $userId, int $jobId, int $dq): array
     {
         if (!in_array($dq, [1, 2], true) || !$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $latestAssignment = $this->db
+            ->select('app_id, MAX(id) AS latest_id', false)
+            ->from('hris_rater_assignments')
+            ->group_by('app_id')
+            ->get_compiled_select();
+
+        $latestDq = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_app_dq')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $latestTeaching = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_applications_rating')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $latestNone = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_rating_none')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $latestPromotion = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_rating_promotion')
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $rows = $this->db
+            ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
+                a.app_year, a.district, a.pre_school, a.dq,
+                j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.promotion,
+                COALESCE(ha.record_no, ha2.record_no, hs.IDNumber, a.applicant_id) AS record_no,
+                COALESCE(ha.id, ha2.id, hs.IDNumber, a.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, ha2.NameExtn, hs.NameExtn, '') AS NameExtn,
+                COALESCE(ha.specialization, ha2.specialization, '') AS specialization,
+                CASE
+                    WHEN ha.id IS NOT NULL OR ha2.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                s.schoolName,
+                dq.reason AS dq_reason, dq.vdate AS dq_date,
+                ra.rater_user_id, ra.assigned_at,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name,
+                rt.id AS teach_row, rt.education AS teach_education, rt.training AS teach_training,
+                rt.experience AS teach_experience, rt.let_rating AS teach_let,
+                rt.demo_rating AS teach_demo, rt.tr_rating AS teach_tr, rt.total_points AS teach_total,
+                rn.id AS none_row, rn.educ AS none_educ, rn.trainings AS none_trainings,
+                rn.experience AS none_experience, rn.performance AS none_performance,
+                rn.oa AS none_oa, rn.ae AS none_ae, rn.ald AS none_ald,
+                rn.interview AS none_interview, rn.written AS none_written,
+                rn.skills AS none_skills, rn.total_points AS none_total,
+                rp.id AS promo_row, rp.educ AS promo_educ, rp.trainings AS promo_trainings,
+                rp.experience AS promo_experience, rp.performance AS promo_performance,
+                rp.ppstco AS promo_ppstco, rp.ppstpa AS promo_ppstpa, rp.total_points AS promo_total", false)
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(a.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->join('schools s', 's.schoolID = CONVERT(CAST(a.pre_school AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci', 'left', false)
+            ->join("($latestAssignment) latest_ra", 'latest_ra.app_id = a.appID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.id = latest_ra.latest_id', 'left')
+            ->join('users u', 'u.id = ra.rater_user_id', 'left')
+            ->join("($latestDq) latest_dq", 'latest_dq.appID = a.appID', 'left')
+            ->join('hris_app_dq dq', 'dq.id = latest_dq.latest_id', 'left')
+            ->join("($latestTeaching) latest_rt", 'latest_rt.appID = a.appID', 'left')
+            ->join('hris_applications_rating rt', 'rt.id = latest_rt.latest_id', 'left')
+            ->join("($latestNone) latest_rn", 'latest_rn.appID = a.appID', 'left')
+            ->join('hris_rating_none rn', 'rn.id = latest_rn.latest_id', 'left')
+            ->join("($latestPromotion) latest_rp", 'latest_rp.appID = a.appID', 'left')
+            ->join('hris_rating_promotion rp', 'rp.id = latest_rp.latest_id', 'left')
+            ->where('a.jobID', $jobId)
+            ->where('a.dq', $dq)
+            ->order_by('ha.LastName', 'asc')
+            ->order_by('hs.LastName', 'asc')
+            ->order_by('a.appID', 'desc')
+            ->get()
+            ->result();
+
+        foreach ($rows as $row) {
+            $this->attach_rating_state($row);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Same as qualification_applicants() but without the per-user vacancy
+     * assignment check. Used by the Verifier role, which reviews disqualified
+     * applicants for any open vacancy.
+     */
+    public function qualification_applicants_for_vacancy(int $jobId, int $dq): array
+    {
+        if (!in_array($dq, [1, 2], true) || !$this->vacancy_is_open($jobId)) {
             return [];
         }
 

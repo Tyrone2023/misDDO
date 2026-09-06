@@ -4,6 +4,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 /**
  * Qualified / Disqualified applicant lists for one vacancy assigned to the
  * signed-in Secretariat account. Same vacancy scoping as applicant tagging.
+ *
+ * The Verifier role is also admitted to the disqualified list, but sees every
+ * open vacancy rather than only the ones tagged to a Secretariat account.
  */
 class SecretariatQualification extends CI_Controller
 {
@@ -17,10 +20,22 @@ class SecretariatQualification extends CI_Controller
 
     private function guard(): void
     {
-        if ($this->session->userdata('position') !== 'Secretariat') {
-            show_error('Only Secretariat users can access this list.', 403, 'Forbidden');
+        $position = $this->session->userdata('position');
+        if (!in_array($position, ['Secretariat', 'Verifier', 'sds', 'asst_sds'], true)) {
+            show_error('Only Secretariat, Verifier, SDS and Assistant SDS users can access this list.', 403, 'Forbidden');
             exit;
         }
+    }
+
+    /**
+     * Reviewer roles (Verifier, SDS, Assistant SDS) see all open vacancies and
+     * get read-only documents. Secretariat sees only its own assigned vacancies
+     * and may edit documents.
+     */
+    private function is_verifier(): bool
+    {
+        $position = $this->session->userdata('position');
+        return in_array($position, ['Verifier', 'sds', 'asst_sds'], true);
     }
 
     private function user_id(): int
@@ -42,10 +57,20 @@ class SecretariatQualification extends CI_Controller
     {
         $this->guard();
 
+        // Verifier may only review the disqualified list.
+        if ($this->is_verifier() && $dq !== 2) {
+            show_error('Verifier accounts may only review the disqualified list.', 403, 'Forbidden');
+            return;
+        }
+
         $mode = ($dq === 1) ? 'qualified' : 'disqualified';
         $userId = $this->user_id();
         $jobId = (int) $this->input->get('job_id');
-        $vacancies = $this->secretariat->tagging_vacancies($userId);
+        $verifier = $this->is_verifier();
+
+        $vacancies = $verifier
+            ? $this->secretariat->all_open_vacancies()
+            : $this->secretariat->tagging_vacancies($userId);
         $selectedVacancy = null;
 
         foreach ($vacancies as $vacancy) {
@@ -56,13 +81,18 @@ class SecretariatQualification extends CI_Controller
         }
 
         if ($jobId > 0 && !$selectedVacancy) {
-            $this->session->set_flashdata('danger', 'That vacancy is not assigned to your Secretariat account.');
+            $msg = $verifier
+                ? 'That vacancy is not open.'
+                : 'That vacancy is not assigned to your Secretariat account.';
+            $this->session->set_flashdata('danger', $msg);
             redirect(base_url('secretariat/' . $mode));
             return;
         }
 
         $applicants = $selectedVacancy
-            ? $this->secretariat->qualification_applicants($userId, $jobId, $dq)
+            ? ($verifier
+                ? $this->secretariat->qualification_applicants_for_vacancy($jobId, $dq)
+                : $this->secretariat->qualification_applicants($userId, $jobId, $dq))
             : [];
 
         $data = [
@@ -73,6 +103,7 @@ class SecretariatQualification extends CI_Controller
             'selectedJobId' => $jobId,
             'jobTypeLabels' => $this->secretariat->job_types_map(),
             'applicants' => $applicants,
+            'isVerifier' => $verifier,
             // One query for the whole list, so each row knows whether its
             // documents were already issued and released.
             'issuedDocs' => $this->secretariat->issued_documents(
@@ -278,12 +309,17 @@ class SecretariatQualification extends CI_Controller
         $isSecretariat = ($position === 'Secretariat')
             && $this->secretariat->secretariat_has_vacancy($this->user_id(), (int) $ctx->jobID);
 
+        // Verifier, SDS and Assistant SDS may open any document tied to an
+        // open vacancy, as read-only reviewers.
+        $isVerifier = in_array($position, ['Verifier', 'sds', 'asst_sds'], true)
+            && $this->secretariat->vacancy_is_open((int) $ctx->jobID);
+
         // The applicant's own copy, matched the same way their application list
         // is scoped, and only once the Secretariat has released it.
         $isOwner = in_array($position, ['reg', 'user'], true)
             && strcasecmp(trim((string) $this->session->userdata('username')), trim((string) $ctx->empEmail)) === 0;
 
-        if (!$isSecretariat && !$isOwner) {
+        if (!$isSecretariat && !$isVerifier && !$isOwner) {
             show_error('You are not allowed to open this document.', 403, 'Forbidden');
             return;
         }
@@ -317,6 +353,7 @@ class SecretariatQualification extends CI_Controller
             'docType'      => $docType,
             'esig'         => $esig,
             'editable'     => $isSecretariat,
+            'isVerifier'   => $isVerifier,
             'appId'        => $appId,
             'applicant'    => $this->secretariat->assessment_applicant_name($ctx),
             'saved'        => $state['saved'],

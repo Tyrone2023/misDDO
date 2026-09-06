@@ -102,6 +102,10 @@ $scoreText = static function ($value) {
     .sq-page .sq-card .card-body { padding:22px 24px; }
     .sq-page .sq-picker-card { border-left:4px solid var(--sq-blue); }
     .sq-page .sq-select { border-color:#ced7e5; border-radius:9px; min-height:46px; }
+    .sq-page .sq-vacancy-select2 + .select2-container .select2-selection--single { border-color:#ced7e5; border-radius:9px; height:46px; }
+    .sq-page .sq-vacancy-select2 + .select2-container .select2-selection--single .select2-selection__rendered { line-height:44px; padding-left:14px; color:#183153; font-weight:600; }
+    .sq-page .sq-vacancy-select2 + .select2-container .select2-selection--single .select2-selection__arrow { height:44px; }
+    .sq-page .sq-vacancy-select2 + .select2-container .select2-selection--single .select2-selection__placeholder { color:#6b7a90; font-weight:500; }
     .sq-page .sq-selected-icon { align-items:center; background:linear-gradient(145deg,#e8efff,#f2f6ff); border-radius:13px; color:var(--sq-blue); display:flex; flex:0 0 46px; font-size:23px; height:46px; justify-content:center; width:46px; }
     .sq-page .sq-metric { align-items:center; background:#f8fafc; border:1px solid var(--sq-line); border-radius:13px; display:flex; gap:12px; height:100%; padding:13px 15px; }
     .sq-page .sq-metric-icon { align-items:center; border-radius:11px; display:flex; flex:0 0 38px; font-size:18px; height:38px; justify-content:center; width:38px; }
@@ -170,7 +174,7 @@ $scoreText = static function ($value) {
                 <div class="col-12">
                     <div class="sq-hero <?= $isQualified ? 'sq-hero-qualified' : 'sq-hero-disqualified'; ?>">
                         <div class="sq-hero-copy">
-                            <div class="sq-eyebrow">Secretariat recruitment workspace</div>
+                            <div class="sq-eyebrow"><?= !empty($isVerifier) ? 'Verifier review workspace' : 'Secretariat recruitment workspace'; ?></div>
                             <h2><?= $isQualified ? 'Qualified Applicants' : 'Disqualified Applicants'; ?></h2>
                             <p>
                                 <?php if ($isQualified) : ?>
@@ -203,12 +207,17 @@ $scoreText = static function ($value) {
                             <div class="form-row align-items-end">
                                 <div class="col-lg-9 col-md-8">
                                     <label for="job_id" class="font-weight-bold">Position / vacancy</label>
-                                    <select name="job_id" id="job_id" class="form-control sq-select" required>
+                                    <select name="job_id" id="job_id" class="form-control sq-select sq-vacancy-select2" required>
                                         <option value="">Choose a position first...</option>
                                         <?php foreach ($vacancies as $vacancy) : ?>
                                             <?php
                                             $group = $positionGroups[(int) $vacancy->position] ?? 'Vacancy';
-                                            $vacancyLabel = $vacancy->jobTitle . ' — ' . $group . ' — FY ' . $vacancy->sy;
+                                            $jobTypeLabel = $jobTypeLabels[(int) ($vacancy->job_type ?? 0)] ?? '';
+                                            $vacancyLabel = $vacancy->jobTitle;
+                                            if ($jobTypeLabel !== '') {
+                                                $vacancyLabel .= ' — ' . $jobTypeLabel;
+                                            }
+                                            $vacancyLabel .= ' — ' . $group . ' — FY ' . $vacancy->sy;
                                             ?>
                                             <option value="<?= (int) $vacancy->jobID; ?>" <?= (int) $vacancy->jobID === $selectedJobId ? 'selected' : ''; ?>>
                                                 <?= $sq_h($vacancyLabel); ?> (<?= (int) $vacancy->applicant_total; ?> applicants)
@@ -236,6 +245,10 @@ $scoreText = static function ($value) {
                                 <div class="ml-3">
                                     <h4 class="mb-1"><?= $sq_h($selectedVacancy->jobTitle); ?></h4>
                                     <div class="text-muted">
+                                        <?php $selJobTypeLabel = $jobTypeLabels[(int) ($selectedVacancy->job_type ?? 0)] ?? ''; ?>
+                                        <?php if ($selJobTypeLabel !== '') : ?>
+                                            <?= $sq_h($selJobTypeLabel); ?> &middot;
+                                        <?php endif; ?>
                                         <?= $sq_h($positionGroups[(int) $selectedVacancy->position] ?? 'Vacancy'); ?>
                                         &middot; FY <?= $sq_h($selectedVacancy->sy); ?>
                                         <?php if (!empty($selectedVacancy->itemNo)) : ?>&middot; Item <?= $sq_h($selectedVacancy->itemNo); ?><?php endif; ?>
@@ -243,11 +256,13 @@ $scoreText = static function ($value) {
                                 </div>
                             </div>
                             <div class="sq-print-hide">
+                                <?php if (empty($isVerifier)) : ?>
                                 <a href="<?= base_url('secretariat/' . $otherMode . '?job_id=' . $selectedJobId); ?>" class="btn btn-outline-secondary btn-sm">
                                     <i class="mdi mdi-swap-horizontal mr-1"></i> <?= $sq_h($otherLabel); ?>
                                 </a>
-                                <a href="<?= base_url('secretariat'); ?>" class="btn btn-outline-secondary btn-sm">
-                                    <i class="mdi mdi-view-dashboard-outline mr-1"></i> Dashboard
+                                <?php endif; ?>
+                                <a href="<?= base_url('secretariat/disqualified'); ?>" class="btn btn-outline-secondary btn-sm">
+                                    <i class="mdi mdi-view-dashboard-outline mr-1"></i> <?= !empty($isVerifier) ? 'Refresh' : 'Dashboard'; ?>
                                 </a>
                             </div>
                         </div>
@@ -396,22 +411,24 @@ $scoreText = static function ($value) {
                                                     : ['assessment' => 'Evaluative Assessment', 'letter' => 'Letter (Non-Compliant)'];
                                                 ?>
                                                 <div class="sq-actions">
-                                                    <?php foreach ($docButtons as $docKey => $docLabel) : ?>
-                                                        <?php $docState = $appDocs[$docKey] ?? null; ?>
-                                                        <a class="btn btn-sm <?= $docKey === 'letter' ? 'btn-outline-danger' : 'btn-primary'; ?> sq-doc-btn"
-                                                            target="_blank"
-                                                            href="<?= base_url('application-document/' . (int) $applicant->appID . '/' . $docKey); ?>"
-                                                            title="<?= $sq_h($docLabel); ?>">
-                                                            <i class="mdi <?= $docKey === 'letter' ? 'mdi-email-outline' : 'mdi-file-document-edit-outline'; ?> mr-1"></i><?= $docKey === 'letter' ? 'Letter' : 'Assessment'; ?>
-                                                            <?php if ($docState !== null) : ?>
-                                                                <span class="sq-doc-dot <?= !empty($docState['released']) ? 'is-released' : 'is-draft'; ?>"
-                                                                    title="<?= !empty($docState['released']) ? 'Released to the applicant' : 'Saved, not released yet'; ?>"></span>
-                                                            <?php endif; ?>
-                                                        </a>
-                                                    <?php endforeach; ?>
+                                                    <?php if (empty($isVerifier)) : ?>
+                                                        <?php foreach ($docButtons as $docKey => $docLabel) : ?>
+                                                            <?php $docState = $appDocs[$docKey] ?? null; ?>
+                                                            <a class="btn btn-sm <?= $docKey === 'letter' ? 'btn-outline-danger' : 'btn-primary'; ?> sq-doc-btn"
+                                                                target="_blank"
+                                                                href="<?= base_url('application-document/' . (int) $applicant->appID . '/' . $docKey); ?>"
+                                                                title="<?= $sq_h($docLabel); ?>">
+                                                                <i class="mdi <?= $docKey === 'letter' ? 'mdi-email-outline' : 'mdi-file-document-edit-outline'; ?> mr-1"></i><?= $docKey === 'letter' ? 'Letter' : 'Assessment'; ?>
+                                                                <?php if ($docState !== null) : ?>
+                                                                    <span class="sq-doc-dot <?= !empty($docState['released']) ? 'is-released' : 'is-draft'; ?>"
+                                                                        title="<?= !empty($docState['released']) ? 'Released to the applicant' : 'Saved, not released yet'; ?>"></span>
+                                                                <?php endif; ?>
+                                                            </a>
+                                                        <?php endforeach; ?>
+                                                    <?php endif; ?>
                                                     <?php if ($profileUrl !== '') : ?>
-                                                        <a class="btn btn-outline-secondary btn-sm" target="_blank" href="<?= $sq_h($profileUrl); ?>" title="Applicant information">
-                                                            <i class="mdi mdi-account-details"></i>
+                                                        <a class="btn btn-outline-secondary btn-sm" target="_blank" href="<?= $sq_h($profileUrl); ?>" title="View application">
+                                                            <i class="mdi mdi-account-details mr-1"></i>View Application
                                                         </a>
                                                     <?php endif; ?>
                                                 </div>
@@ -443,6 +460,25 @@ $scoreText = static function ($value) {
     var RATING_COLUMN = <?= $isQualified ? 7 : -1; ?>;
     var table = null;
 
+    function initVacancySelect2() {
+        if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+        var $sel = jQuery('#job_id.sq-vacancy-select2');
+        if (!$sel.length || $sel.data('select2')) return;
+        $sel.select2({
+            width: '100%',
+            placeholder: 'Choose a position first...',
+            allowClear: false,
+            matcher: function (params, data) {
+                if (!params.term || !params.term.trim()) return data;
+                var text = (data.text || '').toString();
+                if (text.toLowerCase().indexOf(params.term.trim().toLowerCase()) > -1) {
+                    return data;
+                }
+                return null;
+            }
+        });
+    }
+
     function initTable() {
         if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) return;
         var node = jQuery('#sq-table');
@@ -469,9 +505,13 @@ $scoreText = static function ($value) {
     }
 
     if (document.readyState === 'complete') {
+        initVacancySelect2();
         initTable();
     } else {
-        window.addEventListener('load', initTable);
+        window.addEventListener('load', function () {
+            initVacancySelect2();
+            initTable();
+        });
     }
 })();
 </script>

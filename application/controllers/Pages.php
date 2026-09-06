@@ -611,6 +611,10 @@ class Pages extends CI_Controller
             // Field Encoders have no dashboard of their own - their whole
             // account exists to encode Interview / Written Examination scores.
             redirect(base_url() . 'secretariat/scores');
+        } elseif ($this->session->position == 'Verifier') {
+            // Verifiers have no dashboard of their own - their whole account
+            // exists to review the disqualified applicant list.
+            redirect(base_url() . 'secretariat/disqualified');
         } elseif ($this->session->position == 'Secretariat') {
             $page = "dashboard_secretariat";
 
@@ -2986,6 +2990,8 @@ class Pages extends CI_Controller
                         redirect(base_url() . 'Page/schoolDashboard/');
                     } elseif ($this->session->position === "SHNS") {
                         redirect(base_url() . 'Page/Health/');
+                    } elseif ($this->session->position === "Verifier") {
+                        redirect(base_url() . 'secretariat/disqualified');
                     } elseif ($this->session->position === "Staff") {
                         redirect(base_url());
                     } elseif ($this->session->position === "Accountant") {
@@ -2994,7 +3000,11 @@ class Pages extends CI_Controller
                         redirect(base_url());
                     }
                 } else {
-                    redirect(base_url());
+                    if ($this->session->position === "Verifier") {
+                        redirect(base_url() . 'secretariat/disqualified');
+                    } else {
+                        redirect(base_url());
+                    }
                 }
             } else {
                 $this->session->set_flashdata('failed', 'Username/Password not match');
@@ -3484,7 +3494,11 @@ class Pages extends CI_Controller
         $this->session->set_flashdata('success', 'Password successfully changed.');
         redirect(base_url() . 'secretariat/scores');
 
-    elseif ($this->session->position === 'Evaluator' || 
+    elseif ($this->session->position === 'Verifier') :
+        $this->session->set_flashdata('success', 'Password successfully changed.');
+        redirect(base_url() . 'secretariat/disqualified');
+
+    elseif ($this->session->position === 'Evaluator' ||
             $this->session->position == "Human Resource Admin" || 
             $this->session->position == "HR Staff" || 
             $this->session->position == "District") :
