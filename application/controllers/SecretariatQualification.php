@@ -90,9 +90,13 @@ class SecretariatQualification extends CI_Controller
         }
 
         $applicants = $selectedVacancy
-            ? ($verifier
-                ? $this->secretariat->qualification_applicants_for_vacancy($jobId, $dq)
-                : $this->secretariat->qualification_applicants($userId, $jobId, $dq))
+            ? ($dq === 2
+                ? ($verifier
+                    ? $this->secretariat->disqualified_applicants_for_vacancy($jobId)
+                    : $this->secretariat->disqualified_applicants($userId, $jobId))
+                : ($verifier
+                    ? $this->secretariat->qualification_applicants_for_vacancy($jobId, $dq)
+                    : $this->secretariat->qualification_applicants($userId, $jobId, $dq)))
             : [];
 
         $data = [

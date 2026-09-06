@@ -3467,6 +3467,89 @@ class Secretariat_model extends CI_Model
     }
 
     /**
+     * Lightweight version of qualification_applicants() for the disqualified
+     * list (dq=2). Drops the three rating-table subqueries and scopes the
+     * remaining subqueries to just this job's applicants.
+     */
+    public function disqualified_applicants(int $userId, int $jobId): array
+    {
+        if (!$this->secretariat_has_vacancy($userId, $jobId)) {
+            return [];
+        }
+
+        $jobAppIds = $this->db
+            ->select('appID')
+            ->from('hris_applications')
+            ->where('jobID', $jobId)
+            ->where('dq', 2)
+            ->get_compiled_select();
+
+        $latestAssignment = $this->db
+            ->select('app_id, MAX(id) AS latest_id', false)
+            ->from('hris_rater_assignments')
+            ->where("app_id IN ($jobAppIds)", null, false)
+            ->group_by('app_id')
+            ->get_compiled_select();
+
+        $latestDq = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_app_dq')
+            ->where("appID IN ($jobAppIds)", null, false)
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $rows = $this->db
+            ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
+                a.app_year, a.district, a.pre_school, a.dq,
+                j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.promotion,
+                COALESCE(ha.record_no, ha2.record_no, hs.IDNumber, a.applicant_id) AS record_no,
+                COALESCE(ha.id, ha2.id, hs.IDNumber, a.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, ha2.NameExtn, hs.NameExtn, '') AS NameExtn,
+                COALESCE(ha.specialization, ha2.specialization, '') AS specialization,
+                CASE
+                    WHEN ha.id IS NOT NULL OR ha2.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                s.schoolName,
+                dq.reason AS dq_reason, dq.vdate AS dq_date,
+                ra.rater_user_id, ra.assigned_at,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name", false)
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(a.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->join('schools s', 's.schoolID = CONVERT(CAST(a.pre_school AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci', 'left', false)
+            ->join("($latestAssignment) latest_ra", 'latest_ra.app_id = a.appID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.id = latest_ra.latest_id', 'left')
+            ->join('users u', 'u.id = ra.rater_user_id', 'left')
+            ->join("($latestDq) latest_dq", 'latest_dq.appID = a.appID', 'left')
+            ->join('hris_app_dq dq', 'dq.id = latest_dq.latest_id', 'left')
+            ->where('a.jobID', $jobId)
+            ->where('a.dq', 2)
+            ->order_by('ha.LastName', 'asc')
+            ->order_by('hs.LastName', 'asc')
+            ->order_by('a.appID', 'desc')
+            ->get()
+            ->result();
+
+        foreach ($rows as $row) {
+            $row->is_rated = false;
+            $row->rating_total = null;
+            $row->rating_source = null;
+            $row->rating_components = [];
+            $row->interview = null;
+            $row->written = null;
+        }
+
+        return $rows;
+    }
+
+    /**
      * Same as qualification_applicants() but without the per-user vacancy
      * assignment check. Used by the Verifier role, which reviews disqualified
      * applicants for any open vacancy.
@@ -3565,6 +3648,96 @@ class Secretariat_model extends CI_Model
 
         foreach ($rows as $row) {
             $this->attach_rating_state($row);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Lightweight version of qualification_applicants_for_vacancy() for the
+     * disqualified list (dq=2). The disqualified view only shows the DQ reason
+     * and date — it never displays rating scores — so the three rating-table
+     * subqueries and their joins are dropped entirely, and the remaining
+     * subqueries are scoped to just this job's applicants instead of scanning
+     * the whole table. This cuts the query from 5 full-table GROUP BY scans +
+     * 13 joins down to 2 scoped subqueries + 7 joins.
+     */
+    public function disqualified_applicants_for_vacancy(int $jobId): array
+    {
+        if (!$this->vacancy_is_open($jobId)) {
+            return [];
+        }
+
+        // Scope subqueries to just this job's applicants — a tiny set compared
+        // to a full-table GROUP BY.
+        $jobAppIds = $this->db
+            ->select('appID')
+            ->from('hris_applications')
+            ->where('jobID', $jobId)
+            ->where('dq', 2)
+            ->get_compiled_select();
+
+        $latestAssignment = $this->db
+            ->select('app_id, MAX(id) AS latest_id', false)
+            ->from('hris_rater_assignments')
+            ->where("app_id IN ($jobAppIds)", null, false)
+            ->group_by('app_id')
+            ->get_compiled_select();
+
+        $latestDq = $this->db
+            ->select('appID, MAX(id) AS latest_id', false)
+            ->from('hris_app_dq')
+            ->where("appID IN ($jobAppIds)", null, false)
+            ->group_by('appID')
+            ->get_compiled_select();
+
+        $rows = $this->db
+            ->select("a.appID, a.applicant_id, a.jobID, a.empEmail, a.appStatus, a.dateSubmitted,
+                a.app_year, a.district, a.pre_school, a.dq,
+                j.jobTitle, j.position, j.job_type, j.sy, j.itemNo, j.promotion,
+                COALESCE(ha.record_no, ha2.record_no, hs.IDNumber, a.applicant_id) AS record_no,
+                COALESCE(ha.id, ha2.id, hs.IDNumber, a.applicant_id) AS profile_id,
+                COALESCE(ha.FirstName, ha2.FirstName, hs.FirstName, '') AS FirstName,
+                COALESCE(ha.MiddleName, ha2.MiddleName, hs.MiddleName, '') AS MiddleName,
+                COALESCE(ha.LastName, ha2.LastName, hs.LastName, '') AS LastName,
+                COALESCE(ha.NameExtn, ha2.NameExtn, hs.NameExtn, '') AS NameExtn,
+                COALESCE(ha.specialization, ha2.specialization, '') AS specialization,
+                CASE
+                    WHEN ha.id IS NOT NULL OR ha2.id IS NOT NULL THEN 'ma'
+                    WHEN hs.IDNumber IS NOT NULL THEN 'ma_staff'
+                    ELSE ''
+                END AS profile_route,
+                s.schoolName,
+                dq.reason AS dq_reason, dq.vdate AS dq_date,
+                ra.rater_user_id, ra.assigned_at,
+                CONCAT_WS(' ', NULLIF(TRIM(u.fname), ''), NULLIF(TRIM(u.mname), ''), NULLIF(TRIM(u.lname), '')) AS evaluator_name", false)
+            ->from('hris_applications a')
+            ->join('hris_jobvacancy j', 'j.jobID = a.jobID')
+            ->join('hris_applicant ha', 'ha.id = a.applicant_id', 'left')
+            ->join('hris_applicant ha2', 'ha2.record_no = CONVERT(CAST(a.applicant_id AS CHAR) USING latin1) COLLATE latin1_swedish_ci AND ha.id IS NULL', 'left', false)
+            ->join('hris_staff hs', 'CONVERT(hs.IDNumber USING utf8mb4) COLLATE utf8mb4_general_ci = a.empEmail AND ha.id IS NULL AND ha2.id IS NULL', 'left', false)
+            ->join('schools s', 's.schoolID = CONVERT(CAST(a.pre_school AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci', 'left', false)
+            ->join("($latestAssignment) latest_ra", 'latest_ra.app_id = a.appID', 'left')
+            ->join('hris_rater_assignments ra', 'ra.id = latest_ra.latest_id', 'left')
+            ->join('users u', 'u.id = ra.rater_user_id', 'left')
+            ->join("($latestDq) latest_dq", 'latest_dq.appID = a.appID', 'left')
+            ->join('hris_app_dq dq', 'dq.id = latest_dq.latest_id', 'left')
+            ->where('a.jobID', $jobId)
+            ->where('a.dq', 2)
+            ->order_by('ha.LastName', 'asc')
+            ->order_by('hs.LastName', 'asc')
+            ->order_by('a.appID', 'desc')
+            ->get()
+            ->result();
+
+        // No attach_rating_state() — the disqualified view never shows scores.
+        foreach ($rows as $row) {
+            $row->is_rated = false;
+            $row->rating_total = null;
+            $row->rating_source = null;
+            $row->rating_components = [];
+            $row->interview = null;
+            $row->written = null;
         }
 
         return $rows;

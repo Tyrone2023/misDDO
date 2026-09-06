@@ -118,6 +118,13 @@ $scoreText = static function ($value) {
     .sq-page .sq-metric-note { color:var(--sq-muted); font-size:11px; margin-top:3px; }
     .sq-page .sq-table-head { align-items:center; border-bottom:1px solid #edf1f6; display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; padding:19px 24px 15px; }
     .sq-page .sq-table-title { color:var(--sq-ink); font-size:17px; font-weight:800; }
+    .sq-page .sq-search-box .input-group { width:260px; }
+    .sq-page .sq-search-box .input-group-text { border-color:#d8e0eb; border-radius:8px 0 0 8px; color:#6b7a90; }
+    .sq-page .sq-search-box .form-control { border-color:#d8e0eb; border-radius:0 8px 8px 0; font-size:13px; height:36px; }
+    .sq-page .sq-search-box .form-control:focus { box-shadow:none; border-color:#2457d6; }
+    @media (max-width:767px) {
+        .sq-page .sq-search-box .input-group { width:100%; }
+    }
     .sq-page .sq-table-wrap { padding:4px 24px 18px; }
     .sq-page .sq-table { margin:0; width:100% !important; }
     .sq-page .sq-table thead th { background:var(--sq-soft); border-color:#e4eaf2; color:#506176; font-size:11px; letter-spacing:.04em; padding:12px; text-transform:uppercase; }
@@ -149,8 +156,18 @@ $scoreText = static function ($value) {
     .sq-page .dataTables_wrapper .dataTables_filter input { border:1px solid #d8e0eb; border-radius:8px; margin-left:7px; padding:6px 10px; }
     .sq-page .dataTables_wrapper .dataTables_length select { border:1px solid #d8e0eb; border-radius:7px; padding:4px 22px 4px 8px; }
     .sq-page .dataTables_wrapper .dataTables_info,
-    .sq-page .dataTables_wrapper .dataTables_length,
-    .sq-page .dataTables_wrapper .dataTables_filter { color:var(--sq-muted); font-size:12px; }
+    .sq-page .dataTables_wrapper .dataTables_length { color:var(--sq-muted); font-size:12px; }
+    .sq-page .sq-dt-top { padding:12px 24px 0; margin:0 !important; align-items:center; }
+    .sq-page .sq-dt-top .dataTables_length { padding-top:4px; }
+    .sq-page .sq-dt-top .dataTables_info { padding-top:6px; }
+    .sq-page .sq-dt-table { overflow-x:auto; }
+    .sq-page .sq-dt-bottom { padding:8px 24px 14px; margin:0 !important; align-items:center; }
+    .sq-page .sq-dt-bottom .dataTables_paginate { margin:0; }
+    .sq-page .dataTables_wrapper .dataTables_paginate .paginate_button { color:var(--sq-muted) !important; border-radius:6px; }
+    .sq-page .dataTables_wrapper .dataTables_paginate .paginate_button:hover { background:#eef4ff; border-color:transparent; color:var(--sq-blue) !important; }
+    .sq-page .dataTables_wrapper .dataTables_paginate .paginate_button.current { background:var(--sq-blue); border-color:var(--sq-blue); color:#fff !important; }
+    .sq-page .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover { background:var(--sq-blue); border-color:var(--sq-blue); color:#fff !important; }
+    .sq-page .dataTables_wrapper .dataTables_paginate .paginate_button.disabled { color:#c5cdd9 !important; }
     .sq-page .page-item.active .page-link { background-color:var(--sq-blue); border-color:var(--sq-blue); }
     @media (max-width:767px) {
         .sq-page .sq-hero { padding:22px 20px; }
@@ -161,6 +178,7 @@ $scoreText = static function ($value) {
     }
     @media print {
         .sq-page .sq-hero, .sq-page .sq-picker-card, .sq-page .sq-chip-filter,
+        .sq-page .sq-search-box, .sq-page .sq-dt-top, .sq-page .sq-dt-bottom,
         .sq-page .dataTables_length, .sq-page .dataTables_filter, .sq-page .dataTables_paginate,
         .sq-page .sq-print-hide { display:none !important; }
         .sq-page .sq-card { box-shadow:none; }
@@ -309,13 +327,25 @@ $scoreText = static function ($value) {
                 <div class="card sq-card">
                     <div class="sq-table-head">
                         <div class="sq-table-title"><?= $isQualified ? 'Qualified list' : 'Disqualified list'; ?></div>
-                        <?php if ($isQualified && !empty($applicants)) : ?>
-                            <div class="sq-print-hide">
-                                <button type="button" class="sq-chip-filter is-active" data-rating-filter="">All</button>
-                                <button type="button" class="sq-chip-filter" data-rating-filter="rated">Rated (<?= $ratedTotal; ?>)</button>
-                                <button type="button" class="sq-chip-filter" data-rating-filter="unrated">Not yet rated (<?= $awaitingRating; ?>)</button>
-                            </div>
-                        <?php endif; ?>
+                        <div class="d-flex align-items-center flex-wrap" style="gap:10px;">
+                            <?php if ($isQualified && !empty($applicants)) : ?>
+                                <div class="sq-print-hide">
+                                    <button type="button" class="sq-chip-filter is-active" data-rating-filter="">All</button>
+                                    <button type="button" class="sq-chip-filter" data-rating-filter="rated">Rated (<?= $ratedTotal; ?>)</button>
+                                    <button type="button" class="sq-chip-filter" data-rating-filter="unrated">Not yet rated (<?= $awaitingRating; ?>)</button>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!empty($applicants)) : ?>
+                                <div class="sq-print-hide sq-search-box">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-prepend">
+                                            <span class="input-group-text bg-white border-right-0"><i class="mdi mdi-magnify"></i></span>
+                                        </span>
+                                        <input type="text" class="form-control border-left-0 sq-table-search" placeholder="Search name, record #, school..." autocomplete="off">
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <?php if (empty($applicants)) : ?>
@@ -489,10 +519,21 @@ $scoreText = static function ($value) {
             lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
             order: [[1, 'asc']],
             autoWidth: false,
+            // Custom DOM: no default filter (we use our own search box), keep
+            // length menu + info + pagination. The table renders inside the
+            // sq-table-wrap div, so the dom only adds the top and bottom bars.
+            dom: '<"row sq-dt-top"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6 text-md-right"i>>' +
+                 '<"sq-dt-table"rt>' +
+                 '<"row sq-dt-bottom"<"col-sm-12 d-flex justify-content-between flex-wrap"p>>',
             columnDefs: [
                 { orderable: false, targets: [6] },
                 { visible: false, searchable: true, targets: [7] }
             ]
+        });
+
+        // Wire the custom search box to the DataTable.
+        jQuery('.sq-table-search').on('keyup change', function () {
+            if (table) table.search(this.value).draw();
         });
 
         jQuery('.sq-chip-filter').on('click', function () {
