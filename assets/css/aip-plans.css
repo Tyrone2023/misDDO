@@ -27,6 +27,7 @@
 /* Tone variants so each page is recognisable at a glance. */
 .ap-hero-amber  { background: linear-gradient(120deg, #7c4a11 0%, #b3701c 55%, #dd9a34 100%); box-shadow: 0 10px 26px rgba(124, 74, 17, .22); }
 .ap-hero-indigo { background: linear-gradient(120deg, #2a2f66 0%, #3d4694 55%, #5a67d8 100%); box-shadow: 0 10px 26px rgba(42, 47, 102, .22); }
+.ap-hero-red    { background: linear-gradient(120deg, #6d1d1d 0%, #a52d2d 55%, #cf5757 100%); box-shadow: 0 10px 26px rgba(109, 29, 29, .22); }
 
 .ap-hero-eyebrow {
     display: inline-flex; align-items: center; gap: .35rem;
@@ -179,6 +180,9 @@
 .ap-btn-deny:hover { background: #8a2323; border-color: #8a2323; color: #fff; }
 .ap-btn:disabled, .ap-btn.disabled { opacity: .55; pointer-events: none; }
 
+/* Denied rows carry a red edge so the list scans as refusals at a glance. */
+.ap-table tbody tr.ap-row-danger > td:first-child { box-shadow: inset 3px 0 0 #a52d2d; }
+
 .ap-actions { display: inline-flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
 .ap-toolbar { display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
 
@@ -204,6 +208,8 @@
     max-width: 420px;
     white-space: normal;
 }
+/* A denial is the one reason block that has to read as a refusal, not a note. */
+.ap-reason-danger { background: #fdf3f3; border-color: #f5dcdc; border-left-color: #a52d2d; color: #7a2323; }
 
 /* ---- notice banner ---- */
 .ap-note {

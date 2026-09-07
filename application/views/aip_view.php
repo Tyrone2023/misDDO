@@ -169,12 +169,19 @@ foreach ($data as $row) {
                                                 <span class="ap-status-pill ap-status-pill-lg <?= $pill[1]; ?>">
                                                     <i class="mdi <?= $pill[2]; ?>"></i> <?= $pill[0]; ?>
                                                 </span>
+                                                <?php if ($requestDenied) : ?>
+                                                    <span class="ap-status-pill ap-status-pill-lg ap-pill-red">
+                                                        <i class="mdi mdi-close-circle-outline"></i> Unlock Denied
+                                                    </span>
+                                                <?php endif; ?>
                                             </h5>
                                             <p class="ap-card-sub">
                                                 <?php if (!$submitted) : ?>
                                                     This plan has not been submitted for evaluation yet.
                                                 <?php elseif ($canEdit) : ?>
                                                     Submitted on <?= html_escape($aip_s->date); ?>. The plan is open for editing.
+                                                <?php elseif ($requestDenied) : ?>
+                                                    Submitted on <?= html_escape($aip_s->date); ?>. Your unlock request was denied, so the plan stays locked.
                                                 <?php else : ?>
                                                     Submitted on <?= html_escape($aip_s->date); ?>. The plan is locked - request an unlock to edit it.
                                                 <?php endif; ?>

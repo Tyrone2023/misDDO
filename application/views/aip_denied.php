@@ -60,7 +60,7 @@ if (!function_exists('aip_denied_stage_pill')) {
                                     </div>
                                 <?php endif; ?>
 
-                                <div class="ap-hero ap-hero-amber">
+                                <div class="ap-hero ap-hero-red">
                                     <div class="ap-hero-text">
                                         <span class="ap-hero-eyebrow"><i class="mdi mdi-close-circle-outline"></i> Denied Requests</span>
                                         <h3 class="ap-hero-title"><?= html_escape($title); ?></h3>
@@ -132,7 +132,7 @@ if (!function_exists('aip_denied_stage_pill')) {
                                                     $pill    = aip_denied_stage_pill($row->submit_status, $stages);
                                                     $docs    = $row->school_id . '/' . $row->fy . '/' . $row->b_code . '/' . $row->s_id;
                                                     ?>
-                                                <tr>
+                                                <tr class="ap-row-danger">
                                                     <td>
                                                         <div class="ap-school">
                                                             <span class="ap-avatar"><?= html_escape($initial); ?></span>
@@ -157,7 +157,8 @@ if (!function_exists('aip_denied_stage_pill')) {
                                                         <span class="ap-status-pill <?= $pill[1]; ?>"><i class="mdi <?= $pill[2]; ?>"></i> <?= $pill[0]; ?></span>
                                                     </td>
                                                     <td>
-                                                        <span class="ap-date"><?= !empty($row->deny_date) ? html_escape($row->deny_date) : html_escape($row->tdate); ?></span>
+                                                        <span class="ap-status-pill ap-pill-red"><i class="mdi mdi-close-circle-outline"></i> Denied</span>
+                                                        <div class="ap-date mt-1"><?= !empty($row->deny_date) ? html_escape($row->deny_date) : html_escape($row->tdate); ?></div>
                                                         <div class="ap-school-sub">
                                                             <?= !empty($row->deny_time) ? html_escape($row->deny_time) : html_escape($row->ttime); ?>
                                                             <?php if (!empty($row->deny_by)) : ?>
@@ -169,7 +170,7 @@ if (!function_exists('aip_denied_stage_pill')) {
                                                         <div class="ap-reason"><?= html_escape($row->remarks); ?></div>
                                                     </td>
                                                     <td>
-                                                        <div class="ap-reason"><?= !empty($row->deny_remarks) ? html_escape($row->deny_remarks) : '—'; ?></div>
+                                                        <div class="ap-reason ap-reason-danger"><?= !empty($row->deny_remarks) ? html_escape($row->deny_remarks) : '—'; ?></div>
                                                     </td>
                                                     <td class="text-right">
                                                         <div class="ap-actions">
