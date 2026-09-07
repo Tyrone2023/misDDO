@@ -1,6 +1,6 @@
 <?php
 // AIP dashboard for the `review` and `funds` roles. Both sit mid-pipeline, so
-// the view shows every stage and highlights the one this role owns.
+// the view shows only the stages this role acts on and highlights the one it owns.
 // $counts comes from SGODModel::aip_stage_counts() — the same source the Plan
 // Supervisor dashboard uses. Before, this page rendered hardcoded figures.
 $counts = isset($counts) && is_array($counts)
@@ -17,58 +17,77 @@ $openRequests = (int) $requests['open'];
 
 $isFunds = ($this->session->position == 'funds');
 
-// The stage this role acts on gets the emphasis treatment.
-$ownStage = $isFunds ? 'funds' : 'reviewed';
+// Each role only sees the stages it acts on, named after the action it owes, so the
+// card label and the list it opens say the same thing.
+//   review : plans still waiting for review (status 0) plus the ones it has passed (3).
+//   funds  : only the reviewed plans (status 3) - those are the ones it has to certify,
+//            and they are exactly what Page/aip_sub_funds lists.
+$ownStage = $isFunds ? 'for_funds' : 'for_review';
 
-$cards = array(
-    array(
-        'key'   => 'submitted',
+$cards = array();
+
+if ($isFunds) {
+    $cards[] = array(
+        'key'   => 'for_funds',
+        // aip_sub_funds lists status 3, so the count is the reviewed total. Status 4 is
+        // what this role has already certified, which is not a queue it works on.
+        'value' => (int) $counts['reviewed'],
+        'label' => 'For Funds Available',
+        'sub'   => 'Reviewed plans waiting for certification',
+        'link'  => 'Page/aip_sub_funds',
+        'icon'  => 'mdi-cash-multiple',
+        'tone'  => 'mis-t-amber',
+    );
+} else {
+    $cards[] = array(
+        'key'   => 'for_review',
         // aip_sub_review lists status 0 only, so the card counts status 0 only. The wider
         // submitted total also carries SNED (2) and SBFP (6), which have their own lists.
         'value' => (int) $counts['awaiting_review'],
-        'label' => 'Submitted AIP',
-        'sub'   => 'Waiting for review',
+        'label' => 'For Review AIP',
+        'sub'   => 'Waiting for your review',
         'link'  => 'Page/aip_sub_review',
-        'icon'  => 'mdi-send-check-outline',
+        'icon'  => 'mdi-file-find-outline',
         'tone'  => 'mis-t-blue',
-    ),
-    array(
+    );
+    $cards[] = array(
         'key'   => 'reviewed',
         'value' => (int) $counts['reviewed'],
         'label' => 'Reviewed',
         'sub'   => 'Passed the review stage',
         'link'  => 'Page/aip_reviewed',
-        'icon'  => 'mdi-file-find-outline',
+        'icon'  => 'mdi-clipboard-check-outline',
         'tone'  => 'mis-t-sky',
-    ),
-    array(
-        'key'   => 'funds',
-        'value' => (int) $counts['funds'],
-        'label' => 'Funds Available',
-        'sub'   => 'Certified with available funds',
-        'link'  => 'Page/aip_sub_funds',
-        'icon'  => 'mdi-cash-multiple',
-        'tone'  => 'mis-t-amber',
-    ),
-    array(
-        'key'   => 'approved',
-        'value' => (int) $counts['approved'],
-        'label' => 'Approved',
-        'sub'   => 'Reached final approval',
-        'link'  => 'Page/aip_sub_approved',
-        'icon'  => 'mdi-check-decagram',
-        'tone'  => 'mis-t-green',
-    ),
-    array(
-        'key'   => 'requested',
-        'value' => $openRequests,
-        'label' => 'Requested',
-        'sub'   => 'Open unlock requests',
-        'link'  => 'Page/aip_requested',
-        'icon'  => 'mdi-lock-open-variant-outline',
-        'tone'  => 'mis-t-red',
-    ),
+    );
+}
+
+$cards[] = array(
+    'key'   => 'approved',
+    'value' => (int) $counts['approved'],
+    'label' => 'Approved',
+    'sub'   => 'Reached final approval',
+    'link'  => 'Page/aip_sub_approved',
+    'icon'  => 'mdi-check-decagram',
+    'tone'  => 'mis-t-green',
 );
+
+$cards[] = array(
+    'key'   => 'requested',
+    'value' => $openRequests,
+    'label' => 'Requested',
+    'sub'   => 'Open unlock requests',
+    'link'  => 'Page/aip_requested',
+    'icon'  => 'mdi-lock-open-variant-outline',
+    'tone'  => 'mis-t-red',
+);
+
+// The headline figure is this role's own queue, so it never repeats a stage the
+// dashboard no longer shows.
+$heroValue = $isFunds ? (int) $counts['reviewed'] : (int) $counts['awaiting_review'];
+$heroLabel = $isFunds ? 'For Funds Available' : 'For Review';
+
+// Card count drives the grid: 5 columns for five, 3 for three, otherwise the 4-up default.
+$gridClass = count($cards) === 5 ? ' mis-grid-5' : (count($cards) === 3 ? ' mis-grid-3' : '');
 ?>
 
 <!-- ============================================================== -->
@@ -96,8 +115,8 @@ $cards = array(
                 </div>
                 <div class="mis-hero-aside">
                     <div class="mis-hero-stat">
-                        <span class="mis-hero-stat-value"><?= number_format((int) $counts[$ownStage]); ?></span>
-                        <span class="mis-hero-stat-label"><?= $isFunds ? 'Certified' : 'Reviewed'; ?></span>
+                        <span class="mis-hero-stat-value"><?= number_format($heroValue); ?></span>
+                        <span class="mis-hero-stat-label"><?= $heroLabel; ?></span>
                     </div>
                     <a href="#" class="mis-pill" data-toggle="modal" data-target="#myModal">
                         <i class="mdi mdi-calendar-outline"></i> FY <?= html_escape($fy); ?>
@@ -106,7 +125,7 @@ $cards = array(
                 </div>
             </div>
 
-            <div class="mis-grid mis-grid-5">
+            <div class="mis-grid<?= $gridClass; ?>">
                 <?php foreach ($cards as $card) : ?>
                     <a href="<?= base_url() . $card['link']; ?>" class="mis-card <?= $card['tone']; ?>">
                         <div class="mis-card-top">
@@ -129,7 +148,7 @@ $cards = array(
                 <div class="mis-panel-head">
                     <div>
                         <h5 class="mis-panel-title"><i class="mdi mdi-format-list-bulleted"></i> Plan lists</h5>
-                        <p class="mis-panel-sub">Every stage of the pipeline</p>
+                        <p class="mis-panel-sub">The lists this role works on</p>
                     </div>
                 </div>
                 <div class="mis-panel-body">

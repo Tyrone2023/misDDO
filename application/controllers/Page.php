@@ -6098,7 +6098,9 @@ class Page extends CI_Controller
 
 	function aip_sub_review()
 	{
-		$result['title'] = "SUBMITTED PLANS";
+		// Titled after the action this list owes, not the school's submission step -
+		// the same wording the review dashboard card uses.
+		$result['title'] = "FOR REVIEW AIP";
 		$fys = $this->session->cur_fy;
 
 		$result['data'] = $this->SGODModel->two_cond('sgod_aip_submit', 'fy', $fys, 'status', 0);
@@ -6127,7 +6129,9 @@ class Page extends CI_Controller
 
 	function aip_sub_funds()
 	{
-		$result['title'] = "SUBMITTED PLANS";
+		// Status 3 = reviewed plans waiting for funds certification, so the heading
+		// matches the funds dashboard card instead of saying "submitted".
+		$result['title'] = "FOR FUNDS AVAILABLE";
 		$fys = $this->session->cur_fy;
 
 		$result['data'] = $this->SGODModel->two_cond('sgod_aip_submit', 'fy', $fys, 'status', 3);
@@ -6139,7 +6143,8 @@ class Page extends CI_Controller
 
 	function aip_sub_sgod_chief()
 	{
-		$result['title'] = "SUBMITTED PLANS";
+		// Status 4 = funds-certified plans waiting for the chief's approval.
+		$result['title'] = "FOR APPROVAL AIP";
 		$fys = $this->session->cur_fy;
 
 		$result['data'] = $this->SGODModel->two_cond('sgod_aip_submit', 'fy', $fys, 'status', 4);

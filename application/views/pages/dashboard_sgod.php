@@ -55,7 +55,7 @@ $cards = array(
 );
 
 $quickLinks = array(
-    array('link' => 'Page/aip_sub_sgod_chief', 'icon' => 'mdi-notebook-multiple',    'label' => 'Implementation Plans', 'sub' => 'Plans awaiting the chief'),
+    array('link' => 'Page/aip_sub_sgod_chief', 'icon' => 'mdi-notebook-multiple',    'label' => 'For Approval AIP',     'sub' => 'Funds-certified plans waiting for your approval'),
     array('link' => 'Page/aip_requested',      'icon' => 'mdi-lock-open-variant-outline', 'label' => 'Unlock Requests', 'sub' => 'Schools asking to edit a plan'),
     array('link' => 'Page/aip_sub_approved',   'icon' => 'mdi-check-decagram',       'label' => 'Approved Plans',       'sub' => 'Reached final approval'),
     array('link' => 'Page/sbm_list',           'icon' => 'mdi-clipboard-list-outline','label' => 'SBM',                 'sub' => 'Self-assessment checklist'),
