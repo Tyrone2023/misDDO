@@ -6103,7 +6103,11 @@ class Page extends CI_Controller
 		$result['title'] = "FOR REVIEW AIP";
 		$fys = $this->session->cur_fy;
 
-		$result['data'] = $this->SGODModel->two_cond('sgod_aip_submit', 'fy', $fys, 'status', 0);
+		// Every plan still short of review, not just the MOOE ones at status 0: SNED (2)
+		// and SBFP (6) are listed here too. Excluding reviewed (3), funds available (4)
+		// and approved (1) is the same definition the dashboard card counts and the one
+		// plansup_submitted() already uses, so the number and the list always agree.
+		$result['data'] = $this->SGODModel->aip_approved_list($fys, null, array(1, 3, 4));
 		$result['from'] = 'aip_sub_review';
 
 		$this->load->view('templates/head');

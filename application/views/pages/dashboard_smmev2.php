@@ -41,11 +41,12 @@ if ($isFunds) {
 } else {
     $cards[] = array(
         'key'   => 'for_review',
-        // aip_sub_review lists status 0 only, so the card counts status 0 only. The wider
-        // submitted total also carries SNED (2) and SBFP (6), which have their own lists.
-        'value' => (int) $counts['awaiting_review'],
+        // Every plan still short of review, whatever the fund source: 'submitted' is the
+        // total of status 0 (MOOE), 2 (SNED) and 6 (SBFP), which is exactly what
+        // aip_sub_review lists.
+        'value' => (int) $counts['submitted'],
         'label' => 'For Review AIP',
-        'sub'   => 'Waiting for your review',
+        'sub'   => 'All plans waiting for your review',
         'link'  => 'Page/aip_sub_review',
         'icon'  => 'mdi-file-find-outline',
         'tone'  => 'mis-t-blue',
@@ -83,7 +84,7 @@ $cards[] = array(
 
 // The headline figure is this role's own queue, so it never repeats a stage the
 // dashboard no longer shows.
-$heroValue = $isFunds ? (int) $counts['reviewed'] : (int) $counts['awaiting_review'];
+$heroValue = $isFunds ? (int) $counts['reviewed'] : (int) $counts['submitted'];
 $heroLabel = $isFunds ? 'For Funds Available' : 'For Review';
 
 // Card count drives the grid: 5 columns for five, 3 for three, otherwise the 4-up default.

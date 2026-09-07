@@ -68,6 +68,7 @@
                                                 <thead>
                                                     <tr>
                                                         <th>Budget Code</th>
+                                                        <th>FUND TYPE</th>
                                                         <th>SCHOOL NAME</th>
                                                         <th>GROUP</th>
                                                         <th>DATE</th>
@@ -83,6 +84,8 @@
 
                                                     <tr>
                                                         <td><?= $row->b_code; ?></td>
+                                                        <?php // Fund source comes from the allocation batch (alloc_type): MOOE, SNED Fund, SBFP. ?>
+                                                        <td><?= (isset($sa->alloc_type) && $sa->alloc_type !== '') ? $sa->alloc_type : '-'; ?></td>
                                                         <td><?= $school->schoolName; ?></td>
                                                         <td><?= $sa->alloc_group; ?></td>
                                                         <td><?= $row->date; ?></td>  
