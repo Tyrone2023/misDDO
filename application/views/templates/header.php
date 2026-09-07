@@ -1648,8 +1648,9 @@
 
                             <?php elseif ($this->session->userdata('position') === 'review') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_review"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li>
+                                <!-- <li><a href="<?= base_url(); ?>Page/aip_sub_review"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li> -->
                                 <li><a href="<?= base_url(); ?>Page/aip_requested"><i class="fas fa-lock-open"></i><span>Unlock Requests</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_denied"><i class="fas fa-ban"></i><span>Denied List</span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i><span>Approved Plans</span></a></li>
 
 
@@ -1659,8 +1660,9 @@
 
                             <?php elseif ($this->session->userdata('position') === 'funds') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_funds"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li>
+                                <!-- <li><a href="<?= base_url(); ?>Page/aip_sub_funds"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li> -->
                                 <li><a href="<?= base_url(); ?>Page/aip_requested"><i class="fas fa-lock-open"></i><span>Unlock Requests</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_denied"><i class="fas fa-ban"></i><span>Denied List</span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/aip_sub_approved"><i class="fas fa-check-circle"></i><span>Approved Plans</span></a></li>
 
 
@@ -2021,8 +2023,9 @@
                                 <li><a href="<?= base_url(); ?>Page/deptDashboard" class="waves-effect"><i class="mdi mdi-view-dashboard-outline"></i><span>Dashboard</span></a></li>
 
                                 <li class="menu-title">Planning</li>
-                                <li><a href="<?= base_url(); ?>Page/aip_sub_sgod_chief" class="waves-effect"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li>
+                                <!-- <li><a href="<?= base_url(); ?>Page/aip_sub_sgod_chief" class="waves-effect"><i class="fas fa-scroll"></i><span>Implementation Plans</span></a></li> -->
                                 <li><a href="<?= base_url(); ?>Page/aip_requested" class="waves-effect"><i class="fas fa-lock-open"></i><span>Unlock Requests</span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/aip_denied" class="waves-effect"><i class="fas fa-ban"></i><span>Denied List</span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/aip_sub_approved" class="waves-effect"><i class="fas fa-check-circle"></i><span>Approved Plans</span></a></li>
 
                                 <li class="menu-title">Monitoring</li>

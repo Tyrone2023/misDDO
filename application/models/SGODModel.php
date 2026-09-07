@@ -383,13 +383,45 @@ class SGODModel extends CI_Model
 		return $result->row();
 	}
 
+	// Which fund a batch was allocated from. sgod_school_allocation.fund_type is 0 on every
+	// row in production, so alloc_type is the only reliable discriminator. Returns the same
+	// codes the report controllers already branch on: 0 = MOOE, 2 = SBFP, 1 = SNED/others.
+	public function batch_fund_type($school_id, $fy, $bcode)
+	{
+		$this->db->where("schoolID", $school_id);
+		$this->db->where("alloc_year", $fy);
+		$this->db->where("alloc_batch", $bcode);
+		$row = $this->db->get('sgod_school_allocation')->row();
+
+		// Fall back to the batch on its own: the admin/print routes are sometimes reached
+		// with a school id that does not match the allocation row exactly.
+		if (empty($row)) {
+			$this->db->where("alloc_batch", $bcode);
+			$row = $this->db->get('sgod_school_allocation')->row();
+		}
+
+		if (empty($row)) {
+			return 0;
+		}
+
+		$type = strtoupper(trim($row->alloc_type));
+
+		if ($type === '' || $type === 'MOOE') {
+			return 0;
+		}
+		if ($type === 'SBFP') {
+			return 2;
+		}
+		return 1;
+	}
+
 	public function aip_category($table, $school_id, $fy, $bcode, $cat)
 	{
 		$this->db->where("school_id", $school_id);
 		$this->db->where("fy", $fy);
 		$this->db->where("b_code", $bcode);
 		$this->db->where("category", $cat);
-		//$this->db->where("budget_source", 'MOOE');
+		$this->db->where("budget_source", 'MOOE');
 		$result = $this->db->get($table);
 		return $result->result();
 	}
@@ -747,7 +779,7 @@ class SGODModel extends CI_Model
 		$this->db->where('fy', $val2);
 		$this->db->where('b_code', $val3);
 		$this->db->where('category', $val4);
-		//$this->db->where('budget_source', 'MOOE');
+		$this->db->where('budget_source', 'MOOE');
 
 		$result = $this->db->get($table);
 		return $result->result();
@@ -1360,6 +1392,69 @@ class SGODModel extends CI_Model
 
 		$this->db->where('id', $this->input->post('r_id'));
 		return $this->db->update('sgod_aip_request', $data);
+	}
+
+	// Denying an unlock request keeps the plan locked, so the reason has to live on the
+	// request row itself - sgod_aip_track only carries the narrative. Additive, idempotent,
+	// and cheap: the information_schema lookup runs once per request.
+	private static $aip_request_schema_ready = false;
+
+	public function ensure_aip_request_schema()
+	{
+		if (self::$aip_request_schema_ready) {
+			return;
+		}
+		self::$aip_request_schema_ready = true;
+
+		$this->Common->ensure_columns('sgod_aip_request', array(
+			'deny_remarks' => 'text null',
+			'deny_by'      => 'varchar(100) null',
+			'deny_date'    => 'date null',
+			'deny_time'    => 'varchar(100) null',
+		));
+	}
+
+	// stat 2 = denied. The plan is NOT unlocked, so sgod_aip_submit is left untouched and
+	// the school keeps the read-only plan it had.
+	public function aip_request_deny()
+	{
+		date_default_timezone_set('Asia/Manila');
+
+		$this->ensure_aip_request_schema();
+
+		$data = array(
+			'stat'         => 2,
+			'deny_remarks' => $this->input->post('remarks'),
+			'deny_by'      => $this->session->username,
+			'deny_date'    => date('Y-m-d', time()),
+			'deny_time'    => date('h:i:s a', time())
+		);
+
+		$this->db->where('id', $this->input->post('r_id'));
+		return $this->db->update('sgod_aip_request', $data);
+	}
+
+	public function aip_request_deny_track()
+	{
+		date_default_timezone_set('Asia/Manila');
+		$date = date('Y-m-d', time());
+		$t = date('h:i:s a', time());
+
+		$data = array(
+			'submit_id' => $this->input->post('id'),
+			'remarks' => 'Unlock Denied: ' . $this->input->post('remarks'),
+			'tdate' => $date,
+			'dtime' => $t,
+			'school_id' => $this->input->post('school_id'),
+			'res' => $this->session->username,
+			// notify = 1 with a non-School position is what puts the row in the school's
+			// notification bell (see templates/header.php), so the denial is not only visible
+			// on the plan page.
+			'notify' => 1,
+			'position' => $this->session->position
+		);
+
+		return $this->db->insert('sgod_aip_track', $data);
 	}
 
 	public function request_insert_track()
@@ -2992,9 +3087,12 @@ class SGODModel extends CI_Model
 	// join, which would otherwise multiply the request rows.
 	public function aip_request_list($fy, $stat = 0)
 	{
+		$this->ensure_aip_request_schema();
+
 		$fy_escaped = $this->db->escape($fy);
 
 		$this->db->select('r.id, r.fy, r.b_code, r.school_id, r.tdate, r.ttime, r.remarks, r.stat, r.s_id,
+			r.deny_remarks, r.deny_by, r.deny_date, r.deny_time,
 			sc.schoolName, sc.district, sc.course,
 			alloc.alloc_group, alloc.alloc_amount, alloc.alloc_type,
 			sub.id AS submit_id, sub.status AS submit_status, sub.remarks AS submit_remarks, sub.date AS submit_date,
@@ -3028,7 +3126,9 @@ class SGODModel extends CI_Model
 	// "Requested" card the review / funds / SGOD Chief dashboards share.
 	public function aip_request_counts($fy)
 	{
-		$counts = array('open' => 0, 'opened' => 0, 'total' => 0);
+		$this->ensure_aip_request_schema();
+
+		$counts = array('open' => 0, 'opened' => 0, 'denied' => 0, 'total' => 0);
 
 		$this->db->select('stat, COUNT(*) AS total', false);
 		$this->db->from('sgod_aip_request');
@@ -3041,6 +3141,8 @@ class SGODModel extends CI_Model
 
 			if ((int) $row->stat === 0) {
 				$counts['open'] += $total;
+			} elseif ((int) $row->stat === 2) {
+				$counts['denied'] += $total;
 			} else {
 				$counts['opened'] += $total;
 			}
@@ -3056,7 +3158,11 @@ class SGODModel extends CI_Model
 	// (3 = AIP Reviewed, 4 = Funds Available, 1 = Approved).
 	public function aip_stage_counts($fy)
 	{
-		$counts = array('submitted' => 0, 'reviewed' => 0, 'funds' => 0, 'approved' => 0);
+		// 'submitted' is every plan still in the pipeline (0 = MOOE, 2 = SNED, 6 = SBFP) and is
+		// what the Plan Supervisor list shows. 'awaiting_review' is status 0 on its own — the
+		// rows Page/aip_sub_review actually lists. The two are different numbers; a card must
+		// use the one that matches the page it links to.
+		$counts = array('submitted' => 0, 'awaiting_review' => 0, 'reviewed' => 0, 'funds' => 0, 'approved' => 0);
 
 		$this->db->select('status, COUNT(*) AS total', false);
 		$this->db->from('sgod_aip_submit');
@@ -3075,6 +3181,10 @@ class SGODModel extends CI_Model
 					break;
 				case 1:
 					$counts['approved'] = $total;
+					break;
+				case 0:
+					$counts['awaiting_review'] = $total;
+					$counts['submitted'] += $total;
 					break;
 				default:
 					$counts['submitted'] += $total;

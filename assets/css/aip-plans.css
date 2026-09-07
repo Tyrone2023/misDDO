@@ -175,6 +175,8 @@
 .ap-btn-success:hover { background: #176436; border-color: #176436; color: #fff; }
 .ap-btn-danger  { border-color: #f0c9c9; color: #a52d2d; background: #fdf3f3; }
 .ap-btn-danger:hover { background: #a52d2d; border-color: #a52d2d; color: #fff; }
+.ap-btn-deny    { background: #a52d2d; border-color: #a52d2d; color: #fff; }
+.ap-btn-deny:hover { background: #8a2323; border-color: #8a2323; color: #fff; }
 .ap-btn:disabled, .ap-btn.disabled { opacity: .55; pointer-events: none; }
 
 .ap-actions { display: inline-flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
@@ -218,6 +220,7 @@
 .ap-note-amber { background: #fdf8ee; border-color: #f4e0bb; color: #7c5512; }
 .ap-note-blue  { background: #f2f7fd; border-color: #cfe0f7; color: #2c5282; }
 .ap-note-green { background: #f1faf5; border-color: #c6e8d5; color: #176436; }
+.ap-note-red   { background: #fdf3f3; border-color: #f0c9c9; color: #a52d2d; }
 .ap-note strong { font-weight: 600; }
 
 /* ---- plan context meta ---- */

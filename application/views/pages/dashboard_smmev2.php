@@ -5,7 +5,7 @@
 // Supervisor dashboard uses. Before, this page rendered hardcoded figures.
 $counts = isset($counts) && is_array($counts)
     ? $counts
-    : array('submitted' => 0, 'reviewed' => 0, 'funds' => 0, 'approved' => 0);
+    : array('submitted' => 0, 'awaiting_review' => 0, 'reviewed' => 0, 'funds' => 0, 'approved' => 0);
 
 $fy = isset($fy) ? $fy : $this->session->cur_fy;
 $districts = (isset($district) && is_object($district)) ? $district->num_rows() : 0;
@@ -23,9 +23,11 @@ $ownStage = $isFunds ? 'funds' : 'reviewed';
 $cards = array(
     array(
         'key'   => 'submitted',
-        'value' => (int) $counts['submitted'],
+        // aip_sub_review lists status 0 only, so the card counts status 0 only. The wider
+        // submitted total also carries SNED (2) and SBFP (6), which have their own lists.
+        'value' => (int) $counts['awaiting_review'],
         'label' => 'Submitted AIP',
-        'sub'   => 'Schools that submitted a plan',
+        'sub'   => 'Waiting for review',
         'link'  => 'Page/aip_sub_review',
         'icon'  => 'mdi-send-check-outline',
         'tone'  => 'mis-t-blue',

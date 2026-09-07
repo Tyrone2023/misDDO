@@ -65,6 +65,13 @@ if ($submitted) {
 // Unlock request state for this batch. The original rules are kept: no new request
 // while one is pending, and at most three granted requests per batch.
 $requestPending  = !empty($aip_r) && (int) $aip_r->stat === 0;
+
+// stat 2 = the reviewer turned the request down. The plan was never unlocked, so it
+// stays read-only; the reason is on the request row for the school to see.
+$requestDenied = !empty($aip_r) && (int) $aip_r->stat === 2;
+if ($requestDenied) {
+    $canEdit = false;
+}
 $grantedRequests = 0;
 if (!empty($aip_r) && !$requestPending) {
     $grantedRequests = $this->SGODModel
@@ -209,6 +216,21 @@ foreach ($data as $row) {
                                                 Sent <?= html_escape($aip_r->tdate); ?> at <?= html_escape($aip_r->ttime); ?>.
                                                 You will be able to edit this plan once it is approved.
                                                 <div class="mt-1"><em><?= html_escape($aip_r->remarks); ?></em></div>
+                                            </div>
+                                        </div>
+                                    <?php elseif ($requestDenied) : ?>
+                                        <div class="ap-note ap-note-red mt-3 mb-0">
+                                            <i class="mdi mdi-close-circle-outline"></i>
+                                            <div>
+                                                <strong>Unlock request denied.</strong>
+                                                <?php if (!empty($aip_r->deny_date)) : ?>
+                                                    Decided <?= html_escape($aip_r->deny_date); ?><?php if (!empty($aip_r->deny_time)) : ?> at <?= html_escape($aip_r->deny_time); ?><?php endif; ?>.
+                                                <?php endif; ?>
+                                                This plan stays locked and cannot be edited.
+                                                <?php if (!empty($aip_r->deny_remarks)) : ?>
+                                                    <div class="mt-1"><strong>Reason:</strong> <em><?= html_escape($aip_r->deny_remarks); ?></em></div>
+                                                <?php endif; ?>
+                                                <div class="mt-1">Your request: <em><?= html_escape($aip_r->remarks); ?></em></div>
                                             </div>
                                         </div>
                                     <?php elseif ($requestCapReached) : ?>

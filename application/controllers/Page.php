@@ -779,12 +779,15 @@ class Page extends CI_Controller
 
 		if ($liq->num_rows() == 0) {
 
-			if ($bs->fund_type == 0) {
+			// alloc_type, not the always-zero fund_type, says which fund the batch came from.
+			$fund_type = $this->SGODModel->batch_fund_type($school_id, $fy, $bcode);
+
+			if ($fund_type == 0) {
 				$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
 				$data['mb'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
 				$data['tli'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
 				$data['tst'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TRAININGS/SEMINAR/TRAVEL');
-			}elseif($bs->fund_type == 2) {
+			}elseif($fund_type == 2) {
 				$data['mr'] = $this->SGODModel->aip_category_sbfp('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
 				$data['mb'] = $this->SGODModel->aip_category_sbfp('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
 				$data['tli'] = $this->SGODModel->aip_category_sbfp('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
@@ -5583,8 +5586,10 @@ class Page extends CI_Controller
 		$bs = $this->SGODModel->one_cond_row('sgod_school_allocation', 'alloc_batch', $bcode);
 		$data['bs'] = $bs;
 
-		// Some allocation batches have no row/fund_type; default to the regular fund category.
-		$fund_type = isset($bs->fund_type) ? $bs->fund_type : 0;
+		// fund_type is 0 on every allocation row, so the batch fund is read off alloc_type.
+		// A MOOE batch lists MOOE line items only; SBFP/SNED batches keep listing everything
+		// because schools tag those items inconsistently.
+		$fund_type = $this->SGODModel->batch_fund_type($school_id, $fy, $bcode);
 		if ($fund_type == 0) {
 			$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
 			$data['mb'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
@@ -5619,10 +5624,19 @@ class Page extends CI_Controller
 		$data['data_row'] = $this->SGODModel->get_aip_row($school_id, $fy, $bcode);
 
 
-		$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
-		$data['mb'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
-		$data['tli'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
-		$data['tst'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TRAININGS/SEMINAR/TRAVEL');
+		// Only a MOOE batch is restricted to MOOE line items; SBFP/SNED batches keep
+		// listing every source because schools tag those items inconsistently.
+		if ($this->SGODModel->batch_fund_type($school_id, $fy, $bcode) == 0) {
+			$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
+			$data['mb'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
+			$data['tli'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
+			$data['tst'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TRAININGS/SEMINAR/TRAVEL');
+		} else {
+			$data['mr'] = $this->SGODModel->aip_category_sned('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
+			$data['mb'] = $this->SGODModel->aip_category_sned('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
+			$data['tli'] = $this->SGODModel->aip_category_sned('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
+			$data['tst'] = $this->SGODModel->aip_category_sned('sgod_aip', $school_id, $fy, $bcode, 'TRAININGS/SEMINAR/TRAVEL');
+		}
 		$this->load->view('rca_generate', $data);
 	}
 
@@ -5639,7 +5653,7 @@ class Page extends CI_Controller
 
 		$bs = $this->SGODModel->one_cond_row('sgod_school_allocation', 'alloc_batch', $bcode);
 
-		if ($bs->fund_type == 0) {
+		if ($this->SGODModel->batch_fund_type($school_id, $fy, $bcode) == 0) {
 			$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
 			$data['mb'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
 			$data['tli'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
@@ -5668,10 +5682,19 @@ class Page extends CI_Controller
 
 		$data['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
 
-		$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
-		$data['mb'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
-		$data['tli'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
-		$data['tst'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TRAININGS/SEMINAR/TRAVEL');
+		// Only a MOOE batch is restricted to MOOE line items; SBFP/SNED batches keep
+		// listing every source because schools tag those items inconsistently.
+		if ($this->SGODModel->batch_fund_type($school_id, $fy, $bcode) == 0) {
+			$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
+			$data['mb'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
+			$data['tli'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
+			$data['tst'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'TRAININGS/SEMINAR/TRAVEL');
+		} else {
+			$data['mr'] = $this->SGODModel->aip_category_sned('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');
+			$data['mb'] = $this->SGODModel->aip_category_sned('sgod_aip', $school_id, $fy, $bcode, 'MANDATORY BILLS');
+			$data['tli'] = $this->SGODModel->aip_category_sned('sgod_aip', $school_id, $fy, $bcode, 'TEACHING-LEARNING INSTRUCTION');
+			$data['tst'] = $this->SGODModel->aip_category_sned('sgod_aip', $school_id, $fy, $bcode, 'TRAININGS/SEMINAR/TRAVEL');
+		}
 		$this->load->view('rca_generate', $data);
 	}
 
@@ -5908,6 +5931,53 @@ class Page extends CI_Controller
 		redirect(base_url() . 'Page/' . (in_array($from, $allowed, true) ? $from : 'aip_sub'));
 	}
 
+	// Turn an unlock request down. The plan itself is left exactly as it is - still locked,
+	// still read-only for the school - and the reason is stored on the request so the school
+	// can see why on its own plan page.
+	function deny_aip()
+	{
+		$allowed_roles = array('Admin', 'Super Admin', 'smme', 'review', 'funds', 'sgod');
+		if (!in_array($this->session->position, $allowed_roles, true)) {
+			show_404();
+			return;
+		}
+
+		// Same whitelist as open_aip(): come back to the worklist the action was fired from.
+		$from = $this->input->post('from');
+		$allowed = array('aip_sub', 'aip_requested', 'aip_denied', 'aip_sub_review', 'aip_reviewed', 'aip_sub_funds', 'aip_sub_sgod_chief');
+		$back = base_url() . 'Page/' . (in_array($from, $allowed, true) ? $from : 'aip_requested');
+
+		$r_id    = $this->input->post('r_id');
+		$remarks = trim((string) $this->input->post('remarks'));
+
+		if (empty($r_id) || $remarks === '') {
+			$this->session->set_flashdata('danger', 'A reason is required to deny an unlock request.');
+			redirect($back);
+			return;
+		}
+
+		$this->SGODModel->aip_request_deny();
+		$this->SGODModel->aip_request_deny_track();
+
+		$this->session->set_flashdata('success', 'The unlock request has been denied. The plan stays locked and the school can now see the reason.');
+		redirect($back);
+	}
+
+	// Requests that were turned down (sgod_aip_request.stat = 2), for the review / funds /
+	// SGOD Chief sidebars.
+	function aip_denied()
+	{
+		$fys = $this->session->cur_fy;
+
+		$result['title'] = "DENIED UNLOCK REQUESTS";
+		$result['fy'] = $fys;
+		$result['data'] = $this->SGODModel->aip_request_list($fys, 2);
+		$result['counts'] = $this->SGODModel->aip_request_counts($fys);
+
+		$this->load->view('templates/head');
+		$this->load->view('templates/header');
+		$this->load->view('aip_denied', $result);
+	}
 	function submit_aip()
 	{
 		$fy = $_SESSION['fy'];
@@ -6573,6 +6643,8 @@ class Page extends CI_Controller
 		$result['aip_submit'] = $this->SGODModel->aip_related_row('sgod_aip_submit', $school_id, $fy, $b_code);
 		$result['data_row'] = $this->SGODModel->get_aip_row($school_id, $fy, $b_code);
 
+		$result['fund_type'] = $this->SGODModel->batch_fund_type($school_id, $fy, $b_code);
+
 		$this->load->view('app_generate', $result);
 	}
 
@@ -6658,6 +6730,10 @@ class Page extends CI_Controller
 			redirect(base_url() . 'Page/view_app');
 		}
 
+		// A MOOE batch must list MOOE line items only; SBFP/SNED batches keep listing every
+		// source because schools tag those items inconsistently.
+		$result['fund_type'] = $this->SGODModel->batch_fund_type($school_id, $fy, $b_code);
+
 		$this->load->view('ppmp_generate', $result);
 	}
 
@@ -6678,6 +6754,8 @@ class Page extends CI_Controller
 		$result['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
 		$result['abp'] = $this->SGODModel->one_cond_row('sgod_app_percentage', 'b_code', $b_code);
 		$result['ssa'] = $this->SGODModel->three_cond_row('sgod_school_allocation', 'schoolID', $school_id, 'alloc_batch', $b_code, 'alloc_year', $fy);
+
+		$result['fund_type'] = $this->SGODModel->batch_fund_type($school_id, $fy, $b_code);
 
 		$this->load->view('ppmp_generate', $result);
 	}
@@ -6700,6 +6778,8 @@ class Page extends CI_Controller
 		$result['abp'] = $this->SGODModel->one_cond_row('sgod_app_percentage', 'b_code', $b_code);
 		$result['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
 		$result['ssa'] = $this->SGODModel->three_cond_row('sgod_school_allocation', 'schoolID', $school_id, 'alloc_batch', $b_code, 'alloc_year', $fy);
+
+		$result['fund_type'] = $this->SGODModel->batch_fund_type($school_id, $fy, $b_code);
 
 		$this->load->view('app_generate', $result);
 	}

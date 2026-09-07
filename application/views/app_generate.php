@@ -78,6 +78,13 @@
 
 
 
+            // A MOOE batch lists MOOE line items only (SGODModel::aip filters on
+            // budget_source); SBFP/SNED batches use the unfiltered lookup because schools tag
+            // those items inconsistently.
+            $fund_type  = isset($fund_type) ? (int) $fund_type : 0;
+            $aip_fn     = ($fund_type === 0) ? 'aip' : 'aipv2';
+            $fund_label = (isset($ssa->alloc_type) && trim($ssa->alloc_type) !== '') ? strtoupper(trim($ssa->alloc_type)) : 'MOOE';
+
             $mooe = $ssa->alloc_amount; 
             $mandatory = $mooe*$mb;
             $minor = $mooe*$mr;
@@ -94,7 +101,7 @@
             </tr>
             <tr>
                 <th colspan="2">Source of Fund:</th>
-                <th colspan="8" class="nobc"> MOOE</th>
+                <th colspan="8" class="nobc"> <?= $fund_label; ?></th>
                 <th colspan="8">Mandatory   (<?= $abp->mb; ?>%):</th>
                 <th colspan="3" class="nobc"><?= number_format(($mandatory), 2, '.', ','); ?></th>
                 <th colspan="2" class="nobc"><?= number_format(($monthly*$mb), 2, '.', ','); ?></th><?php $mbmc = $monthly*$mb; ?>
@@ -160,7 +167,7 @@
                 <td colspan="23" class="bar">I. MANDATORY (<?= $abp->mb; ?>%)</td>
             </tr>
             <?php 
-                $aip_by_pillar = $this->SGODModel->aip('sgod_aip',$school_id,$fy,$b_code,'MANDATORY BILLS');
+                $aip_by_pillar = $this->SGODModel->$aip_fn('sgod_aip',$school_id,$fy,$b_code,'MANDATORY BILLS');
                 $otba = 0;
                 $otjan = 0;
                 $otfeb = 0;
@@ -363,7 +370,7 @@
                 <td colspan="23" class="bar">II. MINOR REPAIR     ( <?= $abp->mr; ?>% )</td>
             </tr>
             <?php 
-                $aip_by_pillar = $this->SGODModel->aip('sgod_aip',$school_id,$fy,$b_code,'MINOR REPAIR');
+                $aip_by_pillar = $this->SGODModel->$aip_fn('sgod_aip',$school_id,$fy,$b_code,'MINOR REPAIR');
                 $otba = 0;
                 $otjan = 0;
                 $otfeb = 0;
@@ -562,7 +569,7 @@
                 <td colspan="23" class="bar">III. TEACHING-LEARNING INSTRUCTION   (<?= $abp->tli; ?>% )</td>
             </tr>
             <?php 
-                $aip_by_pillar = $this->SGODModel->aip('sgod_aip',$school_id,$fy,$b_code,'TEACHING-LEARNING INSTRUCTION');
+                $aip_by_pillar = $this->SGODModel->$aip_fn('sgod_aip',$school_id,$fy,$b_code,'TEACHING-LEARNING INSTRUCTION');
                 $otba = 0;
                 $otjan = 0;
                 $otfeb = 0;
@@ -762,7 +769,7 @@
                 <td colspan="23" class="bar">IV. Attendance to & Conduct of Trainings/Seminars/Conferences (<?= $abp->tst; ?>%)  </td>
             </tr>
             <?php 
-                $aip_by_pillar = $this->SGODModel->aip('sgod_aip',$school_id,$fy,$b_code,'TRAININGS/SEMINAR/TRAVEL');
+                $aip_by_pillar = $this->SGODModel->$aip_fn('sgod_aip',$school_id,$fy,$b_code,'TRAININGS/SEMINAR/TRAVEL');
                 $otba = 0;
                 $otjan = 0;
                 $otfeb = 0;

@@ -208,6 +208,17 @@ if (!function_exists('aip_request_stage_pill')) {
                                                                         data-reason="<?= html_escape($row->remarks); ?>">
                                                                     <i class="mdi mdi-lock-open-variant"></i> Unlock
                                                                 </button>
+
+                                                                <button type="button"
+                                                                        class="ap-btn ap-btn-deny js-deny-aip"
+                                                                        data-submit="<?= $row->s_id; ?>"
+                                                                        data-request="<?= $row->id; ?>"
+                                                                        data-schoolid="<?= html_escape($row->school_id); ?>"
+                                                                        data-school="<?= html_escape($name); ?>"
+                                                                        data-bcode="<?= html_escape($row->b_code); ?>"
+                                                                        data-reason="<?= html_escape($row->remarks); ?>">
+                                                                    <i class="mdi mdi-close-circle-outline"></i> Deny
+                                                                </button>
                                                             <?php endif; ?>
                                                         </div>
                                                     </td>
@@ -361,6 +372,52 @@ if (!function_exists('aip_request_stage_pill')) {
                         </div>
                     </div>
                 </div>
+
+                <!-- Deny modal -->
+                <div id="ap-deny-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="apDenyLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered" role="document">
+                        <div class="modal-content ap-modal">
+                            <?= form_open('Page/deny_aip'); ?>
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="apDenyLabel"><i class="mdi mdi-close-circle-outline"></i> Deny Unlock Request</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                            </div>
+                            <div class="modal-body">
+                                <input type="hidden" name="id" id="ap-deny-submit">
+                                <input type="hidden" name="r_id" id="ap-deny-request">
+                                <input type="hidden" name="school_id" id="ap-deny-schoolid">
+                                <input type="hidden" name="from" value="aip_requested">
+
+                                <div class="ap-note ap-note-red">
+                                    <i class="mdi mdi-lock-outline"></i>
+                                    <div>
+                                        Denying leaves <strong id="ap-deny-school">this plan</strong>
+                                        (batch <span id="ap-deny-bcode"></span>) <strong>locked</strong>.
+                                        The school cannot edit it, and the reason below is shown on its plan page.
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="ap-meta-label">School&#39;s reason</label>
+                                    <div class="ap-reason" id="ap-deny-reason" style="max-width:none;"></div>
+                                </div>
+
+                                <div class="form-group mb-0">
+                                    <label class="ap-meta-label" for="ap-deny-remarks">Reason for denial <span class="text-danger">*</span></label>
+                                    <textarea required name="remarks" id="ap-deny-remarks" rows="3" class="form-control"
+                                              placeholder="Explain why the request is being turned down. The school sees this text."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="ap-btn ap-btn-ghost" data-dismiss="modal">Cancel</button>
+                                <button type="submit" name="submit" class="ap-btn ap-btn-deny">
+                                    <i class="mdi mdi-close-circle-outline"></i> Deny Request
+                                </button>
+                            </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 <?php endif; ?>
 
             <!-- ============================================================== -->
@@ -425,6 +482,20 @@ if (!function_exists('aip_request_stage_pill')) {
                         .fail(function () {
                             $body.html('<div class="ap-track-empty"><i class="mdi mdi-alert-circle-outline"></i><p>Could not load the status history. Please try again.</p></div>');
                         });
+                });
+
+                $(document).on('click', '.js-deny-aip', function () {
+                    var $b = $(this);
+
+                    $('#ap-deny-submit').val($b.data('submit'));
+                    $('#ap-deny-request').val($b.data('request'));
+                    $('#ap-deny-schoolid').val($b.data('schoolid'));
+                    $('#ap-deny-school').text($b.data('school') || 'this plan');
+                    $('#ap-deny-bcode').text($b.data('bcode') || '—');
+                    $('#ap-deny-reason').text($b.data('reason') || '—');
+                    $('#ap-deny-remarks').val('');
+
+                    $('#ap-deny-modal').modal('show');
                 });
 
                 $(document).on('click', '.js-open-aip', function () {
