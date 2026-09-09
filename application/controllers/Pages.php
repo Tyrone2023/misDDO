@@ -8786,10 +8786,79 @@ public function rqa_municipality_print_shsv2()
         );
     }
 
+    /**
+     * Additional applicant documents kept outside the legacy regfile folder.
+     * The request only ever supplies the array key; column and folder names
+     * remain server-controlled through this whitelist.
+     */
+    private function applicant_supporting_document_types()
+    {
+        return [
+            'wes' => [
+                'column' => 'wes_file',
+                'folder' => 'wes',
+                'label' => 'WES',
+                'anchor' => '#appen',
+            ],
+            'bachelor_cav' => [
+                'column' => 'bachelor_cav',
+                'folder' => 'cav',
+                'label' => "Bachelor's Degree CAV",
+                'anchor' => '#efile',
+            ],
+            'master_cav' => [
+                'column' => 'master_cav',
+                'folder' => 'cav',
+                'label' => "Master's Degree CAV",
+                'anchor' => '#efile',
+            ],
+            'doctor_cav' => [
+                'column' => 'doctor_cav',
+                'folder' => 'cav',
+                'label' => "Doctor's Degree CAV",
+                'anchor' => '#efile',
+            ],
+            'prc_license' => [
+                'column' => 'prc_license',
+                'folder' => 'prc',
+                'label' => 'PRC / Other License ID (RA 1080)',
+                'anchor' => '#er',
+            ],
+            'board_rating' => [
+                'column' => 'board_rating',
+                'folder' => 'prc',
+                'label' => 'Certificate of Board Rating',
+                'anchor' => '#er',
+            ],
+        ];
+    }
+
+    /** Keep upgraded and newly installed databases compatible with the page. */
+    private function ensure_applicant_supporting_document_columns()
+    {
+        static $ensured = false;
+
+        if ($ensured) {
+            return;
+        }
+
+        $ensured = true;
+        foreach ($this->applicant_supporting_document_types() as $document) {
+            $column = $document['column'];
+            if (!$this->db->field_exists($column, 'hris_applicant')) {
+                $this->db->query(
+                    'ALTER TABLE `hris_applicant` ADD COLUMN `' . $column . '` VARCHAR(255) NULL DEFAULT NULL'
+                );
+            }
+        }
+    }
+
     // renren new code please don't touch
 
     public function ma($param = null)
     {
+        $this->ensure_applicant_supporting_document_columns();
+
         // Send record_no / staff links back to the identifier this page expects
         // before anything reads it - the whole view is keyed off segment(3).
         $applicant = $this->canonicalize_rating_url('ma');
@@ -9481,6 +9550,220 @@ public function rqa_municipality_print_shsv2()
         }
 
         return @unlink($path);
+    }
+
+    /**
+     * Upload one of the WES, CAV, or PRC supporting documents shown on ma().
+     * These files are applicant-owned, PDF-only, and replace the prior file for
+     * the same document type only after the database update succeeds.
+     */
+    public function update_supporting_document()
+    {
+        if (strtoupper((string) $this->input->server('REQUEST_METHOD')) !== 'POST') {
+            show_error('Method Not Allowed', 405);
+            return;
+        }
+
+        $this->ensure_applicant_supporting_document_columns();
+        $types = $this->applicant_supporting_document_types();
+        $type = (string) $this->input->post('document_type');
+
+        if (!isset($types[$type])) {
+            show_error('Unknown supporting document type.', 400);
+            return;
+        }
+
+        $document = $types[$type];
+        $applicantId = (int) $this->input->post('id');
+        $appId = (int) $this->input->post('appID');
+        $jobId = (int) $this->input->post('jobID');
+        $applicant = $this->Common->one_cond_row('hris_applicant', 'id', $applicantId);
+        $application = $this->Common->one_cond_row('hris_applications', 'appID', $appId);
+
+        if (empty($applicant) || empty($application)) {
+            show_404();
+            return;
+        }
+
+        $position = strtolower(trim((string) $this->session->userdata('position')));
+        $ownsProfile = in_array($position, ['reg', 'user'], true)
+            && (string) $this->session->userdata('c_id') === (string) $applicantId;
+        $sameApplication = (int) ($application->jobID ?? 0) === $jobId
+            && (
+                (int) ($application->applicant_id ?? 0) === $applicantId
+                || (string) ($application->empEmail ?? '') === (string) ($applicant->empEmail ?? '')
+            );
+
+        if (!$ownsProfile || !$sameApplication) {
+            show_error('You are not allowed to upload documents for this applicant.', 403);
+            return;
+        }
+
+        if ((int) ($application->stat ?? 1) !== 0) {
+            show_error('Document uploading is closed for this application.', 409);
+            return;
+        }
+
+        $uploadDirectory = FCPATH . 'uploads/' . $document['folder'] . '/';
+        if (!is_dir($uploadDirectory) && !@mkdir($uploadDirectory, 0777, true)) {
+            log_message('error', 'Unable to create supporting-document directory: ' . $uploadDirectory);
+            $this->session->set_flashdata('danger', 'The upload folder is unavailable. Please contact the administrator.');
+            $this->redirect_back($document['anchor']);
+            return;
+        }
+
+        // XAMPP serves PHP as the daemon user while these folders are normally
+        // created by the deployment user. Match the writable upload-directory
+        // convention already used by uploads/regfile.
+        if (!is_writable($uploadDirectory)) {
+            @chmod($uploadDirectory, 0777);
+        }
+        if (!is_writable($uploadDirectory)) {
+            log_message('error', 'Supporting-document directory is not writable: ' . $uploadDirectory);
+            $this->session->set_flashdata('danger', 'The upload folder is not writable. Please contact the administrator.');
+            $this->redirect_back($document['anchor']);
+            return;
+        }
+
+        $originalName = $_FILES['file']['name'] ?? 'document.pdf';
+        try {
+            $suffix = bin2hex(random_bytes(4));
+        } catch (Exception $exception) {
+            $suffix = str_replace('.', '', uniqid('', true));
+        }
+
+        $config = [
+            'allowed_types' => 'pdf',
+            'upload_path' => $uploadDirectory,
+            'file_name' => $applicantId . '_' . $type . '_' . time() . '_' . $suffix . '_' . safe_upload_name($originalName),
+            'file_ext_tolower' => true,
+            'detect_mime' => true,
+            'overwrite' => false,
+        ];
+
+        $this->load->library('upload', $config);
+        if (!$this->upload->do_upload('file')) {
+            $this->session->set_flashdata('danger', strip_tags($this->upload->display_errors('', '')));
+            $this->redirect_back($document['anchor']);
+            return;
+        }
+
+        $uploaded = $this->upload->data();
+        $newName = basename((string) $uploaded['file_name']);
+        $oldName = basename((string) ($applicant->{$document['column']} ?? ''));
+        $updated = $this->db
+            ->where('id', $applicantId)
+            ->update('hris_applicant', [$document['column'] => $newName]);
+
+        if (!$updated) {
+            @unlink($uploadDirectory . $newName);
+            $this->session->set_flashdata('danger', 'The document could not be saved. Please try again.');
+            $this->redirect_back($document['anchor']);
+            return;
+        }
+
+        if ($oldName !== '' && $oldName !== $newName && is_file($uploadDirectory . $oldName)) {
+            @unlink($uploadDirectory . $oldName);
+        }
+
+        $this->Audit->log('upload_document', [
+            'entity_type' => 'document',
+            'entity_table' => 'hris_applicant',
+            'entity_id' => $document['column'],
+            'app_id' => $appId,
+            'applicant_id' => $applicantId,
+            'job_id' => $jobId,
+            'field' => $document['column'],
+            'description' => 'Uploaded ' . $document['label'] . '.',
+            'old_value' => $oldName,
+            'new_value' => $newName,
+        ]);
+
+        $this->session->set_flashdata('success', $document['label'] . ' uploaded successfully.');
+        $this->redirect_back(
+            $document['anchor'],
+            base_url() . 'pages/ma/' . $applicantId . '/' . $jobId . '/' . $this->input->post('school_id') . $document['anchor']
+        );
+    }
+
+    /** Remove a WES, CAV, or PRC supporting document from an open application. */
+    public function remove_supporting_document()
+    {
+        $this->ensure_applicant_supporting_document_columns();
+        $types = $this->applicant_supporting_document_types();
+        $applicantId = (int) $this->uri->segment(3);
+        $jobId = (int) $this->uri->segment(4);
+        $schoolId = (string) $this->uri->segment(5);
+        $type = (string) $this->uri->segment(6);
+        $appId = (int) $this->uri->segment(7);
+
+        if (!isset($types[$type])) {
+            show_error('Unknown supporting document type.', 400);
+            return;
+        }
+
+        $document = $types[$type];
+        $applicant = $this->Common->one_cond_row('hris_applicant', 'id', $applicantId);
+        $application = $this->Common->one_cond_row('hris_applications', 'appID', $appId);
+
+        if (empty($applicant) || empty($application)) {
+            show_404();
+            return;
+        }
+
+        $position = strtolower(trim((string) $this->session->userdata('position')));
+        $ownsProfile = in_array($position, ['reg', 'user'], true)
+            && (string) $this->session->userdata('c_id') === (string) $applicantId;
+        $sameApplication = (int) ($application->jobID ?? 0) === $jobId
+            && (
+                (int) ($application->applicant_id ?? 0) === $applicantId
+                || (string) ($application->empEmail ?? '') === (string) ($applicant->empEmail ?? '')
+            );
+
+        if (!$ownsProfile || !$sameApplication) {
+            show_error('You are not allowed to remove documents for this applicant.', 403);
+            return;
+        }
+
+        if ((int) ($application->stat ?? 1) !== 0) {
+            show_error('Document changes are closed for this application.', 409);
+            return;
+        }
+
+        $column = $document['column'];
+        $oldName = basename((string) ($applicant->$column ?? ''));
+        $updated = $this->db
+            ->where('id', $applicantId)
+            ->update('hris_applicant', [$column => null]);
+
+        if (!$updated) {
+            $this->session->set_flashdata('danger', 'The document could not be removed. Please try again.');
+            $this->redirect_back($document['anchor']);
+            return;
+        }
+
+        $oldPath = FCPATH . 'uploads/' . $document['folder'] . '/' . $oldName;
+        if ($oldName !== '' && is_file($oldPath)) {
+            @unlink($oldPath);
+        }
+
+        $this->Audit->log('delete_document', [
+            'entity_type' => 'document',
+            'entity_table' => 'hris_applicant',
+            'entity_id' => $column,
+            'app_id' => $appId,
+            'applicant_id' => $applicantId,
+            'job_id' => $jobId,
+            'field' => $column,
+            'description' => 'Removed ' . $document['label'] . '.',
+            'old_value' => $oldName,
+        ]);
+
+        $this->session->set_flashdata('success', $document['label'] . ' removed successfully.');
+        $this->redirect_back(
+            $document['anchor'],
+            base_url() . 'pages/ma/' . $applicantId . '/' . $jobId . '/' . $schoolId . $document['anchor']
+        );
     }
 
     public function update_educ()

@@ -1,0 +1,8 @@
+<?php defined('BASEPATH') OR exit('No direct script access allowed'); ?>
+
+ERROR - 2026-09-10 06:09:22 --> Query error: Column 'username' cannot be null - Invalid query: INSERT INTO `mis_logs` (`username`, `used_pass`, `transDate`, `logStat`, `logType`, `acctLevel`, `hostName`, `ipaddress`) VALUES (NULL, '', '2026-09-10 06:09:22 am', 'success', 'logout', NULL, '192.168.254.109', '::1')
+ERROR - 2026-09-10 06:09:26 --> Query error: Column 'username' cannot be null - Invalid query: INSERT INTO `mis_logs` (`username`, `used_pass`, `transDate`, `logStat`, `logType`, `acctLevel`, `hostName`, `ipaddress`) VALUES (NULL, '', '2026-09-10 06:09:26 am', 'success', 'logout', NULL, '192.168.254.109', '::1')
+ERROR - 2026-09-10 06:09:28 --> Query error: Column 'username' cannot be null - Invalid query: INSERT INTO `mis_logs` (`username`, `used_pass`, `transDate`, `logStat`, `logType`, `acctLevel`, `hostName`, `ipaddress`) VALUES (NULL, '', '2026-09-10 06:09:28 am', 'success', 'logout', NULL, '192.168.254.109', '::1')
+ERROR - 2026-09-10 06:09:30 --> Query error: Column 'username' cannot be null - Invalid query: INSERT INTO `mis_logs` (`username`, `used_pass`, `transDate`, `logStat`, `logType`, `acctLevel`, `hostName`, `ipaddress`) VALUES (NULL, '', '2026-09-10 06:09:30 am', 'success', 'logout', NULL, '192.168.254.109', '::1')
+ERROR - 2026-09-10 06:09:47 --> Severity: Warning --> Undefined variable $job /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342
+ERROR - 2026-09-10 06:09:47 --> Severity: Warning --> Attempt to read property "promotion" on null /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/pages/validated.php 342

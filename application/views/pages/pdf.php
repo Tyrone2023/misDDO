@@ -28,7 +28,16 @@ body { font: 15px/120% sans-serif; color: #555; background: #fff; padding: 2rem;
 <?php
     $col  = $this->uri->segment(4);
     $file = isset($data->$col) ? basename((string) $data->$col) : '';
-    $onDisk = ($file !== '' && is_file(FCPATH . 'uploads/regfile/' . $file));
+    $documentFolders = array(
+        'wes_file'     => 'wes',
+        'bachelor_cav' => 'cav',
+        'master_cav'   => 'cav',
+        'doctor_cav'   => 'cav',
+        'prc_license'  => 'prc',
+        'board_rating' => 'prc',
+    );
+    $folder = isset($documentFolders[$col]) ? $documentFolders[$col] : 'regfile';
+    $onDisk = ($file !== '' && is_file(FCPATH . 'uploads/' . $folder . '/' . $file));
 ?>
 <?php if ($file === ''): ?>
 <p>No file has been attached yet.</p>
@@ -51,7 +60,7 @@ body { font: 15px/120% sans-serif; color: #555; background: #fff; padding: 2rem;
     // Files uploaded before names were sanitised can still contain spaces, '&'
     // or '#'. Left raw those truncate or corrupt the URL - and on the live host
     // they make the request look hostile, which comes back as a bare 403.
-    $src = base_url() . 'uploads/regfile/' . rawurlencode($file);
+    $src = base_url() . 'uploads/' . $folder . '/' . rawurlencode($file);
 ?>
 <script>PDFObject.embed(<?= json_encode($src, JSON_UNESCAPED_SLASHES); ?>, document.body);</script>
 <?php endif; ?>

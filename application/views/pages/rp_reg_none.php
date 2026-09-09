@@ -192,6 +192,59 @@
                 $request = $this->Common->one_cond_row('hris_rating_request', 'app_id',$aa->appID);
                 $canUploadDocuments = (int)($aa->stat ?? 1) === 0;
 
+                $supportingDocuments = array(
+                    'wes' => array(
+                        'supporting_type' => 'wes',
+                        'supporting_column' => 'wes_file',
+                        'supporting_label' => 'WES',
+                        'supporting_file' => $data->wes_file ?? '',
+                        'supporting_background' => '#90bdf9',
+                    ),
+                    'bachelor_cav' => array(
+                        'supporting_type' => 'bachelor_cav',
+                        'supporting_column' => 'bachelor_cav',
+                        'supporting_label' => "Bachelor's Degree CAV",
+                        'supporting_file' => $data->bachelor_cav ?? '',
+                        'supporting_background' => '#f7e8bc',
+                    ),
+                    'master_cav' => array(
+                        'supporting_type' => 'master_cav',
+                        'supporting_column' => 'master_cav',
+                        'supporting_label' => "Master's Degree CAV",
+                        'supporting_file' => $data->master_cav ?? '',
+                        'supporting_background' => '#f7e8bc',
+                    ),
+                    'doctor_cav' => array(
+                        'supporting_type' => 'doctor_cav',
+                        'supporting_column' => 'doctor_cav',
+                        'supporting_label' => "Doctor's Degree CAV",
+                        'supporting_file' => $data->doctor_cav ?? '',
+                        'supporting_background' => '#f7e8bc',
+                    ),
+                    'prc_license' => array(
+                        'supporting_type' => 'prc_license',
+                        'supporting_column' => 'prc_license',
+                        'supporting_label' => 'PRC / Other License ID (RA 1080)',
+                        'supporting_file' => $data->prc_license ?? '',
+                        'supporting_background' => '#bbb7eb',
+                    ),
+                    'board_rating' => array(
+                        'supporting_type' => 'board_rating',
+                        'supporting_column' => 'board_rating',
+                        'supporting_label' => 'Certificate of Board Rating',
+                        'supporting_file' => $data->board_rating ?? '',
+                        'supporting_background' => '#bbb7eb',
+                    ),
+                );
+                $supportingDocumentContext = array(
+                    'supporting_can_manage' => $canUploadDocuments
+                        && (string) $this->session->c_id === (string) ($user->user_id ?? ''),
+                    'supporting_applicant_id' => (int) $data->id,
+                    'supporting_job_id' => (int) $this->uri->segment(4),
+                    'supporting_school_id' => (string) $this->uri->segment(5),
+                    'supporting_app_id' => (int) ($aa->appID ?? 0),
+                );
+
                 // Who encoded each rating — along with every other action taken on
                 // this application — now lives in one place: the Tracking modal
                 // opened from the APPLICATION DETAILS header. The per-component
@@ -530,6 +583,7 @@
                                                             <?php }} ?>
                                                         </td>
                                                     </tr>
+                                                    <?php $this->load->view('pages/partials/applicant_supporting_document_row', array_merge($supportingDocuments['wes'], $supportingDocumentContext)); ?>
                                                     
                                                     <tr class="bg-warning text-white">
                                                         <th colspan="2" class="text-center" id="efile">EDUCATION (<?= $ptp->educ; ?>)<?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } } ?> <?php if($asds_equivalent_access){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"><?php } ?></th>
@@ -547,6 +601,7 @@
                                                             <strong><?= htmlspecialchars((string)$data->bd, ENT_QUOTES, 'UTF-8'); ?></strong>
                                                         </td>
                                                     </tr>
+                                                    <?php $this->load->view('pages/partials/applicant_supporting_document_row', array_merge($supportingDocuments['bachelor_cav'], $supportingDocumentContext)); ?>
 
                                                     <?php 
                                                         $educ=array(
@@ -611,6 +666,7 @@
 
                                                         </td>
                                                     </tr>
+                                                    <?php $this->load->view('pages/partials/applicant_supporting_document_row', array_merge($supportingDocuments['master_cav'], $supportingDocumentContext)); ?>
                                                     <tr>
                                                         <th class="text-right">Doctor's Degree</th>
                                                         <td class="text-left" style="background: #f7e8bc; color:#464545">
@@ -639,6 +695,7 @@
                                                             <?php endif; ?>
                                                         </td>
                                                     </tr>
+                                                    <?php $this->load->view('pages/partials/applicant_supporting_document_row', array_merge($supportingDocuments['doctor_cav'], $supportingDocumentContext)); ?>
                                                     
                                                     <?php if(!empty($rating)){?>
                                                     <tr>
@@ -831,6 +888,8 @@
                                                             <?php }} ?>
                                                         </td>
                                                     </tr>
+                                                    <?php $this->load->view('pages/partials/applicant_supporting_document_row', array_merge($supportingDocuments['prc_license'], $supportingDocumentContext)); ?>
+                                                    <?php $this->load->view('pages/partials/applicant_supporting_document_row', array_merge($supportingDocuments['board_rating'], $supportingDocumentContext)); ?>
                                                     
 
                                                     <tr class="text-white" style="background-color:#e8e65b">
@@ -4482,6 +4541,15 @@
 
 
                                         <?php
+                                        if (!empty($supportingDocumentContext['supporting_can_manage'])) {
+                                            foreach ($supportingDocuments as $supportingDocument) {
+                                                $this->load->view(
+                                                    'pages/partials/applicant_supporting_document_modal',
+                                                    array_merge($supportingDocument, $supportingDocumentContext)
+                                                );
+                                            }
+                                        }
+
                                         /*
                                          * Applicants QS for Performance, Outstanding Accomplishments,
                                          * Application of Education and Application of Learning &
