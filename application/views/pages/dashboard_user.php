@@ -145,6 +145,37 @@
 .hrp-ann-body { color: #4a5568; font-size: .86rem; line-height: 1.55; white-space: normal; }
 .hrp-ann-foot { margin-top: .5rem; font-size: .72rem; color: #98a6ad; }
 
+/* ---- clickable RQA publications ---- */
+.hrp-rqa-list { display: flex; flex-direction: column; gap: .85rem; }
+.hrp-rqa-item {
+    display: block;
+    position: relative;
+    border: 1px solid #d8e5f4;
+    border-left: 4px solid #2c5282;
+    background: #f7faff;
+    border-radius: 0 11px 11px 0;
+    padding: .9rem 3rem .9rem 1rem;
+    color: inherit;
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.hrp-rqa-item:hover {
+    border-color: #b9cee7;
+    background: #eef5fd;
+    color: inherit;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+.hrp-rqa-caption { display: block; margin-top: .45rem; color: #334155; font-size: .88rem; line-height: 1.5; }
+.hrp-rqa-foot { display: block; margin-top: .5rem; color: #7b8794; font-size: .72rem; }
+.hrp-rqa-open {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    color: #2c5282;
+    font-size: 1.35rem;
+    transform: translateY(-50%);
+}
+
 @media (max-width: 767.98px) {
     .hrp-hero { padding: 1.25rem; }
     .hrp-hero-title { font-size: 1.15rem; }
@@ -193,6 +224,7 @@
                         // announcements/remarks HR attached to the vacancies this
                         // applicant applied for (Page/jobVacancy -> Announcement column)
                         $announcements = isset($announcements) ? $announcements : array();
+                        $rqa_posts = isset($rqa_posts) ? $rqa_posts : array();
 
                         $jobTypes = [
                             1  => 'Elementary',
@@ -217,6 +249,59 @@
                             20 => 'FOR TESTING PURPOSES (DO NOT APPLY)'
                         ];
                         ?>
+
+                        <?php if (!empty($rqa_posts)) : ?>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="hrp-card">
+                                    <div class="hrp-card-head">
+                                        <div>
+                                            <h4 class="hrp-card-title"><i class="mdi mdi-file-document-box-check-outline"></i> Posted RQA</h4>
+                                            <p class="hrp-card-sub">Published CAR-RQA results for positions you applied for</p>
+                                        </div>
+                                        <div class="hrp-card-actions">
+                                            <span class="hrp-chip hrp-chip-blue">
+                                                <?= count($rqa_posts); ?> report<?= count($rqa_posts) == 1 ? '' : 's'; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="hrp-rqa-list">
+                                        <?php foreach ($rqa_posts as $rqaPost) :
+                                            $typeLabel = isset($jobTypes[$rqaPost->job_type]) ? $jobTypes[$rqaPost->job_type] : '';
+                                        ?>
+                                            <a class="hrp-rqa-item" href="<?= base_url(); ?>Pages/view_posted_rqa/<?= (int) $rqaPost->jobID; ?>" target="_blank" rel="noopener">
+                                                <span class="hrp-ann-head">
+                                                    <span class="hrp-ann-job"><?= html_escape($rqaPost->jobTitle); ?></span>
+                                                    <?php if ($typeLabel !== '') : ?>
+                                                        <span class="hrp-chip hrp-chip-blue"><?= html_escape($typeLabel); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (trim((string) $rqaPost->sy) !== '') : ?>
+                                                        <span class="hrp-chip hrp-chip-grey">SY <?= html_escape($rqaPost->sy); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if (trim((string) $rqaPost->appStatus) !== '') : ?>
+                                                        <span class="hrp-chip hrp-chip-green"><?= html_escape($rqaPost->appStatus); ?></span>
+                                                    <?php endif; ?>
+                                                </span>
+                                                <span class="hrp-rqa-caption"><?= nl2br(html_escape(trim((string) $rqaPost->caption))); ?></span>
+                                                <span class="hrp-rqa-foot">
+                                                    Posted
+                                                    <?php if (trim((string) $rqaPost->posted_by) !== '') : ?>
+                                                        by <?= html_escape($rqaPost->posted_by); ?>
+                                                    <?php endif; ?>
+                                                    <?php if (trim((string) $rqaPost->posted_at) !== '') : ?>
+                                                        <span class="hrp-dotsep">&bull;</span><?= date('M d, Y g:i A', strtotime($rqaPost->posted_at)); ?>
+                                                    <?php endif; ?>
+                                                    <span class="hrp-dotsep">&bull;</span>Click to view report
+                                                </span>
+                                                <i class="mdi mdi-open-in-new hrp-rqa-open" aria-hidden="true"></i>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
 
                         <?php if (!empty($announcements)) : ?>
                         <div class="row">
@@ -354,13 +439,9 @@
     </div>
 </div>
 <?php endif; ?>
-                      
+
                     </div>
                 </div>
-                        
-                    
 
                 </div>
                 <!-- end content -->
-
-                

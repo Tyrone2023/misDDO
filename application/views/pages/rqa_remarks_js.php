@@ -10,6 +10,7 @@
  *
  * Expects $jobID from the controller.
  */
+$rqaRemarksReadOnly = in_array((string) $this->session->userdata('position'), array('user', 'reg'), true);
 ?>
 <style>
     .data td.remarks-cell {
@@ -44,6 +45,7 @@
     .remarks-input.saving { background: #fff8e1; }
     .remarks-input.saved  { background: #eefaef; }
     .remarks-input.failed { background: #fdecea; border-color: #d9534f; }
+    .remarks-input[readonly] { cursor: default; border-color: #e2e8f0; background: #f8fafc; }
 
     .rqa-toolbar {
         position: fixed;
@@ -82,7 +84,7 @@
 
 <div class="rqa-toolbar no-print">
     <button type="button" id="rqaPrint">Print</button>
-    <span class="rqa-status" id="rqaStatus">Remarks save automatically</span>
+    <span class="rqa-status" id="rqaStatus"><?= $rqaRemarksReadOnly ? 'Posted RQA - view only' : 'Remarks save automatically'; ?></span>
 </div>
 
 <script>
@@ -91,6 +93,7 @@
     var url = "<?= base_url(); ?>Pages/save_rqa_remark";
     var status = document.getElementById('rqaStatus');
     var inputs = document.querySelectorAll('.remarks-input');
+    var readOnly = <?= $rqaRemarksReadOnly ? 'true' : 'false'; ?>;
 
     function setStatus(text) {
         if (status) { status.textContent = text; }
@@ -151,7 +154,9 @@
     for (var i = 0; i < inputs.length; i++) {
         (function (input) {
             input.setAttribute('data-saved', input.value);
+            if (readOnly) { input.readOnly = true; }
             autoGrow(input);
+            if (readOnly) { return; }
             input.addEventListener('input', function () { autoGrow(input); });
             input.addEventListener('change', function () { save(input); });
             input.addEventListener('blur', function () { save(input); });

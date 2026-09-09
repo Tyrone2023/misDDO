@@ -1004,6 +1004,10 @@ class Pages extends CI_Controller
         $this->Reg->ensure_announcement_columns();
         $result['announcements'] = $this->Page_model->applied_job_announcements($empEmail);
 
+        // captioned CAR/RQA reports published for the same applicant's vacancies
+        $this->Common->ensure_rqa_posts_table();
+        $result['rqa_posts'] = $this->Page_model->applied_rqa_posts($empEmail);
+
         $result['data1'] = $this->Page_model->countvacancy('hris_jobvacancy');
         $result['data2'] = $this->Page_model->countapplications('hris_applications', $empEmail);
         $result['data5'] = $this->Page_model->count_for_approval_leave3('hris_leave', $empEmail);
@@ -7320,6 +7324,12 @@ public function car_rqa_promotion()
             return;
         }
 
+        if (in_array((string) $this->session->userdata('position'), array('user', 'reg'), true)) {
+            $result['message'] = 'Posted RQA reports are view-only for applicants.';
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
         $jobID     = (int) $this->input->post('jobID');
         $record_no = trim((string) $this->input->post('record_no'));
         $remarks   = trim((string) $this->input->post('remarks'));
@@ -7352,6 +7362,12 @@ public function car_rqa_promotion()
             return;
         }
 
+        if (in_array((string) $this->session->userdata('position'), array('user', 'reg'), true)) {
+            $result['message'] = 'Posted RQA reports are view-only for applicants.';
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
         $jobID     = (int) $this->input->post('jobID');
         $record_no = trim((string) $this->input->post('record_no'));
         $field     = trim((string) $this->input->post('field'));
@@ -7380,6 +7396,12 @@ public function car_rqa_promotion()
             return;
         }
 
+        if (in_array((string) $this->session->userdata('position'), array('user', 'reg'), true)) {
+            $result['message'] = 'Posted RQA reports are view-only for applicants.';
+            $this->output->set_content_type('application/json')->set_output(json_encode($result));
+            return;
+        }
+
         $jobID = (int) $this->input->post('jobID');
         $field = trim((string) $this->input->post('field'));
         $value = trim((string) $this->input->post('value'));
@@ -7391,6 +7413,201 @@ public function car_rqa_promotion()
 
         $result = array('status' => 'success', 'message' => 'Saved');
         $this->output->set_content_type('application/json')->set_output(json_encode($result));
+    }
+
+    /** Roles that may publish a CAR/RQA link to applicant dashboards. */
+    private function can_manage_rqa_posts()
+    {
+        return in_array((string) $this->session->userdata('position'), array(
+            'Human Resource Admin',
+            'HR Staff',
+            'Super Admin',
+            'asds',
+            'sds',
+            'asst_sds',
+            'HRMO'
+        ), true);
+    }
+
+    private function rqa_post_json($status, $message, array $extra = array())
+    {
+        $payload = array_merge(array(
+            'status' => $status,
+            'message' => $message
+        ), $extra);
+
+        $this->output
+            ->set_content_type('application/json')
+            ->set_output(json_encode($payload));
+    }
+
+    /**
+     * Convert the browser's current report URL to an internal Pages/... URI.
+     * Only CAR/RQA report methods are accepted, and the vacancy in the URL must
+     * match the submitted jobID. This keeps the dashboard link from becoming
+     * an arbitrary redirect.
+     */
+    private function normalize_rqa_report_uri($reportUrl, $jobID)
+    {
+        $parts = @parse_url(trim((string) $reportUrl));
+        if (!is_array($parts) || empty($parts['path'])) {
+            return '';
+        }
+
+        $baseParts = @parse_url(base_url());
+        if (!empty($parts['host'])) {
+            $baseHost = is_array($baseParts) && isset($baseParts['host']) ? $baseParts['host'] : '';
+            if ($baseHost === '' || strcasecmp($parts['host'], $baseHost) !== 0) {
+                return '';
+            }
+        }
+
+        $route = trim((string) $parts['path'], '/');
+        $basePath = is_array($baseParts) && isset($baseParts['path'])
+            ? trim((string) $baseParts['path'], '/')
+            : '';
+
+        if ($basePath !== '' && stripos($route, $basePath . '/') === 0) {
+            $route = substr($route, strlen($basePath) + 1);
+        }
+
+        $route = preg_replace('#/+#', '/', $route);
+        if (!preg_match('#^Pages/[A-Za-z0-9_]+(?:/[A-Za-z0-9_.~-]+)*$#i', $route)) {
+            return '';
+        }
+
+        $segments = explode('/', $route);
+        $method = strtolower($segments[1] ?? '');
+        $isCarReport = (bool) preg_match('/^car(?:$|_[a-z0-9_]+)$/', $method);
+        $isRqaReport = (bool) preg_match('/^rqa_[a-z0-9_]*(?:print|list)[a-z0-9_]*$/', $method);
+        if (!$isCarReport && !$isRqaReport) {
+            return '';
+        }
+
+        $query = array();
+        if (!empty($parts['query'])) {
+            parse_str($parts['query'], $query);
+        }
+
+        $urlJobIDs = array();
+        foreach (array_slice($segments, 2) as $segment) {
+            if (ctype_digit((string) $segment)) {
+                $urlJobIDs[] = (int) $segment;
+            }
+        }
+        foreach (array('jobID', 'id') as $key) {
+            if (isset($query[$key]) && is_scalar($query[$key]) && ctype_digit((string) $query[$key])) {
+                $urlJobIDs[] = (int) $query[$key];
+            }
+        }
+
+        if (!in_array((int) $jobID, $urlJobIDs, true)) {
+            return '';
+        }
+
+        // A publication always opens the HTML report, never an export request.
+        unset($query['export'], $query['excel'], $query['rqa_post']);
+
+        return $route . (!empty($query) ? '?' . http_build_query($query, '', '&') : '');
+    }
+
+    /** Publish or replace the current vacancy's applicant-facing RQA link. */
+    public function rqa_post_save()
+    {
+        if ($this->session->logged_in == false || !$this->can_manage_rqa_posts()) {
+            $this->rqa_post_json('error', 'You are not allowed to post RQA reports.');
+            return;
+        }
+
+        $jobID = (int) $this->input->post('jobID');
+        $caption = trim((string) $this->input->post('caption', true));
+        $reportUri = $this->normalize_rqa_report_uri($this->input->post('report_url'), $jobID);
+
+        if ($jobID <= 0 || !$this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID)) {
+            $this->rqa_post_json('error', 'The selected vacancy could not be found.');
+            return;
+        }
+        if ($caption === '') {
+            $this->rqa_post_json('error', 'Please enter a caption before posting the RQA.');
+            return;
+        }
+
+        $captionLength = function_exists('mb_strlen') ? mb_strlen($caption, 'UTF-8') : strlen($caption);
+        if ($captionLength > 500) {
+            $this->rqa_post_json('error', 'The caption must not exceed 500 characters.');
+            return;
+        }
+        if ($reportUri === '') {
+            $this->rqa_post_json('error', 'This page is not a valid CAR/RQA report.');
+            return;
+        }
+
+        $postedBy = (string) $this->session->userdata('username');
+        if (!$this->Common->save_rqa_post($jobID, $caption, $reportUri, $postedBy)) {
+            $this->rqa_post_json('error', 'The RQA could not be posted. Please try again.');
+            return;
+        }
+
+        $this->Page_model->insert_at('Posted RQA to Applicant Dashboard.', $jobID);
+        $this->rqa_post_json('success', 'RQA posted. Applicants for this vacancy can now open it from their dashboard.');
+    }
+
+    /** Remove the vacancy's RQA link from applicant dashboards. */
+    public function rqa_post_unpublish()
+    {
+        if ($this->session->logged_in == false || !$this->can_manage_rqa_posts()) {
+            $this->rqa_post_json('error', 'You are not allowed to unpublish RQA reports.');
+            return;
+        }
+
+        $jobID = (int) $this->input->post('jobID');
+        if ($jobID <= 0 || !$this->Common->rqa_post($jobID, true)) {
+            $this->rqa_post_json('error', 'There is no active RQA post for this vacancy.');
+            return;
+        }
+
+        if (!$this->Common->unpublish_rqa_post($jobID)) {
+            $this->rqa_post_json('error', 'The RQA could not be unpublished. Please try again.');
+            return;
+        }
+
+        $this->Page_model->insert_at('Unpublished RQA from Applicant Dashboard.', $jobID);
+        $this->rqa_post_json('success', 'RQA unpublished. It is no longer shown on applicant dashboards.');
+    }
+
+    /**
+     * Applicant dashboard gate for a posted RQA. The user must either manage
+     * RQA publications or have an application against the linked vacancy.
+     */
+    public function view_posted_rqa($jobID = 0)
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        $jobID = (int) $jobID;
+        $post = $this->Common->rqa_post($jobID, true);
+        if (!$post) {
+            show_error('This RQA is no longer available.', 404);
+            return;
+        }
+
+        if (!$this->can_manage_rqa_posts()) {
+            $hasApplication = $this->db
+                ->where('jobID', $jobID)
+                ->where('empEmail', (string) $this->session->userdata('username'))
+                ->limit(1)
+                ->get('hris_applications')
+                ->num_rows() > 0;
+
+            if (!$hasApplication) {
+                show_error('You are not allowed to view this posted RQA.', 403);
+                return;
+            }
+        }
+
+        redirect(base_url() . ltrim($post->report_uri, '/'));
     }
 
     public function car_rqa_administrative_region()

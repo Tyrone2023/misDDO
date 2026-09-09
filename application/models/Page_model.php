@@ -547,6 +547,31 @@ HAVING
         return $query->result();
     }
 
+    /**
+     * Active RQA publications for vacancies the current applicant applied to.
+     * The post itself is stored separately from ordinary vacancy announcements
+     * so either kind of notice can be maintained without overwriting the other.
+     */
+    public function applied_rqa_posts($empEmail)
+    {
+        $query = $this->db->query(
+            "select p.jobID, p.caption, p.posted_by, p.posted_at,
+                    j.jobTitle, j.job_type, j.sy, j.empType,
+                    max(a.appStatus) as appStatus
+               from hris_rqa_posts p
+               join hris_jobvacancy j on j.jobID = p.jobID
+               join hris_applications a on a.jobID = p.jobID
+              where a.empEmail = ?
+                and p.is_active = 1
+              group by p.jobID, p.caption, p.posted_by, p.posted_at,
+                       j.jobTitle, j.job_type, j.sy, j.empType
+              order by p.posted_at desc, p.jobID desc",
+            array($empEmail)
+        );
+
+        return $query->result();
+    }
+
     public function countTrainingNeeds($table, $empEmail)
     {
         $result = $this->db->where('IDNumber=', $empEmail);

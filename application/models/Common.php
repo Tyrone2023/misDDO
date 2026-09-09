@@ -232,6 +232,75 @@ class Common extends CI_Model
         return $this->db->affected_rows() >= 0;
     }
 
+    /**
+     * One applicant-facing RQA publication per vacancy. Re-posting from a
+     * different CAR/RQA view replaces the link for that vacancy, while an
+     * unpublished row is retained so HR can restore or revise its caption.
+     */
+    public function ensure_rqa_posts_table()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS hris_rqa_posts (
+                jobID INT UNSIGNED NOT NULL PRIMARY KEY,
+                caption VARCHAR(500) NOT NULL,
+                report_uri VARCHAR(1000) NOT NULL,
+                posted_by VARCHAR(150) NULL DEFAULT NULL,
+                posted_at DATETIME NULL DEFAULT NULL,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                updated_at DATETIME NULL DEFAULT NULL,
+                KEY idx_rqa_posts_active (is_active, posted_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
+    }
+
+    /** Active or previously unpublished RQA post for one vacancy. */
+    public function rqa_post($jobID, $activeOnly = false)
+    {
+        $this->ensure_rqa_posts_table();
+
+        $this->db->where('jobID', (int) $jobID);
+        if ($activeOnly) {
+            $this->db->where('is_active', 1);
+        }
+
+        return $this->db->get('hris_rqa_posts')->row();
+    }
+
+    /** Publish (or replace) the applicant-facing RQA for a vacancy. */
+    public function save_rqa_post($jobID, $caption, $reportUri, $postedBy = null)
+    {
+        $this->ensure_rqa_posts_table();
+
+        $this->db->query(
+            "insert into hris_rqa_posts
+                (jobID, caption, report_uri, posted_by, posted_at, is_active, updated_at)
+             values (?, ?, ?, ?, NOW(), 1, NOW())
+             on duplicate key update
+                caption = VALUES(caption),
+                report_uri = VALUES(report_uri),
+                posted_by = VALUES(posted_by),
+                posted_at = NOW(),
+                is_active = 1,
+                updated_at = NOW()",
+            array((int) $jobID, $caption, $reportUri, $postedBy)
+        );
+
+        return $this->db->affected_rows() >= 0;
+    }
+
+    /** Hide a post from applicant dashboards without discarding its details. */
+    public function unpublish_rqa_post($jobID)
+    {
+        $this->ensure_rqa_posts_table();
+
+        return $this->db->query(
+            "update hris_rqa_posts
+                set is_active = 0, updated_at = NOW()
+              where jobID = ?",
+            array((int) $jobID)
+        );
+    }
+
     public function one_cond_between($table, $col, $val, $con, $minvalue, $maxvalue)
     {
         $this->db->where($col, $val);

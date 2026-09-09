@@ -399,6 +399,7 @@
                                                                 <?php  
                                                                 $procurement = array('Direct Purchase',
                                                                                     'Shopping',
+                                                                                    'Small Value',
                                                                                     'Framework AgreementPublic Bidding',
                                                                                     'Negotiated', 
                                                                                     'Request for Proposal');
