@@ -3727,7 +3727,6 @@ class Page extends CI_Controller
 		$id = $this->input->get('jobID');
 
 		// Relevance judged for this vacancy ends with it (back to No Action).
-		$this->Reg->carry_relevance_before_archive((int) $id);
 		$this->db->query("update hris_jobvacancy set jvStatus='Closed' where jobID='" . $id . "'");
 		$this->Reg->release_relevance_after_archive((int) $id);
 
@@ -12321,11 +12320,11 @@ class Page extends CI_Controller
 		$finished = trim((string) $this->input->post('dateFinished'));
 
 		$error = '';
-		if ($title !== null && trim((string) $title) === '') {
+		if (trim((string) $title) === '') {
 			$error = 'Training title is required.';
 		} elseif (!is_numeric($hours) || (float) $hours < 0) {
 			$error = 'Please enter a valid number of hours.';
-		} elseif (($started === '') !== ($finished === '')) {
+		} elseif ($started === '' || $finished === '') {
 			$error = 'Please supply both the "from" and "to" dates.';
 		} elseif ($started !== '' && strtotime($finished) < strtotime($started)) {
 			$error = 'The "to" date cannot be earlier than the "from" date.';
@@ -12434,9 +12433,9 @@ class Page extends CI_Controller
 	}
 
 	/**
-	 * Correct the company / office and the job title on an existing work
-	 * experience row. Scope 'details': the settings lock freezes attachments,
-	 * not the text, so this stays available while Add and Delete are closed.
+	 * Correct the company, job title and inclusive dates on an existing work
+	 * experience row. Staff can correct these fields after applicant editing is
+	 * closed; the applicant cannot.
 	 */
 	public function update_experience_details()
 	{
@@ -12460,11 +12459,17 @@ class Page extends CI_Controller
 			return;
 		}
 
-		// Dates are optional on this form, but when given they must form a range.
+		if (trim((string) $this->input->post('position_title')) === '') {
+			$this->session->set_flashdata('danger', 'Job title / position held is required.');
+			redirect($_SERVER['HTTP_REFERER'] . '#work');
+			return;
+		}
+
+		// The duration shown to evaluators is derived from this range.
 		$from = trim((string) $this->input->post('date_from'));
 		$to   = trim((string) $this->input->post('date_to'));
 
-		if (($from === '') !== ($to === '') || ($from !== '' && strtotime($to) < strtotime($from))) {
+		if ($from === '' || $to === '' || strtotime($to) < strtotime($from)) {
 			$this->session->set_flashdata('danger', 'Please supply a valid inclusive date range.');
 			redirect($_SERVER['HTTP_REFERER'] . '#work');
 			return;
@@ -12546,19 +12551,70 @@ class Page extends CI_Controller
 		$parts  = array_pad(explode(':', (string) $this->input->post('relevance')), 4, '');
 		$anchor = $parts[0] === 'experience' ? '#work' : '#trainings';
 		$back   = ($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor;
+		$isAjax = $this->input->is_ajax_request();
+		$type   = $parts[0];
+		$recordId = (int) $parts[1];
+		$jobId = (int) $parts[2];
+		$stat = ctype_digit($parts[3]) ? (int) $parts[3] : -1;
 
 		if (!$this->Reg->can_set_relevance()) {
-			$this->session->set_flashdata('danger', 'You are not allowed to set relevance.');
-			redirect($back);
-			return;
+			$error = 'You are not allowed to set relevance.';
+		} else {
+			$error = $this->Reg->set_record_relevance($type, $recordId, $jobId, $stat);
 		}
 
-		$error = $this->Reg->set_record_relevance(
-			$parts[0],
-			(int) $parts[1],
-			(int) $parts[2],
-			ctype_digit($parts[3]) ? (int) $parts[3] : -1
-		);
+		if ($isAjax) {
+			$response = array(
+				'success' => $error === '',
+				'title'   => $error === '' ? 'Relevance updated' : 'Unable to save relevance',
+				'message' => $error === '' ? 'The vacancy relevance was saved.' : $error,
+				'total'   => '',
+				'record_type' => $type,
+				'stat' => $stat,
+			);
+
+			if ($error === '') {
+				$isTraining = $type === 'training';
+				$record = $isTraining
+					? $this->Common->one_cond_row('hris_trainings', 'trainingID', $recordId)
+					: $this->Common->one_cond_row('hris_experience', 'id', $recordId);
+				$applicantId = $isTraining
+					? (int) ($record->IDNumber ?? 0)
+					: (int) ($record->id_number ?? 0);
+				$recordTitle = $isTraining
+					? trim((string) ($record->trainingTitle ?? 'Training'))
+					: trim((string) (($record->position_title ?? '') ?: ($record->title ?? 'Work experience')));
+				$summary = $this->Reg->vacancy_relevance_summary($applicantId, $jobId);
+				$vacancyLabel = trim((string) ($summary['vacancy']->label ?? ('Vacancy #' . $jobId)));
+				$statusLabel = $stat === 1 ? 'Relevant' : ($stat === 2 ? 'Not Relevant' : 'No Action');
+				$effect = $stat === 1
+					? "It is included in this vacancy's assessment total."
+					: ($stat === 2
+						? "It is excluded from this vacancy's assessment total."
+						: 'It will remain excluded until it is marked Relevant.');
+
+				$response['message'] = ($isTraining ? 'Training' : 'Work experience')
+					. ' "' . $recordTitle . '" is now ' . $statusLabel . ' for ' . $vacancyLabel . '. ' . $effect;
+
+				if ($isTraining) {
+					$hours = (float) ($summary['training_hours'] ?? 0);
+					$hoursText = rtrim(rtrim(number_format($hours, 2, '.', ''), '0'), '.');
+					$response['total'] = 'Current relevant training total: ' . $hoursText
+						. ' hour' . ($hours === 1.0 ? '' : 's') . '.';
+					$response['total_value'] = $hoursText . ' hour' . ($hours === 1.0 ? '' : 's');
+				} else {
+					$months = (int) ($summary['experience_months'] ?? 0);
+					$totalText = intdiv($months, 12) . ' yr ' . ($months % 12) . ' mo';
+					$response['total'] = 'Current relevant experience total: ' . $totalText . '.';
+					$response['total_value'] = $totalText;
+				}
+			}
+
+			$this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($response));
+			return;
+		}
 
 		$this->session->set_flashdata($error === '' ? 'success' : 'danger', $error === '' ? 'Relevance updated.' : $error);
 		redirect($back);

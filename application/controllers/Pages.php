@@ -2833,37 +2833,6 @@ class Pages extends CI_Controller
         $data['training'] = $this->Common->one_cond('hris_trainings', 'IDNumber', $param);
         $data['experience'] = $this->Common->one_cond('hris_experience', 'id_number', $param);
 
-        $data['training_sum'] = $this->Reg->gettotaltraining_staff('hris_trainings','noHours',$this->uri->segment(2));
-        $data['ex_year_sum'] = $this->Reg->gettotaltraining('hris_experience','ny',$this->uri->segment(2));
-        $data['ex_month_sum'] = $this->Reg->gettotaltraining('hris_experience','nm',$this->uri->segment(2));
-
-        // Allow assigned evaluators to manage certain profile sections (e.g., trainings)
-        $isAssignedEvaluator = false;
-        $pos = $this->session->position ?? null;
-        if (in_array($pos, ['Evaluator', 'rater', 'raters'], true)) {
-            $raterId = (int) ($this->session->id ?? 0);
-
-            $applicantKeys = [];
-            if (!empty($data['a_user']->id)) {
-                $applicantKeys[] = (string) $data['a_user']->id;
-            }
-            if (!empty($data['a_user']->record_no)) {
-                $applicantKeys[] = (string) $data['a_user']->record_no;
-            }
-
-            if ($raterId && !empty($applicantKeys)) {
-                $this->db->where('rater_user_id', $raterId);
-                $this->db->where_in('applicant_id', $applicantKeys);
-                $isAssignedEvaluator = $this->db->count_all_results('hris_rater_assignments') > 0;
-            }
-        }
-
-        $data['isAssignedEvaluator'] = $isAssignedEvaluator;
-        
-
-
-
-
         $this->load->view('templates/head');
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
@@ -9033,6 +9002,13 @@ public function rqa_municipality_print_shsv2()
             // the applicant's job list.
             $this->secretariat->purge_stale_assessments([(int) $appIdForRating]);
         }
+
+        // Feed the rating view only the credentials credited to this URL's
+        // vacancy. This runs after evaluator-access checks above.
+        $data['vacancy_relevance_summary'] = $this->Reg->vacancy_relevance_summary(
+            (int) $applicant->id,
+            (int) $this->uri->segment(4)
+        );
 
         // Retention request raised for this application, so it can be granted or
         // denied straight from the rating page instead of Pages/request_rating.

@@ -185,9 +185,16 @@
 
                 $request_rp = $this->Common->one_cond_row('settings', 'id', 10);
                 
-                $training_sum = $this->Reg->gettotaltraining_staff('hris_trainings','noHours',$data->id);
-                $ex_year_sum = $this->Reg->gettotaltraining('hris_experience','ny',$data->id);
-                $ex_month_sum = $this->Reg->gettotaltraining('hris_experience','nm',$data->id);
+                // Only records tagged Relevant for this page's vacancy count.
+                $vacancyRelevance = $vacancy_relevance_summary ?? array();
+                $relevantTrainings = $vacancyRelevance['trainings'] ?? array();
+                $relevantExperiences = $vacancyRelevance['experiences'] ?? array();
+                $training_sum = (float) ($vacancyRelevance['training_hours'] ?? 0);
+                $experienceTotalMonths = (int) ($vacancyRelevance['experience_months'] ?? 0);
+                $ex_year_sum = intdiv($experienceTotalMonths, 12);
+                $ex_month_sum = $experienceTotalMonths % 12;
+                $vacancyRelevanceLabel = trim((string) ($vacancyRelevance['vacancy']->label ?? ($job->jobTitle ?? 'this vacancy')));
+                $trainingHoursText = rtrim(rtrim(number_format($training_sum, 2, '.', ''), '0'), '.');
 
                 $request = $this->Common->one_cond_row('hris_rating_request', 'app_id',$aa->appID);
                 $canUploadDocuments = (int)($aa->stat ?? 1) === 0;
@@ -739,18 +746,35 @@
                                                     <tr class="bg-info text-white">
                                                         <th colspan="2" class="text-center" id="ept">TRAININGS AND SEMINARS (<?= $ptp->tr; ?>) <?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".cert"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php }} ?></th>
                                                     </tr>
+                                                    <tr>
+                                                        <td colspan="2" class="p-2">
+                                                            <div class="alert alert-info py-2 mb-0"><i class="mdi mdi-information-outline mr-1"></i>Showing only training and work experience marked <strong>Relevant</strong> for <strong><?= html_escape($vacancyRelevanceLabel); ?></strong>.</div>
+                                                        </td>
+                                                    </tr>
 
-                                                    <?php $check_tv = $this->Common->one_cond_count_row('hris_training','id_number',$data->id); ?>
+                                                    <?php $check_tv = $this->Common->one_cond_count_row('hris_trainings','IDNumber',$data->id); ?>
                                                         <tr>
                                                             <th class="text-right">Training/Seminar Certificates</th>
                                                             <td class="text-left" style="background: #9ddcf4; color:#464545">
                                                                 <?php if($this->session->position == 'reg'){?>
                                                                     <a target="_blank" class="btn btn-sm btn-primary" href="<?= base_url(); ?>registered_profile/<?= $data->id; ?>?jobID=<?= $this->uri->segment(4); ?>&appID=<?= (int)($aa->appID ?? 0); ?>#trainings"><?php echo ($check_tv->num_rows() >= 1) ? 'Profile' : 'Add Certificate'; ?></a>
-                                                                    <span class="badge badge-success"><?= empty($training_sum) ? "No Action" : $training_sum.' hours'; ?></span>
+                                                                    <span class="badge badge-success"><?= $trainingHoursText; ?> hours</span>
                                                                 <?php }else{ ?>
                                                                     <a target="_blank" class="btn btn-sm btn-purple" href="<?= base_url(); ?>registered_profile/<?= $data->id; ?>?jobID=<?= $this->uri->segment(4); ?>&appID=<?= (int)($aa->appID ?? 0); ?>#trainings">View Profile</a>
-                                                                    <span class="badge badge-success"><?= empty($training_sum) ? "Need Action" : $training_sum.' hours'; ?></span>
+                                                                    <span class="badge badge-success"><?= $trainingHoursText; ?> hours</span>
                                                                 <?php } ?>
+                                                                <?php if(!empty($relevantTrainings)): ?>
+                                                                    <details class="mt-2 small">
+                                                                        <summary><?= count($relevantTrainings); ?> relevant training<?= count($relevantTrainings) === 1 ? '' : 's'; ?></summary>
+                                                                        <ul class="mb-0 mt-1 pl-3">
+                                                                            <?php foreach($relevantTrainings as $relevantTraining): ?>
+                                                                                <li><?= html_escape($relevantTraining->trainingTitle); ?> &mdash; <?= rtrim(rtrim(number_format((float) $relevantTraining->noHours, 2, '.', ''), '0'), '.'); ?> hr</li>
+                                                                            <?php endforeach; ?>
+                                                                        </ul>
+                                                                    </details>
+                                                                <?php else: ?>
+                                                                    <div class="small mt-1 text-muted">No training has been marked Relevant for this vacancy.</div>
+                                                                <?php endif; ?>
                                                             </td>
                                                         </tr>
                                                         <tr>
@@ -817,6 +841,18 @@
                                                                     <a target="_blank" class="btn btn-sm btn-purple" href="<?= base_url(); ?>registered_profile/<?= $data->id; ?>?jobID=<?= $this->uri->segment(4); ?>&appID=<?= (int)($aa->appID ?? 0); ?>#work">View Profile</a>
                                                                     <span class="badge badge-purple"><?= (($y=(int)($ex_year_sum??0)) + intdiv((int)($ex_month_sum??0),12)) . ' years and ' . ((int)($ex_month_sum??0) % 12) . ' months'; ?></span>
                                                                 <?php } ?>
+                                                                <?php if(!empty($relevantExperiences)): ?>
+                                                                    <details class="mt-2 small">
+                                                                        <summary><?= count($relevantExperiences); ?> relevant experience record<?= count($relevantExperiences) === 1 ? '' : 's'; ?></summary>
+                                                                        <ul class="mb-0 mt-1 pl-3">
+                                                                            <?php foreach($relevantExperiences as $relevantExperience): ?>
+                                                                                <li><?= html_escape(trim((string) ($relevantExperience->position_title ?? '')) ?: $relevantExperience->title); ?></li>
+                                                                            <?php endforeach; ?>
+                                                                        </ul>
+                                                                    </details>
+                                                                <?php else: ?>
+                                                                    <div class="small mt-1 text-muted">No work experience has been marked Relevant for this vacancy.</div>
+                                                                <?php endif; ?>
                                                             </td>
                                                         </tr>
 

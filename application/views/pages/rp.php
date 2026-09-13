@@ -79,12 +79,14 @@
             <?php
                 
                 $refId = $data->id ?? $data->IDNumber ?? $data->record_no ?? null;
-                // Trainings (new staff schema) — totals count only relevant (stat=1)
-                $training_sum = $this->Reg->gettotaltraining_staff('hris_trainings','noHours',$refId) ?: 0;
-                $training_list = $this->Common->one_cond('hris_trainings','IDNumber',$refId);
-                // Experience totals
-                $ex_year_sum = $this->Reg->gettotaltraining('hris_experience','ny',$refId);
-                $ex_month_sum = $this->Reg->gettotaltraining('hris_experience','nm',$refId);
+                // Only explicit relevance choices for this URL's vacancy count.
+                $vacancyRelevance = $vacancy_relevance_summary ?? array();
+                $training_sum = (float) ($vacancyRelevance['training_hours'] ?? 0);
+                $experienceTotalMonths = (int) ($vacancyRelevance['experience_months'] ?? 0);
+                $ex_year_sum = intdiv($experienceTotalMonths, 12);
+                $ex_month_sum = $experienceTotalMonths % 12;
+                $vacancyRelevanceLabel = trim((string) ($vacancyRelevance['vacancy']->label ?? 'this vacancy'));
+                $trainingHoursText = rtrim(rtrim(number_format($training_sum, 2, '.', ''), '0'), '.');
 
                 $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID',$this->uri->segment(4));
 
@@ -665,6 +667,11 @@
                                                     <tr class="bg-info text-white">
                                                         <th colspan="2" class="text-center" id="ept">TRAININGS AND SEMINARS (10) <?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".cert"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php }} ?></th>
                                                     </tr>
+                                                    <tr>
+                                                        <td colspan="2" class="p-2">
+                                                            <div class="alert alert-info py-2 mb-0"><i class="mdi mdi-information-outline mr-1"></i>Totals shown only for <strong><?= html_escape($vacancyRelevanceLabel); ?></strong>.</div>
+                                                        </td>
+                                                    </tr>
                                                     <?php if($tv->status == 1){?>
                                                         <?php $check_tv = $this->Common->one_cond_count_row('hris_trainings','IDNumber',$refId); ?>
                                                         <tr>
@@ -672,10 +679,10 @@
                                                             <td class="text-left" style="background: #9ddcf4; color:#464545">
                                                                 <?php if($this->session->position == 'reg'){?>
                                                                     <a target="_blank" class="btn btn-sm btn-primary" href="<?= base_url(); ?>registered_profile/<?= $data->id; ?>?jobID=<?= $this->uri->segment(4); ?>&appID=<?= (int)($aa->appID ?? 0); ?>#trainings"><?php echo ($check_tv->num_rows() >= 1) ? 'Profile' : 'Add Certificate'; ?></a>
-                                                                    <span class="badge badge-success"><?= (int)($training_sum ?? 0); ?> hours</span>
+                                                                    <span class="badge badge-success"><?= $trainingHoursText; ?> hours</span>
                                                                 <?php }else{ ?>
                                                                     <a target="_blank" class="btn btn-sm btn-purple" href="<?= base_url(); ?>registered_profile/<?= $data->id; ?>?jobID=<?= $this->uri->segment(4); ?>&appID=<?= (int)($aa->appID ?? 0); ?>#trainings">View Profile</a>
-                                                                    <span class="badge badge-success"><?= (int)($training_sum ?? 0); ?> hours</span>
+                                                                    <span class="badge badge-success"><?= $trainingHoursText; ?> hours</span>
                                                                 <?php } ?>
                                                             </td>
                                                         </tr>
@@ -709,7 +716,7 @@
                                                                 <?php if($data->tscfile != ""){ ?><a onclick="return confirm('Are you sure?')" href="<?= base_url(); ?>Pages/remove_attachment/<?= $this->uri->segment(3).'/'. $this->uri->segment(4).'/'. $this->uri->segment(5); ?>/tscfile" class="btn btn-warning"><i class="mdi mdi-block-helper mr-2 text-danger tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Remove Attachment"></i>Remove Attachment</a><?php } ?>
                                                                 
                                                             <?php }} ?>
-                                                            <span class="badge badge-success"><?= (int)($training_sum ?? 0); ?> hours</span>
+                                                            <span class="badge badge-success"><?= $trainingHoursText; ?> hours</span>
                                                         </td>
                                                     </tr>
 
