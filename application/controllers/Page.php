@@ -3725,7 +3725,11 @@ class Page extends CI_Controller
 	public function archive_jv()
 	{
 		$id = $this->input->get('jobID');
+
+		// Relevance judged for this vacancy ends with it (back to No Action).
+		$this->Reg->carry_relevance_before_archive((int) $id);
 		$this->db->query("update hris_jobvacancy set jvStatus='Closed' where jobID='" . $id . "'");
+		$this->Reg->release_relevance_after_archive((int) $id);
 
 		$this->load->model('Secretariat_model', 'secretariat');
 		$this->secretariat->remove_vacancy_assignments((int) $id);
@@ -12295,10 +12299,41 @@ class Page extends CI_Controller
 
 	public function update_trainings_staff()
 	{
+		$this->Reg->ensure_training_datetime();
 		$this->Reg->ensure_training_columns();
 
 		$row = $this->Common->one_cond_row('hris_trainings', 'trainingID', $this->input->post('id'));
-		if ($this->Reg->block_when_records_locked($row->IDNumber ?? $this->input->post('id_number'), '#trainings', 'details')) {
+
+		if (empty($row)) {
+			$this->session->set_flashdata('danger', 'That training record no longer exists.');
+			redirect($_SERVER['HTTP_REFERER'] . '#trainings');
+			return;
+		}
+
+		// Staff may always correct a training; the applicant only while open.
+		if ($this->Reg->block_when_records_locked($row->IDNumber, '#trainings', 'edit')) {
+			return;
+		}
+
+		$title    = $this->input->post('trainingTitle');
+		$hours    = $this->input->post('nh');
+		$started  = trim((string) $this->input->post('dateStarted'));
+		$finished = trim((string) $this->input->post('dateFinished'));
+
+		$error = '';
+		if ($title !== null && trim((string) $title) === '') {
+			$error = 'Training title is required.';
+		} elseif (!is_numeric($hours) || (float) $hours < 0) {
+			$error = 'Please enter a valid number of hours.';
+		} elseif (($started === '') !== ($finished === '')) {
+			$error = 'Please supply both the "from" and "to" dates.';
+		} elseif ($started !== '' && strtotime($finished) < strtotime($started)) {
+			$error = 'The "to" date cannot be earlier than the "from" date.';
+		}
+
+		if ($error !== '') {
+			$this->session->set_flashdata('danger', $error);
+			redirect($_SERVER['HTTP_REFERER'] . '#trainings');
 			return;
 		}
 
@@ -12381,7 +12416,7 @@ class Page extends CI_Controller
 		$this->Reg->ensure_experience_columns();
 
 		$row = $this->Common->one_cond_row('hris_experience', 'id', $this->input->post('id'));
-		if ($this->Reg->block_when_records_locked($row->id_number ?? $this->input->post('id_number'), '#work', 'details')) {
+		if ($this->Reg->block_when_records_locked($row->id_number ?? $this->input->post('id_number'), '#work', 'edit')) {
 			return;
 		}
 
@@ -12415,12 +12450,22 @@ class Page extends CI_Controller
 			return;
 		}
 
-		if ($this->Reg->block_when_records_locked($row->id_number ?? $this->input->post('id_number'), '#work', 'details')) {
+		if ($this->Reg->block_when_records_locked($row->id_number ?? $this->input->post('id_number'), '#work', 'edit')) {
 			return;
 		}
 
 		if (trim((string) $this->input->post('title')) === '') {
 			$this->session->set_flashdata('danger', 'Company / office name is required.');
+			redirect($_SERVER['HTTP_REFERER'] . '#work');
+			return;
+		}
+
+		// Dates are optional on this form, but when given they must form a range.
+		$from = trim((string) $this->input->post('date_from'));
+		$to   = trim((string) $this->input->post('date_to'));
+
+		if (($from === '') !== ($to === '') || ($from !== '' && strtotime($to) < strtotime($from))) {
+			$this->session->set_flashdata('danger', 'Please supply a valid inclusive date range.');
 			redirect($_SERVER['HTTP_REFERER'] . '#work');
 			return;
 		}
@@ -12486,5 +12531,36 @@ class Page extends CI_Controller
 		$this->Reg->update_cert_stat_staff('hris_trainings');
 		$this->session->set_flashdata('success', 'Successfully updated');
 		redirect($_SERVER['HTTP_REFERER'] . '#trainings');
+	}
+
+	/**
+	 * Relevance of one training / work experience for one vacancy. The switch
+	 * posts "type:record:job:stat"; stat 0 clears the mark back to No Action.
+	 */
+	public function update_record_relevance()
+	{
+		$this->Reg->ensure_training_columns();
+		$this->Reg->ensure_experience_columns();
+		$this->Reg->ensure_record_relevance_table();
+
+		$parts  = array_pad(explode(':', (string) $this->input->post('relevance')), 4, '');
+		$anchor = $parts[0] === 'experience' ? '#work' : '#trainings';
+		$back   = ($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor;
+
+		if (!$this->Reg->can_set_relevance()) {
+			$this->session->set_flashdata('danger', 'You are not allowed to set relevance.');
+			redirect($back);
+			return;
+		}
+
+		$error = $this->Reg->set_record_relevance(
+			$parts[0],
+			(int) $parts[1],
+			(int) $parts[2],
+			ctype_digit($parts[3]) ? (int) $parts[3] : -1
+		);
+
+		$this->session->set_flashdata($error === '' ? 'success' : 'danger', $error === '' ? 'Relevance updated.' : $error);
+		redirect($back);
 	}
 }

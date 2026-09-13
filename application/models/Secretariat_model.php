@@ -600,8 +600,10 @@ class Secretariat_model extends CI_Model
      *
      * Rows past the tagging stage (endorsed, rated, confirmed, disqualified)
      * are returned too, flagged with is_taggable = 0, so the tagged list and
-     * the evaluator distribution keep showing work that is already done. Only
-     * is_taggable rows can be tagged or reassigned.
+     * the evaluator distribution keep showing work that is already done. The
+     * flag only orders the queue and labels the stage - every row can still be
+     * tagged or re-tagged, so an application can be handed to another
+     * evaluator for re-evaluation at any stage.
      */
     public function applicants_for_tagging(int $userId, int $jobId): array
     {
@@ -1692,8 +1694,11 @@ class Secretariat_model extends CI_Model
     }
 
     /**
-     * Assign or reassign one eligible application to an evaluator. This method
-     * deliberately does not change appStatus, dq, or create a rating row.
+     * Assign or reassign one application of the Secretariat's vacancy to an
+     * evaluator. Re-tagging stays open at every stage - endorsed, rated and
+     * disqualified applications included - so an application can be handed to
+     * another evaluator for re-evaluation. This method deliberately does not
+     * change appStatus, dq, or create a rating row.
      */
     public function tag_applicant_to_evaluator(int $userId, int $appId, int $jobId, int $raterId, ?int $assignedBy): array
     {
@@ -1706,8 +1711,6 @@ class Secretariat_model extends CI_Model
             ->where('a.appID', $appId)
             ->where('a.jobID', $jobId)
             ->where('j.jvStatus !=', 'Closed')
-            ->where_in('a.appStatus', ['Application Submitted', 'Validated'])
-            ->where('a.dq !=', 2)
             ->get()
             ->row();
 
@@ -1734,6 +1737,12 @@ class Secretariat_model extends CI_Model
         ], static function ($value) {
             return trim((string) $value) !== '';
         })));
+
+        // The hand-over is recorded on the assignment row itself, so the
+        // evaluator who receives the application can find it on their
+        // Re-tagged list. Done before the row is read so the counter is there.
+        $this->load->model('AssignRater_model', 'assignRater');
+        $this->assignRater->ensure_retag_columns();
 
         $existing = $this->db
             ->from('hris_rater_assignments')
@@ -1769,13 +1778,35 @@ class Secretariat_model extends CI_Model
         $this->db->trans_start();
 
         if ($existing) {
+            $previousRaterId = (int) $existing->rater_user_id;
+
             $this->db
                 ->where('id', $existing->id)
                 ->update('hris_rater_assignments', [
                     'rater_user_id' => $raterId,
                     'assigned_by' => $assignedBy,
                     'assigned_at' => $now,
+                    'retagged_at' => $now,
+                    'retagged_from' => $previousRaterId > 0 ? $previousRaterId : null,
+                    'retag_count' => (int) ($existing->retag_count ?? 0) + 1,
                 ]);
+
+            // The rating claim follows the tag. eval_id1 belongs to the
+            // evaluator who scores Education through ALD, and the rating views
+            // only show those scores and the Rate buttons to whoever holds it,
+            // so a re-tag for re-evaluation would otherwise leave the new
+            // evaluator with a blank, unusable rating column. Only rows still
+            // stamped with the previous evaluator move; scores, eval_id2 and
+            // eval_id3 (Secretariat-encoded Interview / Written) are untouched.
+            if ($previousRaterId > 0 && $previousRaterId !== $raterId) {
+                foreach (['hris_applications_rating', 'hris_rating_none', 'hris_rating_promotion'] as $ratingTable) {
+                    $this->db
+                        ->where('appID', (string) $application->appID)
+                        ->where('eval_id1', $previousRaterId)
+                        ->update($ratingTable, ['eval_id1' => (string) $raterId]);
+                }
+            }
+
             $action = 'reassigned';
         } else {
             $this->db->insert('hris_rater_assignments', [

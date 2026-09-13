@@ -7,6 +7,38 @@ class AssignRater_model extends CI_Model
     {
         parent::__construct();
         $this->load->database();
+        $this->ensure_retag_columns();
+    }
+
+    /**
+     * Re-tagging updates the assignment row in place, so without these columns
+     * there is no trace that an application changed hands. Additive only: the
+     * columns are created once and never dropped, recreated or cleared.
+     *
+     * retagged_at   - when the application was last handed to another evaluator
+     * retagged_from - the evaluator it was taken from on that hand-over
+     * retag_count   - how many times it has been handed over
+     */
+    public function ensure_retag_columns(): void
+    {
+        static $ensured = false;
+
+        if ($ensured) {
+            return;
+        }
+
+        $ensured = true;
+        $columns = [
+            'retagged_at'   => "ALTER TABLE `hris_rater_assignments` ADD COLUMN `retagged_at` DATETIME NULL DEFAULT NULL AFTER `assigned_at`",
+            'retagged_from' => "ALTER TABLE `hris_rater_assignments` ADD COLUMN `retagged_from` INT UNSIGNED NULL DEFAULT NULL AFTER `retagged_at`",
+            'retag_count'   => "ALTER TABLE `hris_rater_assignments` ADD COLUMN `retag_count` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `retagged_from`",
+        ];
+
+        foreach ($columns as $column => $sql) {
+            if (!$this->db->field_exists($column, 'hris_rater_assignments')) {
+                $this->db->query($sql);
+            }
+        }
     }
 
     private function assigned_app_ids(int $fy): array
@@ -463,6 +495,57 @@ class AssignRater_model extends CI_Model
         ->where('app.dq', 2)
         ->group_by('ra.app_id')
         ->order_by('dq.vdate', 'desc')
+        ->order_by('ra.app_id', 'desc')
+        ->get()
+        ->result();
+  }
+
+  /**
+   * Every applicant currently tagged to this evaluator, whatever stage they are
+   * at - waiting, endorsed, rated, confirmed or disqualified. The dashboard
+   * splits the work into pending / scored queues; this is the one flat list of
+   * everything they hold, with when it was tagged and where it came from, so a
+   * hand-over for re-evaluation is never hidden behind a status filter.
+   */
+  public function get_tagged_applicants(int $raterId): array
+  {
+    if ($raterId <= 0) {
+        return [];
+    }
+
+    $this->ensure_retag_columns();
+
+    return $this->db
+        ->select("
+            ra.app_id,
+            ra.job_id,
+            ra.assigned_at,
+            ra.retagged_at,
+            ra.retagged_from,
+            ra.retag_count,
+            app.appID, app.appStatus, app.dq, app.pre_school, app.app_year, app.applicant_id, app.jobID,
+            jv.job_type, jv.jobTitle, jv.jvStatus,
+            COALESCE(ha_id.record_no, ha_rec.record_no) AS record_no,
+            COALESCE(ha_id.FirstName,  ha_rec.FirstName)  AS FirstName,
+            COALESCE(ha_id.LastName,   ha_rec.LastName)   AS LastName,
+            COALESCE(ha_id.MiddleName, ha_rec.MiddleName) AS MiddleName,
+            COALESCE(ha_id.specialization, ha_rec.specialization) AS specialization,
+            TRIM(CONCAT(IFNULL(prev.fname, ''), ' ', IFNULL(prev.mname, ''), ' ', IFNULL(prev.lname, ''))) AS previous_evaluator,
+            TRIM(CONCAT(IFNULL(sec.fname, ''), ' ', IFNULL(sec.mname, ''), ' ', IFNULL(sec.lname, ''))) AS retagged_by_name,
+            dq.reason AS dq_reason,
+            dq.vdate  AS dq_vdate
+        ", false)
+        ->from('hris_rater_assignments ra')
+        ->join('hris_applications app', 'app.appID = ra.app_id', 'left')
+        ->join('hris_jobvacancy jv', 'jv.jobID = ra.job_id', 'left')
+        ->join('hris_applicant ha_id', 'ha_id.id = app.applicant_id', 'left')
+        ->join('hris_applicant ha_rec', 'ha_rec.record_no = app.applicant_id AND ha_id.id IS NULL', 'left')
+        ->join('users prev', 'prev.id = ra.retagged_from', 'left')
+        ->join('users sec', 'sec.id = ra.assigned_by', 'left')
+        ->join('hris_app_dq dq', 'dq.appID = app.appID', 'left')
+        ->where('ra.rater_user_id', $raterId)
+        ->group_by('ra.app_id')
+        ->order_by('ra.assigned_at', 'desc')
         ->order_by('ra.app_id', 'desc')
         ->get()
         ->result();

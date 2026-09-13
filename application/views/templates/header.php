@@ -442,6 +442,7 @@
                                             <li><a href="<?= base_url(); ?>EvaluatorAssigned#pendingApplicantsTable">Pending Assigned Applicants</a></li>
                                             <li><a href="<?= base_url(); ?>EvaluatorAssigned#scoredApplicantsTable">With Scores</a></li>
                                             <li><a href="<?= base_url(); ?>EvaluatorAssigned/denied_requests">Denied Requests</a></li>
+                                            <li><a href="<?= base_url(); ?>EvaluatorAssigned/tagged">All Tagged Applicants</a></li>
                                             <li><a href="<?= base_url(); ?>ApplicantQueryAssigned">My Applicants Query</a></li>
                                         </ul>
                                     </li>
@@ -2162,6 +2163,7 @@
                                     <?php if ($this->session->position === 'Evaluator' || $this->session->position === 'rater' || $this->session->position === 'raters') { ?>
                                         <li><a href="<?= base_url(); ?>EvaluatorAssigned/disqualified" class="waves-effect"><i class="mdi mdi-account-remove-outline"></i><span>Disqualified Applicants</span></a></li>
                                         <li><a href="<?= base_url(); ?>EvaluatorAssigned/denied_requests" class="waves-effect"><i class="mdi mdi-file-cancel-outline"></i><span>Denied Requests</span></a></li>
+                                        <li><a href="<?= base_url(); ?>EvaluatorAssigned/tagged" class="waves-effect"><i class="mdi mdi-format-list-checks"></i><span>All Tagged Applicants</span></a></li>
                                     <?php } ?>
                                 <?php } ?>
                                 <!-- <li><a href="<?= base_url(); ?>Page/sbm_district_list"><i class="fas fa-user-plus"></i><span>SBM</span></a></li> -->

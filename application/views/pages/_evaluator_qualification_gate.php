@@ -37,6 +37,10 @@ if ($isDisqualified) {
     $gatePalette = ['border' => '#bcd8f5', 'accent' => '#2878db', 'bg' => 'linear-gradient(110deg, #f3f8ff, #ffffff)', 'iconBg' => '#dfedff', 'iconFg' => '#276ebc', 'kicker' => '#2969aa'];
 }
 
+$gateDq = $gate['dq'] ?? null;
+$gateDqReason = trim((string)($gateDq->reason ?? ''));
+$gateDqDate = trim((string)($gateDq->vdate ?? ''));
+
 $recordNo = trim((string)($gateApplicant->record_no ?? $gateApplication->applicant_id ?? ''));
 $applicantName = trim(implode(' ', array_filter([
     trim((string)($gateApplicant->FirstName ?? '')),
@@ -140,6 +144,48 @@ $applicantName = trim(implode(' ', array_filter([
     .eqg-modal .modal-title,
     .eqg-modal .close {
         color: #fff;
+    }
+
+    .eqg-reason-note {
+        margin-top: 10px;
+        border: 1px solid #f2d3d3;
+        border-radius: 9px;
+        background: #fff7f7;
+        padding: 9px 12px;
+        color: #7d4141;
+        font-size: 12px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+    }
+
+    .eqg-reason-note-label {
+        display: block;
+        margin-bottom: 2px;
+        color: #a83d3d;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+
+    .eqg-revert-success {
+        margin-bottom: 16px;
+        border: 1px solid #cbe7da;
+        border-radius: 11px;
+        background: #f4fbf8;
+        padding: 13px 15px;
+        color: #3c6b58;
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .eqg-revert-success ul {
+        margin: 8px 0 0;
+        padding-left: 18px;
+    }
+
+    .eqg-modal.eqg-modal-success .modal-header {
+        background: linear-gradient(120deg, #146449, #2f9e73);
     }
 
     .eqg-revert-warning {
@@ -371,6 +417,12 @@ if ($isDisqualified) {
             <?php elseif ($isDisqualified): ?>
                 <h4>Applicant marked Disqualified</h4>
                 <p>The document review and disqualification reason were saved. Rating remains unavailable for this application.</p>
+                <?php if ($gateDqReason !== ''): ?>
+                    <div class="eqg-reason-note">
+                        <span class="eqg-reason-note-label">Reason<?= $gateDqDate !== '' ? ' &middot; ' . $gate_h($gateDqDate) : '' ?></span>
+                        <?= $gate_h($gateDqReason) ?>
+                    </div>
+                <?php endif; ?>
             <?php elseif ($isQualified): ?>
                 <h4>Applicant marked Qualified</h4>
                 <p>This application was endorsed for rating. If the applicant was qualified by mistake, revert the decision to move them back to Disqualified.</p>
@@ -387,6 +439,12 @@ if ($isDisqualified) {
     <?php elseif ($isQualified && !$gateJobClosed && !$gateViewOnly): ?>
         <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#evaluatorRevertQualificationModal">
             <i class="mdi mdi-account-remove-outline"></i> Revert to Disqualified
+        </button>
+    <?php elseif ($isDisqualified && !$gateJobClosed && !$gateViewOnly): ?>
+        <?php // Same action the Disqualified Applicants list offers, brought
+              // to the page the evaluator is already looking at. ?>
+        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#evaluatorRevertDisqualificationModal">
+            <i class="mdi mdi-undo-variant"></i> Revert Disqualification
         </button>
     <?php endif; ?>
 </div>
@@ -544,6 +602,58 @@ if ($isDisqualified) {
     </div>
 <?php endif; ?>
 
+<?php if ($isDisqualified && !$gateJobClosed && !$gateViewOnly): ?>
+    <div class="modal fade eqg-modal eqg-modal-success" id="evaluatorRevertDisqualificationModal" tabindex="-1" role="dialog" aria-labelledby="evaluatorRevertDisqualificationTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <form id="evaluatorRevertDisqualificationForm" action="<?= $gate_h(base_url('EvaluatorAssigned/revert_disqualification')) ?>" method="post">
+                    <div class="modal-header">
+                        <div>
+                            <h5 class="modal-title" id="evaluatorRevertDisqualificationTitle">Revert Disqualification</h5>
+                            <div class="eqg-modal-subtitle">Use this when the applicant was disqualified by mistake.</div>
+                        </div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input type="hidden" name="appID" value="<?= (int)$gateApplication->appID ?>">
+                        <input type="hidden" name="return_url" value="<?= $gate_h(current_url()) ?>">
+
+                        <div class="eqg-applicant-summary">
+                            <i class="mdi mdi-account-circle-outline"></i>
+                            <div>
+                                <div class="eqg-applicant-name"><?= $gate_h($applicantName !== '' ? $applicantName : 'Applicant #' . $gateApplication->appID) ?></div>
+                                <div class="eqg-applicant-position"><?= $gate_h($gateJob->jobTitle ?? '') ?> &middot; <?= $gate_h($recordNo) ?></div>
+                            </div>
+                        </div>
+
+                        <?php if ($gateDqReason !== ''): ?>
+                            <div class="eqg-reason-note">
+                                <span class="eqg-reason-note-label">Recorded reason<?= $gateDqDate !== '' ? ' &middot; ' . $gate_h($gateDqDate) : '' ?></span>
+                                <?= $gate_h($gateDqReason) ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="eqg-revert-success mt-3">
+                            Reverting this disqualification will:
+                            <ul>
+                                <li>return the application to the qualification review stage;</li>
+                                <li>remove the recorded disqualification reason;</li>
+                                <li>withdraw any assessment letter issued for it.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success" id="eqg-revert-dq-submit"><i class="mdi mdi-undo-variant mr-1"></i> Yes, revert</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var gate = document.getElementById('evaluatorQualificationGate');
@@ -598,6 +708,15 @@ if ($isDisqualified) {
                 var revertSubmit = document.getElementById('eqg-revert-submit');
                 revertSubmit.disabled = true;
                 revertSubmit.innerHTML = '<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span> Reverting...';
+            });
+        }
+
+        var revertDqForm = document.getElementById('evaluatorRevertDisqualificationForm');
+        if (revertDqForm) {
+            revertDqForm.addEventListener('submit', function () {
+                var revertDqSubmit = document.getElementById('eqg-revert-dq-submit');
+                revertDqSubmit.disabled = true;
+                revertDqSubmit.innerHTML = '<span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span> Reverting...';
             });
         }
 

@@ -41,7 +41,7 @@ class EvaluatorAssigned extends CI_Controller
             ->count_all_results();
     }
 
-    private function safeQualificationReturnUrl()
+    private function safeQualificationReturnUrl($fallback = null)
     {
         $returnUrl = trim((string)$this->input->post('return_url'));
         if ($returnUrl !== ''
@@ -51,7 +51,7 @@ class EvaluatorAssigned extends CI_Controller
             return $returnUrl;
         }
 
-        return base_url('EvaluatorAssigned');
+        return $fallback !== null ? $fallback : base_url('EvaluatorAssigned');
     }
 
     private function ensureRatingRecord($application, $job, $recordNo)
@@ -692,6 +692,38 @@ class EvaluatorAssigned extends CI_Controller
     }
 
     /**
+     * Every applicant tagged to this evaluator in one flat list, at every stage
+     * - waiting, endorsed, rated, confirmed or disqualified - with when it was
+     * tagged and, where it applies, which evaluator it was handed over from.
+     */
+    public function tagged()
+    {
+        $this->guard();
+
+        $raterId = (int)($this->session->id ?? $this->session->userdata('id'));
+        if (!$raterId) {
+            redirect(base_url());
+            return;
+        }
+
+        $page = 'evaluator_tagged';
+        if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
+            show_404();
+        }
+
+        $data = [
+            'title'    => 'All Tagged Applicants',
+            'tagged'   => $this->assignRater->get_tagged_applicants($raterId),
+            'jobTypes' => $this->assignRater->job_types_map(),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/' . $page, $data);
+        $this->load->view('templates/footer');
+    }
+
+    /**
      * Rating / retention requests that were denied on applications assigned to
      * the current evaluator. The scores were not carried over, so each row is a
      * re-evaluation: the action opens the same rating page (Pages/ma) the
@@ -740,6 +772,11 @@ class EvaluatorAssigned extends CI_Controller
             return;
         }
 
+        // The action is offered from the disqualified list, the All Tagged
+        // Applicants list and the rating page, so it returns to whichever one
+        // posted it instead of always landing on the disqualified list.
+        $returnUrl = $this->safeQualificationReturnUrl(base_url('EvaluatorAssigned/disqualified'));
+
         $appID = (int)$this->input->post('appID');
         if ($appID <= 0 || !$this->isAssignedToCurrentEvaluator($appID)) {
             show_error('This application is not assigned to your evaluator account.', 403);
@@ -758,7 +795,7 @@ class EvaluatorAssigned extends CI_Controller
 
         if ((int)$application->dq !== 2) {
             $this->session->set_flashdata('danger', 'This applicant is not currently disqualified.');
-            redirect(base_url('EvaluatorAssigned/disqualified'));
+            redirect($returnUrl);
             return;
         }
 
@@ -769,7 +806,7 @@ class EvaluatorAssigned extends CI_Controller
 
         if ($job && isset($job->jvStatus) && strcasecmp(trim((string)$job->jvStatus), 'Closed') === 0) {
             $this->session->set_flashdata('danger', 'This vacancy is closed. Disqualification can no longer be reverted.');
-            redirect(base_url('EvaluatorAssigned/disqualified'));
+            redirect($returnUrl);
             return;
         }
 
@@ -837,14 +874,14 @@ class EvaluatorAssigned extends CI_Controller
             || $this->db->trans_status() === false) {
             $this->db->trans_rollback();
             $this->session->set_flashdata('danger', 'The disqualification could not be reverted. Please try again.');
-            redirect(base_url('EvaluatorAssigned/disqualified'));
+            redirect($returnUrl);
             return;
         }
 
         $this->db->trans_commit();
         $this->session->set_flashdata('success', 'Applicant reverted successfully. They are now back in your Applicants to Evaluate list.');
 
-        redirect(base_url('EvaluatorAssigned/disqualified'));
+        redirect($returnUrl);
     }
 
     public function check_updates()

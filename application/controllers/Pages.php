@@ -2816,6 +2816,12 @@ class Pages extends CI_Controller
         // vacancy, otherwise weighed across every application of the applicant.
         $data['record_lock'] = $this->Reg->applicant_record_lock($param, $profileAppID, $profileJobID);
 
+        // Trainings and work experience are marked relevant per open vacancy.
+        $data['relevance'] = $this->Reg->record_relevance_context(
+            $param,
+            !empty($profileApplication) ? (int) $profileApplication->jobID : $profileJobID
+        );
+
         $data['awards'] = $this->Page_model->get_posts_by_col('hris_awards', 'IDNumber', $param);
         $data['files'] = $this->Page_model->get_posts_by_col('hris_files', 'IDNumber', $param);
         $data['trainings'] = $this->Page_model->get_posts_by_col('hris_trainings', 'IDNumber', $param);
@@ -3591,6 +3597,7 @@ class Pages extends CI_Controller
     {
 
         $this->Page_model->check_ownership($param);
+        $this->ensure_applicant_eligibility_columns();
 
         $this->form_validation->set_error_delimiters('<div class="alert alert-danger alert-dismissible fade show" role="alert">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -8853,11 +8860,33 @@ public function rqa_municipality_print_shsv2()
         }
     }
 
+    /**
+     * Keep the eligibility fields on the rating page and the applicant profile
+     * working on databases that predate the Eligibility Rating box. Mirrors the
+     * csEligibility column it sits beside, and does nothing once it exists.
+     */
+    private function ensure_applicant_eligibility_columns()
+    {
+        static $ensured = false;
+
+        if ($ensured) {
+            return;
+        }
+
+        $ensured = true;
+        if (!$this->db->field_exists('csEligibilityRating', 'hris_applicant')) {
+            $this->db->query(
+                "ALTER TABLE `hris_applicant` ADD COLUMN `csEligibilityRating` VARCHAR(45) NOT NULL DEFAULT '' AFTER `csEligibility`"
+            );
+        }
+    }
+
     // renren new code please don't touch
 
     public function ma($param = null)
     {
         $this->ensure_applicant_supporting_document_columns();
+        $this->ensure_applicant_eligibility_columns();
 
         // Send record_no / staff links back to the identifier this page expects
         // before anything reads it - the whole view is keyed off segment(3).
@@ -8963,11 +8992,25 @@ public function rqa_municipality_print_shsv2()
             $data['field_evaluator_bypass'] = $isFieldEvaluatorForVacancy;
 
             if ($gateState !== null) {
+                // The recorded disqualification, so the panel can show the
+                // reason and offer the same revert the disqualified list does.
+                $gateDq = $gateState === 'disqualified'
+                    ? $this->db
+                        ->select('reason, vdate')
+                        ->from('hris_app_dq')
+                        ->where('appID', (int)$appIdForRating)
+                        ->order_by('id', 'desc')
+                        ->limit(1)
+                        ->get()
+                        ->row()
+                    : null;
+
                 $data['evaluator_qualification_gate'] = [
                     'state' => $gateState,
                     'application' => $applicationForEvaluator,
                     'applicant' => $applicant,
                     'job' => $jobvacancy,
+                    'dq' => $gateDq,
                     // A Field Evaluator sees the stage for context but is not
                     // held by it: no qualify / revert actions, and the rating
                     // form stays open whatever the stage says.
@@ -9007,9 +9050,31 @@ public function rqa_municipality_print_shsv2()
             && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Open') === 0
             && (int) ($jobvacancy->a_stat ?? 1) === 0;
 
+        $showApplicantUploadReminder = strtolower(trim((string) $this->session->userdata('position'))) === 'reg';
+        $data['applicant_document_reminder_feedback'] = [];
+        $data['applicant_document_reminder_announcement'] = trim((string) ($jobvacancy->announcement ?? ''));
+        if ($showApplicantUploadReminder) {
+            // Upload handlers return to this page with the site's standard
+            // success/danger flash data. Put that result in the required
+            // reminder instead of showing a second alert behind the modal.
+            foreach (['success', 'danger'] as $feedbackType) {
+                $feedback = $this->session->flashdata($feedbackType);
+                if ($feedback !== null && $feedback !== false && trim(strip_tags((string) $feedback)) !== '') {
+                    $data['applicant_document_reminder_feedback'][$feedbackType] = (string) $feedback;
+                    $this->session->unmark_flash($feedbackType);
+                    $this->session->unset_userdata($feedbackType);
+                }
+            }
+        }
+
         $this->load->view('templates/head');
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
+        if ($showApplicantUploadReminder) {
+            // Applicants must acknowledge this on every visit. Do not persist
+            // the acknowledgement: the reminder is intentionally per page load.
+            $this->load->view('pages/_applicant_document_upload_reminder', $data);
+        }
         if (!empty($data['can_edit_eligibility'])) {
             $this->load->view('pages/partials/applicant_eligibility_modal', $data);
         }
@@ -9080,6 +9145,8 @@ public function rqa_municipality_print_shsv2()
             show_error('Method Not Allowed', 405);
             return;
         }
+
+        $this->ensure_applicant_eligibility_columns();
 
         $applicantId = (int) $this->input->post('id');
         $appId = (int) $this->input->post('appID');
@@ -11166,7 +11233,12 @@ public function rqa_municipality_print_shsv2()
 
     public function close_job()
     {
+        $jobId = (int) $this->uri->segment(3);
+
+        // Same relevance hand-off as Page::archive_jv().
+        $this->Reg->carry_relevance_before_archive($jobId);
         $this->Reg->close_jv();
+        $this->Reg->release_relevance_after_archive($jobId);
         $this->Page_model->insert_at('Cancel Application', $this->uri->segment(3));
         $this->session->set_flashdata('success', 'The Job Item has been Successfully Closed.');
         redirect(base_url() . 'page/jobVacancy');

@@ -16,19 +16,20 @@ $evaluators = $evaluators ?? [];
 $selectedJobId = (int) ($selectedJobId ?? 0);
 $selectedVacancy = $selectedVacancy ?? null;
 
-// Waiting = no evaluator yet AND still taggable. Applicants past the tagging
-// stage without an evaluator are neither waiting nor tagged, so they are only
-// reported as a footnote instead of padding an actionable queue.
+// Waiting = no evaluator yet. Tagging and re-tagging stay open at every stage,
+// so applicants past the tagging stage are listed here too - the status chip
+// tells the Secretariat what they are looking at.
 $untaggedApplicants = [];
 $taggedApplicants = [];
 $closedUntaggedTotal = 0;
 foreach ($applicants as $applicant) {
     if (!empty($applicant->assignment_id)) {
         $taggedApplicants[] = $applicant;
-    } elseif ((int) ($applicant->is_taggable ?? 0) === 1) {
-        $untaggedApplicants[] = $applicant;
     } else {
-        $closedUntaggedTotal++;
+        $untaggedApplicants[] = $applicant;
+        if ((int) ($applicant->is_taggable ?? 0) !== 1) {
+            $closedUntaggedTotal++;
+        }
     }
 }
 
@@ -90,8 +91,16 @@ foreach ($evaluators as $evaluator) {
         'id' => (int) $evaluator->id,
         'name' => $evaluatorName,
         'label' => $evaluatorName . ($evaluatorUsername !== '' ? ' — ' . $evaluatorUsername : ''),
-        'assigned_total' => (int) $evaluator->assigned_total,
     ];
+}
+
+// Indexed so a tagged row can render only the option it already holds; the
+// rest of the list is handed to the browser once, as JSON, and written into a
+// dropdown when that dropdown is first used. Rendering all 100+ evaluators
+// into every applicant row is what made this page slow to load.
+$evaluatorById = [];
+foreach ($evaluatorOptions as $evaluatorOption) {
+    $evaluatorById[$evaluatorOption['id']] = $evaluatorOption;
 }
 
 $applicantName = static function ($applicant) {
@@ -402,7 +411,7 @@ $applicantProfileUrl = static function ($applicant) {
                                     <p class="text-muted mb-0">
                                         Choose an evaluator, then save. The applicant moves below immediately.
                                         <?php if ($closedUntaggedTotal > 0) : ?>
-                                            <br><small><?= (int) $closedUntaggedTotal; ?> applicant<?= $closedUntaggedTotal === 1 ? '' : 's'; ?> left the tagging stage without an evaluator and cannot be tagged here.</small>
+                                            <br><small><?= (int) $closedUntaggedTotal; ?> applicant<?= $closedUntaggedTotal === 1 ? '' : 's'; ?> here already left the tagging stage - tagging one still works and hands the application to the chosen evaluator.</small>
                                         <?php endif; ?>
                                     </p>
                                 </div>
@@ -418,7 +427,7 @@ $applicantProfileUrl = static function ($applicant) {
                                         <th style="width:30%">Applicant</th>
                                         <th style="width:12%">Status</th>
                                         <th style="width:28%">School / district</th>
-                                        <th style="width:30%">Tag to evaluator <span class="font-weight-normal text-muted">(number = applicants tagged to them this FY, all vacancies)</span></th>
+                                        <th style="width:30%">Tag to evaluator</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -449,9 +458,6 @@ $applicantProfileUrl = static function ($applicant) {
                                                     <input type="hidden" name="job_id" value="<?= (int) $selectedVacancy->jobID; ?>">
                                                     <select name="rater_id" class="form-control form-control-sm sat-evaluator-select" data-placeholder="Select evaluator..." data-saved-value="" required aria-label="Evaluator for <?= $tagging_h($fullName); ?>" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>
                                                         <option value="">Select evaluator...</option>
-                                                        <?php foreach ($evaluatorOptions as $evaluator) : ?>
-                                                            <option value="<?= $evaluator['id']; ?>"><?= $tagging_h($evaluator['label']); ?> (<?= $evaluator['assigned_total']; ?>)</option>
-                                                        <?php endforeach; ?>
                                                     </select>
                                                     <button type="submit" class="btn btn-sm btn-primary" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>Save tag</button>
                                                 </form>
@@ -469,7 +475,7 @@ $applicantProfileUrl = static function ($applicant) {
                             <span class="sat-table-head-icon sat-icon-green"><i class="mdi mdi-account-check-outline"></i></span>
                             <div class="ml-3">
                                 <div class="sat-table-title">Tagged applicants</div>
-                                <p class="text-muted mb-0">Every applicant already given an evaluator, including those endorsed, rated, or disqualified. Reassignment stays open only while an applicant is still in the tagging stage.</p>
+                                <p class="text-muted mb-0">Every applicant already given an evaluator, including those endorsed, rated, or disqualified. Re-tagging stays open at every stage, so an application can be handed to another evaluator for re-evaluation.</p>
                             </div>
                         </div>
                         <span class="sat-count-badge badge-success"><i class="mdi mdi-account-check-outline"></i><span id="tagged-table-count"><?= count($taggedApplicants); ?></span> tagged</span>
@@ -488,7 +494,7 @@ $applicantProfileUrl = static function ($applicant) {
                                         <th style="width:11%">Status</th>
                                         <th style="width:22%">School / district</th>
                                         <th style="width:17%">Evaluator</th>
-                                        <th style="width:25%">Reassign evaluator <span class="font-weight-normal text-muted">(number = applicants tagged to them this FY, all vacancies)</span></th>
+                                        <th style="width:25%">Reassign evaluator</th>
                                         <th>Evaluator key</th>
                                     </tr>
                                 </thead>
@@ -498,7 +504,20 @@ $applicantProfileUrl = static function ($applicant) {
                                         $fullName = $applicantName($applicant);
                                         $profileUrl = $applicantProfileUrl($applicant);
                                         [$statusLabel, $statusClass] = $statusChip($applicant);
-                                        $canReassign = (int) ($applicant->is_taggable ?? 0) === 1;
+                                        // Re-tagging is open at every stage; a row already past tagging
+                                        // only gets a note so the Secretariat knows the save also hands
+                                        // the rating over to the evaluator they pick.
+                                        $pastTagging = (int) ($applicant->is_taggable ?? 0) !== 1;
+
+                                        // An evaluator who no longer holds the position is not in the
+                                        // list any more, so fall back to the name joined on the row -
+                                        // the select must never silently drop who it is tagged to.
+                                        $currentEvaluatorId = (int) $applicant->rater_user_id;
+                                        $currentEvaluator = $evaluatorById[$currentEvaluatorId] ?? null;
+                                        $currentEvaluatorLabel = $currentEvaluator['label']
+                                            ?? (trim((string) $applicant->evaluator_name) !== ''
+                                                ? trim((string) $applicant->evaluator_name)
+                                                : 'Evaluator #' . $currentEvaluatorId);
                                         ?>
                                         <tr data-rater-id="<?= (int) $applicant->rater_user_id; ?>">
                                             <td>
@@ -520,25 +539,24 @@ $applicantProfileUrl = static function ($applicant) {
                                                 <div class="sat-sub assignment-date"><?= !empty($applicant->assigned_at) ? 'Tagged ' . $tagging_h(date('M d, Y', strtotime($applicant->assigned_at))) : ''; ?></div>
                                             </td>
                                             <td>
-                                                <?php if (!$canReassign) : ?>
-                                                    <span class="sat-locked">
-                                                        <i class="mdi mdi-lock-outline mr-1"></i>
+                                                <form class="sat-tag-form" data-mode="reassign" method="post" action="<?= base_url('secretariat/applicant-tagging/tag'); ?>">
+                                                    <input type="hidden" name="app_id" value="<?= (int) $applicant->appID; ?>">
+                                                    <input type="hidden" name="job_id" value="<?= (int) $selectedVacancy->jobID; ?>">
+                                                    <select name="rater_id" class="form-control form-control-sm sat-evaluator-select" data-placeholder="Select evaluator..." data-saved-value="<?= (int) $applicant->rater_user_id; ?>" required aria-label="Reassign evaluator for <?= $tagging_h($fullName); ?>" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>
+                                                        <option value="">Select evaluator...</option>
+                                                        <?php if ($currentEvaluatorId > 0) : ?>
+                                                            <option value="<?= $currentEvaluatorId; ?>" data-evaluator-label="<?= $tagging_h($currentEvaluatorLabel); ?>" selected><?= $tagging_h($currentEvaluatorLabel); ?></option>
+                                                        <?php endif; ?>
+                                                    </select>
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>Save change</button>
+                                                </form>
+                                                <?php if ($pastTagging) : ?>
+                                                    <div class="sat-sub mt-1">
+                                                        <i class="mdi mdi-information-outline mr-1"></i>
                                                         <?= (int) ($applicant->dq ?? 0) === 2
-                                                            ? 'Disqualified — evaluator kept for the record.'
-                                                            : 'Already past tagging — evaluator can no longer be changed.'; ?>
-                                                    </span>
-                                                <?php else : ?>
-                                                    <form class="sat-tag-form" data-mode="reassign" method="post" action="<?= base_url('secretariat/applicant-tagging/tag'); ?>">
-                                                        <input type="hidden" name="app_id" value="<?= (int) $applicant->appID; ?>">
-                                                        <input type="hidden" name="job_id" value="<?= (int) $selectedVacancy->jobID; ?>">
-                                                        <select name="rater_id" class="form-control form-control-sm sat-evaluator-select" data-placeholder="Select evaluator..." data-saved-value="<?= (int) $applicant->rater_user_id; ?>" required aria-label="Reassign evaluator for <?= $tagging_h($fullName); ?>" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>
-                                                            <option value="">Select evaluator...</option>
-                                                            <?php foreach ($evaluatorOptions as $evaluator) : ?>
-                                                                <option value="<?= $evaluator['id']; ?>" <?= (int) $applicant->rater_user_id === $evaluator['id'] ? 'selected' : ''; ?>><?= $tagging_h($evaluator['label']); ?> (<?= $evaluator['assigned_total']; ?>)</option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                        <button type="submit" class="btn btn-sm btn-outline-primary" <?= empty($evaluatorOptions) ? 'disabled' : ''; ?>>Save change</button>
-                                                    </form>
+                                                            ? 'Disqualified — re-tag only to move the record to another evaluator.'
+                                                            : 'Past tagging — re-tagging hands this application over for re-evaluation.'; ?>
+                                                    </div>
                                                 <?php endif; ?>
                                             </td>
                                             <?php // Hidden column: the evaluator chips filter this table on it. ?>
@@ -560,6 +578,16 @@ $applicantProfileUrl = static function ($applicant) {
 
 <script>
 (function () {
+    // The evaluator list travels once, as data, instead of once per applicant
+    // row. fillEvaluatorOptions() writes it into a dropdown the first time that
+    // dropdown is about to be used, so only the rows on screen carry options.
+    var SAT_EVALUATORS = <?= json_encode(array_map(static function ($evaluator) {
+        return [
+            'id' => (int) $evaluator['id'],
+            'label' => (string) $evaluator['label'],
+        ];
+    }, $evaluatorOptions), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
     var message = document.getElementById('tagging-message');
     var unsavedWarning = document.getElementById('unsaved-evaluator-warning');
     var untaggedDataTable = null;
@@ -806,20 +834,68 @@ $applicantProfileUrl = static function ($applicant) {
         }
     }
 
+    // Writes the full evaluator list into one dropdown, once. The row may
+    // already carry the evaluator it is tagged to, so the value is captured and
+    // put back - including for an evaluator who has since left the list.
+    function fillEvaluatorOptions(select) {
+        if (!select || select.getAttribute('data-options-loaded') === '1') return;
+        select.setAttribute('data-options-loaded', '1');
+
+        var current = select.value;
+        var currentOption = current ? select.querySelector('option[value="' + current + '"]') : null;
+        var currentLabel = currentOption ? (currentOption.getAttribute('data-evaluator-label') || currentOption.textContent) : '';
+
+        while (select.options.length > 1) { select.remove(1); }
+
+        var fragment = document.createDocumentFragment();
+        SAT_EVALUATORS.forEach(function (evaluator) {
+            var id = String(evaluator.id);
+            var option = document.createElement('option');
+            option.value = id;
+            option.setAttribute('data-evaluator-label', evaluator.label);
+            option.textContent = evaluator.label;
+            fragment.appendChild(option);
+        });
+        select.appendChild(fragment);
+
+        select.value = current;
+        if (current && select.value !== current) {
+            var kept = document.createElement('option');
+            kept.value = current;
+            kept.setAttribute('data-evaluator-label', currentLabel);
+            kept.textContent = currentLabel;
+            select.add(kept, select.options[1] || null);
+            select.value = current;
+        }
+    }
+
     function initEvaluatorSelects() {
         if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
 
-        jQuery('select.sat-evaluator-select:visible').each(function () {
-            var select = jQuery(this);
-            if (select.data('select2')) return;
+        // Scoped to the table bodies: DataTables keeps only the current page
+        // there, so this stays a handful of dropdowns however long the list is.
+        jQuery('#untagged-datatable tbody, #tagged-datatable tbody')
+            .find('select.sat-evaluator-select')
+            .each(function () {
+                var select = jQuery(this);
+                if (select.data('select2')) return;
 
-            select.select2({
-                width: '100%',
-                placeholder: select.data('placeholder') || 'Select evaluator...',
-                dropdownParent: jQuery(document.body)
+                fillEvaluatorOptions(this);
+                select.select2({
+                    width: '100%',
+                    placeholder: select.data('placeholder') || 'Select evaluator...',
+                    dropdownParent: jQuery(document.body)
+                });
             });
-        });
     }
+
+    // Without select2 the dropdown is the native one, so fill it as it is opened.
+    document.addEventListener('focusin', function (event) {
+        var target = event.target;
+        if (target && target.classList && target.classList.contains('sat-evaluator-select')) {
+            fillEvaluatorOptions(target);
+        }
+    });
 
     function initDataTables() {
         if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) return;
@@ -960,13 +1036,26 @@ $applicantProfileUrl = static function ($applicant) {
                     form.setAttribute('data-mode', 'reassign');
                     evaluatorSelect.setAttribute('data-saved-value', evaluatorSelect.value);
                     evaluatorSelect.setAttribute('aria-label', 'Reassign evaluator');
-                    Array.prototype.forEach.call(evaluatorSelect.options, function (option) {
-                        if (option.value === evaluatorSelect.value) {
-                            option.setAttribute('selected', 'selected');
-                        } else {
-                            option.removeAttribute('selected');
-                        }
-                    });
+                    // The row is about to be copied as HTML into the tagged
+                    // table, so it carries only the evaluator it now holds; the
+                    // list refills itself the next time the dropdown is opened.
+                    var keptOption = evaluatorSelect.options[evaluatorSelect.selectedIndex];
+                    var keptText = keptOption ? keptOption.textContent : body.evaluator_name;
+                    var keptLabel = keptOption
+                        ? (keptOption.getAttribute('data-evaluator-label') || keptText)
+                        : body.evaluator_name;
+
+                    while (evaluatorSelect.options.length > 1) { evaluatorSelect.remove(1); }
+
+                    var movedOption = document.createElement('option');
+                    movedOption.value = String(selectedEvaluatorId);
+                    movedOption.setAttribute('data-evaluator-label', keptLabel);
+                    movedOption.setAttribute('selected', 'selected');
+                    movedOption.textContent = keptText;
+                    evaluatorSelect.add(movedOption);
+                    evaluatorSelect.value = String(selectedEvaluatorId);
+                    evaluatorSelect.removeAttribute('data-options-loaded');
+                    evaluatorSelect.setAttribute('data-saved-value', String(selectedEvaluatorId));
                     button.disabled = false;
                     button.textContent = 'Save change';
                     button.classList.remove('btn-primary');

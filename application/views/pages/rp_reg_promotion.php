@@ -144,6 +144,8 @@
                             </div>
                         </div>
                         <!-- end page title -->
+
+                        <?php $this->load->view('pages/_retag_evaluator'); ?>
                         <?php 
                             //$app = $this->Common->three_cond('hris_applications', 'empEmail', $staff->empEmail,'app_year',date('Y'),'jobID',$this->uri->segment(4)); 
                             

@@ -3633,8 +3633,36 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
      *       job title, hours). The settings lock leaves this open, because it
      *       exists to stop documents moving, not to freeze typos in place.
      *       A closed vacancy still blocks it: what was ranked stays as ranked.
+     *   'edit' - correcting a row's title, dates or hours. Staff may always do
+     *       it; the applicant only on their own profile and only while neither
+     *       lock has closed the section.
      */
     public function block_when_records_locked($applicant_id, $anchor = '', $scope = 'attachment'){
+
+      if ($scope === 'edit') {
+        $role = trim((string) ($this->session->position ?? ''));
+
+        if ($role !== '' && $role !== 'reg') {
+          return false;
+        }
+
+        $refusal = '';
+        if ($role === '') {
+          $refusal = 'Please sign in to edit these records.';
+        } elseif (trim((string) $this->session->c_id) !== trim((string) $applicant_id)) {
+          $refusal = 'You can only edit your own records.';
+        }
+
+        if ($refusal !== '') {
+          $this->audit_block($applicant_id, $scope, $refusal);
+
+          $this->session->set_flashdata('danger', $refusal);
+
+          redirect(($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor);
+
+          return true;
+        }
+      }
 
       $lock = $this->applicant_record_lock($applicant_id);
 
@@ -3650,7 +3678,9 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
       }
 
       if ($scope !== 'details' && $this->records_settings_locked()) {
-        $reason = 'Adding, replacing and deleting attachments is currently disabled by the administrator.';
+        $reason = ($scope === 'edit')
+            ? 'Editing trainings and work experience is currently closed.'
+            : 'Adding, replacing and deleting attachments is currently disabled by the administrator.';
 
         $this->audit_block($applicant_id, $scope, $reason);
 
@@ -3674,6 +3704,311 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           'field'        => $scope,
           'description'  => 'Refused a ' . $scope . ' change: ' . $reason,
           ));
+    }
+
+    /**
+     * Who may judge a training or work experience relevant to a vacancy - the
+     * same roles the profile always showed the Relevant switch to.
+     */
+    public function can_set_relevance(){
+
+      return in_array((string) ($this->session->position ?? ''), array('asds', 'raters', 'rater', 'Evaluator'), true);
+    }
+
+    /**
+     * Relevance is judged per vacancy: a seminar may count toward School
+     * Principal I and not toward Administrative Officer II.  One row per
+     * record per vacancy - stat 1 Relevant, 2 Not Relevant, 0 No Action.
+     * The record's own stat column stays as the summary the older screens
+     * read (see sync_record_stat()).
+     */
+    public function ensure_record_relevance_table(){
+
+      $this->db->query("
+          CREATE TABLE IF NOT EXISTS hris_record_relevance (
+              id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              record_type VARCHAR(20) NOT NULL,
+              record_id INT UNSIGNED NOT NULL,
+              applicant_id INT UNSIGNED NOT NULL,
+              job_id INT UNSIGNED NOT NULL,
+              stat TINYINT(1) NOT NULL DEFAULT 0,
+              updated_by INT UNSIGNED NULL,
+              updated_at DATETIME NULL DEFAULT NULL,
+              UNIQUE KEY uniq_record_job (record_type, record_id, job_id),
+              KEY idx_applicant_job (applicant_id, job_id),
+              KEY idx_job (job_id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+      ");
+    }
+
+    /** Table, key, owner and title column behind each relevance record type. */
+    private function relevance_source($type){
+
+      $sources = array(
+          'training'   => array('table' => 'hris_trainings',  'pk' => 'trainingID', 'owner' => 'IDNumber',  'title' => 'trainingTitle', 'noun' => 'training'),
+          'experience' => array('table' => 'hris_experience', 'pk' => 'id',         'owner' => 'id_number', 'title' => 'title',         'noun' => 'work experience'),
+          );
+
+      return $sources[$type] ?? null;
+    }
+
+    /**
+     * The vacancies an applicant is still in the running for - every
+     * application whose vacancy is not archived - the one the profile was
+     * opened from first.  Same-titled vacancies get their number appended so
+     * two School Principal I items can be told apart.
+     */
+    public function relevance_vacancies($applicant_id, $context_job = 0){
+
+      $rows = $this->db->query(
+          "select max(a.appID) as appID, a.jobID, j.jobTitle
+             from hris_applications a
+             join hris_jobvacancy j on j.jobID = a.jobID
+            where a.applicant_id = ?
+              and j.jvStatus <> 'Closed'
+            group by a.jobID, j.jobTitle
+            order by (a.jobID = ?) desc, j.jobTitle, a.jobID",
+          array((int) $applicant_id, (int) $context_job)
+          )->result();
+
+      $seen = array();
+      foreach ($rows as $row) {
+        $key = strtolower(trim((string) $row->jobTitle));
+        $seen[$key] = ($seen[$key] ?? 0) + 1;
+      }
+
+      foreach ($rows as $row) {
+        $title = trim((string) $row->jobTitle);
+
+        $row->label = ($title === '' || $seen[strtolower($title)] > 1)
+            ? ($title !== '' ? $title . ' ' : 'Vacancy ') . '#' . (int) $row->jobID
+            : $title;
+        $row->is_context = (int) $context_job > 0 && (int) $row->jobID === (int) $context_job;
+      }
+
+      return $rows;
+    }
+
+    /**
+     * Before relevance was kept per vacancy a record carried one Relevant /
+     * Not Relevant mark that every rating sheet read.  The first time such a
+     * record is met it is carried over to each open vacancy of the applicant,
+     * so nothing an evaluator already decided disappears; from then on the
+     * per-vacancy rows are the source.
+     */
+    private function seed_legacy_relevance($applicant_id, array $job_ids){
+
+      if (empty($job_ids)) {
+        return;
+      }
+
+      $now = $this->record_stamp();
+
+      foreach (array('training', 'experience') as $type) {
+        $src = $this->relevance_source($type);
+
+        $legacy = $this->db->query(
+            "select r.`{$src['pk']}` as record_id, r.stat
+               from `{$src['table']}` r
+              where r.`{$src['owner']}` = ?
+                and r.stat in (1, 2)
+                and not exists (select 1 from hris_record_relevance x
+                                 where x.record_type = ? and x.record_id = r.`{$src['pk']}`)",
+            array((string) $applicant_id, $type)
+            )->result();
+
+        if (empty($legacy)) {
+          continue;
+        }
+
+        $values = array();
+        $binds  = array();
+        foreach ($legacy as $row) {
+          foreach ($job_ids as $job_id) {
+            $values[] = '(?, ?, ?, ?, ?, ?)';
+            array_push($binds, $type, (int) $row->record_id, (int) $applicant_id, (int) $job_id, (int) $row->stat, $now);
+          }
+        }
+
+        $this->db->query(
+            "insert ignore into hris_record_relevance
+                (record_type, record_id, applicant_id, job_id, stat, updated_at)
+             values " . implode(', ', $values),
+            $binds
+            );
+      }
+    }
+
+    /**
+     * Everything the profile needs to show relevance per vacancy.
+     *
+     * @return array vacancies (see relevance_vacancies()),
+     *               map[type][record_id][job_id] = stat, open vacancies only
+     */
+    public function record_relevance_context($applicant_id, $context_job = 0){
+
+      $this->ensure_record_relevance_table();
+
+      $vacancies = $this->relevance_vacancies($applicant_id, $context_job);
+      $job_ids   = array_map(function ($v) { return (int) $v->jobID; }, $vacancies);
+      $map       = array('training' => array(), 'experience' => array());
+
+      if (!empty($job_ids)) {
+        $this->seed_legacy_relevance($applicant_id, $job_ids);
+
+        $rows = $this->db
+            ->select('record_type, record_id, job_id, stat')
+            ->where('applicant_id', (int) $applicant_id)
+            ->where_in('job_id', $job_ids)
+            ->get('hris_record_relevance')
+            ->result();
+
+        foreach ($rows as $row) {
+          if (isset($map[$row->record_type])) {
+            $map[$row->record_type][(int) $row->record_id][(int) $row->job_id] = (int) $row->stat;
+          }
+        }
+      }
+
+      return array('vacancies' => $vacancies, 'map' => $map);
+    }
+
+    /**
+     * Mark one record Relevant (1), Not Relevant (2) or back to No Action (0)
+     * for one vacancy.  Only an open vacancy the applicant applied for.
+     *
+     * @return string '' when saved, otherwise why it was refused
+     */
+    public function set_record_relevance($type, $record_id, $job_id, $stat){
+
+      $src = $this->relevance_source($type);
+      if (!$src || !in_array((int) $stat, array(0, 1, 2), true) || (int) $stat !== $stat) {
+        return 'Invalid relevance request.';
+      }
+
+      $record = $this->Common->one_cond_row($src['table'], $src['pk'], (int) $record_id);
+      if (empty($record)) {
+        return 'That record no longer exists.';
+      }
+
+      $applicant_id = (int) $record->{$src['owner']};
+
+      $vacancy = $this->db->query(
+          "select j.jobID, j.jobTitle
+             from hris_applications a
+             join hris_jobvacancy j on j.jobID = a.jobID
+            where a.applicant_id = ? and a.jobID = ? and j.jvStatus <> 'Closed'
+            limit 1",
+          array($applicant_id, (int) $job_id)
+          )->row();
+
+      if (empty($vacancy)) {
+        return 'Relevance can only be set for an open vacancy the applicant applied for.';
+      }
+
+      $now = $this->record_stamp();
+      $by  = (int) ($this->session->id ?? 0);
+
+      $this->db->query(
+          "insert into hris_record_relevance
+              (record_type, record_id, applicant_id, job_id, stat, updated_by, updated_at)
+           values (?, ?, ?, ?, ?, ?, ?)
+           on duplicate key update stat = values(stat), updated_by = values(updated_by), updated_at = values(updated_at)",
+          array($type, (int) $record_id, $applicant_id, (int) $job_id, $stat, $by > 0 ? $by : null, $now)
+          );
+
+      $this->sync_record_stat($type, $record_id, $now);
+
+      $this->Audit->log('update_' . $type, array(
+          'entity_type'  => $type,
+          'entity_table' => $src['table'],
+          'entity_id'    => (int) $record_id,
+          'applicant_id' => $applicant_id,
+          'field'        => $type . '_relevance',
+          'description'  => 'Marked ' . $src['noun'] . ' "' . ($record->{$src['title']} ?? '') . '" as '
+              . $this->relevance_label($stat) . ' for ' . $vacancy->jobTitle
+              . ' (vacancy #' . (int) $vacancy->jobID . '), saved ' . $now . '.',
+          ));
+
+      return '';
+    }
+
+    /**
+     * Keep the record's own stat column in step with its per-vacancy marks,
+     * counting open vacancies only: Relevant when any open vacancy has it
+     * relevant, Not Relevant when only such marks remain, otherwise No Action.
+     * That is what returns a record to No Action once the vacancy it was
+     * judged for is archived.
+     */
+    public function sync_record_stat($type, $record_id, $touched_at = null){
+
+      $src = $this->relevance_source($type);
+      if (!$src) {
+        return 0;
+      }
+
+      $marks = $this->db->query(
+          "select max(r.stat = 1) as relevant, max(r.stat = 2) as not_relevant
+             from hris_record_relevance r
+             join hris_jobvacancy j on j.jobID = r.job_id
+            where r.record_type = ? and r.record_id = ? and j.jvStatus <> 'Closed'",
+          array($type, (int) $record_id)
+          )->row();
+
+      $stat = !empty($marks->relevant) ? 1 : (!empty($marks->not_relevant) ? 2 : 0);
+
+      $data = array('stat' => $stat);
+      if ($touched_at) {
+        $data['updated_at'] = $touched_at;
+      }
+
+      $this->db->where($src['pk'], (int) $record_id)->update($src['table'], $data);
+
+      return $stat;
+    }
+
+    /**
+     * Archiving a vacancy ends the relevance judged for it.  Call this while
+     * the vacancy is still open: records on the old single mark are carried
+     * over to each open vacancy of their applicant first, so the next step
+     * treats them like every other record.
+     */
+    public function carry_relevance_before_archive($job_id){
+
+      $this->ensure_record_relevance_table();
+
+      $applicants = $this->db
+          ->distinct()
+          ->select('applicant_id')
+          ->where('jobID', (int) $job_id)
+          ->get('hris_applications')
+          ->result();
+
+      foreach ($applicants as $a) {
+        $open = array_map(function ($v) { return (int) $v->jobID; }, $this->relevance_vacancies($a->applicant_id));
+        $this->seed_legacy_relevance($a->applicant_id, $open);
+      }
+    }
+
+    /**
+     * ...and this once it is closed: every record judged for the vacancy has
+     * its stat recomputed without it, falling back to No Action when no other
+     * open vacancy holds a mark.  The per-vacancy rows themselves are kept.
+     */
+    public function release_relevance_after_archive($job_id){
+
+      $this->ensure_record_relevance_table();
+
+      $rows = $this->db
+          ->distinct()
+          ->select('record_type, record_id')
+          ->where('job_id', (int) $job_id)
+          ->get('hris_record_relevance')
+          ->result();
+
+      foreach ($rows as $row) {
+        $this->sync_record_stat($row->record_type, $row->record_id);
+      }
     }
 
     /**
@@ -3827,6 +4162,20 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           'updated_at'     => $this->record_stamp(),
           );
 
+      // The edit form carries the inclusive dates too; the length of service
+      // is re-derived from them exactly as the dates-only form does.
+      $from = trim((string) $this->input->post('date_from'));
+      $to   = trim((string) $this->input->post('date_to'));
+
+      if ($from !== '' && $to !== '') {
+        $span = $this->experience_duration($from, $to);
+
+        $data['date_from'] = $from;
+        $data['date_to']   = $to;
+        $data['ny']        = $span['ny'];
+        $data['nm']        = $span['nm'];
+      }
+
       $this->db->where('id', $id);
       $res = $this->db->update('hris_experience', $data);
 
@@ -3840,6 +4189,10 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
               'fields'       => array(
                   'title'          => 'Company / Office',
                   'position_title' => 'Job Title',
+                  'date_from'      => 'From',
+                  'date_to'        => 'To',
+                  'ny'             => 'Years of Service',
+                  'nm'             => 'Months of Service',
               ),
           ));
 
@@ -3909,26 +4262,45 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
 
     public function update_training_staff(){
 
+      $id     = $this->input->post('id');
+      $before = $this->Audit->snapshot('hris_trainings', 'trainingID', $id);
+
       $data = array(
           'noHours' => $this->input->post('nh'),
-          'updated_at' => $this->record_stamp(),
           );
 
-        $id  = $this->input->post('id');
-        $row = $this->Common->one_cond_row('hris_trainings', 'trainingID', $id);
+      // The edit form also corrects the title and the inclusive dates; a form
+      // that posts only the hours leaves both as they are.
+      $title = trim((string) $this->input->post('trainingTitle'));
+      if ($title !== '') {
+        $data['trainingTitle'] = $title;
+      }
+
+      $started  = $this->Page_model->training_stamp($this->input->post('dateStarted'));
+      $finished = $this->Page_model->training_stamp($this->input->post('dateFinished'));
+      if ($started && $finished) {
+        $data['dateStarted']  = $started;
+        $data['dateFinished'] = $finished;
+      }
+
+      $data['updated_at'] = $this->record_stamp();
 
         $this->db->where('trainingID', $id);
         $res = $this->db->update('hris_trainings', $data);
 
-        $this->Audit->log('update_training', [
+        $this->Audit->log_changes('update_training', $this->Audit->diff($before, $data), array(
             'entity_type'  => 'training',
+            'entity_table' => 'hris_trainings',
             'entity_id'    => $id,
-            'applicant_id' => $row->IDNumber ?? $this->input->post('id_number'),
-            'field'        => 'training_hours',
-            'description'  => 'Set no. of hours of "' . ($row->trainingTitle ?? '') . '" from '
-                . (float) ($row->noHours ?? 0) . ' to ' . (float) $data['noHours']
-                . ', saved ' . $data['updated_at'] . '.',
-        ]);
+            'applicant_id' => $before['IDNumber'] ?? $this->input->post('id_number'),
+            'label'        => 'training #' . $id,
+            'fields'       => array(
+                'trainingTitle' => 'Training Title',
+                'dateStarted'   => 'From',
+                'dateFinished'  => 'To',
+                'noHours'       => 'No. of Hours',
+            ),
+        ));
 
         return $res;
     }
