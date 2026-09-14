@@ -179,7 +179,9 @@ class Page extends CI_Controller
 		if ($this->session->position == "School") {
 			redirect(base_url());
 		}
+		$this->SGODModel->ensure_allocation_schema();
 		$result['data'] = $this->PersonnelModel->school_allocations();
+		$result['alloc_programs'] = $this->SGODModel->alloc_programs();
 		$result['bs'] = $this->SGODModel->no_cond('sgod_settings_bs');
 		$result['school'] = $this->Common->no_cond_order_by('schools', 'schoolName', 'ASC');
 		$result['district'] = $this->Common->no_cond_order_by('district', 'discription', 'ASC');
@@ -202,7 +204,9 @@ class Page extends CI_Controller
 		if ($this->session->position == 'School') {
 			redirect(base_url() . 'Page/school_allocations2');
 		}
+		$this->SGODModel->ensure_allocation_schema();
 		$result['st'] = $this->SGODModel->one_cond_row('sgod_school_allocation', 'id', $this->uri->segment(3));
+		$result['alloc_programs'] = $this->SGODModel->alloc_programs();
 		$result['last'] = $this->SGODModel->get_last_record('sgod_school_allocation');
 		$result['bs'] = $this->SGODModel->no_cond('sgod_settings_bs');
 		$this->load->view('school_allocation_update', $result);
@@ -327,6 +331,7 @@ class Page extends CI_Controller
 			$this->session->set_flashdata('danger', 'You are not allowed to edit allocations.');
 			redirect(base_url() . 'Page/school_allocations2');
 		}
+		$this->SGODModel->ensure_allocation_schema();
 		$this->SGODModel->update_fund_allocation();
 		$this->session->set_flashdata('success', 'Updated successfully.');
 		if ($this->session->position == 'School') {
@@ -342,6 +347,7 @@ class Page extends CI_Controller
 			$this->session->set_flashdata('danger', 'You are not allowed to add allocations.');
 			redirect(base_url() . 'Page/school_allocations2');
 		}
+		$this->SGODModel->ensure_allocation_schema();
 		$this->SGODModel->insert_fund_allocation();
 		$this->session->set_flashdata('success', 'Added successfully.');
 		if ($this->session->position == 'School') {
@@ -5891,15 +5897,30 @@ class Page extends CI_Controller
 
 	function approved_aip_review()
 	{
+		// Only the review account moves a plan out of review, and only while it is still waiting
+		// for review (0 MOOE, 2 SNED, 6 SBFP) - a stale link must not pull a later plan back.
+		if (!$this->aip_stage_allowed('review', array(0, 2, 6))) {
+			redirect(base_url() . 'Page/aip_sub_review');
+		}
+
 		$this->SGODModel->aip_review_track('AIP Reviewed');
 		$this->SGODModel->update_aip_action_review(3, 'AIP Reviewed');
-		redirect(base_url() . 'Page/aip_sub_review');
+		// The plan is now status 3, so it leaves the For Review queue: land on the list it moved to.
+		$this->session->set_flashdata('success', 'The plan has been marked as AIP Reviewed and now waits for funds certification.');
+		redirect(base_url() . 'Page/aip_reviewed');
 	}
 
 	function approved_aip_funds()
 	{
+		// Funds certification only applies to reviewed plans (status 3); without this check an
+		// approved plan (1) could be sent back to Funds Available.
+		if (!$this->aip_stage_allowed('funds', array(3))) {
+			redirect(base_url() . 'Page/aip_sub_funds');
+		}
+
 		$this->SGODModel->aip_review_track('Funds Available');
 		$this->SGODModel->update_aip_action_review(4, 'Funds Available');
+		$this->session->set_flashdata('success', 'Funds have been certified available. The plan now goes to the SGOD Chief for approval.');
 		redirect(base_url() . 'Page/aip_sub_funds');
 	}
 
@@ -6113,25 +6134,20 @@ class Page extends CI_Controller
 		$result['data'] = $this->SGODModel->aip_approved_list($fys, null, array(1, 3, 4));
 		$result['from'] = 'aip_sub_review';
 
-		$this->load->view('templates/head');
-		$this->load->view('templates/header');
-		$this->load->view('aip_action_view_review', $result);
+		$this->aip_stage_page($result, $fys, 'review', 'For Review', 'mdi-file-find-outline', 'Plans waiting for your review');
 	}
 
 	// Plans the review stage has already signed off on (status 3 = 'AIP Reviewed').
-	// Same list layout as aip_sub_review, but read-only for the review action:
-	// the Approved button is hidden for rows already at status 3.
+	// Reference list: no Mark Reviewed action, only tracking, documents and unlock.
 	function aip_reviewed()
 	{
 		$result['title'] = "REVIEWED PLANS";
 		$fys = $this->session->cur_fy;
 
-		$result['data'] = $this->SGODModel->two_cond('sgod_aip_submit', 'fy', $fys, 'status', 3);
+		$result['data'] = $this->SGODModel->aip_approved_list($fys, 3);
 		$result['from'] = 'aip_reviewed';
 
-		$this->load->view('templates/head');
-		$this->load->view('templates/header');
-		$this->load->view('aip_action_view_review', $result);
+		$this->aip_stage_page($result, $fys, '', 'Reviewed', 'mdi-clipboard-check-outline', 'Plans that passed the review stage');
 	}
 
 	function aip_sub_funds()
@@ -6141,11 +6157,56 @@ class Page extends CI_Controller
 		$result['title'] = "FOR FUNDS AVAILABLE";
 		$fys = $this->session->cur_fy;
 
-		$result['data'] = $this->SGODModel->two_cond('sgod_aip_submit', 'fy', $fys, 'status', 3);
+		$result['data'] = $this->SGODModel->aip_approved_list($fys, 3);
+		$result['from'] = 'aip_sub_funds';
+
+		$this->aip_stage_page($result, $fys, 'funds', 'Funds Certification', 'mdi-cash-multiple', 'Reviewed plans waiting for funds certification');
+	}
+
+	// The review / funds worklists share the Approved Plans layout (views/aip_stage_list.php);
+	// only the rows, the status pills and the stage action differ.
+	private function aip_stage_page($result, $fys, $stage_action, $eyebrow, $icon, $blurb)
+	{
+		$result['fy']            = $fys;
+		$result['stage_action']  = $stage_action;
+		$result['can_act']       = in_array($this->session->position, $this->aip_stage_roles($stage_action), true);
+		$result['eyebrow']       = $eyebrow;
+		$result['icon']          = $icon;
+		$result['blurb']         = $blurb;
+		$result['open_requests'] = $this->SGODModel->aip_request_list($fys, 0);
 
 		$this->load->view('templates/head');
 		$this->load->view('templates/header');
-		$this->load->view('aip_action_view_funds', $result);
+		$this->load->view('aip_stage_list', $result);
+	}
+
+	// Accounts allowed to act at each worklist stage.
+	private function aip_stage_roles($stage)
+	{
+		$roles = array(
+			'review' => array('review', 'Admin', 'Super Admin'),
+			'funds'  => array('funds', 'Admin', 'Super Admin'),
+		);
+
+		return isset($roles[$stage]) ? $roles[$stage] : array();
+	}
+
+	// Server-side twin of the stage buttons on views/aip_stage_list.php: the owning role only,
+	// and only while the plan (URI segment 3) is still at one of $from_statuses.
+	private function aip_stage_allowed($stage, $from_statuses)
+	{
+		if (!in_array($this->session->position, $this->aip_stage_roles($stage), true)) {
+			$this->session->set_flashdata('danger', 'Your account is not allowed to perform this step.');
+			return false;
+		}
+
+		$plan = $this->SGODModel->one_cond_row('sgod_aip_submit', 'id', $this->uri->segment(3));
+		if (empty($plan) || !in_array((int) $plan->status, $from_statuses, true)) {
+			$this->session->set_flashdata('danger', 'This plan is no longer at this stage, so nothing was changed.');
+			return false;
+		}
+
+		return true;
 	}
 
 	function aip_sub_sgod_chief()
@@ -12266,6 +12327,22 @@ class Page extends CI_Controller
 
 	public function allocation_delete()
 	{
+		if ($this->session->position == 'School') {
+			redirect(base_url() . 'Page/school_allocations2');
+		}
+
+		// Keep the allocation of a batch the school already encoded or submitted an AIP for:
+		// without it the batch drops out of Page/implementation_plans and its reports fall back to MOOE.
+		$alloc = $this->SGODModel->one_cond_row('sgod_school_allocation', 'id', $this->uri->segment(3));
+		if (!empty($alloc)) {
+			$in_use = $this->db->where('school_id', $alloc->schoolID)->where('b_code', $alloc->alloc_batch)->count_all_results('sgod_aip_submit')
+				|| $this->db->where('school_id', $alloc->schoolID)->where('b_code', $alloc->alloc_batch)->count_all_results('sgod_aip');
+			if ($in_use) {
+				$this->session->set_flashdata('danger', 'Batch ' . $alloc->alloc_batch . ' already has an AIP for school ' . $alloc->schoolID . ' and cannot be deleted.');
+				redirect(base_url() . 'Page/school_allocations');
+			}
+		}
+
 		$this->Common->delete('sgod_school_allocation', 'id', '3');
 		$this->session->set_flashdata('danger', 'Successfully deleted.');
 		redirect(base_url() . 'Page/school_allocations');

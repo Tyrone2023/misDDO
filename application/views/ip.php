@@ -104,8 +104,15 @@
                       <option></option>
                       <?php if (!empty($ssa)) foreach ($ssa as $row) {
                         $sel = (isset($_SESSION['aip']) && (string)$_SESSION['aip'] === (string)$row->alloc_batch) ? 'selected' : '';
-                        echo "<option value='" . $row->alloc_batch . "' " . $sel . ">Batch " . $row->alloc_batch
-                           . " &bull; " . $row->alloc_group . " &mdash; PHP " . number_format($row->alloc_amount, 2) . "</option>";
+                        // Batch code · group · program · amount (blank parts are skipped)
+                        $parts = array_filter(array(
+                          $row->alloc_batch,
+                          trim($row->alloc_group),
+                          $this->SGODModel->alloc_program_label($row),
+                          'PHP ' . number_format((float) $row->alloc_amount, 2),
+                        ), 'strlen');
+                        echo "<option value='" . htmlspecialchars($row->alloc_batch) . "' " . $sel . ">"
+                           . implode(' &middot; ', array_map('htmlspecialchars', $parts)) . "</option>";
                       } ?>
                     </select>
                     <?php if (empty($ssa)) { ?>

@@ -105,6 +105,18 @@
                                                             </select>
                                                         </div>
 
+                                                        <div class="form-group col-md-12">
+                                                            <label>Program</label>
+                                                            <select class="form-control" name="program">
+                                                                <option value=""></option>
+                                                                <?php $curProgram = $this->SGODModel->alloc_program_label($st);
+                                                                  foreach($alloc_programs as $p){
+                                                                ?>
+                                                                <option <?php if($curProgram === $p){echo ' selected ';}  ?> value="<?= $p; ?>"><?= $p; ?></option>
+                                                                <?php } ?>
+                                                            </select>
+                                                        </div>
+
                                                     
                                                         <div class="modal-footer">
                                                             <button type="submit" name="submit" class="btn btn-primary waves-effect waves-light">Update</button>

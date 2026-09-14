@@ -415,6 +415,64 @@ class SGODModel extends CI_Model
 		return 1;
 	}
 
+	// Program acronyms an allocation batch can be tagged with (sgod_school_allocation.alloc_program).
+	public function alloc_programs()
+	{
+		return array(
+			'ALS', 'BEC', 'BEFF-CL', 'BEFF-PDEF', 'BEFF-Repair', 'BPLP', 'DCP', 'DCP-SAGIP', 'DPCJ', 'DPRP',
+			'ELLN', 'FLO', 'GASS', 'HRTD', 'IMS', 'IPEd', 'ISRS', 'LSP', 'MG', 'NASBE', 'OPDNTP', 'PFSS',
+			'SBFP', 'SIIF', 'SMOOE11TO12', 'SMOOE7TO10', 'SMOOEKto6', 'SPED', 'WTDIB'
+		);
+	}
+
+	private static $allocation_schema_ready = false;
+
+	// Additive and idempotent: rows saved before the column existed keep '' and are
+	// labelled by alloc_program_label().
+	public function ensure_allocation_schema()
+	{
+		if (self::$allocation_schema_ready) {
+			return;
+		}
+		self::$allocation_schema_ready = true;
+
+		$this->Common->ensure_columns('sgod_school_allocation', array(
+			'alloc_program' => "varchar(45) NOT NULL DEFAULT ''",
+		));
+	}
+
+	// Program acronym shown for an allocation row. Untagged rows are labelled from
+	// alloc_type/alloc_group; anything unmapped shows its alloc_type as-is.
+	public function alloc_program_label($row)
+	{
+		if (!empty($row->alloc_program)) {
+			return $row->alloc_program;
+		}
+
+		$type  = strtoupper(trim($row->alloc_type));
+		$group = strtoupper(trim($row->alloc_group));
+
+		if ($type === 'MOOE') {
+			if (strpos($group, 'SENIOR') === 0) {
+				return 'SMOOE11TO12';
+			}
+			if (strpos($group, 'JUNIOR') === 0) {
+				return 'SMOOE7TO10';
+			}
+			if ($group === 'ELEMENTARY') {
+				return 'SMOOEKto6';
+			}
+		}
+		if ($type === 'SBFP') {
+			return 'SBFP';
+		}
+		if ($type === 'SNED FUND') {
+			return 'SPED';
+		}
+
+		return trim($row->alloc_type);
+	}
+
 	public function aip_category($table, $school_id, $fy, $bcode, $cat)
 	{
 		$this->db->where("school_id", $school_id);
@@ -1809,6 +1867,12 @@ class SGODModel extends CI_Model
 			'mo_dec' => $m
 		);
 
+		// The quick-edit modal posts only the amount; keep the program unless the edit page sent one.
+		$program = $this->input->post('program');
+		if ($program !== null) {
+			$data['alloc_program'] = in_array($program, $this->alloc_programs(), true) ? $program : '';
+		}
+
 		$this->db->where('id', $id);
 		return $this->db->update('sgod_school_allocation', $data);
 	}
@@ -1869,6 +1933,7 @@ class SGODModel extends CI_Model
 			'alloc_amount' => $fund,
 			'alloc_type' => $this->input->post('type'),
 			'alloc_group' => $this->input->post('group'),
+			'alloc_program' => in_array($this->input->post('program'), $this->alloc_programs(), true) ? $this->input->post('program') : '',
 			'mo_jan' => $jan,
 			'mo_feb' => $feb,
 			'mo_mar' => $mar,
@@ -3038,7 +3103,7 @@ class SGODModel extends CI_Model
 
 		$this->db->select('s.id, s.fy, s.b_code, s.school_id, s.date, s.status, s.remarks,
 			sc.schoolName, sc.district, sc.course,
-			alloc.alloc_group, alloc.alloc_amount,
+			alloc.alloc_group, alloc.alloc_amount, alloc.alloc_type,
 			app.id as app_id', false);
 		$this->db->from('sgod_aip_submit s');
 		$this->db->join(
@@ -3079,9 +3144,11 @@ class SGODModel extends CI_Model
 	//
 	// sgod_aip_request.school_id/b_code are INT while schools.schoolID and
 	// sgod_school_allocation.schoolID/alloc_batch are varchar, so the int side is
-	// cast to CHAR: a CAST result is coercible to the column's collation, whereas
-	// comparing the columns directly forces a numeric conversion of every school
-	// row. No GROUP BY is needed - sgod_aip_submit joins on its primary key and
+	// cast to CHAR. A bare CAST takes the connection collation (utf8mb3_general_ci)
+	// with the same IMPLICIT weight as the column, which raises error 1267 against
+	// schools.schoolID (utf8mb3_unicode_ci); an explicit COLLATE on the cast wins over
+	// either column charset, same as the schools joins in Secretariat_model.
+	// No GROUP BY is needed - sgod_aip_submit joins on its primary key and
 	// (schoolID, alloc_batch) is unique in sgod_school_allocation. sgod_app_percentage
 	// is NOT unique per (b_code, fy), so it is read as a scalar subquery instead of a
 	// join, which would otherwise multiply the request rows.
@@ -3101,14 +3168,14 @@ class SGODModel extends CI_Model
 		$this->db->from('sgod_aip_request r');
 		$this->db->join(
 			'schools sc',
-			'sc.schoolID = CAST(r.school_id AS CHAR)',
+			'sc.schoolID = CONVERT(CAST(r.school_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci',
 			'left',
 			false
 		);
 		$this->db->join(
 			'sgod_school_allocation alloc',
-			'alloc.schoolID = CAST(r.school_id AS CHAR)
-				AND alloc.alloc_batch = CAST(r.b_code AS CHAR)',
+			'alloc.schoolID = CONVERT(CAST(r.school_id AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci
+				AND alloc.alloc_batch = CONVERT(CAST(r.b_code AS CHAR) USING utf8mb4) COLLATE utf8mb4_unicode_ci',
 			'left',
 			false
 		);

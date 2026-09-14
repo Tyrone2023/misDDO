@@ -98,7 +98,18 @@
                                                                 <?php } ?>
                                                             </select>
                                                         </div>
-                                                    
+
+                                                        <div class="form-group col-md-12">
+                                                            <label>Program</label>
+                                                            <select class="form-control" data-toggle="select2" name="program">
+                                                                <option value=""></option>
+                                                                <?php foreach ($alloc_programs as $p) { ?>
+                                                                <option value="<?= $p; ?>"><?= $p; ?></option>
+                                                                <?php } ?>
+                                                            </select>
+                                                            <small class="text-muted">Leave blank to label it from the allocation type and group.</small>
+                                                        </div>
+
                                                         <div class="modal-footer">
                                                             <button type="submit" name="submit" class="btn btn-primary waves-effect waves-light">Submit</button>
                                                         </div>
@@ -159,6 +170,7 @@
                                                     <th>Dec</th>
                                                     <th>Batch Code</th>
                                                     <th>Type</th>
+                                                    <th>Program</th>
                                                     <th>Action</th>
                                                 </tr>
                                             </thead>
@@ -183,6 +195,7 @@
                                                     echo "<td>" . $row->mo_dec . "</td>";
                                                     echo "<td>" . $row->alloc_batch . "</td>";
                                                     echo "<td>" . $row->alloc_type . "</td>";
+                                                    echo "<td>" . $this->SGODModel->alloc_program_label($row) . "</td>";
                                                 ?>
                                                     <td>
                                                         <a data-toggle="modal" data-id="<?= $row->id; ?>" data-item="<?= $row->alloc_amount; ?>" class="open-AddBookDialog text text-success w-lg" href="#alloc"><i class="mdi mdi-file-document-box-check-outline"></i>Edit</a> &nbsp; &nbsp;

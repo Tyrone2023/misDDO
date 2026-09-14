@@ -2,8 +2,6 @@
 <?php $sds = $this->Common->one_cond_row('aip_sign_settings','action',4); ?>
 <?php $fund = $this->Common->one_cond_row('aip_sign_settings','action',2); ?>
 <?php
-$ivy = $this->Common->one_cond_row_select('mis_settings','sgod_sign_type','settingsID',1);
-
 // Create a function for converting the amount in words
 function AmountInWords(float $amount): string
 {
@@ -826,15 +824,12 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
 
     <?php
     /*
-     * sgod_sign_type mirrors the behaviour in ca.php:
-     *   0 = signature images are always printed
-     *   1 = signature images are printed only once the AIP has been submitted
-     * The signatory names/positions print in both modes. Falls back to mode 1
-     * when the setting row is missing so a bad/absent setting can never blank
-     * out the whole signatory block.
+     * Signature images print only once the AIP is Approved (sgod_aip_submit.status = 1).
+     * mis_settings.sgod_sign_type is deliberately not consulted: at 0 it printed every
+     * signatory's e-signature on RCAs still at Submitted / AIP Reviewed / Funds Available.
+     * The signatory names/positions print either way.
      */
-    $signType  = isset($ivy->sgod_sign_type) ? (int) $ivy->sgod_sign_type : 1;
-    $showSigns = ($signType === 0) || (!empty($aipstat) && $aipstat->status == 1);
+    $showSigns = !empty($aipstat) && (int) $aipstat->status === 1;
     ?>
 
     <div class="signWrapper">
