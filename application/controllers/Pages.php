@@ -21,6 +21,42 @@ class Pages extends CI_Controller
     $this->load->model('AssignRater_model', 'assignRater');
     }
 
+    /**
+     * Selective IER / RQA filter.
+     *
+     * The IER and RQA reports accept an optional ?batch={id} produced by
+     * Reselection/select. When it is there, only the applications manually
+     * picked for that batch are printed - a later selection round of the same
+     * vacancy that must leave out the applicants already acted on. Without it
+     * the reports behave exactly as before.
+     */
+    private function reselection_filter($rows)
+    {
+        $batch = (int) $this->input->get("batch");
+
+        if ($batch < 1 || empty($rows)) {
+            return $rows;
+        }
+
+        $this->load->model("Reselection_model", "resel");
+        $ids = $this->resel->member_ids($batch);
+
+        if (empty($ids)) {
+            return array();
+        }
+
+        $keep = array_flip($ids);
+        $out  = array();
+
+        foreach ($rows as $row) {
+            if (isset($row->appID) && isset($keep[(int) $row->appID])) {
+                $out[] = $row;
+            }
+        }
+
+        return $out;
+    }
+
     private function get_rqa_sign($job, $stat = null, $useJobSign = true)
     {
         $sign = null;
@@ -3854,7 +3890,7 @@ class Pages extends CI_Controller
 
     $jobID = $this->uri->segment(3);
     $data['job'] = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,jobTitle,job_type', 'jobID', $jobID);
-    $data['car'] = $this->Page_model->rqa($jobID);
+    $data['car'] = $this->reselection_filter($this->Page_model->rqa($jobID));
     $data['settings'] = $this->SettingsModel->get_mis_settings();
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
@@ -3892,7 +3928,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,jobTitle,job_type,sy,sign,ttype', 'jobID', $jobID);
-        $data['car'] = $this->Page_model->rqa_promotion($jobID);
+        $data['car'] = $this->reselection_filter($this->Page_model->rqa_promotion($jobID));
         $data['settings'] = $this->SettingsModel->get_mis_settings();
 
         //$job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
@@ -7128,7 +7164,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa('hris_rating_none', $jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa('hris_rating_none', $jobID));
         
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job);
@@ -7154,7 +7190,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa_non($jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa_non($jobID));
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
         $data['vsign'] = $this->get_vacancy_signatories($jobID);
@@ -7183,7 +7219,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa_non($jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa_non($jobID));
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
         $data['vsign'] = $this->get_vacancy_signatories($jobID);
@@ -7212,7 +7248,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa_non($jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa_non($jobID));
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
         $data['vsign'] = $this->get_vacancy_signatories($jobID);
@@ -7243,7 +7279,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa_non($jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa_non($jobID));
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
         $data['vsign'] = $this->get_vacancy_signatories($jobID);
@@ -7268,7 +7304,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa('hris_rating_none', $jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa('hris_rating_none', $jobID));
         $data['settings'] = $this->SettingsModel->get_mis_settings();
 
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign', 'jobID', $jobID);
@@ -7596,7 +7632,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa_non($jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa_non($jobID));
         $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
         $data['vsign'] = $this->get_vacancy_signatories($jobID);
@@ -7625,7 +7661,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa_non($jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa_non($jobID));
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
         $data['vsign'] = $this->get_vacancy_signatories($jobID);
@@ -7648,7 +7684,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa_non($jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa_non($jobID));
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0);
         $data['vsign'] = $this->get_vacancy_signatories($jobID);
@@ -7672,7 +7708,7 @@ public function car_rqa_promotion()
 
         $jobID = $this->uri->segment(3);
         $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-        $data['car'] = $this->Common->rqa('hris_rating_none', $jobID);
+        $data['car'] = $this->reselection_filter($this->Common->rqa('hris_rating_none', $jobID));
         $job = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
         $data['sign'] = $this->get_rqa_sign($job, 0, false);
 
@@ -7691,7 +7727,7 @@ public function car_rqa_promotion()
 
     $jobID = $this->uri->segment(3);
     $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-    $data['car'] = $this->Page_model->rqa($jobID);
+    $data['car'] = $this->reselection_filter($this->Page_model->rqa($jobID));
     $data['settings'] = $this->SettingsModel->get_mis_settings();
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
@@ -7727,7 +7763,7 @@ public function car_rqa1_promotion()
 
     $jobID = $this->uri->segment(3);
     $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-    $data['car'] = $this->Page_model->rqa_promotion($jobID);
+    $data['car'] = $this->reselection_filter($this->Page_model->rqa_promotion($jobID));
     $data['settings'] = $this->SettingsModel->get_mis_settings();
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
@@ -7762,7 +7798,7 @@ public function car_rqa1_promotion_region()
 
     $jobID = $this->uri->segment(3);
     $data['job'] = $this->Page_model->get_single_row_by_id('hris_jobvacancy', 'jobID', $jobID);
-    $data['car'] = $this->Page_model->rqa_promotion($jobID);
+    $data['car'] = $this->reselection_filter($this->Page_model->rqa_promotion($jobID));
     $data['settings'] = $this->SettingsModel->get_mis_settings();
 
     $job = $this->Common->one_cond_row_select('hris_jobvacancy','jobID,sy,sign,ttype', 'jobID', $jobID);
@@ -15165,7 +15201,7 @@ public function request_rating_granted_none()
 
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
-        $data['data'] = $this->Common->get_submitted_applicant($this->uri->segment(3));
+        $data['data'] = $this->reselection_filter($this->Common->get_submitted_applicant($this->uri->segment(3)));
 
         
 
@@ -15182,7 +15218,7 @@ public function request_rating_granted_none()
 
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
-        $data['data'] = $this->Common->get_submitted_applicant($this->uri->segment(3));
+        $data['data'] = $this->reselection_filter($this->Common->get_submitted_applicant($this->uri->segment(3)));
 
         
 
@@ -15200,7 +15236,7 @@ public function request_rating_granted_none()
 
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
-        $data['data'] = $this->Hiring_model->get_submitted_applicant($this->uri->segment(3));
+        $data['data'] = $this->reselection_filter($this->Hiring_model->get_submitted_applicant($this->uri->segment(3)));
 
         
 
@@ -15218,7 +15254,7 @@ public function request_rating_granted_none()
 
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
-        $data['data'] = $this->Hiring_model->get_submitted_applicant($this->uri->segment(3));
+        $data['data'] = $this->reselection_filter($this->Hiring_model->get_submitted_applicant($this->uri->segment(3)));
 
         
 

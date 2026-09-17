@@ -63,6 +63,26 @@ foreach ($teaching as $row) {
     ];
 }
 
+// job lists for the report picker modal: each report entry names its list in
+// data-list, and the picker appends the jobID to the entry's data-url
+$reportJobLists = ['jobs' => [], 'tjobs' => [], 'ren' => []];
+foreach (['jobs' => $jobs, 'tjobs' => $tjobs] as $listKey => $list) {
+    foreach ($list as $jobID => $info) {
+        $reportJobLists[$listKey][] = [
+            'id'    => (int) $jobID,
+            'title' => $info['jobTitle'],
+            'type'  => $jobTypeLabels[$info['jobType']] ?? ''
+        ];
+    }
+}
+foreach ($ren as $row) {
+    $reportJobLists['ren'][] = [
+        'id'    => (int) $row->jobID,
+        'title' => $row->jobTitle,
+        'type'  => $jobTypeLabels[$row->job_type] ?? ''
+    ];
+}
+
 // hero counters
 $total_vacancies = count($data);
 $open_apps       = 0;
@@ -99,16 +119,6 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
 
 <?php include('includes/hr_recruitment_styles.php'); ?>
 <style>
-    .dropdown-submenu { position: relative; }
-    .dropdown-submenu .dropdown-menu {
-        top: 0;
-        left: 100%;
-        margin-top: -1px;
-        display: none;
-    }
-    .dropdown-submenu:hover .dropdown-menu { display: block; }
-    .dropdown-submenu.is-open > .dropdown-menu { display: block; }
-
     /* toolbar dropdowns tuned to the card look */
     .hrp-toolbar {
         position: relative;
@@ -125,30 +135,50 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         padding: .35rem;
         font-size: .84rem;
     }
+    .hrp-toolbar > .btn-group > .dropdown-menu { min-width: 270px; }
     .hrp-toolbar .dropdown-item {
-        border-radius: 7px;
-        padding: .4rem .65rem;
-        color: #5c6873;
-    }
-    .hrp-toolbar .dropdown-submenu > .dropdown-item {
         display: flex;
         align-items: center;
-        gap: .4rem;
+        gap: .55rem;
+        border-radius: 7px;
+        padding: .45rem .65rem;
+        color: #5c6873;
     }
-    .hrp-toolbar .dropdown-submenu > .dropdown-item::after {
-        display: inline-block;
-        width: 0;
-        height: 0;
-        margin-left: auto;
-        content: "";
-        border-top: .3em solid transparent;
-        border-right: 0;
-        border-bottom: .3em solid transparent;
-        border-left: .3em solid;
-        transition: transform .15s ease;
+    .hrp-toolbar .dropdown-item > .mdi {
+        flex: 0 0 auto;
+        width: 1.1rem;
+        font-size: 1rem;
+        text-align: center;
+        color: #98a6ad;
     }
     .hrp-toolbar .dropdown-item:hover { background: #f1f4f8; color: #313a46; }
-    .hrp-toolbar .dropdown-menu .dropdown-menu { max-height: 300px; overflow-y: auto; overflow-x: hidden; min-width: 280px; }
+    .hrp-toolbar .dropdown-item:hover > .mdi { color: #2c5282; }
+    .hrp-toolbar .dropdown-header {
+        padding: .5rem .65rem .3rem;
+        font-size: .66rem;
+        font-weight: 600;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: #98a6ad;
+    }
+    .hrp-toolbar .dropdown-divider { margin: .3rem .2rem; border-top-color: #eef1f6; }
+
+    /* entries that ask for a job title first (opens the report picker) */
+    .hrp-toolbar .hrp-report-pick::after {
+        content: "\203A";
+        margin-left: auto;
+        padding-left: .75rem;
+        font-size: 1.1rem;
+        line-height: 1;
+        color: #b4bfca;
+    }
+    .hrp-toolbar .hrp-report-pick:hover::after { color: #2c5282; }
+    .hrp-toolbar-sep {
+        align-self: stretch;
+        width: 1px;
+        margin: .15rem .2rem;
+        background: #e3e9f1;
+    }
     .hrp-toolbar > .btn-group > .dropdown-menu.hrp-viewport-menu {
         position: fixed !important;
         top: var(--hrp-menu-top, 0) !important;
@@ -159,28 +189,13 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         will-change: auto !important;
     }
 
-    /* Wide view: the report menu scrolls inside the viewport and each fly-out is
-       pinned to the viewport as well, so no report row can land off-screen (or
-       behind .content-page's overflow:hidden) where it cannot be clicked. */
+    /* Wide view: a long report menu scrolls inside the viewport, so no report row
+       can land off-screen (or behind .content-page's overflow:hidden). */
     @media (min-width: 992px) {
         .hrp-toolbar > .btn-group > .dropdown-menu.hrp-viewport-menu {
             max-height: var(--hrp-menu-max-h, none);
             overflow-x: hidden;
             overflow-y: auto;
-        }
-        .hrp-toolbar .dropdown-submenu > .dropdown-menu.hrp-flyout-fixed {
-            position: fixed !important;
-            top: var(--hrp-fly-top, 0) !important;
-            left: var(--hrp-fly-left, 0) !important;
-            right: auto !important;
-            bottom: auto !important;
-            margin: 0 !important;
-            transform: none !important;
-            max-height: var(--hrp-fly-max-h, 300px);
-        }
-        /* the caret has to admit it when the fly-out opened on the other side */
-        .hrp-toolbar .dropdown-submenu.hrp-flyout-left > .dropdown-item::after {
-            transform: scaleX(-1);
         }
     }
     .hrp-toolbar-group-label {
@@ -229,27 +244,8 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
             top: auto !important;
             bottom: calc(100% + .45rem) !important;
         }
-        .hrp-toolbar .dropdown-submenu:hover > .dropdown-menu { display: none; }
-        .hrp-toolbar .dropdown-submenu.is-open > .dropdown-menu { display: block; }
-        .hrp-toolbar .dropdown-submenu > .dropdown-menu {
-            position: static !important;
-            float: none;
-            width: 100%;
-            min-width: 0;
-            max-height: 42vh;
-            margin: .3rem 0 .4rem !important;
-            border: 1px solid #e3e9f1;
-            border-left: 3px solid #9bb8de;
-            border-radius: 8px;
-            box-shadow: none;
-            transform: none !important;
-        }
-        .hrp-toolbar .dropdown-submenu > .dropdown-item::after {
-            transform: rotate(90deg);
-        }
-        .hrp-toolbar .dropdown-submenu.is-open > .dropdown-item::after {
-            transform: rotate(-90deg);
-        }
+        .hrp-toolbar-sep { display: none; }
+        .hrp-toolbar-group-label { flex-basis: 100%; margin-top: .3rem; }
     }
 
     @media (max-width: 575.98px) {
@@ -360,6 +356,28 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
         margin-top: 1.1rem;
     }
     .hrp-ann-actions-spacer { margin-left: auto; }
+
+    /* report picker modal */
+    .hrp-report-help { margin: 0 0 .6rem; font-size: .8rem; color: #7b8794; }
+    .hrp-report-search { margin-bottom: .75rem; }
+    .hrp-report-jobs {
+        max-height: 55vh;
+        margin-bottom: .7rem;
+        padding-right: .15rem;
+        overflow-y: auto;
+    }
+    .hrp-report-job-text { display: flex; flex-direction: column; min-width: 0; }
+    .hrp-report-job-title { font-weight: 600; color: #313a46; overflow-wrap: anywhere; }
+    .hrp-report-job-type { font-size: .74rem; color: #98a6ad; }
+    .hrp-report-job-type:empty { display: none; }
+    .hrp-actions-list .hrp-action-item .hrp-report-open { margin-left: auto; color: #b4bfca; }
+    .hrp-actions-list .hrp-action-item:hover .hrp-report-open { color: #2c5282; }
+    .hrp-report-empty {
+        padding: 1.4rem 1rem 1.8rem;
+        font-size: .85rem;
+        text-align: center;
+        color: #98a6ad;
+    }
 </style>
 
 <div class="content-page">
@@ -446,211 +464,82 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                                     <i class="mdi mdi-lock-outline"></i> Lock All
                                 </a> -->
 
+                                <span class="hrp-toolbar-sep" aria-hidden="true"></span>
+                                <span class="hrp-toolbar-group-label">Reports</span>
+
                                 <div class="btn-group">
-                                    <button type="button" class="hrp-btn hrp-btn-info dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                        <i class="mdi mdi-chart-box-outline"></i> Teaching Reports
+                                    <button type="button" class="hrp-btn hrp-btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="mdi mdi-school-outline"></i> Teaching Reports
                                     </button>
                                     <div class="dropdown-menu">
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/ssc_report">SSC Status Report</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report">Endorsed Applicant - District</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report_rr">Requested Rating - District</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report_validated">Validated - District</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report_multiple">Multiple Application</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/rated_applicantion">Rated Application</a>
+                                        <h6 class="dropdown-header">Status &amp; district</h6>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/ssc_report"><i class="mdi mdi-chart-pie"></i> SSC Status Report</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report"><i class="mdi mdi-map-marker-outline"></i> Endorsed Applicant - District</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report_rr"><i class="mdi mdi-star-outline"></i> Requested Rating - District</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report_validated"><i class="mdi mdi-check-circle-outline"></i> Validated - District</a>
+
+                                        <div class="dropdown-divider"></div>
+                                        <h6 class="dropdown-header">Applications</h6>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report_multiple"><i class="mdi mdi-content-copy"></i> Multiple Application</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/rated_applicantion"><i class="mdi mdi-star-circle-outline"></i> Rated Application</a>
                                         <?php if ($this->session->userdata('position') === 'Super Admin' || $this->session->position === 'Super Admin') : ?>
-                                            <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/rated_applicants_missing_scores">Rated Applicants (No Scores)</a>
+                                            <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/rated_applicants_missing_scores"><i class="mdi mdi-account-alert-outline"></i> Rated Applicants (No Scores)</a>
                                         <?php endif; ?>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/jshs_applicantion/3">JHS Application</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/jshs_applicantion/4">SHS Application</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/dabd_report">DQ List</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/dabq_report">Qualified List</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/dabq_reportv2">Qualified List - District </a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/dabq_reportv2_summary">Summary Of Applicants - Job Title</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report_district">Summary Of Applicant - District</a>
-                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Page/applicantList">Validated Applicants (All)</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/jshs_applicantion/3"><i class="mdi mdi-school-outline"></i> JHS Application</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/jshs_applicantion/4"><i class="mdi mdi-school-outline"></i> SHS Application</a>
+
+                                        <div class="dropdown-divider"></div>
+                                        <h6 class="dropdown-header">Lists &amp; summaries</h6>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/dabd_report"><i class="mdi mdi-playlist-remove"></i> DQ List</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/dabq_report"><i class="mdi mdi-playlist-check"></i> Qualified List</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/dabq_reportv2"><i class="mdi mdi-map-marker-radius"></i> Qualified List - District</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/dabq_reportv2_summary"><i class="mdi mdi-chart-bar"></i> Summary Of Applicants - Job Title</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Pages/abd_report_district"><i class="mdi mdi-city-variant-outline"></i> Summary Of Applicant - District</a>
+                                        <a class="dropdown-item" target="_blank" href="<?= base_url(); ?>Page/applicantList"><i class="mdi mdi-account-multiple-check"></i> Validated Applicants (All)</a>
                                     </div>
                                 </div>
 
                                 <div class="btn-group">
                                     <button type="button" class="hrp-btn hrp-btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <i class="mdi mdi-file-tree-outline"></i> Reports by Job Title
+                                        <i class="mdi mdi-briefcase-outline"></i> Reports by Job Title
                                     </button>
                                     <div class="dropdown-menu">
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">Submitted Applicants</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Page/submittedApplicantsByJob/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">Validated Applicants</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Page/validatedApplicantsByJob/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">Shortlist</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Page/endorsedApplicantsByJob/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">Rated Applicants</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Page/ratedApplicantsByJob/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">Counts by District</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Page/applicantCountsByDistrict/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
+                                        <h6 class="dropdown-header">Pick a report, then a job title</h6>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="Submitted Applicants" data-list="jobs" data-url="<?= base_url(); ?>Page/submittedApplicantsByJob/"><i class="mdi mdi-file-document-outline"></i> Submitted Applicants</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="Validated Applicants" data-list="jobs" data-url="<?= base_url(); ?>Page/validatedApplicantsByJob/"><i class="mdi mdi-account-check-outline"></i> Validated Applicants</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="Shortlist" data-list="jobs" data-url="<?= base_url(); ?>Page/endorsedApplicantsByJob/"><i class="mdi mdi-format-list-checks"></i> Shortlist</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="Rated Applicants" data-list="jobs" data-url="<?= base_url(); ?>Page/ratedApplicantsByJob/"><i class="mdi mdi-star-outline"></i> Rated Applicants</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="Counts by District" data-list="jobs" data-url="<?= base_url(); ?>Page/applicantCountsByDistrict/"><i class="mdi mdi-map-marker-outline"></i> Counts by District</a>
                                     </div>
                                 </div>
 
                                 <div class="btn-group">
-                                    <button type="button" class="hrp-btn hrp-btn-warning dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                        <i class="mdi mdi-clipboard-list-outline"></i> Related &amp; Non-Teaching Reports
+                                    <button type="button" class="hrp-btn hrp-btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="mdi mdi-clipboard-account-outline"></i> Related &amp; Non-Teaching Reports
                                     </button>
                                     <div class="dropdown-menu">
+                                        <h6 class="dropdown-header">IER &middot; pick a job title</h6>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER" data-list="jobs" data-url="<?= base_url(); ?>Pages/all_non_teaching_applicant/"><i class="mdi mdi-file-chart-outline"></i> IER</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER V2" data-list="jobs" data-url="<?= base_url(); ?>Pages/all_non_teaching_applicantv2/"><i class="mdi mdi-file-chart-outline"></i> IER V2</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER V3" data-list="jobs" data-url="<?= base_url(); ?>Pages/all_non_teaching_applicantv3/"><i class="mdi mdi-file-chart-outline"></i> IER V3</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER V4" data-list="jobs" data-url="<?= base_url(); ?>Pages/all_non_teaching_applicantv4/"><i class="mdi mdi-file-chart-outline"></i> IER V4</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER Group by Municipality" data-list="jobs" data-url="<?= base_url(); ?>Pages/ier_group_mun/"><i class="mdi mdi-city-variant-outline"></i> IER Group by Municipality</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER Group by Municipality V2" data-list="jobs" data-url="<?= base_url(); ?>Pages/ier_group_munv2/"><i class="mdi mdi-city-variant-outline"></i> IER Group by Municipality V2</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER Learning Area Specialization" data-list="tjobs" data-url="<?= base_url(); ?>Pages/las/"><i class="mdi mdi-book-open-variant"></i> IER Learning Area Specialization</a>
 
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/all_non_teaching_applicant/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER V2</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/all_non_teaching_applicantv2/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER V3</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/all_non_teaching_applicantv3/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER V4</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/all_non_teaching_applicantv4/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER Group by Municipality</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/ier_group_mun/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER Group by Municipality V2</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/ier_group_munv2/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER Learning Area Specialization</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($tjobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/las/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-
-                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_qaulified" target="_blank">Qualified List</a>
-                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_not_qaulified" target="_blank">Not Qualified List</a>
-                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/not_qualify_promotion" target="_blank">Not Qualified List V2</a>
-                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_qaulified_rated" target="_blank">Qualified List Rated</a>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item" href="<?= base_url(); ?>Pages/qaulified_promotion" target="_blank">Qualified List Promotion</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($ren as $pro) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/qaulified_promotion_job/<?= $pro->jobID; ?>" target="_blank">
-                                                        <?= $pro->jobTitle; ?> <?= $jobTypes[$pro->job_type] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
+                                        <div class="dropdown-divider"></div>
+                                        <h6 class="dropdown-header">Qualification lists</h6>
+                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_qaulified" target="_blank"><i class="mdi mdi-playlist-check"></i> Qualified List</a>
+                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_not_qaulified" target="_blank"><i class="mdi mdi-playlist-remove"></i> Not Qualified List</a>
+                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/not_qualify_promotion" target="_blank"><i class="mdi mdi-playlist-remove"></i> Not Qualified List V2</a>
+                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_qaulified_rated" target="_blank"><i class="mdi mdi-star-circle-outline"></i> Qualified List Rated</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="Qualified List Promotion" data-list="ren" data-url="<?= base_url(); ?>Pages/qaulified_promotion_job/" data-all-url="<?= base_url(); ?>Pages/qaulified_promotion"><i class="mdi mdi-trophy-outline"></i> Qualified List Promotion</a>
                                     </div>
                                 </div>
 
                             <?php elseif ($this->session->position == "doceval") : ?>
 
-                                <a target="_blank" href="<?= base_url(); ?>Pages/dabd_report" class="hrp-btn hrp-btn-danger"><i class="mdi mdi-account-cancel-outline"></i> Disqualified List</a>
+                                <a target="_blank" href="<?= base_url(); ?>Pages/dabd_report" class="hrp-btn hrp-btn-danger"><i class="mdi mdi-account-alert-outline"></i> Disqualified List</a>
                                 <a target="_blank" href="<?= base_url(); ?>Pages/dabq_report" class="hrp-btn hrp-btn-primary"><i class="mdi mdi-account-check-outline"></i> Qualified List</a>
 
                             <?php elseif ($this->session->position == "School") : ?>
@@ -663,47 +552,20 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
 
                             <?php if ($this->session->position == 'raters') { ?>
                                 <div class="btn-group">
-                                    <button type="button" class="hrp-btn hrp-btn-warning dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                                        <i class="mdi mdi-clipboard-list-outline"></i> Related &amp; Non-Teaching Reports
+                                    <button type="button" class="hrp-btn hrp-btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="mdi mdi-clipboard-account-outline"></i> Related &amp; Non-Teaching Reports
                                     </button>
                                     <div class="dropdown-menu">
+                                        <h6 class="dropdown-header">IER &middot; pick a job title</h6>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER" data-list="jobs" data-url="<?= base_url(); ?>Pages/all_non_teaching_applicant/"><i class="mdi mdi-file-chart-outline"></i> IER</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="IER Group by Municipality" data-list="jobs" data-url="<?= base_url(); ?>Pages/ier_group_mun/"><i class="mdi mdi-city-variant-outline"></i> IER Group by Municipality</a>
 
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/all_non_teaching_applicant/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item dropdown-toggle" href="#">IER Group by Municipality</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($jobs as $jobID => $info) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/ier_group_mun/<?= $jobID; ?>" target="_blank">
-                                                        <?= $info['jobTitle']; ?>
-                                                        <?= $jobTypes[$info['jobType']] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_qaulified" target="_blank">Qualified List</a>
-                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_not_qaulified" target="_blank">Not Qualified List</a>
-                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_qaulified_rated" target="_blank">Qualified List Rated</a>
-
-                                        <div class="dropdown-submenu">
-                                            <a class="dropdown-item" href="<?= base_url(); ?>Pages/qaulified_promotion" target="_blank">Qualified List Promotion</a>
-                                            <div class="dropdown-menu">
-                                                <?php foreach ($ren as $pro) : ?>
-                                                    <a class="dropdown-item" href="<?= base_url(); ?>Pages/qaulified_promotion_job/<?= $pro->jobID; ?>" target="_blank">
-                                                        <?= $pro->jobTitle; ?> <?= $jobTypes[$pro->job_type] ?? ''; ?>
-                                                    </a>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
+                                        <div class="dropdown-divider"></div>
+                                        <h6 class="dropdown-header">Qualification lists</h6>
+                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_qaulified" target="_blank"><i class="mdi mdi-playlist-check"></i> Qualified List</a>
+                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_not_qaulified" target="_blank"><i class="mdi mdi-playlist-remove"></i> Not Qualified List</a>
+                                        <a class="dropdown-item" href="<?= base_url(); ?>Pages/hiring_non_qaulified_rated" target="_blank"><i class="mdi mdi-star-circle-outline"></i> Qualified List Rated</a>
+                                        <a class="dropdown-item hrp-report-pick" href="#" data-report="Qualified List Promotion" data-list="ren" data-url="<?= base_url(); ?>Pages/qaulified_promotion_job/" data-all-url="<?= base_url(); ?>Pages/qaulified_promotion"><i class="mdi mdi-trophy-outline"></i> Qualified List Promotion</a>
                                     </div>
                                 </div>
                             <?php } ?>
@@ -919,6 +781,11 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                                                                 <i class="mdi mdi-calculator hrp-i-green"></i> RQA
                                                             </a>
 
+                                                            <?php // second-round deliberation: manually picked applicants get their own IER / RQA ?>
+                                                            <a class="hrp-action-item" href="<?= base_url(); ?>Reselection/index/<?= $row->jobID; ?>">
+                                                                <i class="mdi mdi-account-multiple-check-outline hrp-i-purple"></i> Selective IER / RQA
+                                                            </a>
+
                                                             <?php
                                                             if ($row->position == 1) {
                                                                 $ca = $this->Common->two_cond_count_row('hris_applications', 'jobID', $row->jobID, 'appStatus', 'Validated');
@@ -1084,6 +951,28 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                 </div>
                 <div class="modal-body">
                     <div class="hrp-actions-list" id="hrp-actions-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /.modal -->
+
+    <!--  Report picker: a report entry asks for the job title here -->
+    <div class="modal fade hrp-modal hrp-modal-compact" id="hrp-report-modal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="mdi mdi-file-chart-outline"></i>
+                        <span id="hrp-report-title">Report</span>
+                    </h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="hrp-report-help">Click a job title and the report opens in a new tab.</p>
+                    <input type="search" class="form-control hrp-report-search" id="hrp-report-search" placeholder="Search job title..." autocomplete="off">
+                    <div class="hrp-actions-list hrp-report-jobs" id="hrp-report-jobs"></div>
+                    <div class="hrp-report-empty" id="hrp-report-empty" hidden></div>
                 </div>
             </div>
         </div>
@@ -1814,102 +1703,6 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
             var compactReportMenus = window.matchMedia('(max-width: 991.98px)');
             var $reportToolbar = $('.hrp-toolbar');
 
-            function closeReportSubmenus($scope) {
-                var $subs = $scope.filter('.dropdown-submenu').add($scope.find('.dropdown-submenu'));
-
-                $subs.children('.dropdown-menu').each(function() {
-                    $(this).removeClass('hrp-flyout-fixed');
-                    this.style.removeProperty('--hrp-fly-top');
-                    this.style.removeProperty('--hrp-fly-left');
-                    this.style.removeProperty('--hrp-fly-max-h');
-                });
-
-                $subs.removeClass('is-open hrp-flyout-left')
-                    .children('.dropdown-item')
-                    .attr('aria-expanded', 'false');
-            }
-
-            // A compact view cannot fit a second fly-out beside the first menu.
-            // The first tap expands it in place; a second tap follows a real link.
-            $(document).on('click', '.hrp-toolbar .dropdown-submenu > .dropdown-item', function(e) {
-                var $trigger = $(this);
-                var $submenu = $trigger.parent('.dropdown-submenu');
-                var hasRealLink = ($trigger.attr('href') || '#') !== '#';
-
-                if (compactReportMenus.matches) {
-                    if (!$submenu.hasClass('is-open')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        closeReportSubmenus($submenu.siblings('.dropdown-submenu'));
-                        $submenu.addClass('is-open');
-                        $trigger.attr('aria-expanded', 'true');
-                        return;
-                    }
-
-                    if (!hasRealLink) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        $submenu.removeClass('is-open');
-                        $trigger.attr('aria-expanded', 'false');
-                    }
-                    return;
-                }
-
-                // Preserve normal destinations such as Qualified List Promotion.
-                if (!hasRealLink) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    $submenu.toggleClass('is-open');
-                    $trigger.attr('aria-expanded', $submenu.hasClass('is-open') ? 'true' : 'false');
-
-                    if ($submenu.hasClass('is-open')) {
-                        placeFlyout($submenu);
-                    }
-                }
-            });
-
-            // On wide views the fly-out is pinned to the viewport, measured and
-            // placed in the same frame so it never moves once it is on screen.
-            // The old version also listened on focusin and re-placed a frame
-            // later, so the mousedown that focuses a report link shifted the
-            // fly-out out from under the pointer and the click never landed.
-            function placeFlyout($submenu) {
-                if (compactReportMenus.matches) { return; }
-
-                var $fly = $submenu.children('.dropdown-menu');
-                if (!$fly.length) { return; }
-
-                var gutter = 12;
-                var fly = $fly.addClass('hrp-flyout-fixed').get(0);
-                var room = Math.max(160, window.innerHeight - (gutter * 2));
-
-                fly.style.setProperty('--hrp-fly-max-h', Math.floor(Math.min(300, room)) + 'px');
-
-                var row = $submenu.get(0).getBoundingClientRect();
-                var flyRect = fly.getBoundingClientRect();
-                var viewWidth = document.documentElement.clientWidth;
-                var left = row.right;
-
-                // only swap sides when the fly-out truly cannot fit on the right
-                if (left + flyRect.width > viewWidth - gutter) {
-                    left = row.left - flyRect.width;
-                    $submenu.addClass('hrp-flyout-left');
-                } else {
-                    $submenu.removeClass('hrp-flyout-left');
-                }
-
-                left = Math.min(left, viewWidth - gutter - flyRect.width);
-                var top = Math.min(row.top, window.innerHeight - gutter - flyRect.height);
-
-                fly.style.setProperty('--hrp-fly-left', Math.floor(Math.max(gutter, left)) + 'px');
-                fly.style.setProperty('--hrp-fly-top', Math.floor(Math.max(gutter, top)) + 'px');
-            }
-
-            $(document).on('mouseenter', '.hrp-toolbar .dropdown-submenu', function() {
-                placeFlyout($(this));
-            });
-
             function fitOpenReportMenu($group) {
                 var $menu = $group.children('.dropdown-menu');
                 var trigger = $group.children('.dropdown-toggle').get(0);
@@ -1931,7 +1724,7 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
                 // Bootstrap flips a tall menu above its button when the space below
                 // is a little short. At 100% zoom that can put the first reports
                 // underneath the fixed top bar. Clamp the original menu inside the
-                // visible viewport instead, while keeping nested fly-outs intact.
+                // visible viewport instead.
                 var menu = $menu.addClass('hrp-viewport-menu').get(0);
                 var triggerRect = trigger.getBoundingClientRect();
                 var topbar = document.querySelector('.navbar-custom');
@@ -1965,40 +1758,106 @@ $is_hr = ($this->session->position === 'Human Resource Admin'
             }
 
             $reportToolbar.on('shown.bs.dropdown', '.btn-group', function() {
-                var $group = $(this);
-                fitOpenReportMenu($group);
-
-                // the menu scrolls now, so an open fly-out has to follow its row
-                $group.children('.dropdown-menu').on('scroll.hrpFlyout', function() {
-                    $(this).children('.dropdown-submenu').each(function() {
-                        var $submenu = $(this);
-                        if ($submenu.hasClass('is-open') || $submenu.is(':hover')) {
-                            placeFlyout($submenu);
-                        }
-                    });
-                });
+                fitOpenReportMenu($(this));
             });
 
             $reportToolbar.on('hidden.bs.dropdown', '.btn-group', function() {
                 $reportToolbar.removeClass('hrp-dropdown-up');
                 var $menu = $(this).children('.dropdown-menu');
-                $menu.off('scroll.hrpFlyout').removeClass('hrp-viewport-menu').css('max-height', '');
+                $menu.removeClass('hrp-viewport-menu').css('max-height', '');
                 if ($menu.length) {
                     $menu.get(0).style.removeProperty('--hrp-menu-top');
                     $menu.get(0).style.removeProperty('--hrp-menu-left');
                     $menu.get(0).style.removeProperty('--hrp-menu-max-h');
                 }
-                closeReportSubmenus($(this));
             });
 
             $(window).on('resize', function() {
                 $reportToolbar.removeClass('hrp-dropdown-up');
                 $reportToolbar.children('.btn-group').children('.dropdown-menu').css('max-height', '');
-                closeReportSubmenus($reportToolbar);
 
                 var $openGroup = $reportToolbar.children('.btn-group.show');
                 if ($openGroup.length) {
                     fitOpenReportMenu($openGroup.first());
+                }
+            });
+
+            /* ---------- report picker: click a report, then click a job title ---------- */
+            var REPORT_JOBS = <?= json_encode($reportJobLists, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+            var $reportModal = $('#hrp-report-modal');
+            var $reportJobs = $('#hrp-report-jobs');
+            var $reportSearch = $('#hrp-report-search');
+            var $reportEmpty = $('#hrp-report-empty');
+
+            function setReportEmpty(message) {
+                $reportEmpty.text(message || '').prop('hidden', !message);
+            }
+
+            $(document).on('click', '.hrp-toolbar .hrp-report-pick', function(e) {
+                e.preventDefault();
+
+                var $pick = $(this);
+                var baseUrl = $pick.attr('data-url');
+                var allUrl = $pick.attr('data-all-url');
+                var jobs = REPORT_JOBS[$pick.attr('data-list')] || [];
+
+                $reportJobs.empty();
+
+                // reports that also have an all-postings version keep that link on top
+                if (allUrl) {
+                    $('<a class="hrp-action-item" target="_blank"></a>')
+                        .attr('href', allUrl)
+                        .append('<i class="mdi mdi-format-list-bulleted hrp-i-blue"></i>')
+                        .append('<span class="hrp-report-job-title">All postings</span>')
+                        .append('<i class="mdi mdi-open-in-new hrp-report-open"></i>')
+                        .appendTo($reportJobs);
+                    if (jobs.length) { $reportJobs.append('<div class="hrp-action-group">Or one job title</div>'); }
+                }
+
+                $.each(jobs, function(i, job) {
+                    $('<a class="hrp-action-item hrp-report-job" target="_blank"></a>')
+                        .attr('href', baseUrl + job.id)
+                        .attr('data-search', (job.title + ' ' + job.type).toLowerCase())
+                        .append('<i class="mdi mdi-briefcase-outline hrp-i-grey"></i>')
+                        .append(
+                            $('<span class="hrp-report-job-text"></span>')
+                                .append($('<span class="hrp-report-job-title"></span>').text(job.title))
+                                .append($('<span class="hrp-report-job-type"></span>').text(job.type))
+                        )
+                        .append('<i class="mdi mdi-open-in-new hrp-report-open"></i>')
+                        .appendTo($reportJobs);
+                });
+
+                $('#hrp-report-title').text($pick.attr('data-report') || 'Report');
+                $reportSearch.val('').prop('hidden', !jobs.length);
+                setReportEmpty(jobs.length ? '' : 'No open job postings for this report.');
+                $reportModal.modal('show');
+            });
+
+            $reportModal.on('shown.bs.modal', function() {
+                // skip on phones so the keyboard does not cover the list
+                if (!compactReportMenus.matches && !$reportSearch.prop('hidden')) {
+                    $reportSearch.trigger('focus');
+                }
+            });
+
+            $reportSearch.on('input', function() {
+                var term = $.trim($(this).val()).toLowerCase();
+                var shown = 0;
+
+                $reportJobs.children('.hrp-report-job').each(function() {
+                    var match = !term || this.getAttribute('data-search').indexOf(term) !== -1;
+                    this.hidden = !match;
+                    if (match) { shown++; }
+                });
+
+                setReportEmpty(shown ? '' : 'No job title matches "' + term + '".');
+            }).on('keydown', function(e) {
+                // Enter opens the first job title still listed
+                if (e.which === 13) {
+                    e.preventDefault();
+                    var first = $reportJobs.children('.hrp-report-job').not('[hidden]').get(0);
+                    if (first) { first.click(); }
                 }
             });
 

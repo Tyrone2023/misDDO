@@ -86,6 +86,9 @@
 
                                         <?php } ?>
                             
+                                    <?php // second-round deliberation: manually picked applicants get their own IER / RQA ?>
+                                    <a class="btn sm btn-dark" href="<?= base_url(); ?>Reselection/index/<?= $this->input->get("jobID"); ?>">Selective IER / RQA</a>
+
                                     <div class="clearfix"></div>
                                 </div>
                             </div>

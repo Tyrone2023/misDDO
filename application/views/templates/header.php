@@ -416,6 +416,7 @@
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
                                         <li><a href="<?= base_url(); ?>Page/jobVacancy">Job Vacancies</a></li>
+                                        <li><a href="<?= base_url(); ?>Reselection">Selective IER / RQA</a></li>
                                         <!-- <li><a href="<?= base_url(); ?>Pages/validated_applicant">Validated Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/for_endorsement">For Endorsement</a></li> -->
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants">Endorsed Applicants</a></li>
@@ -650,6 +651,7 @@
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
                                         <li><a href="<?= base_url(); ?>Page/jobVacancy">Job Vacancies</a></li>
+                                        <li><a href="<?= base_url(); ?>Reselection">Selective IER / RQA</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/validated_applicant">Validated Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/for_endorsement">For Endorsement</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants">Endorsed Applicants</a></li>
@@ -820,6 +822,7 @@
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
                                         <li><a href="<?= base_url(); ?>Page/jobVacancy">Job Vacancies</a></li>
+                                        <li><a href="<?= base_url(); ?>Reselection">Selective IER / RQA</a></li>
                                         <li><a href="<?= base_url(); ?>Page/jobArchieved">Archived Vacancies</a></li>
                                         <li><a href="<?= base_url(); ?>Page/regApplicants">Registered Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Page/appRatingUploading">Upload Applicant's Rating</a></li>
@@ -1071,6 +1074,7 @@
                                     </a>
                                     <ul class="nav-second-level" aria-expanded="false">
                                         <li><a href="<?= base_url(); ?>Page/jobVacancy">Job Vacancies</a></li>
+                                        <?php if ($this->session->position === "sds") : ?><li><a href="<?= base_url(); ?>Reselection">Selective IER / RQA</a></li><?php endif; ?>
                                         <!-- <li><a href="<?= base_url(); ?>Pages/validated_applicant">Validated Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/for_endorsement">For Endorsement</a></li> -->
                                         <li><a href="<?= base_url(); ?>Pages/endorsed_applicants">Endorsed Applicants</a></li>
