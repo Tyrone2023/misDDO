@@ -201,6 +201,45 @@ class Reselection_model extends CI_Model
     }
 
     /**
+     * appIDs picked into any batch - the rows the general (unbatched) IER /
+     * RQA reports must leave out, because those applicants now belong to their
+     * own selection round. hris_applications.appID is the table's primary key,
+     * so an appID here can only belong to the vacancy of its own batch; the
+     * vacancy filter is therefore optional.
+     */
+    public function batched_ids($jobID = 0): array
+    {
+        $jobID = (int) $jobID;
+
+        $sql = "select m.appID
+                  from `{$this->member_table}` m
+                  join `{$this->batch_table}` b on b.id = m.batch_id";
+        $bind = array();
+
+        if ($jobID > 0) {
+            $sql .= " where b.jobID = ?";
+            $bind[] = $jobID;
+        }
+
+        $rows = $this->db->query($sql, $bind)->result();
+
+        $ids = array();
+        foreach ($rows as $row) {
+            $ids[] = (int) $row->appID;
+        }
+
+        return $ids;
+    }
+
+    /** True when one application was picked for the given batch. */
+    public function is_member($batch_id, $appID): bool
+    {
+        return $this->db->where('batch_id', (int) $batch_id)
+            ->where('appID', (int) $appID)
+            ->count_all_results($this->member_table) > 0;
+    }
+
+    /**
      * appIDs already taken by the other batches of the same vacancy - the
      * "already done" applicants the next round is meant to skip.
      */

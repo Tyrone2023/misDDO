@@ -3,6 +3,8 @@
             <!-- Start Page Content here -->
             <!-- ============================================================== -->
                     <?php 
+                        // appIDs moved into a selective round - hidden from this general list
+                        $rs_picked = isset($rs_picked) ? $rs_picked : array();
                         $emp_stat = $this->Common->one_cond('hris_hire_stat','stat',0); 
                         $nature_app = $this->Common->one_cond('hris_hire_stat','stat',1); 
                         $nature_sep = $this->Common->one_cond('hris_hire_stat','stat',2);
@@ -148,6 +150,7 @@
                                                 $ren=1;
                                                 $promotion = $this->Page_model->rqa_promotion($job->jobID); 
                                                 foreach($promotion as $row){
+                                                    if(isset($rs_picked[(int) $row->appID])){ continue; }
                                             ?>
                                             <tr>
                                                 <td><?= $ren++; ?></td>
@@ -193,6 +196,7 @@
                                                 $ren=1;
                                                 $teaching = $this->Page_model->rqa($job->jobID); 
                                                 foreach($teaching as $row){
+                                                    if(isset($rs_picked[(int) $row->appID])){ continue; }
                                                     $hire = $this->Common->one_cond_row('hris_hire','appID',$row->appID);
                                             ?>
                                             <tr>
@@ -246,6 +250,7 @@
                                                 $ren=1;
                                                 $noneteaching = $this->Common->qualified_applicant_list_nt($job->jobID); 
                                                 foreach($noneteaching as $row){
+                                                    if(isset($rs_picked[(int) $row->appID])){ continue; }
                                             ?>
                                             <tr>
                                                     <td><?= $ren++; ?></td>

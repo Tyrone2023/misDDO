@@ -270,7 +270,7 @@
                                         <?php foreach ($rqa_posts as $rqaPost) :
                                             $typeLabel = isset($jobTypes[$rqaPost->job_type]) ? $jobTypes[$rqaPost->job_type] : '';
                                         ?>
-                                            <a class="hrp-rqa-item" href="<?= base_url(); ?>Pages/view_posted_rqa/<?= (int) $rqaPost->jobID; ?>" target="_blank" rel="noopener">
+                                            <a class="hrp-rqa-item" href="<?= base_url(); ?>Pages/view_posted_rqa/<?= (int) $rqaPost->jobID; ?>/<?= (int) ($rqaPost->batch_id ?? 0); ?>" target="_blank" rel="noopener">
                                                 <span class="hrp-ann-head">
                                                     <span class="hrp-ann-job"><?= html_escape($rqaPost->jobTitle); ?></span>
                                                     <?php if ($typeLabel !== '') : ?>

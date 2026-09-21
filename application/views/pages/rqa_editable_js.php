@@ -19,7 +19,24 @@ $rqaCanPost = empty($is_excel_export)
     && in_array((string) $this->session->userdata('position'), $rqaPostRoles, true)
     && (int) ($jobID ?? 0) > 0;
 $rqaApplicantView = in_array((string) $this->session->userdata('position'), array('user', 'reg'), true);
-$rqaPost = $rqaCanPost ? $this->Common->rqa_post((int) $jobID) : null;
+
+// ?batch={id} means this is a selective round's report - it is published on
+// its own row so it never replaces the vacancy's general RQA post
+$rqaBatchID = (int) $this->input->get('batch');
+$rqaBatch = null;
+if ($rqaBatchID > 0) {
+    // a view only carries the controller properties that existed when it was
+    // rendered, so a model loaded here is reached through the CI instance
+    $rqaCI =& get_instance();
+    $rqaCI->load->model('Reselection_model', 'resel');
+    $rqaBatch = $rqaCI->resel->get_batch($rqaBatchID);
+    if (empty($rqaBatch) || (int) $rqaBatch->jobID !== (int) ($jobID ?? 0)) {
+        $rqaBatchID = 0;
+        $rqaBatch = null;
+    }
+}
+
+$rqaPost = $rqaCanPost ? $this->Common->rqa_post((int) $jobID, false, $rqaBatchID) : null;
 $rqaPublished = !empty($rqaPost) && (int) $rqaPost->is_active === 1;
 ?>
 <style>
@@ -178,7 +195,11 @@ $rqaPublished = !empty($rqaPost) && (int) $rqaPost->is_active === 1;
     <span id="rqaEditStatus"><?= $rqaApplicantView ? 'Posted RQA - view only' : 'Item no., deliberation date and the hand-filled columns save automatically'; ?></span>
     <?php if ($rqaCanPost) : ?>
         <button type="button" class="rqa-post-button" id="rqaPostOpen">
-            <?= $rqaPublished ? 'Update RQA Post' : 'Post RQA'; ?>
+            <?php if (!empty($rqaBatch)) : ?>
+                <?= $rqaPublished ? 'Update Selective RQA Post' : 'Post Selective RQA'; ?>
+            <?php else : ?>
+                <?= $rqaPublished ? 'Update RQA Post' : 'Post RQA'; ?>
+            <?php endif; ?>
         </button>
     <?php endif; ?>
 </div>
@@ -187,14 +208,26 @@ $rqaPublished = !empty($rqaPost) && (int) $rqaPost->is_active === 1;
 <div class="rqa-post-modal no-print" id="rqaPostModal" role="dialog" aria-modal="true" aria-labelledby="rqaPostTitle">
     <div class="rqa-post-dialog">
         <div class="rqa-post-head">
-            <h2 id="rqaPostTitle">Post RQA to Applicant Dashboard</h2>
+            <h2 id="rqaPostTitle"><?= !empty($rqaBatch) ? 'Post Selective RQA to Applicant Dashboard' : 'Post RQA to Applicant Dashboard'; ?></h2>
             <button type="button" class="rqa-post-close" id="rqaPostClose" aria-label="Close">&times;</button>
         </div>
         <div class="rqa-post-body">
-            <p class="rqa-post-position"><?= htmlspecialchars((string) ($job->jobTitle ?? 'Selected vacancy'), ENT_QUOTES, 'UTF-8'); ?></p>
+            <p class="rqa-post-position">
+                <?= htmlspecialchars((string) ($job->jobTitle ?? 'Selected vacancy'), ENT_QUOTES, 'UTF-8'); ?>
+                <?php if (!empty($rqaBatch)) : ?>
+                    &mdash; <?= htmlspecialchars((string) $rqaBatch->batch_name, ENT_QUOTES, 'UTF-8'); ?>
+                    (Round <?= (int) $rqaBatch->round_no; ?>)
+                <?php endif; ?>
+            </p>
             <label for="rqaPostCaption">Caption</label>
             <textarea id="rqaPostCaption" class="rqa-post-caption" maxlength="500" placeholder="Example: The CAR-RQA results for this position are now available."><?= htmlspecialchars((string) ($rqaPost->caption ?? ''), ENT_QUOTES, 'UTF-8'); ?></textarea>
-            <p class="rqa-post-help">Applicants for this vacancy will see the caption as a clickable announcement. Clicking it opens this report.</p>
+            <p class="rqa-post-help">
+                <?php if (!empty($rqaBatch)) : ?>
+                    Only the applicants picked for this round will see the caption as a clickable announcement. It is posted on its own and does not replace the vacancy's general RQA post.
+                <?php else : ?>
+                    Applicants for this vacancy will see the caption as a clickable announcement. Clicking it opens this report. Applicants moved into a selective round see their round's post instead.
+                <?php endif; ?>
+            </p>
             <div class="rqa-post-message" id="rqaPostMessage" aria-live="polite"></div>
         </div>
         <div class="rqa-post-foot">
@@ -286,6 +319,7 @@ $rqaPublished = !empty($rqaPost) && (int) $rqaPost->is_active === 1;
 <script>
 (function () {
     var jobID       = "<?= (int) $jobID; ?>";
+    var batchID     = "<?= (int) $rqaBatchID; ?>";
     var modal       = document.getElementById('rqaPostModal');
     var openButton  = document.getElementById('rqaPostOpen');
     var closeButton = document.getElementById('rqaPostClose');
@@ -371,7 +405,7 @@ $rqaPublished = !empty($rqaPost) && (int) $rqaPost->is_active === 1;
                 return;
             }
 
-            openButton.textContent = 'Update RQA Post';
+            openButton.textContent = batchID > 0 ? 'Update Selective RQA Post' : 'Update RQA Post';
             submit.textContent = 'Update Post';
             remove.style.display = '';
             status.textContent = response.message;
@@ -384,14 +418,14 @@ $rqaPublished = !empty($rqaPost) && (int) $rqaPost->is_active === 1;
 
         setBusy(true);
         message.textContent = 'Unpublishing...';
-        request(removeUrl, { jobID: jobID }, function (response) {
+        request(removeUrl, { jobID: jobID, batch_id: batchID }, function (response) {
             setBusy(false);
             if (response.status !== 'success') {
                 message.textContent = response.message || 'The RQA could not be unpublished.';
                 return;
             }
 
-            openButton.textContent = 'Post RQA';
+            openButton.textContent = batchID > 0 ? 'Post Selective RQA' : 'Post RQA';
             submit.textContent = 'Post RQA';
             remove.style.display = 'none';
             status.textContent = response.message;

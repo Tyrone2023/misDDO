@@ -233,32 +233,55 @@ class Common extends CI_Model
     }
 
     /**
-     * One applicant-facing RQA publication per vacancy. Re-posting from a
-     * different CAR/RQA view replaces the link for that vacancy, while an
+     * One applicant-facing RQA publication per vacancy and selection round.
+     * batch_id 0 is the vacancy's general RQA; a hris_reselection_batch id is
+     * the report of that round, posted separately so it never overwrites the
+     * general one. Re-posting the same round replaces its link, while an
      * unpublished row is retained so HR can restore or revise its caption.
      */
     public function ensure_rqa_posts_table()
     {
         $this->db->query("
             CREATE TABLE IF NOT EXISTS hris_rqa_posts (
-                jobID INT UNSIGNED NOT NULL PRIMARY KEY,
+                jobID INT UNSIGNED NOT NULL,
+                batch_id INT UNSIGNED NOT NULL DEFAULT 0,
                 caption VARCHAR(500) NOT NULL,
                 report_uri VARCHAR(1000) NOT NULL,
                 posted_by VARCHAR(150) NULL DEFAULT NULL,
                 posted_at DATETIME NULL DEFAULT NULL,
                 is_active TINYINT(1) NOT NULL DEFAULT 1,
                 updated_at DATETIME NULL DEFAULT NULL,
+                PRIMARY KEY (jobID, batch_id),
                 KEY idx_rqa_posts_active (is_active, posted_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
         ");
+
+        // tables created before selective posting carry jobID alone as the key -
+        // widen it in place so the existing posts are kept as batch_id 0.
+        // list_fields() is not cached by CI, so the check is made once a request.
+        static $checked = false;
+        if ($checked) {
+            return;
+        }
+        $checked = true;
+
+        if (!$this->db->field_exists('batch_id', 'hris_rqa_posts')) {
+            $this->db->query("
+                ALTER TABLE hris_rqa_posts
+                    ADD COLUMN batch_id INT UNSIGNED NOT NULL DEFAULT 0 AFTER jobID,
+                    DROP PRIMARY KEY,
+                    ADD PRIMARY KEY (jobID, batch_id)
+            ");
+        }
     }
 
-    /** Active or previously unpublished RQA post for one vacancy. */
-    public function rqa_post($jobID, $activeOnly = false)
+    /** Active or previously unpublished RQA post for one round of a vacancy. */
+    public function rqa_post($jobID, $activeOnly = false, $batchID = 0)
     {
         $this->ensure_rqa_posts_table();
 
         $this->db->where('jobID', (int) $jobID);
+        $this->db->where('batch_id', (int) $batchID);
         if ($activeOnly) {
             $this->db->where('is_active', 1);
         }
@@ -266,15 +289,15 @@ class Common extends CI_Model
         return $this->db->get('hris_rqa_posts')->row();
     }
 
-    /** Publish (or replace) the applicant-facing RQA for a vacancy. */
-    public function save_rqa_post($jobID, $caption, $reportUri, $postedBy = null)
+    /** Publish (or replace) the applicant-facing RQA of one round. */
+    public function save_rqa_post($jobID, $caption, $reportUri, $postedBy = null, $batchID = 0)
     {
         $this->ensure_rqa_posts_table();
 
         $this->db->query(
             "insert into hris_rqa_posts
-                (jobID, caption, report_uri, posted_by, posted_at, is_active, updated_at)
-             values (?, ?, ?, ?, NOW(), 1, NOW())
+                (jobID, batch_id, caption, report_uri, posted_by, posted_at, is_active, updated_at)
+             values (?, ?, ?, ?, ?, NOW(), 1, NOW())
              on duplicate key update
                 caption = VALUES(caption),
                 report_uri = VALUES(report_uri),
@@ -282,22 +305,22 @@ class Common extends CI_Model
                 posted_at = NOW(),
                 is_active = 1,
                 updated_at = NOW()",
-            array((int) $jobID, $caption, $reportUri, $postedBy)
+            array((int) $jobID, (int) $batchID, $caption, $reportUri, $postedBy)
         );
 
         return $this->db->affected_rows() >= 0;
     }
 
     /** Hide a post from applicant dashboards without discarding its details. */
-    public function unpublish_rqa_post($jobID)
+    public function unpublish_rqa_post($jobID, $batchID = 0)
     {
         $this->ensure_rqa_posts_table();
 
         return $this->db->query(
             "update hris_rqa_posts
                 set is_active = 0, updated_at = NOW()
-              where jobID = ?",
-            array((int) $jobID)
+              where jobID = ? and batch_id = ?",
+            array((int) $jobID, (int) $batchID)
         );
     }
 

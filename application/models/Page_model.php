@@ -551,11 +551,16 @@ HAVING
      * Active RQA publications for vacancies the current applicant applied to.
      * The post itself is stored separately from ordinary vacancy announcements
      * so either kind of notice can be maintained without overwriting the other.
+     *
+     * A post of a selective round (batch_id > 0) reaches only the applicants
+     * picked for that round; the vacancy's general post (batch_id 0) reaches
+     * everyone else, so an applicant moved into a round stops seeing the
+     * general RQA and sees their own round's report instead.
      */
     public function applied_rqa_posts($empEmail)
     {
         $query = $this->db->query(
-            "select p.jobID, p.caption, p.posted_by, p.posted_at,
+            "select p.jobID, p.batch_id, p.caption, p.posted_by, p.posted_at,
                     j.jobTitle, j.job_type, j.sy, j.empType,
                     max(a.appStatus) as appStatus
                from hris_rqa_posts p
@@ -563,7 +568,20 @@ HAVING
                join hris_applications a on a.jobID = p.jobID
               where a.empEmail = ?
                 and p.is_active = 1
-              group by p.jobID, p.caption, p.posted_by, p.posted_at,
+                and (
+                     (p.batch_id > 0 and exists (
+                          select 1
+                            from hris_reselection_member m
+                           where m.batch_id = p.batch_id
+                             and m.appID = a.appID))
+                  or (p.batch_id = 0 and not exists (
+                          select 1
+                            from hris_reselection_member m2
+                            join hris_reselection_batch b2 on b2.id = m2.batch_id
+                           where b2.jobID = p.jobID
+                             and m2.appID = a.appID))
+                )
+              group by p.jobID, p.batch_id, p.caption, p.posted_by, p.posted_at,
                        j.jobTitle, j.job_type, j.sy, j.empType
               order by p.posted_at desc, p.jobID desc",
             array($empEmail)

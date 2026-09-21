@@ -25,33 +25,57 @@ class Pages extends CI_Controller
      * Selective IER / RQA filter.
      *
      * The IER and RQA reports accept an optional ?batch={id} produced by
-     * Reselection/select. When it is there, only the applications manually
-     * picked for that batch are printed - a later selection round of the same
-     * vacancy that must leave out the applicants already acted on. Without it
-     * the reports behave exactly as before.
+     * Reselection/select. With it, only the applications manually picked for
+     * that batch are printed - a later selection round of the same vacancy.
+     *
+     * Without it the report is the general one, and the applicants already
+     * picked into a round are dropped from it: they are now deliberated on
+     * their own report under Reselection/index/{jobID}, so they must not show
+     * up twice.
      */
     private function reselection_filter($rows)
     {
-        $batch = (int) $this->input->get("batch");
-
-        if ($batch < 1 || empty($rows)) {
+        if (empty($rows)) {
             return $rows;
         }
 
         $this->load->model("Reselection_model", "resel");
-        $ids = $this->resel->member_ids($batch);
 
-        if (empty($ids)) {
-            return array();
+        $batch = (int) $this->input->get("batch");
+
+        if ($batch > 0) {
+            $ids = $this->resel->member_ids($batch);
+
+            if (empty($ids)) {
+                return array();
+            }
+
+            $keep = array_flip($ids);
+            $out  = array();
+
+            foreach ($rows as $row) {
+                if (isset($row->appID) && isset($keep[(int) $row->appID])) {
+                    $out[] = $row;
+                }
+            }
+
+            return $out;
         }
 
-        $keep = array_flip($ids);
+        $picked = $this->resel->batched_ids();
+
+        if (empty($picked)) {
+            return $rows;
+        }
+
+        $skip = array_flip($picked);
         $out  = array();
 
         foreach ($rows as $row) {
-            if (isset($row->appID) && isset($keep[(int) $row->appID])) {
-                $out[] = $row;
+            if (isset($row->appID) && isset($skip[(int) $row->appID])) {
+                continue;
             }
+            $out[] = $row;
         }
 
         return $out;
@@ -1040,8 +1064,11 @@ class Pages extends CI_Controller
         $this->Reg->ensure_announcement_columns();
         $result['announcements'] = $this->Page_model->applied_job_announcements($empEmail);
 
-        // captioned CAR/RQA reports published for the same applicant's vacancies
+        // captioned CAR/RQA reports published for the same applicant's vacancies -
+        // a selective round only reaches the applicants picked for it, so the
+        // reselection tables must exist before the post list is read
         $this->Common->ensure_rqa_posts_table();
+        $this->load->model('Reselection_model', 'resel');
         $result['rqa_posts'] = $this->Page_model->applied_rqa_posts($empEmail);
 
         $result['data1'] = $this->Page_model->countvacancy('hris_jobvacancy');
@@ -8041,7 +8068,34 @@ public function car_rqa_promotion()
         return $route . (!empty($query) ? '?' . http_build_query($query, '', '&') : '');
     }
 
-    /** Publish or replace the current vacancy's applicant-facing RQA link. */
+    /**
+     * Selection round a report URI belongs to. The ?batch={id} the report was
+     * opened with decides which publication row is written, so a selective
+     * round is posted beside the vacancy's general RQA instead of replacing
+     * it. A batch of another vacancy is treated as no batch at all.
+     */
+    private function rqa_post_batch($reportUri, $jobID)
+    {
+        $mark = strpos((string) $reportUri, '?');
+        if ($mark === false) {
+            return 0;
+        }
+
+        $query = array();
+        parse_str(substr((string) $reportUri, $mark + 1), $query);
+
+        $batchID = isset($query['batch']) && is_scalar($query['batch']) ? (int) $query['batch'] : 0;
+        if ($batchID < 1) {
+            return 0;
+        }
+
+        $this->load->model('Reselection_model', 'resel');
+        $batch = $this->resel->get_batch($batchID);
+
+        return (!empty($batch) && (int) $batch->jobID === (int) $jobID) ? $batchID : 0;
+    }
+
+    /** Publish or replace the applicant-facing RQA link of the current round. */
     public function rqa_post_save()
     {
         if ($this->session->logged_in == false || !$this->can_manage_rqa_posts()) {
@@ -8072,17 +8126,25 @@ public function car_rqa_promotion()
             return;
         }
 
+        $batchID = $this->rqa_post_batch($reportUri, $jobID);
+
         $postedBy = (string) $this->session->userdata('username');
-        if (!$this->Common->save_rqa_post($jobID, $caption, $reportUri, $postedBy)) {
+        if (!$this->Common->save_rqa_post($jobID, $caption, $reportUri, $postedBy, $batchID)) {
             $this->rqa_post_json('error', 'The RQA could not be posted. Please try again.');
             return;
         }
 
+        if ($batchID > 0) {
+            $this->Page_model->insert_at('Posted Selective RQA to Applicant Dashboard.', $jobID);
+            $this->rqa_post_json('success', 'Selective RQA posted. Only the applicants picked for this round can open it from their dashboard.', array('batch_id' => $batchID));
+            return;
+        }
+
         $this->Page_model->insert_at('Posted RQA to Applicant Dashboard.', $jobID);
-        $this->rqa_post_json('success', 'RQA posted. Applicants for this vacancy can now open it from their dashboard.');
+        $this->rqa_post_json('success', 'RQA posted. Applicants for this vacancy can now open it from their dashboard.', array('batch_id' => 0));
     }
 
-    /** Remove the vacancy's RQA link from applicant dashboards. */
+    /** Remove one round's RQA link from applicant dashboards. */
     public function rqa_post_unpublish()
     {
         if ($this->session->logged_in == false || !$this->can_manage_rqa_posts()) {
@@ -8091,12 +8153,22 @@ public function car_rqa_promotion()
         }
 
         $jobID = (int) $this->input->post('jobID');
-        if ($jobID <= 0 || !$this->Common->rqa_post($jobID, true)) {
-            $this->rqa_post_json('error', 'There is no active RQA post for this vacancy.');
+        $batchID = (int) $this->input->post('batch_id');
+
+        if ($batchID > 0) {
+            $this->load->model('Reselection_model', 'resel');
+            $batch = $this->resel->get_batch($batchID);
+            if (empty($batch) || (int) $batch->jobID !== $jobID) {
+                $batchID = 0;
+            }
+        }
+
+        if ($jobID <= 0 || !$this->Common->rqa_post($jobID, true, $batchID)) {
+            $this->rqa_post_json('error', 'There is no active RQA post for this report.');
             return;
         }
 
-        if (!$this->Common->unpublish_rqa_post($jobID)) {
+        if (!$this->Common->unpublish_rqa_post($jobID, $batchID)) {
             $this->rqa_post_json('error', 'The RQA could not be unpublished. Please try again.');
             return;
         }
@@ -8107,9 +8179,11 @@ public function car_rqa_promotion()
 
     /**
      * Applicant dashboard gate for a posted RQA. The user must either manage
-     * RQA publications or have an application against the linked vacancy.
+     * RQA publications or have an application against the linked vacancy -
+     * and, for a selective round, that application must be one of the ones
+     * picked for the round.
      */
-    public function view_posted_rqa($jobID = 0)
+    public function view_posted_rqa($jobID = 0, $batchID = 0)
     {
         if ($this->session->logged_in == false) {
             redirect(base_url() . 'log_in');
@@ -8117,21 +8191,48 @@ public function car_rqa_promotion()
         }
 
         $jobID = (int) $jobID;
-        $post = $this->Common->rqa_post($jobID, true);
+        $batchID = (int) $batchID;
+        $post = $this->Common->rqa_post($jobID, true, $batchID);
         if (!$post) {
             show_error('This RQA is no longer available.', 404);
             return;
         }
 
         if (!$this->can_manage_rqa_posts()) {
-            $hasApplication = $this->db
+            $applications = $this->db
+                ->select('appID')
                 ->where('jobID', $jobID)
                 ->where('empEmail', (string) $this->session->userdata('username'))
-                ->limit(1)
                 ->get('hris_applications')
-                ->num_rows() > 0;
+                ->result();
 
-            if (!$hasApplication) {
+            if (empty($applications)) {
+                show_error('You are not allowed to view this posted RQA.', 403);
+                return;
+            }
+
+            $this->load->model('Reselection_model', 'resel');
+
+            // for a round, only its own picks; for the general RQA, anyone a
+            // round has not taken over
+            $picked = array_flip($batchID > 0
+                ? $this->resel->member_ids($batchID)
+                : $this->resel->batched_ids($jobID));
+
+            $allowed = false;
+
+            foreach ($applications as $application) {
+                $inBatch = isset($picked[(int) $application->appID]);
+
+                // the round's report is for its own applicants; the general one
+                // is for everybody the rounds left behind
+                if ($batchID > 0 ? $inBatch : !$inBatch) {
+                    $allowed = true;
+                    break;
+                }
+            }
+
+            if (!$allowed) {
                 show_error('You are not allowed to view this posted RQA.', 403);
                 return;
             }
@@ -14889,6 +14990,11 @@ public function rqa_municipality_print_shsv2()
         }
 
         $data['title'] = 'Registry of Qualified Applicants';
+
+        // applicants already picked into a selective round have their own
+        // report under Reselection/index/{jobID} - keep them off this list
+        $this->load->model('Reselection_model', 'resel');
+        $data['rs_picked'] = array_flip($this->resel->batched_ids($jobID));
 
         // $data['data'] = $this->Common->promotion_list($jobID);
 
