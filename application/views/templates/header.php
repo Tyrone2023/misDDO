@@ -474,6 +474,7 @@
                                         <span>Appointed List</span>
                                     </a>
                                 </li>
+                                <?php $this->load->view('templates/appointment_documents_menu'); ?>
 
                                 <?php if ($this->session->position === 'Admin') { ?>
                                     <li class="menu-title">Planning</li>
@@ -914,6 +915,7 @@
                                         <span>Appointed List</span>
                                     </a>
                                 </li>
+                                <?php $this->load->view('templates/appointment_documents_menu'); ?>
 
                                 <li class="menu-title">Reports</li>
                                 <li>
@@ -1123,6 +1125,7 @@
                                         <span>Appointed List</span>
                                     </a>
                                 </li>
+                                <?php $this->load->view('templates/appointment_documents_menu'); ?>
 
                                 <li class="menu-title">Administration</li>
                                 <li><a href="<?= base_url(); ?>users" class="waves-effect"><i class="ion ion-ios-person-add"></i><span>Manage Users</span></a></li>
@@ -1170,6 +1173,7 @@
                                         <span> Appointed List </span>
                                     </a>
                                 </li>
+                                <?php $this->load->view('templates/appointment_documents_menu'); ?>
 
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>
@@ -1191,6 +1195,7 @@
                                         <span> Appointed List </span>
                                     </a>
                                 </li>
+                                <?php $this->load->view('templates/appointment_documents_menu'); ?>
 
                                 <li><a data-toggle="modal" data-id="<?= $id; ?>" class="open-AddBookDialog" href="#change_pass"><i class="fas fa-unlock-alt"></i><span> Change Password </span></a></li>
                                 <li><a href="<?= base_url(); ?>logout" class="waves-effect"><i class="fas fa-arrow-circle-left "></i><span>Logout </span></a></li>

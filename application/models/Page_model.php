@@ -2379,9 +2379,11 @@ public function count_for_approval_leave4($table, $approver_username)
             rec.id AS rec_id, rec.item_number, rec.remarks, rec.status, rec.created_at, rec.approved_at,
             rec.applicant_name AS rec_name, rec.total_points AS rec_total,
             rec.school_id, rec.school_name, rec.date_hired, rec.date_waived,
-            rec.appointment_issued_at, rec.appointment_issued_by,
+            rec.appointment_issued_at, rec.appointment_issued_by, rec.nature_of_appointment,
             a.appID, a.jobID, a.empEmail,
-            jv.jobTitle, jv.job_type,
+            jv.jobTitle, jv.job_type, jv.position AS position_group,
+            jv.empType, jv.department, jv.description AS vacancy_description,
+            jv.position_id, jv.itemNo AS vacancy_item_no,
             r.education, r.training, r.experience, r.let_rating, r.demo_rating, r.tr_rating, r.total_points,
             COALESCE(app.record_no, staff.IDNumber) AS code,
             COALESCE(app.contactNo, staff.contactNo) AS contactNo,
@@ -2389,6 +2391,8 @@ public function count_for_approval_leave4($table, $approver_username)
             COALESCE(app.MiddleName, staff.MiddleName) AS MiddleName,
             COALESCE(app.NameExtn, staff.NameExtn) AS NameExtn,
             COALESCE(app.LastName, staff.LastName) AS LastName,
+            COALESCE(app.prefix, staff.prefix) AS prefix,
+            COALESCE(app.Sex, staff.Sex) AS Sex,
             COALESCE(app.specialization, staff.specialization) AS specialization,
             COALESCE(app.jhss, staff.jhss) AS jhss,
             COALESCE(app.shss, staff.shss) AS shss,
@@ -2428,6 +2432,71 @@ public function count_for_approval_leave4($table, $approver_username)
         $this->db->order_by('r.total_points', 'DESC');
 
         return $this->db->get()->result();
+    }
+
+    /**
+     * Every vacancy application (any pipeline stage), shaped like a
+     * recommended_for_approval() row so appointment documents can be
+     * generated even when a vacancy never reached the recommendation step.
+     * Disqualified applications (dq = 2) are excluded. Pass an appID to
+     * fetch a single row; returns null when not found.
+     */
+    public function rqa_application_rows($appId = null)
+    {
+        $this->db->select("
+            a.appID, a.jobID, a.empEmail, a.appStatus,
+            jv.jobTitle, jv.job_type, jv.position AS position_group,
+            jv.empType, jv.department, jv.description AS vacancy_description,
+            jv.position_id, jv.itemNo AS vacancy_item_no,
+            sch.recID AS school_id, sch.schoolName AS school_name,
+            COALESCE(app.record_no, staff.IDNumber) AS code,
+            COALESCE(app.contactNo, staff.contactNo) AS contactNo,
+            COALESCE(app.FirstName, staff.FirstName) AS FirstName,
+            COALESCE(app.MiddleName, staff.MiddleName) AS MiddleName,
+            COALESCE(app.NameExtn, staff.NameExtn) AS NameExtn,
+            COALESCE(app.LastName, staff.LastName) AS LastName,
+            COALESCE(app.prefix, staff.prefix) AS prefix,
+            COALESCE(app.Sex, staff.Sex) AS Sex,
+            COALESCE(app.resHouseNo, staff.resHouseNo) AS resHouseNo,
+            COALESCE(app.resStreet, staff.resStreet) AS resStreet,
+            COALESCE(app.resVillage, staff.resVillage) AS resVillage,
+            COALESCE(app.resCity, staff.resCity) AS resCity,
+            COALESCE(app.resBarangay, staff.resBarangay) AS brgy,
+            COALESCE(app.resProvince, staff.resProvince) AS resProvince,
+            COALESCE(app.resZipCode, staff.resZipCode) AS resZipCode
+        ", false);
+        $this->db->from('hris_applications a');
+        $this->db->join('hris_jobvacancy jv', 'jv.jobID = a.jobID', 'left');
+        $this->db->join('hris_applicant app', 'a.empEmail = app.empEmail', 'left');
+        $this->db->join('hris_staff staff', 'app.record_no IS NULL AND a.empEmail = staff.IDNumber', 'left');
+        $this->db->join('schools sch', 'sch.schoolID = a.pre_school', 'left');
+        $this->db->where('(a.dq IS NULL OR a.dq != 2)', null, false);
+
+        if (!empty($appId)) {
+            $row = $this->db->where('a.appID', (int) $appId)->get()->row();
+            if (empty($row)) {
+                return null;
+            }
+            $this->rqa_application_row_defaults($row);
+            return $row;
+        }
+
+        $rows = $this->db->order_by('a.appID', 'DESC')->get()->result();
+        foreach ($rows as $row) {
+            $this->rqa_application_row_defaults($row);
+        }
+        return $rows;
+    }
+
+    private function rqa_application_row_defaults($row)
+    {
+        $row->rec_id = 0;
+        $row->status = 'applicant';
+        $row->rec_name = '';
+        $row->item_number = trim((string) ($row->vacancy_item_no ?? ''));
+        $row->nature_of_appointment = '';
+        $row->date_hired = '';
+        $row->appointment_issued_at = '';
     }
 
     /**

@@ -4033,6 +4033,7 @@ public function car_rqa_promotion()
             'date_waived' => "ADD COLUMN `date_waived` DATE DEFAULT NULL",
             'appointment_issued_at' => "ADD COLUMN `appointment_issued_at` DATETIME DEFAULT NULL",
             'appointment_issued_by' => "ADD COLUMN `appointment_issued_by` INT(11) DEFAULT NULL",
+            'nature_of_appointment' => "ADD COLUMN `nature_of_appointment` VARCHAR(40) DEFAULT NULL",
         ];
         foreach ($columns as $col => $ddl) {
             if (!$this->db->field_exists($col, 'hris_rqa_recommendation')) {
@@ -6385,10 +6386,12 @@ public function car_rqa_promotion()
         }
 
         $this->ensure_rqa_recommendation_table();
+        $appointmentDocuments = $this->appointment_document_model();
 
         $data = [
             'title' => 'For Issuance of Appointment',
             'settings' => $this->SettingsModel->get_mis_settings(),
+            'appointmentNatures' => $appointmentDocuments->natures(),
         ];
 
         $this->load->view('templates/head');
@@ -6454,6 +6457,7 @@ public function car_rqa_promotion()
             $rows[] = [
                 'recId' => (int) ($row->rec_id ?? 0),
                 'jobType' => $jobType,
+                'positionGroup' => (int) ($row->position_group ?? 0),
                 'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
                 'tribe' => trim((string) ($row->tribe ?? '')),
                 'position' => trim(($row->jobTitle ?? '') . ' ' . $suffix),
@@ -6470,6 +6474,7 @@ public function car_rqa_promotion()
                 'dateHired' => (string) $dateHired,
                 'dateWaived' => (string) $dateWaived,
                 'status' => $status,
+                'natureOfAppointment' => trim((string) ($row->nature_of_appointment ?? '')),
                 'canUndo' => $canUndo,
             ];
         }
@@ -6657,8 +6662,15 @@ public function car_rqa_promotion()
         $this->ensure_rqa_recommendation_table();
 
         $recId = (int) $this->input->post('rec_id');
+        $nature = trim((string) $this->input->post('nature_of_appointment'));
         if ($recId <= 0) {
             echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
+            return;
+        }
+
+        $this->load->model('Appointment_document_model', 'appointmentDocuments');
+        if (!isset($this->appointmentDocuments->natures()[$nature])) {
+            echo json_encode(['status' => 'error', 'message' => 'Please select a valid Nature of Appointment.']);
             return;
         }
 
@@ -6686,6 +6698,7 @@ public function car_rqa_promotion()
             'status' => 'appointed',
             'appointment_issued_at' => $issuedAt,
             'appointment_issued_by' => $userId ? (int) $userId : null,
+            'nature_of_appointment' => $nature,
         ]);
 
         echo json_encode([
@@ -6761,6 +6774,7 @@ public function car_rqa_promotion()
             $rows[] = [
                 'recId' => (int) ($row->rec_id ?? 0),
                 'jobType' => $jobType,
+                'positionGroup' => (int) ($row->position_group ?? 0),
                 'tribeApplicable' => $this->rqa_tribe_applicable($jobType),
                 'tribe' => trim((string) ($row->tribe ?? '')),
                 'position' => trim(($row->jobTitle ?? '') . ' ' . $suffix),
@@ -6775,11 +6789,515 @@ public function car_rqa_promotion()
                 'school' => (string) ($row->school_name ?? ''),
                 'dateHired' => (string) $dateHired,
                 'appointmentIssuedAt' => $issuedAt,
+                'natureOfAppointment' => trim((string) ($row->nature_of_appointment ?? '')),
                 'status' => (string) ($row->status ?? ''),
             ];
         }
 
         echo json_encode(['status' => 'success', 'rows' => $rows]);
+    }
+
+    /* ====================================================================
+     * APPOINTMENT DOCUMENTS
+     * Office-authored Excel/Word templates are grouped by Position Group and
+     * Nature of Appointment, then merged with an appointed applicant's data.
+     * ==================================================================== */
+
+    private function appointment_template_can_manage()
+    {
+        return in_array((string) $this->session->position, ['sds', 'asst_sds', 'HRMO', 'Human Resource Admin', 'asds', 'Secretariat'], true);
+    }
+
+    private function appointment_document_model()
+    {
+        $this->load->model('Appointment_document_model', 'appointmentDocuments');
+        $this->appointmentDocuments->ensure_schema();
+        return $this->appointmentDocuments;
+    }
+
+    /**
+     * A recommendation row may produce appointment documents when the
+     * applicant is actually hired: either the appointment was issued through
+     * the system (status = 'appointed') or the vacancy never went through the
+     * issuance step but a Date Hired was recorded on approval.
+     */
+    private function appointment_document_eligible($row)
+    {
+        $status = (string) ($row->status ?? '');
+        if ($status === 'appointed') {
+            return true;
+        }
+        $dateHired = trim((string) ($row->date_hired ?? ''));
+        return $status === 'approved' && $dateHired !== '' && $dateHired !== '0000-00-00';
+    }
+
+    /**
+     * Resolves the selected applicant for document generation. Keys are
+     * either a recommendation id or "app_{appID}" for applications that
+     * never reached the recommendation step — those rows are built from
+     * the application + vacancy record instead.
+     */
+    private function appointment_document_row($key)
+    {
+        if (strpos((string) $key, 'app_') === 0) {
+            $row = $this->Page_model->rqa_application_rows((int) substr((string) $key, 4));
+            if (empty($row) || !$this->rqa_job_title_allowed($row->jobTitle ?? '')) {
+                return null;
+            }
+            return $row;
+        }
+        foreach ($this->Page_model->recommended_for_approval(['appointed', 'approved'], null, true) as $row) {
+            if ((int) ($row->rec_id ?? 0) !== (int) $key) {
+                continue;
+            }
+            if (!$this->rqa_job_title_allowed($row->jobTitle ?? '') || !$this->appointment_document_eligible($row)) {
+                return null;
+            }
+            return $row;
+        }
+        return null;
+    }
+
+    public function appointment_template_setup()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+        if (!$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to manage appointment templates.', 403);
+            return;
+        }
+
+        $documents = $this->appointment_document_model();
+        $data = [
+            'title' => 'Appointment Template Setup',
+            'settings' => $this->SettingsModel->get_mis_settings(),
+            'groups' => $documents->position_groups(),
+            'natures' => $documents->natures(true),
+            'documentTypes' => $documents->document_types(),
+            'placeholders' => $documents->placeholders(),
+            'templates' => $documents->all_templates(),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/appointment_template_setup', $data);
+        $this->load->view('templates/footer');
+    }
+
+    public function appointment_template_upload()
+    {
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to manage appointment templates.', 403);
+            return;
+        }
+
+        $documents = $this->appointment_document_model();
+        $group = (int) $this->input->post('position_group');
+        $nature = trim((string) $this->input->post('nature_of_appointment'));
+        $documentType = trim((string) $this->input->post('document_type'));
+        $groups = $documents->position_groups();
+        $natures = $documents->natures(true);
+        $types = $documents->document_types();
+
+        if (!isset($groups[$group]) || !isset($natures[$nature]) || !isset($types[$documentType])) {
+            $this->session->set_flashdata('appointment_error', 'Select a valid Position Group, Nature of Appointment, and Document Type.');
+            redirect('Pages/appointment_template_setup');
+            return;
+        }
+        if (empty($_FILES['template_file']) || (int) $_FILES['template_file']['error'] !== UPLOAD_ERR_OK) {
+            $this->session->set_flashdata('appointment_error', 'Choose an Excel (.xls/.xlsx) or Word (.docx) template to upload.');
+            redirect('Pages/appointment_template_setup');
+            return;
+        }
+
+        $upload = $_FILES['template_file'];
+        $originalName = basename((string) $upload['name']);
+        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if (!in_array($extension, ['xls', 'xlsx', 'docx'], true)) {
+            $this->session->set_flashdata('appointment_error', 'Unsupported file type. Use XLS, XLSX, or DOCX.');
+            redirect('Pages/appointment_template_setup');
+            return;
+        }
+        if ((int) $upload['size'] < 1 || (int) $upload['size'] > 20 * 1024 * 1024) {
+            $this->session->set_flashdata('appointment_error', 'The template must be smaller than 20 MB.');
+            redirect('Pages/appointment_template_setup');
+            return;
+        }
+
+        if ($extension === 'xls') {
+            $signature = file_get_contents($upload['tmp_name'], false, null, 0, 8);
+            if ($signature !== "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1") {
+                $this->session->set_flashdata('appointment_error', 'The uploaded file is not a valid XLS workbook.');
+                redirect('Pages/appointment_template_setup');
+                return;
+            }
+        }
+
+        // XLSX and DOCX are ZIP containers. Checking their required internal
+        // file prevents a renamed arbitrary upload from being stored.
+        if (in_array($extension, ['xlsx', 'docx'], true)) {
+            $zip = new ZipArchive();
+            if ($zip->open($upload['tmp_name']) !== true) {
+                $this->session->set_flashdata('appointment_error', 'The uploaded Office file is invalid or damaged.');
+                redirect('Pages/appointment_template_setup');
+                return;
+            }
+            $requiredEntry = $extension === 'docx' ? 'word/document.xml' : 'xl/workbook.xml';
+            $validContainer = $zip->locateName($requiredEntry) !== false;
+            $zip->close();
+            if (!$validContainer) {
+                $this->session->set_flashdata('appointment_error', 'The uploaded file does not contain a valid ' . strtoupper($extension) . ' document.');
+                redirect('Pages/appointment_template_setup');
+                return;
+            }
+        }
+
+        $uploadDir = FCPATH . 'uploads/appointment_templates/';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) {
+            $this->session->set_flashdata('appointment_error', 'The template storage directory could not be created.');
+            redirect('Pages/appointment_template_setup');
+            return;
+        }
+        $storedName = sprintf('%d_%s_%s_%s.%s', $group, strtolower($nature), $documentType, bin2hex(random_bytes(6)), $extension);
+        $storedName = preg_replace('/[^A-Za-z0-9._-]/', '_', $storedName);
+        if (!move_uploaded_file($upload['tmp_name'], $uploadDir . $storedName)) {
+            $this->session->set_flashdata('appointment_error', 'The template could not be saved. Please try again.');
+            redirect('Pages/appointment_template_setup');
+            return;
+        }
+
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $documents->save_template($group, $nature, $documentType, [
+            'original_name' => $originalName,
+            'stored_path' => $storedName,
+            'extension' => $extension,
+            'file_size' => (int) $upload['size'],
+        ], $userId ? (int) $userId : null);
+
+        $this->session->set_flashdata('appointment_success', $types[$documentType] . ' template saved for ' . $groups[$group] . ' / ' . $natures[$nature] . '.');
+        redirect('Pages/appointment_template_setup');
+    }
+
+    public function appointment_template_download($id)
+    {
+        if ($this->session->logged_in == false) {
+            show_error('You are not authorised to download this file.', 403);
+            return;
+        }
+        $documents = $this->appointment_document_model();
+        $template = $documents->template_by_id((int) $id);
+        $path = !empty($template) ? $documents->source_path($template) : '';
+        if (empty($template) || !is_file($path)) {
+            show_404();
+            return;
+        }
+        $this->appointment_send_file($path, (string) $template->original_name, false);
+    }
+
+    /**
+     * Renders a saved template in the browser so users can inspect the active
+     * format without downloading it. Spreadsheets are converted to HTML by
+     * PhpSpreadsheet; Word files are converted to a simplified HTML layout.
+     */
+    public function appointment_template_view($id)
+    {
+        if ($this->session->logged_in == false) {
+            show_error('You are not authorised to view this file.', 403);
+            return;
+        }
+        $documents = $this->appointment_document_model();
+        $template = $documents->template_by_id((int) $id);
+        if (empty($template) || !is_file($documents->source_path($template))) {
+            show_404();
+            return;
+        }
+
+        $preview = null;
+        try {
+            $preview = $documents->preview($template);
+        } catch (\Throwable $e) {
+            log_message('error', 'Appointment template preview failed: ' . $e->getMessage());
+        }
+
+        $groups = $documents->position_groups();
+        $natures = $documents->natures(true);
+        $types = $documents->document_types();
+        $this->load->view('pages/appointment_template_view', [
+            'title' => 'Template Preview',
+            'template' => $template,
+            'preview' => $preview,
+            'groupName' => $groups[(int) $template->position_group] ?? 'Not Set',
+            'natureName' => $natures[$template->nature_of_appointment] ?? $template->nature_of_appointment,
+            'typeName' => $types[$template->document_type] ?? $template->document_type,
+        ]);
+    }
+
+    /**
+     * Remove a saved format (POST). Bundled appointment-guide rows cannot be
+     * deleted — upload over them to replace them. Deleting a row that had
+     * replaced a guide seed simply lets the guide format be re-registered.
+     */
+    public function appointment_template_delete($id)
+    {
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to manage appointment templates.', 403);
+            return;
+        }
+        if (strtoupper((string) $this->input->method()) !== 'POST') {
+            show_404();
+            return;
+        }
+
+        $documents = $this->appointment_document_model();
+        $template = $documents->template_by_id((int) $id);
+        if (empty($template)) {
+            $this->session->set_flashdata('appointment_error', 'Template not found.');
+            redirect('Pages/appointment_template_setup');
+            return;
+        }
+        if ((int) $template->is_guide === 1) {
+            $this->session->set_flashdata('appointment_error', 'The bundled appointment-guide format cannot be deleted. Upload a new file over it to replace it.');
+            redirect('Pages/appointment_template_setup');
+            return;
+        }
+
+        $documents->delete_template((int) $id);
+        $path = $documents->source_path($template);
+        if (is_file($path)) {
+            @unlink($path);
+        }
+
+        $this->session->set_flashdata('appointment_success', 'Template removed. This Position Group / Nature now falls back to an "All Natures" or appointment-guide format.');
+        redirect('Pages/appointment_template_setup');
+    }
+
+    public function appointment_reports()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+        $documents = $this->appointment_document_model();
+        $applicants = [];
+        $coveredAppIds = [];
+        foreach ($this->Page_model->recommended_for_approval(['appointed', 'approved'], null, true) as $row) {
+            if (!$this->rqa_job_title_allowed($row->jobTitle ?? '') || !$this->appointment_document_eligible($row)) {
+                continue;
+            }
+            $coveredAppIds[(int) ($row->appID ?? 0)] = true;
+            $name = trim((string) ($row->rec_name ?? ''));
+            if ($name === '') {
+                $name = rqa_applicant_name($row);
+            }
+            $applicants[] = [
+                'recId' => (int) ($row->rec_id ?? 0),
+                'name' => $name,
+                'code' => (string) ($row->code ?? ''),
+                'position' => trim((string) ($row->jobTitle ?? '')),
+                'positionGroup' => (int) ($row->position_group ?? 0),
+                'positionGroupName' => $documents->position_groups()[(int) ($row->position_group ?? 0)] ?? 'Not Set',
+                'nature' => trim((string) ($row->nature_of_appointment ?? '')),
+                'itemNumber' => (string) ($row->item_number ?? ''),
+                'school' => (string) ($row->school_name ?? ''),
+                'dateHired' => (string) ($row->date_hired ?? ''),
+                'dateIssued' => (string) ($row->appointment_issued_at ?? ''),
+                'status' => (string) ($row->status ?? ''),
+                'statusLabel' => ($row->status ?? '') === 'appointed' ? 'Appointed' : 'Hired',
+                'address' => $this->rqa_complete_address($row),
+                'contact' => (string) ($row->contactNo ?? ''),
+                'email' => (string) ($row->empEmail ?? ''),
+            ];
+        }
+
+        // Any vacancy application — including ones that never reached the
+        // recommendation step — can be selected to generate documents.
+        // Applications already covered by an eligible recommendation are
+        // skipped so each applicant appears only once.
+        foreach ($this->Page_model->rqa_application_rows() as $row) {
+            $appId = (int) ($row->appID ?? 0);
+            if ($appId <= 0 || isset($coveredAppIds[$appId])) {
+                continue;
+            }
+            if (!$this->rqa_job_title_allowed($row->jobTitle ?? '')) {
+                continue;
+            }
+            $name = rqa_applicant_name($row);
+            if ($name === '') {
+                continue;
+            }
+            $applicants[] = [
+                'recId' => 'app_' . $appId,
+                'name' => $name,
+                'code' => (string) ($row->code ?? ''),
+                'position' => trim((string) ($row->jobTitle ?? '')),
+                'positionGroup' => (int) ($row->position_group ?? 0),
+                'positionGroupName' => $documents->position_groups()[(int) ($row->position_group ?? 0)] ?? 'Not Set',
+                'nature' => '',
+                'itemNumber' => (string) ($row->item_number ?? ''),
+                'school' => (string) ($row->school_name ?? ''),
+                'dateHired' => '',
+                'dateIssued' => '',
+                'status' => 'applicant',
+                'statusLabel' => 'Applicant',
+                'address' => $this->rqa_complete_address($row),
+                'contact' => (string) ($row->contactNo ?? ''),
+                'email' => (string) ($row->empEmail ?? ''),
+            ];
+        }
+
+        $data = [
+            'title' => 'Appointment Reports',
+            'settings' => $this->SettingsModel->get_mis_settings(),
+            'applicants' => $applicants,
+            'natures' => $documents->natures(),
+            'documentTypes' => $documents->document_types(),
+            'canManage' => $this->appointment_template_can_manage(),
+            'selectedRecId' => (string) $this->input->get('applicant'),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/appointment_reports', $data);
+        $this->load->view('templates/footer');
+    }
+
+    public function appointment_report_status()
+    {
+        header('Content-Type: application/json');
+        if ($this->session->logged_in == false) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to view appointment reports.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+        $recId = trim((string) $this->input->get('rec_id'));
+        $nature = trim((string) $this->input->get('nature'));
+        $row = $this->appointment_document_row($recId);
+        $documents = $this->appointment_document_model();
+        if (empty($row) || !isset($documents->natures()[$nature])) {
+            echo json_encode(['status' => 'error', 'message' => 'Select a valid appointed or hired applicant and Nature of Appointment.']);
+            return;
+        }
+
+        $reports = [];
+        foreach ($documents->document_types() as $type => $label) {
+            $template = $documents->find_template((int) ($row->position_group ?? 0), $nature, $type);
+            $reports[$type] = [
+                'label' => $label,
+                'available' => !empty($template),
+                'templateName' => !empty($template) ? (string) $template->original_name : '',
+                'extension' => !empty($template) ? strtoupper((string) $template->extension) : '',
+                'templateUrl' => !empty($template) ? base_url('Pages/appointment_template_view/' . (int) $template->id) : '',
+                'url' => !empty($template)
+                    ? base_url('Pages/appointment_report_file/' . rawurlencode($recId) . '/' . $type) . '?nature=' . rawurlencode($nature)
+                    : '',
+            ];
+        }
+        echo json_encode(['status' => 'success', 'reports' => $reports]);
+    }
+
+    public function appointment_report_nature()
+    {
+        header('Content-Type: application/json');
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to update this appointment.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+        $documents = $this->appointment_document_model();
+        $recId = trim((string) $this->input->post('rec_id'));
+        $nature = trim((string) $this->input->post('nature_of_appointment'));
+        $row = $this->appointment_document_row($recId);
+        if (empty($row) || !isset($documents->natures()[$nature])) {
+            echo json_encode(['status' => 'error', 'message' => 'Select a valid appointed or hired applicant and Nature of Appointment.']);
+            return;
+        }
+
+        // Application-only selections have no recommendation row of their
+        // own; persist on one if the application has it, otherwise the
+        // nature is used for this session only.
+        if (strpos($recId, 'app_') === 0) {
+            $appId = (int) substr($recId, 4);
+            $hasRec = $this->db->where('appID', $appId)->count_all_results('hris_rqa_recommendation') > 0;
+            if ($hasRec) {
+                $this->db->where('appID', $appId)->update('hris_rqa_recommendation', [
+                    'nature_of_appointment' => $nature,
+                ]);
+                echo json_encode(['status' => 'success', 'message' => 'Nature of Appointment saved.']);
+            } else {
+                echo json_encode(['status' => 'success', 'message' => 'Nature of Appointment selected for this session.']);
+            }
+            return;
+        }
+
+        $this->db->where('id', (int) $recId)->where_in('status', ['appointed', 'approved'])->update('hris_rqa_recommendation', [
+            'nature_of_appointment' => $nature,
+        ]);
+        echo json_encode(['status' => 'success', 'message' => 'Nature of Appointment saved.']);
+    }
+
+    public function appointment_report_file($recId, $documentType)
+    {
+        if ($this->session->logged_in == false) {
+            show_error('You are not authorised to generate this report.', 403);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+        $documents = $this->appointment_document_model();
+        $row = $this->appointment_document_row($recId);
+        $nature = trim((string) $this->input->get('nature'));
+        if (empty($row) || !isset($documents->document_types()[$documentType]) || !isset($documents->natures()[$nature])) {
+            show_error('The selected appointment report is invalid.', 400);
+            return;
+        }
+        // Honour the nature chosen on screen — application rows (no
+        // recommendation record) have no stored nature of their own.
+        $row->nature_of_appointment = $nature;
+        $template = $documents->find_template((int) ($row->position_group ?? 0), $nature, $documentType);
+        if (empty($template)) {
+            show_error('No ' . $documents->document_types()[$documentType] . ' template is configured for this Position Group and Nature of Appointment.', 404);
+            return;
+        }
+
+        try {
+            $path = $documents->generate($template, $row);
+        } catch (Throwable $e) {
+            log_message('error', 'Appointment report generation failed: ' . $e->getMessage());
+            show_error('The appointment report could not be generated: ' . $e->getMessage(), 500);
+            return;
+        }
+
+        $baseName = preg_replace('/[^A-Za-z0-9_-]+/', '_', trim((string) ($row->LastName ?? $row->rec_name ?? 'applicant')));
+        $downloadName = $baseName . '_' . $documentType . '.' . strtolower((string) $template->extension);
+        $this->appointment_send_file($path, $downloadName, true);
+    }
+
+    private function appointment_send_file($path, $downloadName, $deleteAfter)
+    {
+        $extension = strtolower(pathinfo($downloadName, PATHINFO_EXTENSION));
+        $mimes = [
+            'xls' => 'application/vnd.ms-excel',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: ' . ($mimes[$extension] ?? 'application/octet-stream'));
+        header('Content-Length: ' . filesize($path));
+        header('Content-Disposition: attachment; filename="' . str_replace('"', '', basename($downloadName)) . '"');
+        header('X-Content-Type-Options: nosniff');
+        readfile($path);
+        if ($deleteAfter) {
+            @unlink($path);
+        }
+        exit;
     }
 
     /**

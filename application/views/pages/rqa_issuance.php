@@ -190,6 +190,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var issuanceUnwaiveUrl = '<?= base_url('Pages/rqa_issuance_unwaive'); ?>';
     var issuanceAppointUrl = '<?= base_url('Pages/rqa_issuance_appoint'); ?>';
     var reportPageUrl = '<?= base_url('Pages/rqa_issuance_report'); ?>';
+    var appointmentReportsUrl = '<?= base_url('Pages/appointment_reports'); ?>';
+    var appointmentNatures = <?= json_encode($appointmentNatures ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
     var issuanceRows = [];
 
@@ -483,20 +485,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
         Swal.fire({
             title: 'Mark appointment as issued?',
-            text: 'The applicant will be removed from this issuance queue and moved to the Appointed List.',
+            text: 'Select the Nature of Appointment. This determines which saved report format is used.',
             icon: 'question',
+            input: 'select',
+            inputOptions: appointmentNatures,
+            inputPlaceholder: 'Select Nature of Appointment',
+            inputValidator: function (value) {
+                if (!value) return 'Nature of Appointment is required.';
+            },
             showCancelButton: true,
             confirmButtonText: 'Yes, appointment issued',
             confirmButtonColor: '#1abc9c'
         }).then(function (result) {
             if (!result.value) return;
+            var nature = result.value;
             $btn.prop('disabled', true);
-            $.post(issuanceAppointUrl, { rec_id: recId }, null, 'json').done(function (res) {
+            $.post(issuanceAppointUrl, { rec_id: recId, nature_of_appointment: nature }, null, 'json').done(function (res) {
                 if (res && res.status === 'success') {
                     issuanceRows = issuanceRows.filter(function (r) { return r.recId !== recId; });
                     rebuildFilters();
                     renderIssuance();
-                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.message || 'Appointment issued.', timer: 1800, showConfirmButton: false });
+                    Swal.fire({
+                        icon: 'success',
+                        title: res.message || 'Appointment issued.',
+                        text: 'The appointment, certification of assumption to duty, and assignment order can now be generated.',
+                        showCancelButton: true,
+                        confirmButtonText: 'Open Appointment Documents',
+                        cancelButtonText: 'Stay here',
+                        confirmButtonColor: '#1f3a5f'
+                    }).then(function (r2) {
+                        if (r2.value) {
+                            window.location.href = appointmentReportsUrl + '?applicant=' + encodeURIComponent(recId);
+                        }
+                    });
                 } else {
                     $btn.prop('disabled', false);
                     Swal.fire({ icon: 'error', title: 'Error', text: (res && res.message) ? res.message : 'Unable to save.' });

@@ -70,6 +70,8 @@ if (!function_exists('h')) {
     .rqa-date-tag { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: #2c5d3f; background: #ecfbf2; border: 1px solid #c9eed6; border-radius: 8px; font-size: .68rem; padding: .15rem .45rem; }
     .rqa-date-tag i { font-size: 13px; }
     .rqa-appointed-tag { display: inline-flex; align-items: center; gap: 5px; font-weight: 800; color: #0f7f6c; background: #e8fff8; border: 1px solid #c5f3e6; border-radius: 999px; font-size: .66rem; padding: .18rem .5rem; }
+    .rqa-report-link { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; border-radius:8px; font-size:.67rem; font-weight:800; padding:.3rem .5rem; color:#fff; background:#1f3a5f; border:1px solid #1f3a5f; }
+    .rqa-report-link:hover { color:#fff; background:#274b7a; text-decoration:none; }
 
     .rqa-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 20px; color: var(--rqa-muted); }
     .rqa-empty-state i { font-size: 46px; margin-bottom: 12px; color: #c4d2e3; }
@@ -144,6 +146,7 @@ if (!function_exists('h')) {
                                     <th>School Assigned</th>
                                     <th>Date Hired</th>
                                     <th>Appointment Issued</th>
+                                    <th>Reports</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -230,6 +233,8 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td>' + (r.school ? '<span class="rqa-school-tag">' + escHtml(r.school) + '</span>' : '<span class="text-muted">-</span>') + '</td>';
         html += '<td>' + dateTag(r.dateHired) + '</td>';
         html += '<td>' + appointmentTag(r.appointmentIssuedAt) + '</td>';
+        html += '<td><a class="rqa-report-link" href="<?= base_url('Pages/appointment_reports'); ?>?applicant=' + encodeURIComponent(r.recId) + '"><i class="mdi mdi-file-document-multiple-outline"></i>View Reports</a>'
+            + (r.natureOfAppointment ? '<div class="rqa-contact-line muted mt-1">' + escHtml(r.natureOfAppointment) + '</div>' : '') + '</td>';
         html += '</tr>';
         return html;
     }
