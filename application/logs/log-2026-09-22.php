@@ -31,3 +31,6 @@ ERROR - 2026-09-22 07:16:50 --> Missing RQA sign record for jobID 76
 ERROR - 2026-09-22 07:18:05 --> Missing RQA sign record for jobID 76
 ERROR - 2026-09-22 07:18:17 --> Missing RQA sign record for jobID 76
 ERROR - 2026-09-22 07:18:53 --> Missing RQA sign record for jobID 76
+ERROR - 2026-09-22 07:49:20 --> Severity: Notice --> tempnam(): file created in the system's temporary directory /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/models/Appointment_document_model.php 444
+ERROR - 2026-09-22 07:49:20 --> Appointment report preview failed: Unable to create the report file.
+ERROR - 2026-09-22 08:48:04 --> Missing RQA sign record for jobID 76

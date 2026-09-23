@@ -441,12 +441,7 @@ class Appointment_document_model extends CI_Model
         }
 
         $extension = strtolower((string) $template->extension);
-        $tempBase = tempnam(sys_get_temp_dir(), 'appt_doc_');
-        if ($tempBase === false) {
-            throw new RuntimeException('Unable to create the report file.');
-        }
-        @unlink($tempBase);
-        $output = $tempBase . '.' . $extension;
+        $output = $this->temp_output_path($extension);
         $values = $this->values_for_row($row);
 
         if (in_array($extension, ['xls', 'xlsx'], true)) {
@@ -458,6 +453,54 @@ class Appointment_document_model extends CI_Model
         }
 
         return $output;
+    }
+
+    /**
+     * Working path for a merged document. The system temp directory is the
+     * user's private folder on macOS/XAMPP, which the Apache user cannot
+     * write to, so the merge is written under uploads/ like the rest of the
+     * project. The file is removed as soon as it has been sent or rendered.
+     */
+    private function temp_output_path($extension)
+    {
+        $name = 'appt_' . bin2hex(random_bytes(8)) . '.' . strtolower((string) $extension);
+        $dir = FCPATH . 'uploads/appointment_tmp/';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+            @chmod($dir, 0777);
+        }
+        if (is_dir($dir) && is_writable($dir)) {
+            $this->protect_temp_dir($dir);
+            $this->purge_temp_dir($dir);
+            return $dir . $name;
+        }
+        // Last resort: the system temp directory, if this server can use it.
+        $fallback = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR;
+        if (is_dir($fallback) && is_writable($fallback)) {
+            return $fallback . $name;
+        }
+        throw new RuntimeException('Unable to create the report file. Make the uploads/appointment_tmp folder writable.');
+    }
+
+    /** Keep merged documents, which hold personal data, out of the browser. */
+    private function protect_temp_dir($dir)
+    {
+        if (!is_file($dir . '.htaccess')) {
+            @file_put_contents($dir . '.htaccess', "<IfModule mod_authz_core.c>\n  Require all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\n  Order allow,deny\n  Deny from all\n</IfModule>\n");
+        }
+        if (!is_file($dir . 'index.html')) {
+            @file_put_contents($dir . 'index.html', '');
+        }
+    }
+
+    /** Drop leftovers from runs that ended before their file was removed. */
+    private function purge_temp_dir($dir)
+    {
+        foreach ((array) glob($dir . 'appt_*') as $file) {
+            if (is_file($file) && filemtime($file) < time() - 3600) {
+                @unlink($file);
+            }
+        }
     }
 
     private function merge_spreadsheet($source, $output, array $values, $documentType)
@@ -677,16 +720,258 @@ class Appointment_document_model extends CI_Model
         return null;
     }
 
+    /**
+     * Same conversion as preview(), but for any generated file on disk. The
+     * spreadsheet branch is split into style + body so the sheet can be
+     * printed inline on a page instead of being downloaded.
+     */
+    public function preview_file($path, $extension)
+    {
+        if (!is_file($path)) {
+            return null;
+        }
+        $extension = strtolower((string) $extension);
+        if (in_array($extension, ['xls', 'xlsx'], true)) {
+            $html = $this->spreadsheet_preview_html($path);
+            if ($html === null || $html === false) {
+                return null;
+            }
+            $parts = $this->split_preview_html($html);
+            return [
+                'kind' => 'spreadsheet',
+                'style' => $parts['style'],
+                'pages' => $this->split_sheet_pages($parts['body'], $parts['style']),
+            ];
+        }
+        if ($extension === 'docx') {
+            $html = $this->docx_preview_html($path);
+            return $html === null ? null : [
+                'kind' => 'docx',
+                'style' => '',
+                'pages' => [['html' => $html, 'width' => null]],
+                'page' => $this->docx_page_setup($path),
+            ];
+        }
+        return null;
+    }
+
+    /**
+     * Rows past the end of the form. Excel keeps a sheet's used range long
+     * after the content stops, and those blank rows would otherwise stretch
+     * the printed page. Rows that still carry a border or fill are kept, so
+     * the form's own frame stays intact.
+     */
+    private function trim_trailing_rows($sheet)
+    {
+        $highestRow = (int) $sheet->getHighestRow();
+        if ($highestRow < 2) {
+            return;
+        }
+        $highestColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestColumn());
+        for ($row = $highestRow; $row >= 1; $row--) {
+            if ($this->row_has_content($sheet, $row, $highestColumn)) {
+                if ($row < $highestRow) {
+                    $sheet->removeRow($row + 1, $highestRow - $row);
+                }
+                return;
+            }
+        }
+    }
+
+    private function row_has_content($sheet, $row, $highestColumn)
+    {
+        $none = \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_NONE;
+        for ($column = 1; $column <= $highestColumn; $column++) {
+            $coordinate = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column) . $row;
+            if (!$sheet->cellExists($coordinate)) {
+                continue;
+            }
+            $cell = $sheet->getCell($coordinate);
+            if (trim((string) $cell->getValue()) !== '') {
+                return true;
+            }
+            $style = $cell->getStyle();
+            $borders = $style->getBorders();
+            foreach ([$borders->getTop(), $borders->getBottom(), $borders->getLeft(), $borders->getRight()] as $border) {
+                if ($border->getBorderStyle() !== $none) {
+                    return true;
+                }
+            }
+            if ($style->getFill()->getFillType() !== \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_NONE) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * One printable block per worksheet. The writer opens each sheet with its
+     * own "page: pageN" div, so the blocks are split there; worksheets with no
+     * content of their own are dropped instead of printing a blank page.
+     */
+    private function split_sheet_pages($body, $style)
+    {
+        $chunks = preg_split("/(?=<div style='page: page)/", $body, -1, PREG_SPLIT_NO_EMPTY);
+        if (empty($chunks)) {
+            return [['html' => $body, 'width' => null]];
+        }
+        $pages = [];
+        foreach ($chunks as $chunk) {
+            if (strpos($chunk, "<div style='page: page") !== 0) {
+                continue; // the writer's preamble, not a worksheet
+            }
+            $text = html_entity_decode(strip_tags($chunk), ENT_QUOTES, 'UTF-8');
+            if (trim(str_replace("\xC2\xA0", ' ', $text)) === '' && stripos($chunk, '<img') === false) {
+                continue; // worksheet with nothing on it
+            }
+            $index = preg_match("/id='sheet([0-9]+)'/", $chunk, $match) ? (int) $match[1] : null;
+            $pages[] = [
+                'html' => $chunk,
+                'width' => $index === null ? null : $this->sheet_design_width($style, $index),
+            ];
+        }
+        return empty($pages) ? [['html' => $body, 'width' => null]] : $pages;
+    }
+
+    /**
+     * The sheet's designed width, taken from the column widths the writer
+     * emitted. Laying the sheet out at exactly this width keeps the columns
+     * where the office put them instead of letting the paper squeeze them.
+     */
+    private function sheet_design_width($style, $sheetIndex)
+    {
+        if (!preg_match_all('/table\.sheet' . $sheetIndex . ' col\.col[0-9]+ \{ width:([0-9.]+)pt \}/', $style, $matches)) {
+            return null;
+        }
+        $width = array_sum($matches[1]);
+        return $width > 0 ? round($width, 2) : null;
+    }
+
+    /**
+     * Paper the office actually set on the template. These forms are mostly
+     * Legal/Folio, so printing them on a forced A4 sheet would cut them.
+     */
+    private function paper_sizes()
+    {
+        return [
+            1 => ['Letter', 8.5, 11],
+            3 => ['Tabloid', 11, 17],
+            5 => ['Legal', 8.5, 14],
+            8 => ['A3', 11.69, 16.54],
+            9 => ['A4', 8.27, 11.69],
+            11 => ['A5', 5.83, 8.27],
+            13 => ['B5', 6.93, 9.84],
+            14 => ['Folio', 8.5, 13],
+        ];
+    }
+
+    /**
+     * The document's own text block, so a Word layout keeps its line length
+     * when it is placed on the A4 sheet.
+     */
+    private function page_setup_values($label, $width, $height, $margins)
+    {
+        $inches = function ($value) { return round((float) $value, 2) . 'in'; };
+        $contentWidth = max(1, $width - $margins[1] - $margins[3]);
+        return [
+            'label' => $label . ' ' . round($width, 2) . ' × ' . round($height, 2) . ' in',
+            'content_width' => $inches($contentWidth),
+            'margin_top' => $inches(min(max($margins[0], 0.4), 1.5)),
+            'margin_bottom' => $inches(min(max($margins[2], 0.4), 1.5)),
+        ];
+    }
+
+    private function docx_page_setup($source)
+    {
+        $zip = new \ZipArchive();
+        if ($zip->open($source) !== true) {
+            return null;
+        }
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        if ($xml === false) {
+            return null;
+        }
+        $dom = new \DOMDocument();
+        if (!@$dom->loadXML($xml)) {
+            return null;
+        }
+        $xpath = new \DOMXPath($dom);
+        $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+        $size = $xpath->query('//w:sectPr/w:pgSz')->item(0);
+        if (!$size) {
+            return null;
+        }
+        $ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $twips = function ($value, $fallback) { return ((float) $value) > 0 ? ((float) $value) / 1440 : $fallback; };
+        $width = $twips($size->getAttributeNS($ns, 'w'), 8.5);
+        $height = $twips($size->getAttributeNS($ns, 'h'), 13);
+        $orientation = (string) $size->getAttributeNS($ns, 'orient');
+        $margins = [0.75, 0.75, 0.75, 0.75];
+        $pgMar = $xpath->query('//w:sectPr/w:pgMar')->item(0);
+        if ($pgMar) {
+            $margins = [
+                $twips($pgMar->getAttributeNS($ns, 'top'), 0.75),
+                $twips($pgMar->getAttributeNS($ns, 'right'), 0.75),
+                $twips($pgMar->getAttributeNS($ns, 'bottom'), 0.75),
+                $twips($pgMar->getAttributeNS($ns, 'left'), 0.75),
+            ];
+        }
+        $label = 'Page';
+        foreach ($this->paper_sizes() as $paper) {
+            if (abs($paper[1] - $width) < 0.15 && abs($paper[2] - $height) < 0.15) {
+                $label = $paper[0];
+                break;
+            }
+        }
+        if (strtolower($orientation) === 'landscape' && $height > $width) {
+            $swap = $width;
+            $width = $height;
+            $height = $swap;
+        }
+        return $this->page_setup_values($label, $width, $height, $margins);
+    }
+
+    /**
+     * Pulls the <style> and <body> out of a full HTML document. The writer's
+     * bare "html {}" rule is re-scoped so it cannot restyle the host page.
+     */
+    private function split_preview_html($html)
+    {
+        $style = '';
+        if (preg_match_all('#<style[^>]*>(.*?)</style>#is', $html, $matches)) {
+            $style = implode("\n", $matches[1]);
+            // The writer styles a whole document: re-scope its page-level rules
+            // so they cannot restyle or page-break the page hosting the sheet.
+            $style = preg_replace('/(^|\})\s*html\s*\{/', '$1 .rp-sheet {', $style);
+            $style = str_replace('div + div {page-break-before: always;}', '.rp-sheet div + div {page-break-before: always;}', $style);
+            // Screen-only gridlines override the workbook's own cell borders,
+            // which would make the preview differ from the printed sheet.
+            $style = preg_replace('/\.gridlines (?:td|th) \{border: 1px solid black;\}/', '', $style);
+        }
+        $body = $html;
+        if (preg_match('#<body[^>]*>(.*)</body>#is', $html, $match)) {
+            $body = $match[1];
+        }
+        return ['style' => $style, 'body' => $body];
+    }
+
     private function spreadsheet_preview_html($source)
     {
         if (!class_exists('PhpOffice\\PhpSpreadsheet\\IOFactory')) {
             require_once FCPATH . 'vendor/autoload.php';
         }
         $book = IOFactory::load($source);
+        foreach ($book->getWorksheetIterator() as $sheet) {
+            $this->trim_trailing_rows($sheet);
+        }
         try {
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Html($book);
             $writer->setEmbedImages(true);
             $writer->setPreCalculateFormulas(false);
+            // CS Form 33-B carries its certifications on a second worksheet,
+            // so the whole form has to be rendered, not only the first sheet.
+            $writer->writeAllSheets();
             ob_start();
             try {
                 $writer->save('php://output');

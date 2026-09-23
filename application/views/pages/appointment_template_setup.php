@@ -89,9 +89,6 @@ $extMeta = function ($ext) {
     .appt-alert { border-radius:12px; border:0; box-shadow:0 5px 14px rgba(31,58,95,.07); }
     .appt-empty { text-align:center; padding:34px 20px; color:var(--appt-muted); }
     .appt-empty i { display:block; font-size:40px; color:#c4d1df; margin-bottom:8px; }
-    .appt-ph-search { max-width:320px; border-radius:10px; border:1px solid var(--appt-border); }
-    .appt-placeholder { display:inline-flex; align-items:center; padding:.32rem .55rem; border-radius:8px; background:#f3f7fc; border:1px solid var(--appt-border); font-family:monospace; font-size:.7rem; color:#344b65; margin:3px; cursor:pointer; transition:.14s; }
-    .appt-placeholder:hover { background:#e7f5f1; border-color:#bde5da; color:#14805f; }
     @media(max-width:767px){ .appt-hero{flex-direction:column; align-items:flex-start} .appt-hero-stats{width:100%} .appt-hero-stat{flex:1} .appt-card .card-body{padding:15px} .appt-grid{grid-template-columns:1fr} }
 </style>
 
@@ -107,7 +104,7 @@ $extMeta = function ($ext) {
                 <div class="appt-hero-stats">
                     <div class="appt-hero-stat"><b><?= count($templates); ?></b><span>Saved formats</span></div>
                     <div class="appt-hero-stat"><b><?= count($templates) - $guideCount; ?></b><span>Uploaded</span></div>
-                    <div class="appt-hero-stat"><b><?= count($placeholders); ?></b><span>Data fields</span></div>
+                    <div class="appt-hero-stat"><b><?= $guideCount; ?></b><span>Guide formats</span></div>
                 </div>
             </div>
 
@@ -124,35 +121,35 @@ $extMeta = function ($ext) {
                         <div class="appt-card-ic"><i class="mdi mdi-cloud-upload-outline"></i></div>
                         <div>
                             <h5 class="appt-title">Upload or Replace a Template</h5>
-                            <p class="appt-sub">Uploading the same Position Group, Nature, and Document Type replaces the active format. Accepted files: XLS, XLSX, and DOCX (maximum 20 MB).</p>
+                            <p class="appt-sub">Uploading the same Position Group, Nature, and Document Type replaces the active format. The file is renamed automatically to <b>Nature &ndash; Document Type &ndash; Position Group</b> so it is easy to identify. Accepted files: XLS, XLSX, and DOCX (maximum 20 MB).</p>
                         </div>
                     </div>
-                    <?= form_open_multipart('Pages/appointment_template_upload'); ?>
+                    <?= form_open_multipart('Pages/appointment_template_upload', ['id' => 'appt-upload-form']); ?>
                     <div class="form-row appt-select">
                         <div class="form-group col-lg-4 col-md-4">
                             <label class="appt-label" for="appt-position-group">Position Group</label>
-                            <select class="form-control" id="appt-position-group" name="position_group" required>
+                            <select class="form-control" id="appt-position-group" name="position_group">
                                 <option value=""></option>
                                 <?php foreach ($groups as $id => $label) : ?><option value="<?= (int) $id; ?>"><?= h($label); ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-lg-4 col-md-4">
                             <label class="appt-label" for="appt-nature">Nature of Appointment</label>
-                            <select class="form-control" id="appt-nature" name="nature_of_appointment" required>
+                            <select class="form-control" id="appt-nature" name="nature_of_appointment">
                                 <option value=""></option>
                                 <?php foreach ($natures as $key => $label) : ?><option value="<?= h($key); ?>"><?= h($label); ?></option><?php endforeach; ?>
                             </select>
                         </div>
                         <div class="form-group col-lg-4 col-md-4">
                             <label class="appt-label" for="appt-document-type">Document Type</label>
-                            <select class="form-control" id="appt-document-type" name="document_type" required>
+                            <select class="form-control" id="appt-document-type" name="document_type">
                                 <option value=""></option>
                                 <?php foreach ($documentTypes as $key => $label) : ?><option value="<?= h($key); ?>"><?= h($label); ?></option><?php endforeach; ?>
                             </select>
                         </div>
                     </div>
                     <div class="appt-drop" id="appt-drop">
-                        <input type="file" id="appt-template-file" name="template_file" accept=".xls,.xlsx,.docx" required hidden>
+                        <input type="file" id="appt-template-file" name="template_file" accept=".xls,.xlsx,.docx" hidden>
                         <i class="mdi mdi-cloud-upload-outline"></i>
                         <div><b>Drag &amp; drop your template here</b> or <span class="appt-drop-link">browse files</span></div>
                         <div class="appt-drop-hint">Excel (.xls, .xlsx) or Word (.docx) · max 20 MB</div>
@@ -184,11 +181,16 @@ $extMeta = function ($ext) {
                     <div class="appt-grid" id="appt-template-grid">
                         <?php foreach ($templates as $template) :
                             $meta = $extMeta($template->extension);
+                            // Title the card by Nature and Document Type so a format is
+                            // identifiable even when the stored file keeps an office filename.
+                            $cardTitle = ($natures[$template->nature_of_appointment] ?? $template->nature_of_appointment)
+                                . ' — ' . ($docShort[$template->document_type] ?? $template->document_type);
                         ?>
                             <div class="appt-item" data-group="<?= (int) $template->position_group; ?>">
                                 <div class="appt-item-ic <?= h($meta['cls']); ?>"><i class="mdi <?= h($meta['icon']); ?>"></i></div>
                                 <div class="appt-item-body">
-                                    <span class="appt-file" title="<?= h($template->original_name); ?>"><?= h($template->original_name); ?></span>
+                                    <span class="appt-file" title="<?= h($template->original_name); ?>"><?= h($cardTitle); ?></span>
+                                    <span class="appt-meta"><i class="mdi mdi-paperclip"></i> <?= h($template->original_name); ?></span>
                                     <span class="appt-meta"><?= strtoupper(h($template->extension)); ?> · <?= number_format(((int) $template->file_size) / 1024, 1); ?> KB</span>
                                     <div class="appt-tags">
                                         <span class="appt-pill"><?= h($groups[(int) $template->position_group] ?? 'Not Set'); ?></span>
@@ -213,23 +215,6 @@ $extMeta = function ($ext) {
                 </div>
             </div>
 
-            <div class="card appt-card">
-                <div class="card-body">
-                    <div class="appt-card-head">
-                        <div class="appt-card-ic"><i class="mdi mdi-code-braces"></i></div>
-                        <div class="flex-grow-1">
-                            <h5 class="appt-title">Template Data Fields</h5>
-                            <p class="appt-sub">In a new Excel cell or Word paragraph, type any field exactly as shown. Click a field to copy it. The system replaces it when the report is generated. The supplied guide's known cells and sample names are also filled automatically.</p>
-                        </div>
-                    </div>
-                    <input type="text" class="form-control appt-ph-search mb-2" id="appt-ph-search" placeholder="Filter fields, e.g. salary, school, name&hellip;">
-                    <div id="appt-ph-list">
-                        <?php foreach ($placeholders as $key => $description) : ?>
-                            <button type="button" class="appt-placeholder" data-copy="{{<?= h($key); ?>}}" data-search="<?= h(strtolower($key . ' ' . $description)); ?>" title="<?= h($description); ?>">{{<?= h($key); ?>}}</button>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -282,14 +267,20 @@ document.addEventListener('DOMContentLoaded', function () {
         showFile(file);
     }
 
+    // The file input sits inside the drop zone, so its own click bubbles back
+    // here. Ignoring it stops the handler from re-opening (and blocking) the
+    // file dialog.
     $drop.on('click', function (e) {
+        if (e.target === $fileInput[0]) {
+            return;
+        }
         if ($(e.target).hasClass('appt-drop-x')) {
             e.stopPropagation();
             $fileInput.val('');
             $fileChip.hide().html('');
             return;
         }
-        $fileInput.trigger('click');
+        $fileInput[0].click();
     });
     $fileInput.on('change', function () {
         if (this.files.length) { acceptFile(this.files[0], false); }
@@ -319,18 +310,17 @@ document.addEventListener('DOMContentLoaded', function () {
         $('#appt-no-templates').toggle(visible === 0);
     });
 
-    $('#appt-ph-search').on('input', function () {
-        var q = $(this).val().toLowerCase();
-        $('#appt-ph-list .appt-placeholder').each(function () {
-            $(this).toggle($(this).data('search').indexOf(q) !== -1);
-        });
-    });
-
-    $('.appt-placeholder').on('click', function () {
-        var value = $(this).data('copy');
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(value);
-            Swal.fire({ toast:true, position:'top-end', icon:'success', title:value + ' copied', timer:1100, showConfirmButton:false });
+    // Select2 and the drag & drop box hide their real controls, so HTML5
+    // "required" cannot report on them. Validate before the form is sent.
+    $('#appt-upload-form').on('submit', function (e) {
+        var missing = [];
+        if (!$('#appt-position-group').val()) { missing.push('Position Group'); }
+        if (!$('#appt-nature').val()) { missing.push('Nature of Appointment'); }
+        if (!$('#appt-document-type').val()) { missing.push('Document Type'); }
+        if (!$fileInput[0].files.length) { missing.push('Template file'); }
+        if (missing.length) {
+            e.preventDefault();
+            Swal.fire({ icon:'warning', title:'Incomplete upload', text:'Please provide: ' + missing.join(', ') + '.' });
         }
     });
 });

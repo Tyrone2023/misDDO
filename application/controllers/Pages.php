@@ -6982,13 +6982,24 @@ public function car_rqa_promotion()
         }
 
         $uploadDir = FCPATH . 'uploads/appointment_templates/';
-        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true)) {
-            $this->session->set_flashdata('appointment_error', 'The template storage directory could not be created.');
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0777, true);
+            @chmod($uploadDir, 0777);
+        }
+        if (!is_dir($uploadDir) || !is_writable($uploadDir)) {
+            $this->session->set_flashdata('appointment_error', 'The template storage folder uploads/appointment_templates is not writable by the web server. Set it to 777 and upload again.');
             redirect('Pages/appointment_template_setup');
             return;
         }
-        $storedName = sprintf('%d_%s_%s_%s.%s', $group, strtolower($nature), $documentType, bin2hex(random_bytes(6)), $extension);
-        $storedName = preg_replace('/[^A-Za-z0-9._-]/', '_', $storedName);
+
+        // The file is renamed after the chosen Nature / Document Type /
+        // Position Group so a saved format is identifiable at a glance in the
+        // library, on download, and inside the uploads folder.
+        $shortTypes = ['appointment' => 'Appointment', 'assumption' => 'Certification of Assumption', 'assignment' => 'Assignment Order'];
+        $label = $natures[$nature] . ' - ' . ($shortTypes[$documentType] ?? $types[$documentType]) . ' - ' . $groups[$group];
+        $label = trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9 ()._-]/', ' ', $label)));
+        $displayName = $label . '.' . $extension;
+        $storedName = preg_replace('/[^A-Za-z0-9._-]/', '_', str_replace(' ', '_', $label)) . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
         if (!move_uploaded_file($upload['tmp_name'], $uploadDir . $storedName)) {
             $this->session->set_flashdata('appointment_error', 'The template could not be saved. Please try again.');
             redirect('Pages/appointment_template_setup');
@@ -6996,14 +7007,23 @@ public function car_rqa_promotion()
         }
 
         $userId = $this->session->id ?? $this->session->userdata('id');
-        $documents->save_template($group, $nature, $documentType, [
-            'original_name' => $originalName,
+        $replaced = $documents->save_template($group, $nature, $documentType, [
+            'original_name' => $displayName,
             'stored_path' => $storedName,
             'extension' => $extension,
             'file_size' => (int) $upload['size'],
         ], $userId ? (int) $userId : null);
 
-        $this->session->set_flashdata('appointment_success', $types[$documentType] . ' template saved for ' . $groups[$group] . ' / ' . $natures[$nature] . '.');
+        // Drop the superseded upload. Bundled guide files live in resources/
+        // and are never touched.
+        if (!empty($replaced) && strpos((string) $replaced->stored_path, 'guide/') !== 0) {
+            $oldPath = $uploadDir . basename((string) $replaced->stored_path);
+            if ($oldPath !== $uploadDir . $storedName && is_file($oldPath)) {
+                @unlink($oldPath);
+            }
+        }
+
+        $this->session->set_flashdata('appointment_success', 'Template saved as "' . $displayName . '".');
         redirect('Pages/appointment_template_setup');
     }
 
@@ -7220,7 +7240,7 @@ public function car_rqa_promotion()
                 'extension' => !empty($template) ? strtoupper((string) $template->extension) : '',
                 'templateUrl' => !empty($template) ? base_url('Pages/appointment_template_view/' . (int) $template->id) : '',
                 'url' => !empty($template)
-                    ? base_url('Pages/appointment_report_file/' . rawurlencode($recId) . '/' . $type) . '?nature=' . rawurlencode($nature)
+                    ? base_url('Pages/appointment_report_view/' . rawurlencode($recId) . '/' . $type) . '?nature=' . rawurlencode($nature)
                     : '',
             ];
         }
@@ -7266,6 +7286,63 @@ public function car_rqa_promotion()
             'nature_of_appointment' => $nature,
         ]);
         echo json_encode(['status' => 'success', 'message' => 'Nature of Appointment saved.']);
+    }
+
+    /**
+     * Preview + print an appointee's document. The merged file is rendered in
+     * the browser on an A4 sheet; nothing is written to the uploads folder and
+     * the temporary merge file is removed once converted.
+     */
+    public function appointment_report_view($recId, $documentType)
+    {
+        if ($this->session->logged_in == false) {
+            show_error('You are not authorised to view this report.', 403);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+        $documents = $this->appointment_document_model();
+        $row = $this->appointment_document_row($recId);
+        $nature = trim((string) $this->input->get('nature'));
+        if (empty($row) || !isset($documents->document_types()[$documentType]) || !isset($documents->natures()[$nature])) {
+            show_error('The selected appointment report is invalid.', 400);
+            return;
+        }
+        $row->nature_of_appointment = $nature;
+        $template = $documents->find_template((int) ($row->position_group ?? 0), $nature, $documentType);
+        if (empty($template)) {
+            show_error('No ' . $documents->document_types()[$documentType] . ' template is configured for this Position Group and Nature of Appointment.', 404);
+            return;
+        }
+
+        $preview = null;
+        $error = '';
+        try {
+            $path = $documents->generate($template, $row);
+            $preview = $documents->preview_file($path, (string) $template->extension);
+            @unlink($path);
+        } catch (Throwable $e) {
+            log_message('error', 'Appointment report preview failed: ' . $e->getMessage());
+            $error = $e->getMessage();
+        }
+
+        $groups = $documents->position_groups();
+        $name = trim((string) ($row->rec_name ?? ''));
+        if ($name === '') {
+            $name = rqa_applicant_name($row);
+        }
+
+        $this->load->view('pages/appointment_report_print', [
+            'title' => $documents->document_types()[$documentType],
+            'preview' => $preview,
+            'error' => $error,
+            'applicantName' => $name,
+            'positionTitle' => trim((string) ($row->jobTitle ?? '')),
+            'groupName' => $groups[(int) ($row->position_group ?? 0)] ?? 'Not Set',
+            'natureName' => $nature,
+            'templateName' => (string) $template->original_name,
+            'backUrl' => base_url('Pages/appointment_reports') . '?applicant=' . rawurlencode($recId),
+        ]);
     }
 
     public function appointment_report_file($recId, $documentType)
