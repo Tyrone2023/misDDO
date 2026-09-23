@@ -1129,7 +1129,7 @@
 
                                 <li class="menu-title">Administration</li>
                                 <li><a href="<?= base_url(); ?>users" class="waves-effect"><i class="ion ion-ios-person-add"></i><span>Manage Users</span></a></li>
-                                <?php if (in_array($this->session->position, array('asst_sds', 'HRMO'), true)) : ?>
+                                <?php if (in_array($this->session->position, array('sds', 'asst_sds', 'HRMO'), true)) : ?>
                                 <li>
                                     <a href="<?= base_url(); ?>Pages/esignature" class="waves-effect">
                                         <i class="mdi mdi-draw"></i>

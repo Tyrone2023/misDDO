@@ -92,6 +92,8 @@ class Appointment_document_model extends CI_Model
             'SDS_POSITION' => 'SDS position title',
             'HRMO_NAME' => 'Highest-ranking HRMO',
             'HRMO_POSITION' => 'HRMO position title',
+            'ASDS_NAME' => 'Assistant SDS / HRMPSB Chairperson',
+            'DATE_SIGNING' => 'Date of signing (today)',
             'VICE' => 'Previous incumbent/vice value',
             'PAGE' => 'Plantilla page',
         ];
@@ -333,6 +335,8 @@ class Appointment_document_model extends CI_Model
             'SDS_POSITION' => $signatories['SDS_POSITION'],
             'HRMO_NAME' => $signatories['HRMO_NAME'],
             'HRMO_POSITION' => $signatories['HRMO_POSITION'],
+            'ASDS_NAME' => $signatories['ASDS_NAME'],
+            'DATE_SIGNING' => date('F j, Y'),
             'VICE' => 'NEW ITEM',
             'PAGE' => '',
         ];
@@ -356,11 +360,19 @@ class Appointment_document_model extends CI_Model
             return trim((string) ($settings->{$field} ?? ''));
         };
 
-        $sdsName = $setting('sds');
+        // The signing accounts (users.position) come first so the names match
+        // the e-signatures drawn over them; settings/staff are the fallback.
+        $sdsName = $this->user_signatory('sds')['name'];
         $sdsPosition = $setting('sdsPosition');
-        $hrmoName = $setting('sigSR');
+        $hrmoName = $this->user_signatory('Human Resource Admin')['name'];
         $hrmoPosition = $setting('sigSRPosition');
         $agency = $setting('agency');
+        if ($sdsName === '') {
+            $sdsName = $setting('sds');
+        }
+        if ($hrmoName === '') {
+            $hrmoName = $setting('sigSR');
+        }
 
         if ($sdsName === '') {
             $staff = $this->staff_by_user_position('sds');
@@ -404,8 +416,42 @@ class Appointment_document_model extends CI_Model
             'SDS_POSITION' => $sdsPosition,
             'HRMO_NAME' => $hrmoName,
             'HRMO_POSITION' => $hrmoPosition,
+            'ASDS_NAME' => $this->user_signatory('asst_sds')['name'],
             'AGENCY' => $agency !== '' ? $agency : 'Department of Education',
         ];
+    }
+
+    /**
+     * Name and e-signature file of the account holding a signing role. The
+     * signature is the one maintained under Pages/esignature (uploads/esig).
+     * An account with a signature on file is preferred.
+     */
+    private function user_signatory($userPosition)
+    {
+        static $cache = [];
+        if (isset($cache[$userPosition])) {
+            return $cache[$userPosition];
+        }
+        $hasEsig = $this->db->field_exists('esig', 'users');
+        $this->db->where('position', $userPosition)->where('status', 1);
+        if ($hasEsig) {
+            $this->db->order_by("COALESCE(esig, '') = ''", 'ASC', false);
+        }
+        $user = $this->db->order_by('id', 'DESC')->limit(1)->get('users')->row();
+
+        $name = '';
+        $esig = '';
+        if (!empty($user)) {
+            $first = trim((string) $user->fname);
+            $middle = trim((string) $user->mname);
+            $mi = $middle !== '' ? mb_substr($middle, 0, 1, 'UTF-8') . '.' : '';
+            $name = mb_strtoupper(trim(implode(' ', array_filter([$first, $mi, trim((string) $user->lname)]))), 'UTF-8');
+            $file = $hasEsig ? basename(trim((string) $user->esig)) : '';
+            if ($file !== '' && is_file(FCPATH . 'uploads/esig/' . $file)) {
+                $esig = FCPATH . 'uploads/esig/' . $file;
+            }
+        }
+        return $cache[$userPosition] = ['name' => $name, 'esig' => $esig];
     }
 
     private function staff_by_user_position($userPosition)
@@ -566,9 +612,20 @@ class Appointment_document_model extends CI_Model
             if ($values['{{SDS_NAME}}'] !== '') {
                 $sheet->setCellValue('L51', mb_strtoupper($values['{{SDS_NAME}}'], 'UTF-8'));
             }
-            if ($book->getSheetCount() > 1 && $values['{{HRMO_NAME}}'] !== '') {
-                $book->getSheet(1)->setCellValue('L15', mb_strtoupper($values['{{HRMO_NAME}}'], 'UTF-8'));
-                $book->getSheet(1)->setCellValue('L16', $values['{{HRMO_POSITION}}']);
+            $sheet->setCellValue('M55', $values['{{DATE_SIGNING}}']);
+            $sheet->getStyle('M55')->getAlignment()->setHorizontal('center');
+            $this->add_esig($sheet, 'L48', $this->user_signatory('sds')['esig']);
+            if ($book->getSheetCount() > 1) {
+                $certs = $book->getSheet(1);
+                if ($values['{{HRMO_NAME}}'] !== '') {
+                    $certs->setCellValue('L15', mb_strtoupper($values['{{HRMO_NAME}}'], 'UTF-8'));
+                    $certs->setCellValue('L16', $values['{{HRMO_POSITION}}']);
+                }
+                if ($values['{{ASDS_NAME}}'] !== '') {
+                    $certs->setCellValue('L29', $values['{{ASDS_NAME}}']);
+                }
+                $this->add_esig($certs, 'L12', $this->user_signatory('Human Resource Admin')['esig']);
+                $this->add_esig($certs, 'L26', $this->user_signatory('asst_sds')['esig']);
             }
         }
 
@@ -576,6 +633,23 @@ class Appointment_document_model extends CI_Model
         $writer = IOFactory::createWriter($book, $writerType);
         $writer->save($output);
         $book->disconnectWorksheets();
+    }
+
+    /** Places an e-signature just above the signatory's name. */
+    private function add_esig($sheet, $coordinate, $path)
+    {
+        if ($path === '' || !is_file($path)) {
+            return;
+        }
+        $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
+        $drawing->setName('E-Signature');
+        $drawing->setDescription('E-Signature');
+        $drawing->setPath($path);
+        $drawing->setResizeProportional(true);
+        $drawing->setHeight(60);
+        $drawing->setCoordinates($coordinate);
+        $drawing->setOffsetX(30);
+        $drawing->setWorksheet($sheet);
     }
 
     private function merge_docx($source, $output, array $values, $documentType)
@@ -778,6 +852,65 @@ class Appointment_document_model extends CI_Model
         }
     }
 
+    /**
+     * Blank columns past the right edge of the form. They still count toward
+     * the sheet width, so the form would fill only part of the A4 width.
+     */
+    private function trim_trailing_columns($sheet)
+    {
+        $highestColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestColumn());
+        $highestRow = (int) $sheet->getHighestRow();
+        // A merged range reaching into a column keeps it.
+        $lastMerged = 0;
+        foreach ($sheet->getMergeCells() as $range) {
+            $bounds = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::rangeBoundaries($range);
+            $lastMerged = max($lastMerged, (int) $bounds[1][0]);
+        }
+        $last = $highestColumn;
+        while ($last > max(1, $lastMerged) && !$this->column_has_content($sheet, $last, $highestRow)) {
+            $last--;
+        }
+        if ($last < $highestColumn) {
+            $sheet->removeColumnByIndex($last + 1, $highestColumn - $last);
+        }
+    }
+
+    private function column_has_content($sheet, $column, $highestRow)
+    {
+        $letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column);
+        foreach ($sheet->getDrawingCollection() as $drawing) {
+            if (preg_replace('/[0-9]+/', '', $drawing->getCoordinates()) === $letter) {
+                return true;
+            }
+        }
+        for ($row = 1; $row <= $highestRow; $row++) {
+            if ($this->cell_has_content($sheet, $letter . $row)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function cell_has_content($sheet, $coordinate)
+    {
+        if (!$sheet->cellExists($coordinate)) {
+            return false;
+        }
+        $cell = $sheet->getCell($coordinate);
+        if (trim((string) $cell->getValue()) !== '') {
+            return true;
+        }
+        $style = $cell->getStyle();
+        $borders = $style->getBorders();
+        $none = \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_NONE;
+        foreach ([$borders->getTop(), $borders->getBottom(), $borders->getLeft(), $borders->getRight()] as $border) {
+            if ($border->getBorderStyle() !== $none) {
+                return true;
+            }
+        }
+        return $style->getFill()->getFillType() !== \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_NONE;
+    }
+
     private function row_has_content($sheet, $row, $highestColumn)
     {
         $none = \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_NONE;
@@ -948,6 +1081,9 @@ class Appointment_document_model extends CI_Model
             // Screen-only gridlines override the workbook's own cell borders,
             // which would make the preview differ from the printed sheet.
             $style = preg_replace('/\.gridlines (?:td|th) \{border: 1px solid black;\}/', '', $style);
+            // Each sheet names its own @page with Excel's margins; drop them so
+            // every page prints on the host page's edge-to-edge A4 sheet.
+            $style = preg_replace('/@page\s+page[0-9]+\s*\{[^}]*\}/', '', $style);
         }
         $body = $html;
         if (preg_match('#<body[^>]*>(.*)</body>#is', $html, $match)) {
@@ -961,9 +1097,17 @@ class Appointment_document_model extends CI_Model
         if (!class_exists('PhpOffice\\PhpSpreadsheet\\IOFactory')) {
             require_once FCPATH . 'vendor/autoload.php';
         }
-        $book = IOFactory::load($source);
+        // GD warns about harmless colour profiles in some uploaded e-signature
+        // PNGs; the warning would otherwise be printed into the form.
+        $level = error_reporting(error_reporting() & ~E_WARNING);
+        try {
+            $book = IOFactory::load($source);
+        } finally {
+            error_reporting($level);
+        }
         foreach ($book->getWorksheetIterator() as $sheet) {
             $this->trim_trailing_rows($sheet);
+            $this->trim_trailing_columns($sheet);
         }
         try {
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Html($book);

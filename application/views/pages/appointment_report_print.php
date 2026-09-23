@@ -5,12 +5,12 @@ if (!function_exists('h')) {
 $kind = $preview['kind'] ?? '';
 $pages = $preview['pages'] ?? [];
 
-// Official output is A4 portrait with a formal 12.7 mm (0.5") border on all
-// sides. A spreadsheet form keeps its exact layout and is scaled down as a
-// whole to fit the sheet, the way Excel's "fit to one page" prints it.
-$margin = '12.7mm';
-$availableWidth = 692;   // (210mm - 2 x 12.7mm) at 96dpi, less a safety pixel or two
-$availableHeight = 1020; // (297mm - 2 x 12.7mm) at 96dpi, less a safety pixel or two
+// Official output is A4 portrait with a narrow 6 mm border, the least most
+// printers can reach. A spreadsheet form keeps its exact layout and is scaled
+// as a whole to fill the sheet edge to edge, like Excel's "fit to page".
+$margin = '6mm';
+$availableWidth = 746;   // (210mm - 2 x 6mm) at 96dpi, less a safety pixel or two
+$availableHeight = 1074; // (297mm - 2 x 6mm) at 96dpi, less a safety pixel or two
 $docWidth = $preview['page']['content_width'] ?? '6.5in';
 $docTop = $preview['page']['margin_top'] ?? '1in';
 $docBottom = $preview['page']['margin_bottom'] ?? '1in';
@@ -61,6 +61,12 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
        the single line Excel puts it on, so nothing reflows. */
     .rp-sheet table { border-collapse:collapse; table-layout:fixed; width:100%; }
     .rp-sheet td, .rp-sheet th { white-space:nowrap; }
+    /* E-signatures float over the name as in Excel, not shrunk into one cell. */
+    .rp-sheet td > img { max-width:none !important; pointer-events:none; mix-blend-mode:multiply; }
+    /* Edit mode: the form can be corrected in place before printing. */
+    .rp-editing .rp-fit, .rp-editing .rp-doc { outline:2px dashed #9fb8d6; outline-offset:4px; cursor:text; }
+    .rp-editing [contenteditable]:focus { outline-color:var(--rp-primary); }
+    .rp-btn-edit.active { background:#fff6e8; border-color:#f3dfb8; color:#926719; }
     /* Word single spacing, and no extra gap between paragraphs: the converter
        already emits the document's own blank lines. */
     .rp-doc { width:<?= h($docWidth); ?>; max-width:100%; margin:0 auto; padding:calc(<?= h($docTop); ?> - <?= $margin; ?>) 0 calc(<?= h($docBottom); ?> - <?= $margin; ?>); font-family:'Times New Roman',serif; color:#000; line-height:1.15; }
@@ -74,10 +80,14 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
     @media print {
         @page { size:A4 portrait; margin:<?= $margin; ?>; }
         html, body { background:#fff; }
+        /* Keep the form's cell fills (blue frame, grey headers) on paper;
+           browsers drop background colours in print unless told not to. */
+        .rp-paper, .rp-paper * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
         .rp-bar, .rp-noprint, .rp-page-no { display:none !important; }
         .rp-paper { width:auto; min-height:0; margin:0; padding:0; box-shadow:none; border-radius:0; }
         .rp-paper + .rp-paper { page-break-before:always; }
         .rp-doc { padding:0; }
+        .rp-fit, .rp-doc { outline:none !important; }
     }
 </style>
 </head>
@@ -96,6 +106,9 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
             </div>
         </div>
         <div class="rp-actions">
+            <?php if ($kind === 'spreadsheet' || $kind === 'docx') : ?>
+            <button type="button" class="rp-btn rp-btn-edit" id="rpEdit" title="Edit the text before printing. Changes are not saved."><i class="mdi mdi-pencil-outline"></i><span>Edit</span></button>
+            <?php endif; ?>
             <button type="button" class="rp-btn rp-btn-print" onclick="window.print();"><i class="mdi mdi-printer"></i>Print</button>
         </div>
     </div>
@@ -126,6 +139,8 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
     // reflowed: it keeps its proportions and simply fits the A4 sheet.
     var AVAILABLE_WIDTH = <?= (int) $availableWidth; ?>;
     var AVAILABLE_HEIGHT = <?= (int) $availableHeight; ?>;
+    // Breathing room between text and the form's borders, in unscaled px.
+    var CELL_INSET = 8;
 
     // Excel lets a cell's text run over the empty cells beside it, but it stops
     // at the next value or at a ruled line. The browser has no such limit and
@@ -144,17 +159,34 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
         var row = cell.parentNode;
         if (!row || !row.cells) { return edge; }
         var cells = row.cells, step = side === 'right' ? 1 : -1;
-        for (var i = cell.cellIndex + step; i >= 0 && i < cells.length; i += step) {
-            var next = cells[i], style = window.getComputedStyle(next);
-            if (cellHasInk(next)) { break; }
-            var near = side === 'right' ? style.borderLeftStyle : style.borderRightStyle;
-            if (near && near !== 'none') { break; }
-            var nextRect = next.getBoundingClientRect();
-            edge = side === 'right' ? nextRect.right : nextRect.left;
-            var far = side === 'right' ? style.borderRightStyle : style.borderLeftStyle;
-            if (far && far !== 'none') { break; }
+        // Only a ruled line (or the sheet edge) gets the inset; text stopping
+        // at a neighbouring value keeps the full room Excel gives it.
+        var ruled = true;
+        if (!sideBordered(cell, side)) {
+            for (var i = cell.cellIndex + step; i >= 0 && i < cells.length; i += step) {
+                var next = cells[i], style = window.getComputedStyle(next);
+                if (cellHasInk(next)) { ruled = false; break; }
+                var near = side === 'right' ? style.borderLeftStyle : style.borderRightStyle;
+                if (near && near !== 'none') { break; }
+                var nextRect = next.getBoundingClientRect();
+                edge = side === 'right' ? nextRect.right : nextRect.left;
+                var far = side === 'right' ? style.borderRightStyle : style.borderLeftStyle;
+                if (far && far !== 'none') { break; }
+            }
         }
-        return edge;
+        if (!ruled) { return edge; }
+        return side === 'right' ? edge - CELL_INSET : edge + CELL_INSET;
+    }
+
+    // Whether a vertical ruled line runs along this side of the cell: its own
+    // border or the facing border of the cell beside it.
+    function sideBordered(cell, side) {
+        var own = window.getComputedStyle(cell)[side === 'right' ? 'borderRightStyle' : 'borderLeftStyle'];
+        if (own && own !== 'none') { return true; }
+        var row = cell.parentNode, beside = row && row.cells ? row.cells[cell.cellIndex + (side === 'right' ? 1 : -1)] : null;
+        if (!beside) { return false; }
+        var facing = window.getComputedStyle(beside)[side === 'right' ? 'borderLeftStyle' : 'borderRightStyle'];
+        return !!facing && facing !== 'none';
     }
 
     // The converter puts each run of text in its own sized span, so the cell and
@@ -193,13 +225,53 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
             scaleCellText(cell, 1);
             var fit = measure(cell);
             if (!fit.width || fit.over <= 1 || fit.room <= 0) { continue; }
-            // Only ever ease text down, never up, and never below three quarters
+            // Only ever ease text down, never up, and never below 70%
             // of the size the office set.
-            var ratio = Math.min(1, Math.max((fit.width - fit.over) / fit.width, 0.75));
+            var ratio = Math.min(1, Math.max((fit.width - fit.over) / fit.width, 0.7));
             for (var pass = 0; pass < 4 && ratio < 1; pass++) {
                 scaleCellText(cell, ratio);
                 if (measure(cell).over <= 1) { break; }
-                ratio = Math.max(ratio - 0.02, 0.75);
+                ratio = Math.max(ratio - 0.02, 0.7);
+            }
+        }
+    }
+
+    // Rows are heightened evenly (never the text) so a form that is wider
+    // than it is tall still reaches the bottom of the sheet.
+    function setRowStretch(sheet, factor) {
+        var rows = sheet.getElementsByTagName('tr');
+        for (var r = 0; r < rows.length; r++) {
+            var row = rows[r];
+            if (!row.getAttribute('data-rp-height')) {
+                row.setAttribute('data-rp-height', row.getBoundingClientRect().height || 0);
+            }
+            var base = parseFloat(row.getAttribute('data-rp-height'));
+            row.style.height = factor === 1 || !base ? '' : (base * factor) + 'px';
+        }
+    }
+
+    // Scaling to a fractional size leaves hairline gaps between neighbouring
+    // filled cells (the blue frame, grey headers). Each filled cell bleeds its
+    // own colour a fraction of a pixel so the fill reads solid on screen and paper.
+    function sealFills() {
+        var cells = document.querySelectorAll('.rp-sheet td');
+        for (var i = 0; i < cells.length; i++) {
+            // Inset text away from a ruled line beside it, on top of any indent
+            // the office set. Other sides and empty spacer columns are left
+            // alone so labels keep their room and column widths never change.
+            if (cellHasInk(cells[i]) && !cells[i].getAttribute('data-rp-inset')) {
+                var pad = window.getComputedStyle(cells[i]);
+                if (sideBordered(cells[i], 'left')) {
+                    cells[i].style.paddingLeft = (parseFloat(pad.paddingLeft) || 0) + CELL_INSET + 'px';
+                }
+                if (sideBordered(cells[i], 'right')) {
+                    cells[i].style.paddingRight = (parseFloat(pad.paddingRight) || 0) + CELL_INSET + 'px';
+                }
+                cells[i].setAttribute('data-rp-inset', '1');
+            }
+            var bg = window.getComputedStyle(cells[i]).backgroundColor;
+            if (bg && bg !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(bg) && bg !== 'rgb(255, 255, 255)') {
+                cells[i].style.boxShadow = '0 0 0 0.75px ' + bg;
             }
         }
     }
@@ -211,13 +283,21 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
             sheet.style.transform = 'none';
             holder.style.width = '';
             holder.style.height = '';
+            setRowStretch(sheet, 1);
             fitCells(sheet);
             // The width is the sheet's own box (spilled text is clipped, as in
             // Excel); only the height has to be measured from the content.
             var width = sheet.getBoundingClientRect().width || sheet.offsetWidth;
             var height = sheet.scrollHeight;
             if (!width || !height) { continue; }
-            var scale = Math.min(AVAILABLE_WIDTH / width, AVAILABLE_HEIGHT / height, 1);
+            // Fill the sheet edge to edge: scale up as well as down.
+            var scale = Math.min(AVAILABLE_WIDTH / width, AVAILABLE_HEIGHT / height);
+            var stretch = Math.min(AVAILABLE_HEIGHT / (height * scale), 1.6);
+            if (stretch > 1.01) {
+                setRowStretch(sheet, stretch);
+                height = sheet.scrollHeight;
+                scale = Math.min(AVAILABLE_WIDTH / width, AVAILABLE_HEIGHT / height);
+            }
             sheet.style.transform = 'scale(' + scale + ')';
             holder.style.width = Math.floor(width * scale) + 'px';
             holder.style.height = Math.floor(height * scale) + 'px';
@@ -225,6 +305,25 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
         document.body.className = 'rp-fitted';
     }
 
+    // Word-like correction before printing. Edits live only on this page;
+    // reloading brings back the generated form.
+    var editBtn = document.getElementById('rpEdit');
+    if (editBtn) {
+        editBtn.addEventListener('click', function () {
+            var on = !editBtn.classList.contains('active');
+            var areas = document.querySelectorAll('.rp-fit, .rp-doc');
+            for (var a = 0; a < areas.length; a++) {
+                if (on) { areas[a].setAttribute('contenteditable', 'true'); areas[a].setAttribute('spellcheck', 'false'); }
+                else { areas[a].removeAttribute('contenteditable'); }
+            }
+            editBtn.classList.toggle('active', on);
+            document.documentElement.classList.toggle('rp-editing', on);
+            editBtn.querySelector('span').textContent = on ? 'Done' : 'Edit';
+            if (!on) { fitPages(); }
+        });
+    }
+
+    sealFills();
     if (document.readyState === 'complete') { fitPages(); }
     window.addEventListener('load', fitPages);
     window.addEventListener('resize', fitPages);
