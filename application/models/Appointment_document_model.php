@@ -240,6 +240,10 @@ class Appointment_document_model extends CI_Model
         $middle = trim((string) ($row->MiddleName ?? ''));
         $last = trim((string) ($row->LastName ?? ''));
         $extension = trim((string) ($row->NameExtn ?? ''));
+        // "N/A", "NA", "-" mean no suffix, not part of the printed name.
+        if (preg_match('#^(n/?a|none|-+|\.)$#i', $extension)) {
+            $extension = '';
+        }
         $middleInitial = $middle !== '' ? mb_strtoupper(mb_substr($middle, 0, 1, 'UTF-8'), 'UTF-8') . '.' : '';
         $nameParts = array_filter([$first, $middleInitial, $last, $extension], function ($v) { return $v !== ''; });
         $fullName = implode(' ', $nameParts);
@@ -671,7 +675,15 @@ class Appointment_document_model extends CI_Model
                 'Administrative Officer II' => $values['{{POSITION_TITLE}}'],
                 'PHOEBE GAY L. REFAMONTE, CESO V' => $values['{{SDS_NAME}}'],
                 'NORBERTO S. MANLANGIT CE, MPA' => $values['{{HRMO_NAME}}'],
+                'Administrative Officer V' => $values['{{HRMO_POSITION}}'] !== '' ? $values['{{HRMO_POSITION}}'] : 'Administrative Officer V',
+                // Signed and attested today, like the appointment's date of signing.
+                'Done this ________ day of ________________' => 'Done this ' . date('jS') . ' day of ' . date('F Y'),
+                'Date: ________________' => 'Date: ' . $values['{{DATE_SIGNING}}'],
             ];
+            $hired = strtotime($values['{{DATE_HIRED}}']);
+            if ($values['{{DATE_HIRED}}'] !== '' && $hired) {
+                $legacy['effective   ____________________'] = 'effective   ' . date('F j, Y', $hired);
+            }
         } elseif ($documentType === 'assignment') {
             $locality = trim($values['{{MUNICIPALITY}}'] . ', ' . $values['{{PROVINCE}}'], " \t\n\r\0\x0B,");
             if ($locality === '') {
@@ -684,10 +696,17 @@ class Appointment_document_model extends CI_Model
                 'Monkayo West District' => $values['{{DISTRICT}}'],
                 'Monkayo, Davao de Oro' => $locality,
                 'PHOEBE GAY L. REFAMONTE, CESO V' => $values['{{SDS_NAME}}'],
+                // Order date, and the Special Order month/year; the order
+                // number itself is issued by Records, so it is left to fill in.
+                '_____________________' => $values['{{DATE_SIGNING}}'],
+                'SEPTEMBER– 0514 s. 2026' => mb_strtoupper(date('F'), 'UTF-8') . '– ______ s. ' . date('Y'),
             ];
         }
 
+        // Parts are edited in memory and written once: ZipArchive keeps
+        // returning the original entry until the archive is closed.
         $replacements = $values + $legacy;
+        $parts = [];
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
             if (!preg_match('#^word/(document|header[0-9]+|footer[0-9]+)\.xml$#', $name)) {
@@ -697,14 +716,166 @@ class Appointment_document_model extends CI_Model
             if ($xml === false) {
                 continue;
             }
-            $xml = $this->replace_word_text($xml, $replacements);
-            $zip->addFromString($name, $xml);
+            $parts[$name] = $this->replace_word_text($xml, $replacements);
+        }
+        $parts['word/_rels/document.xml.rels'] = $zip->getFromName('word/_rels/document.xml.rels');
+        $parts['[Content_Types].xml'] = $zip->getFromName('[Content_Types].xml');
+
+        // E-signatures of the signatories, drawn over their printed names.
+        $signatures = [];
+        if (in_array($documentType, ['assumption', 'assignment'], true)) {
+            $signatures[$values['{{SDS_NAME}}']] = $this->user_signatory('sds')['esig'];
+        }
+        if ($documentType === 'assumption') {
+            $signatures[$values['{{HRMO_NAME}}']] = $this->user_signatory('Human Resource Admin')['esig'];
+        }
+        $number = 0;
+        foreach ($signatures as $signName => $signFile) {
+            if ($signName !== '' && $signFile !== '' && isset($parts['word/document.xml'])) {
+                $this->add_docx_esig($zip, $parts, $signName, $signFile, ++$number);
+            }
+        }
+        foreach ($parts as $name => $xml) {
+            if ($xml !== false) {
+                $zip->addFromString($name, $xml);
+            }
         }
         $zip->close();
     }
 
-    /** Replace text even when Word has split it across several w:t runs. */
+    /**
+     * Anchors an e-signature picture on the run that starts the signatory's
+     * name, behind the text and lifted so it sits over the name as a hand
+     * signature does. The picture is added to the package (media, relation,
+     * content type) so the downloaded file carries it too.
+     */
+    private function add_docx_esig(ZipArchive $zip, array &$parts, $signName, $imagePath, $number)
+    {
+        $size = @getimagesize($imagePath);
+        $xml = $parts['word/document.xml'];
+        $relsXml = $parts['word/_rels/document.xml.rels'];
+        if (!$size || $xml === false || $relsXml === false) {
+            return;
+        }
+        $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION)) === 'png' ? 'png' : 'jpeg';
+
+        $dom = new DOMDocument();
+        $dom->preserveWhiteSpace = true;
+        if (!@$dom->loadXML($xml)) {
+            return;
+        }
+        $w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $xpath = new DOMXPath($dom);
+        $xpath->registerNamespace('w', $w);
+        $text = null;
+        foreach ($xpath->query('//w:body//w:r/w:t') as $node) {
+            if (strpos($node->nodeValue, $signName) !== false) {
+                $text = $node;
+                break;
+            }
+        }
+        if ($text === null) {
+            return;
+        }
+        $run = $text->parentNode;
+        $position = strpos($text->nodeValue, $signName);
+
+        // Signature about 0.55in tall, centred over the name.
+        $heightPt = 40;
+        $widthPt = min(150, $heightPt * $size[0] / max(1, $size[1]));
+        $sz = $xpath->query('./w:rPr/w:sz', $run)->item(0);
+        $fontPt = $sz ? ((float) $sz->getAttributeNS($w, 'val')) / 2 : 11;
+        $namePt = mb_strlen($signName, 'UTF-8') * $fontPt * 0.62;
+        $emu = function ($pt) { return (int) round($pt * 12700); };
+        $relId = 'rIdEsig' . $number;
+        $offsetX = $emu(($namePt - $widthPt) / 2);
+        $offsetY = $emu(-$heightPt * 0.75);
+        $cx = $emu($widthPt);
+        $cy = $emu($heightPt);
+        $id = 9100 + $number;
+
+        $fragment = $dom->createDocumentFragment();
+        $fragment->appendXML(
+            '<w:r xmlns:w="' . $w . '" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
+            . ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'
+            . ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:drawing>'
+            . '<wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="' . (251700000 + $number) . '" behindDoc="1" locked="0" layoutInCell="1" allowOverlap="1">'
+            . '<wp:simplePos x="0" y="0"/>'
+            . '<wp:positionH relativeFrom="character"><wp:posOffset>' . $offsetX . '</wp:posOffset></wp:positionH>'
+            . '<wp:positionV relativeFrom="paragraph"><wp:posOffset>' . $offsetY . '</wp:posOffset></wp:positionV>'
+            . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/>'
+            . '<wp:docPr id="' . $id . '" name="E-Signature ' . $number . '"/><wp:cNvGraphicFramePr/>'
+            . '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>'
+            . '<pic:nvPicPr><pic:cNvPr id="' . $id . '" name="esig' . $number . '.' . $extension . '"/><pic:cNvPicPr/></pic:nvPicPr>'
+            . '<pic:blipFill><a:blip r:embed="' . $relId . '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+            . '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+            . '</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>'
+        );
+        $drawingRun = $fragment->firstChild;
+
+        // Split the run so the picture anchors where the name begins.
+        if ($position > 0) {
+            $before = $run->cloneNode(true);
+            $index = 0;
+            foreach ($run->childNodes as $i => $child) {
+                if ($child === $text) {
+                    $index = $i;
+                }
+            }
+            $beforeText = $before->childNodes->item($index);
+            $beforeText->nodeValue = substr($text->nodeValue, 0, $position);
+            $beforeText->setAttribute('xml:space', 'preserve');
+            while ($beforeText->nextSibling) {
+                $before->removeChild($beforeText->nextSibling);
+            }
+            while ($text->previousSibling && !($text->previousSibling instanceof DOMElement && $text->previousSibling->localName === 'rPr')) {
+                $run->removeChild($text->previousSibling);
+            }
+            $text->nodeValue = substr($text->nodeValue, $position);
+            $text->setAttribute('xml:space', 'preserve');
+            $run->parentNode->insertBefore($before, $run);
+        }
+        $run->parentNode->insertBefore($drawingRun, $run);
+
+        $parts['word/document.xml'] = $dom->saveXML();
+        $zip->addFile($imagePath, 'word/media/esig' . $number . '.' . $extension);
+        $parts['word/_rels/document.xml.rels'] = str_replace(
+            '</Relationships>',
+            '<Relationship Id="' . $relId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/esig' . $number . '.' . $extension . '"/></Relationships>',
+            $relsXml
+        );
+        $types = $parts['[Content_Types].xml'];
+        if ($types !== false && stripos($types, 'Extension="' . $extension . '"') === false) {
+            $parts['[Content_Types].xml'] = str_replace(
+                '</Types>',
+                '<Default Extension="' . $extension . '" ContentType="image/' . $extension . '"/></Types>',
+                $types
+            );
+        }
+    }
+
+    /**
+     * Replace text even when Word has split it across several w:t runs.
+     * Two passes through unique markers, so a replaced value is never
+     * matched again by a later rule (e.g. the sample name inside the new one).
+     */
     private function replace_word_text($xml, array $replacements)
+    {
+        $markers = [];
+        $finals = [];
+        $index = 0;
+        foreach ($replacements as $search => $replacement) {
+            if ($search === '' || $search === $replacement) {
+                continue;
+            }
+            $marker = "\u{E000}" . $index++ . "\u{E001}";
+            $markers[$search] = $marker;
+            $finals[$marker] = $replacement;
+        }
+        return $this->replace_word_text_pass($this->replace_word_text_pass($xml, $markers), $finals);
+    }
+
+    private function replace_word_text_pass($xml, array $replacements)
     {
         $dom = new DOMDocument();
         $dom->preserveWhiteSpace = true;
@@ -818,11 +989,14 @@ class Appointment_document_model extends CI_Model
             ];
         }
         if ($extension === 'docx') {
-            $html = $this->docx_preview_html($path);
-            return $html === null ? null : [
+            // The template's own page (letterhead, text boxes, content
+            // controls, tab stops...) so the preview follows the Word form.
+            require_once APPPATH . 'libraries/Docx_page_renderer.php';
+            $page = (new Docx_page_renderer($path))->render();
+            return [
                 'kind' => 'docx',
                 'style' => '',
-                'pages' => [['html' => $html, 'width' => null]],
+                'pages' => [['html' => $page['html'], 'width' => $page['width']]],
                 'page' => $this->docx_page_setup($path),
             ];
         }

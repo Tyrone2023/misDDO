@@ -11,9 +11,14 @@ $pages = $preview['pages'] ?? [];
 $margin = '6mm';
 $availableWidth = 746;   // (210mm - 2 x 6mm) at 96dpi, less a safety pixel or two
 $availableHeight = 1074; // (297mm - 2 x 6mm) at 96dpi, less a safety pixel or two
-$docWidth = $preview['page']['content_width'] ?? '6.5in';
-$docTop = $preview['page']['margin_top'] ?? '1in';
-$docBottom = $preview['page']['margin_bottom'] ?? '1in';
+if ($kind === 'docx') {
+    // A Word page already carries its own margins (and a letterhead that runs
+    // to the paper edge), so it is laid on the A4 sheet without a border.
+    $margin = '0mm';
+    $availableWidth = 793;
+    $availableHeight = 1121;
+}
+$docPageWidth = (float) ($pages[0]['width'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,16 +69,15 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
     /* E-signatures float over the name as in Excel, not shrunk into one cell. */
     .rp-sheet td > img { max-width:none !important; pointer-events:none; mix-blend-mode:multiply; }
     /* Edit mode: the form can be corrected in place before printing. */
-    .rp-editing .rp-fit, .rp-editing .rp-doc { outline:2px dashed #9fb8d6; outline-offset:4px; cursor:text; }
+    .rp-editing .rp-fit { outline:2px dashed #9fb8d6; outline-offset:4px; cursor:text; }
     .rp-editing [contenteditable]:focus { outline-color:var(--rp-primary); }
     .rp-btn-edit.active { background:#fff6e8; border-color:#f3dfb8; color:#926719; }
-    /* Word single spacing, and no extra gap between paragraphs: the converter
-       already emits the document's own blank lines. */
-    .rp-doc { width:<?= h($docWidth); ?>; max-width:100%; margin:0 auto; padding:calc(<?= h($docTop); ?> - <?= $margin; ?>) 0 calc(<?= h($docBottom); ?> - <?= $margin; ?>); font-family:'Times New Roman',serif; color:#000; line-height:1.15; }
-    .rp-doc p { margin:0; }
-    .dp-tab { display:inline-block; width:2.4em; }
-    table.dp-tbl { width:100%; border-collapse:collapse; margin:.5rem 0; }
-    table.dp-tbl td { border:1px solid #000; padding:4px 8px; vertical-align:top; }
+    /* Word page: the template's own page box, scaled onto the A4 sheet. */
+    /* Images that bleed past the paper (letterheads) are cut at its edge, as in Word. */
+    .rp-docpage .dx-page { overflow:hidden; }
+    .rp-docpage .dx-tab { display:inline-block; width:0; }
+    .rp-docpage .dx-shape img { mix-blend-mode:multiply; }
+    .rp-docpage table.dx-table td > .dx-p:last-child { margin-bottom:0; }
     .rp-fallback { max-width:600px; margin:80px auto; text-align:center; color:var(--rp-muted); }
     .rp-fallback i { font-size:52px; color:#c4d1df; display:block; margin-bottom:12px; }
     @media(max-width:900px){ .rp-paper{ width:auto; min-height:0; padding:14px; } .rp-actions{width:100%; margin-left:0} }
@@ -86,8 +90,7 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
         .rp-bar, .rp-noprint, .rp-page-no { display:none !important; }
         .rp-paper { width:auto; min-height:0; margin:0; padding:0; box-shadow:none; border-radius:0; }
         .rp-paper + .rp-paper { page-break-before:always; }
-        .rp-doc { padding:0; }
-        .rp-fit, .rp-doc { outline:none !important; }
+        .rp-fit { outline:none !important; }
     }
 </style>
 </head>
@@ -123,7 +126,11 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
             </div>
         <?php endforeach; ?>
     <?php elseif ($kind === 'docx') : ?>
-        <div class="rp-paper"><div class="rp-doc"><?= $pages[0]['html']; ?></div></div>
+        <div class="rp-paper">
+            <div class="rp-fit-box">
+                <div class="rp-fit rp-docpage"<?= $docPageWidth > 0 ? ' style="width:' . $docPageWidth . 'pt;"' : ''; ?>><?= $pages[0]['html']; ?></div>
+            </div>
+        </div>
     <?php else : ?>
         <div class="rp-fallback rp-noprint">
             <i class="mdi mdi-file-hidden"></i>
@@ -276,6 +283,48 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
         }
     }
 
+    // Word tab stops: each tab runs to the paragraph's next stop (its own
+    // stops first, then the document's default interval), measured from the
+    // column edge. Left, center and right stops are honoured.
+    var PX_PER_PT = 96 / 72;
+    function layoutTabs(root) {
+        var page = root.querySelector('.dx-page');
+        var defaultTab = page ? (parseFloat(page.getAttribute('data-tab')) || 36) : 36;
+        var paragraphs = root.querySelectorAll('.dx-p');
+        for (var i = 0; i < paragraphs.length; i++) {
+            var p = paragraphs[i], tabs = [], all = p.querySelectorAll('.dx-tab');
+            for (var t = 0; t < all.length; t++) {
+                if (all[t].closest('.dx-p') === p) { tabs.push(all[t]); }
+            }
+            if (!tabs.length) { continue; }
+            for (t = 0; t < tabs.length; t++) { tabs[t].style.width = '0px'; }
+            var stops = [];
+            (p.getAttribute('data-tabs') || '').split(',').forEach(function (entry) {
+                var bits = entry.split(':');
+                if (bits.length === 2) { stops.push({ pos: parseFloat(bits[0]), type: bits[1] }); }
+            });
+            var column = p.getBoundingClientRect().left - (parseFloat(p.getAttribute('data-left')) || 0) * PX_PER_PT;
+            for (t = 0; t < tabs.length; t++) {
+                var tab = tabs[t];
+                var x = (tab.getBoundingClientRect().left - column) / PX_PER_PT;
+                var stop = null;
+                for (var s = 0; s < stops.length; s++) {
+                    if (stops[s].pos > x + 0.5) { stop = stops[s]; break; }
+                }
+                if (!stop) { stop = { pos: (Math.floor(x / defaultTab) + 1) * defaultTab, type: 'left' }; }
+                var width = stop.pos - x;
+                if (stop.type === 'center' || stop.type === 'right' || stop.type === 'decimal') {
+                    var range = document.createRange();
+                    range.setStartAfter(tab);
+                    if (tabs[t + 1]) { range.setEndBefore(tabs[t + 1]); } else { range.setEnd(p, p.childNodes.length); }
+                    var segment = range.getBoundingClientRect().width / PX_PER_PT;
+                    width -= stop.type === 'center' ? segment / 2 : segment;
+                }
+                tab.style.width = Math.max(0, width) * PX_PER_PT + 'px';
+            }
+        }
+    }
+
     function fitPages() {
         var boxes = document.querySelectorAll('.rp-fit');
         for (var i = 0; i < boxes.length; i++) {
@@ -283,16 +332,24 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
             sheet.style.transform = 'none';
             holder.style.width = '';
             holder.style.height = '';
-            setRowStretch(sheet, 1);
-            fitCells(sheet);
+            var isDoc = sheet.classList.contains('rp-docpage');
+            if (isDoc) {
+                layoutTabs(sheet);
+            } else {
+                setRowStretch(sheet, 1);
+                fitCells(sheet);
+            }
             // The width is the sheet's own box (spilled text is clipped, as in
             // Excel); only the height has to be measured from the content.
             var width = sheet.getBoundingClientRect().width || sheet.offsetWidth;
-            var height = sheet.scrollHeight;
+            // A Word page is measured by its own box: shapes bleeding past the
+            // paper edge are clipped there and must not shrink the page.
+            var height = isDoc && sheet.firstElementChild ? sheet.firstElementChild.offsetHeight : sheet.scrollHeight;
             if (!width || !height) { continue; }
             // Fill the sheet edge to edge: scale up as well as down.
             var scale = Math.min(AVAILABLE_WIDTH / width, AVAILABLE_HEIGHT / height);
-            var stretch = Math.min(AVAILABLE_HEIGHT / (height * scale), 1.6);
+            // A Word page keeps its own proportions; only Excel rows stretch.
+            var stretch = isDoc ? 1 : Math.min(AVAILABLE_HEIGHT / (height * scale), 1.6);
             if (stretch > 1.01) {
                 setRowStretch(sheet, stretch);
                 height = sheet.scrollHeight;
@@ -311,7 +368,7 @@ $docBottom = $preview['page']['margin_bottom'] ?? '1in';
     if (editBtn) {
         editBtn.addEventListener('click', function () {
             var on = !editBtn.classList.contains('active');
-            var areas = document.querySelectorAll('.rp-fit, .rp-doc');
+            var areas = document.querySelectorAll('.rp-fit');
             for (var a = 0; a < areas.length; a++) {
                 if (on) { areas[a].setAttribute('contenteditable', 'true'); areas[a].setAttribute('spellcheck', 'false'); }
                 else { areas[a].removeAttribute('contenteditable'); }
