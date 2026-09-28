@@ -616,9 +616,12 @@ class Appointment_document_model extends CI_Model
             if ($values['{{SDS_NAME}}'] !== '') {
                 $sheet->setCellValue('L51', mb_strtoupper($values['{{SDS_NAME}}'], 'UTF-8'));
             }
-            $sheet->setCellValue('M55', $values['{{DATE_SIGNING}}']);
-            $sheet->getStyle('M55')->getAlignment()->setHorizontal('center');
-            $this->add_esig($sheet, 'L48', $this->user_signatory('sds')['esig']);
+            // The date of signing sits under the same L:T block as the
+            // Appointing Officer, so both lines share one centre.
+            $this->realign_block($sheet, 'M55:T55', 'L55:T55');
+            $this->realign_block($sheet, 'M56:T56', 'L56:T56');
+            $sheet->setCellValue('L55', $values['{{DATE_SIGNING}}']);
+            $this->add_esig($sheet, 'L', 'T', 48, $this->user_signatory('sds')['esig']);
             if ($book->getSheetCount() > 1) {
                 $certs = $book->getSheet(1);
                 if ($values['{{HRMO_NAME}}'] !== '') {
@@ -628,8 +631,13 @@ class Appointment_document_model extends CI_Model
                 if ($values['{{ASDS_NAME}}'] !== '') {
                     $certs->setCellValue('L29', $values['{{ASDS_NAME}}']);
                 }
-                $this->add_esig($certs, 'L12', $this->user_signatory('Human Resource Admin')['esig']);
-                $this->add_esig($certs, 'L26', $this->user_signatory('asst_sds')['esig']);
+                // Each certification's name and titles are centred on one
+                // K:N block instead of spilling right from the narrow L cell.
+                foreach ([15, 16, 17, 29, 30, 31] as $row) {
+                    $this->realign_block($certs, 'L' . $row, 'K' . $row . ':N' . $row);
+                }
+                $this->add_esig($certs, 'K', 'N', 12, $this->user_signatory('Human Resource Admin')['esig']);
+                $this->add_esig($certs, 'K', 'N', 26, $this->user_signatory('asst_sds')['esig']);
             }
         }
 
@@ -639,8 +647,11 @@ class Appointment_document_model extends CI_Model
         $book->disconnectWorksheets();
     }
 
-    /** Places an e-signature just above the signatory's name. */
-    private function add_esig($sheet, $coordinate, $path)
+    /**
+     * Places an e-signature just above the signatory's name, centred on the
+     * same column block ($from:$to) as the name and position lines.
+     */
+    private function add_esig($sheet, $from, $to, $row, $path)
     {
         if ($path === '' || !is_file($path)) {
             return;
@@ -651,9 +662,79 @@ class Appointment_document_model extends CI_Model
         $drawing->setPath($path);
         $drawing->setResizeProportional(true);
         $drawing->setHeight(60);
-        $drawing->setCoordinates($coordinate);
-        $drawing->setOffsetX(30);
+        $offset = (int) max(0, round(($this->column_span_px($sheet, $from, $to) - $drawing->getWidth()) / 2));
+
+        // The .xls format keeps an offset only within its anchor cell, so the
+        // anchor walks to the column the picture's left edge falls in.
+        $column = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($from);
+        $last = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($to);
+        while ($column < $last) {
+            $letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column);
+            $width = $this->column_span_px($sheet, $letter, $letter);
+            if ($offset < $width) {
+                break;
+            }
+            $offset -= $width;
+            $column++;
+        }
+        // A cell inside a merged range is never drawn, so step up a row
+        // until the anchor is a free cell.
+        $letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column);
+        $merged = function ($columnIndex, $rowIndex) use ($sheet) {
+            foreach ($sheet->getMergeCells() as $range) {
+                list($start, $end) = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::rangeBoundaries($range);
+                if ($columnIndex >= $start[0] && $columnIndex <= $end[0] && $rowIndex >= $start[1] && $rowIndex <= $end[1]) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        while ($row > 1 && $merged($column, $row)) {
+            $row--;
+        }
+        $cell = $letter . $row;
+        $drawing->setCoordinates($cell);
+        $drawing->setOffsetX($offset);
         $drawing->setWorksheet($sheet);
+    }
+
+    /** Width in pixels of the columns $from..$to, as Excel lays them out. */
+    private function column_span_px($sheet, $from, $to)
+    {
+        $first = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($from);
+        $last = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($to);
+        $font = $sheet->getParent()->getDefaultStyle()->getFont();
+        $default = $sheet->getDefaultColumnDimension()->getWidth();
+        $default = $default > 0 ? $default : 8.43;
+        $px = 0;
+        for ($column = $first; $column <= $last; $column++) {
+            $width = $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column))->getWidth();
+            $px += \PhpOffice\PhpSpreadsheet\Shared\Drawing::cellDimensionToPixels($width > 0 ? $width : $default, $font);
+        }
+        return $px;
+    }
+
+    /**
+     * Moves a signatory line from $source (a cell or merged range) onto the
+     * merged block $target, keeping its value and look, centred across it.
+     */
+    private function realign_block($sheet, $source, $target)
+    {
+        list($sourceStart) = explode(':', $source);
+        list($targetStart, $targetEnd) = explode(':', $target);
+        $value = $sheet->getCell($sourceStart)->getValue();
+        $style = $sheet->getStyle($sourceStart);
+        if (strpos($source, ':') !== false && isset($sheet->getMergeCells()[$source])) {
+            $sheet->unmergeCells($source);
+        }
+        // Keep the ruled line of the source span if the new first cell lacks it.
+        $sheet->duplicateStyle($style, $targetStart . ':' . $targetEnd);
+        if ($sourceStart !== $targetStart) {
+            $sheet->setCellValue($sourceStart, null);
+        }
+        $sheet->setCellValue($targetStart, $value);
+        $sheet->mergeCells($target);
+        $sheet->getStyle($target)->getAlignment()->setHorizontal('center');
     }
 
     private function merge_docx($source, $output, array $values, $documentType)
@@ -721,6 +802,19 @@ class Appointment_document_model extends CI_Model
         $parts['word/_rels/document.xml.rels'] = $zip->getFromName('word/_rels/document.xml.rels');
         $parts['[Content_Types].xml'] = $zip->getFromName('[Content_Types].xml');
 
+        // Each signatory's name and position share one centre: the SDS on the
+        // right half of the text column, the attesting HRMO on the left.
+        if (isset($parts['word/document.xml'])) {
+            $blocks = [];
+            if (in_array($documentType, ['assumption', 'assignment'], true)) {
+                $blocks[] = [$values['{{SDS_NAME}}'], 'right'];
+            }
+            if ($documentType === 'assumption') {
+                $blocks[] = [$values['{{HRMO_NAME}}'], 'left'];
+            }
+            $parts['word/document.xml'] = $this->center_docx_signatories($parts['word/document.xml'], $blocks);
+        }
+
         // E-signatures of the signatories, drawn over their printed names.
         $signatures = [];
         if (in_array($documentType, ['assumption', 'assignment'], true)) {
@@ -741,6 +835,128 @@ class Appointment_document_model extends CI_Model
             }
         }
         $zip->close();
+    }
+
+    /**
+     * The templates push names over with spaces/tabs and indent the position
+     * line separately, so the two never share a centre. The name paragraph and
+     * the position line under it are re-laid as one centred block on the
+     * chosen half of the text column.
+     *
+     * @param array $blocks list of [signatory name, 'left'|'right']
+     */
+    private function center_docx_signatories($xml, array $blocks)
+    {
+        $dom = new DOMDocument();
+        $dom->preserveWhiteSpace = true;
+        if (!@$dom->loadXML($xml)) {
+            return $xml;
+        }
+        $w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $xpath = new DOMXPath($dom);
+        $xpath->registerNamespace('w', $w);
+
+        // Half of the text column, in twips.
+        $half = 4320;
+        $size = $xpath->query('//w:body/w:sectPr/w:pgSz')->item(0);
+        $margin = $xpath->query('//w:body/w:sectPr/w:pgMar')->item(0);
+        if ($size && $margin) {
+            $text = (int) $size->getAttributeNS($w, 'w') - (int) $margin->getAttributeNS($w, 'left') - (int) $margin->getAttributeNS($w, 'right');
+            if ($text > 0) {
+                $half = (int) round($text / 2);
+            }
+        }
+
+        $paragraphText = function (DOMElement $p) use ($xpath) {
+            $text = '';
+            foreach ($xpath->query('.//w:t[not(ancestor::w:txbxContent)]', $p) as $node) {
+                $text .= $node->nodeValue;
+            }
+            return trim($text);
+        };
+        $paragraphs = [];
+        foreach ($xpath->query('//w:body//w:p[not(ancestor::w:txbxContent)]') as $p) {
+            $paragraphs[] = $p;
+        }
+
+        foreach ($blocks as $block) {
+            list($name, $side) = $block;
+            if (trim($name) === '') {
+                continue;
+            }
+            foreach ($paragraphs as $index => $p) {
+                if ($paragraphText($p) !== trim($name)) {
+                    continue;
+                }
+                $lines = [$p];
+                // The position line: the next paragraph that carries text.
+                for ($next = $index + 1; $next < count($paragraphs) && $next <= $index + 3; $next++) {
+                    if ($paragraphText($paragraphs[$next]) !== '') {
+                        $lines[] = $paragraphs[$next];
+                        break;
+                    }
+                }
+                foreach ($lines as $line) {
+                    $this->center_docx_paragraph($dom, $xpath, $line, $side === 'right' ? $half : 0, $side === 'right' ? 0 : $half);
+                }
+                break;
+            }
+        }
+        return $dom->saveXML();
+    }
+
+    private function center_docx_paragraph(DOMDocument $dom, DOMXPath $xpath, DOMElement $p, $left, $right)
+    {
+        $w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        // Drop the spaces/tabs used to push the text over.
+        foreach ($xpath->query('./w:r/w:tab|./w:r/w:ptab', $p) as $tab) {
+            $tab->parentNode->removeChild($tab);
+        }
+        $texts = $xpath->query('./w:r/w:t', $p);
+        foreach ($texts as $node) {
+            $trimmed = ltrim($node->nodeValue, " \t\xC2\xA0");
+            $node->nodeValue = $trimmed;
+            if ($trimmed !== '') {
+                break;
+            }
+        }
+        for ($i = $texts->length - 1; $i >= 0; $i--) {
+            $node = $texts->item($i);
+            $trimmed = rtrim($node->nodeValue, " \t\xC2\xA0");
+            $node->nodeValue = $trimmed;
+            if ($trimmed !== '') {
+                break;
+            }
+        }
+
+        $pPr = $xpath->query('./w:pPr', $p)->item(0);
+        if (!$pPr) {
+            $pPr = $dom->createElementNS($w, 'w:pPr');
+            $p->insertBefore($pPr, $p->firstChild);
+        }
+        foreach ($xpath->query('./w:ind|./w:jc|./w:tabs', $pPr) as $old) {
+            $pPr->removeChild($old);
+        }
+        // Schema order within w:pPr: w:ind comes before contextualSpacing /
+        // mirrorIndents / suppressOverlap, and w:jc right after those.
+        $afterJc = ['textDirection', 'textAlignment', 'textboxTightWrap', 'outlineLvl', 'divId', 'cnfStyle', 'rPr', 'sectPr', 'pPrChange'];
+        $afterInd = array_merge(['contextualSpacing', 'mirrorIndents', 'suppressOverlap'], $afterJc);
+        $firstOf = function (array $names) use ($pPr) {
+            foreach ($pPr->childNodes as $child) {
+                if ($child instanceof DOMElement && in_array($child->localName, $names, true)) {
+                    return $child;
+                }
+            }
+            return null;
+        };
+        $ind = $dom->createElementNS($w, 'w:ind');
+        $ind->setAttributeNS($w, 'w:left', (string) $left);
+        $ind->setAttributeNS($w, 'w:right', (string) $right);
+        $ind->setAttributeNS($w, 'w:firstLine', '0');
+        $pPr->insertBefore($ind, $firstOf($afterInd));
+        $jc = $dom->createElementNS($w, 'w:jc');
+        $jc->setAttributeNS($w, 'w:val', 'center');
+        $pPr->insertBefore($jc, $firstOf($afterJc));
     }
 
     /**
