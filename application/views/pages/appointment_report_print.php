@@ -31,7 +31,7 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
 <link href="<?= base_url(); ?>assets/css/icons.min.css" rel="stylesheet" type="text/css" />
 <noscript><style>.rp-fit { visibility:visible !important; }</style></noscript>
 <?php if (!empty($preview['style'])) : ?>
-<style type="text/css"><?= $preview['style']; ?></style>
+<style type="text/css" id="rpSheetStyle"><?= $preview['style']; ?></style>
 <?php endif; ?>
 <style>
     :root { --rp-primary:#1f3a5f; --rp-bg:#eef2f7; --rp-border:#e3eaf3; --rp-muted:#758396; }
@@ -72,6 +72,20 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
     .rp-editing .rp-fit { outline:2px dashed #9fb8d6; outline-offset:4px; cursor:text; }
     .rp-editing [contenteditable]:focus { outline-color:var(--rp-primary); }
     .rp-btn-edit.active { background:#fff6e8; border-color:#f3dfb8; color:#926719; }
+    .rp-btn[disabled] { opacity:.6; cursor:default; }
+    .rp-pill.rp-pill-saved { background:#f0f9f6; color:#14805f; border-color:#d3ece3; }
+    .rp-save-status { align-self:center; font-size:.72rem; font-weight:700; color:var(--rp-muted); }
+    .rp-save-status.is-error { color:#c0392b; }
+    /* Formatting toolbar, shown under the bar while editing. */
+    .rp-tools { display:none; flex-basis:100%; align-items:center; gap:4px; flex-wrap:wrap; padding-top:8px; border-top:1px solid var(--rp-border); }
+    .rp-editing .rp-tools { display:flex; }
+    .rp-tool { display:inline-flex; align-items:center; justify-content:center; min-width:32px; height:30px; padding:0 6px; border:1px solid var(--rp-border); background:#fff; color:#41556c; border-radius:6px; font-size:1.05rem; cursor:pointer; font-family:inherit; }
+    .rp-tool:hover { border-color:#b9c9da; color:var(--rp-primary); background:#f6f9fc; }
+    .rp-tool.active { background:#e8f0fb; border-color:#b9cde6; color:var(--rp-primary); }
+    .rp-tool-sep { width:1px; height:22px; background:var(--rp-border); margin:0 4px; }
+    .rp-tools-hint { margin-left:auto; font-size:.72rem; color:var(--rp-muted); display:inline-flex; align-items:center; gap:4px; }
+    .rp-tools-hint kbd { font-family:inherit; font-size:.66rem; font-weight:700; background:#f1f4f8; border:1px solid var(--rp-border); border-radius:4px; padding:0 4px; }
+    @media(max-width:900px){ .rp-tools-hint { margin-left:0; flex-basis:100%; } }
     /* Word page: the template's own page box, scaled onto the A4 sheet. */
     /* Images that bleed past the paper (letterheads) are cut at its edge, as in Word. */
     .rp-docpage .dx-page { overflow:hidden; }
@@ -105,15 +119,41 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
                 <span class="rp-pill"><?= h($groupName); ?></span>
                 <span class="rp-pill rp-pill-nature"><?= h($natureName); ?></span>
                 <span class="rp-pill rp-pill-paper"><i class="mdi mdi-printer-outline"></i> A4 &middot; <?= count($pages); ?> page<?= count($pages) === 1 ? '' : 's'; ?></span>
+                <?php if ($savedAt !== '') : ?><span class="rp-pill rp-pill-saved" id="rpSavedPill" title="Opened from the saved copy<?= $savedBy !== '' ? ' — saved by ' . h($savedBy) : ''; ?>"><i class="mdi mdi-content-save-outline"></i>&nbsp;Saved edits &middot; <?= h($savedAt); ?></span><?php endif; ?>
                 <?= h($templateName); ?>
             </div>
         </div>
         <div class="rp-actions">
             <?php if ($kind === 'spreadsheet' || $kind === 'docx') : ?>
-            <button type="button" class="rp-btn rp-btn-edit" id="rpEdit" title="Edit the text before printing. Changes are not saved."><i class="mdi mdi-pencil-outline"></i><span>Edit</span></button>
+            <span class="rp-save-status" id="rpSaveStatus"></span>
+            <?php if ($canSave && $savedAt !== '') : ?>
+            <button type="button" class="rp-btn" id="rpReset" title="Discard the saved edits and regenerate the form from the template and current data."><i class="mdi mdi-restore"></i>Reset</button>
+            <?php endif; ?>
+            <button type="button" class="rp-btn rp-btn-edit" id="rpEdit" title="<?= $canSave ? 'Edit the text before printing. Changes are saved when you click Done.' : 'Edit the text before printing. Changes are not saved.'; ?>"><i class="mdi mdi-pencil-outline"></i><span>Edit</span></button>
             <?php endif; ?>
             <button type="button" class="rp-btn rp-btn-print" onclick="window.print();"><i class="mdi mdi-printer"></i>Print</button>
         </div>
+        <?php if ($kind === 'spreadsheet' || $kind === 'docx') : ?>
+        <div class="rp-tools" id="rpTools" role="toolbar" aria-label="Text formatting">
+            <button type="button" class="rp-tool" data-cmd="bold" title="Bold (Ctrl+B)"><i class="mdi mdi-format-bold"></i></button>
+            <button type="button" class="rp-tool" data-cmd="italic" title="Italic (Ctrl+I)"><i class="mdi mdi-format-italic"></i></button>
+            <button type="button" class="rp-tool" data-cmd="underline" title="Underline (Ctrl+U)"><i class="mdi mdi-format-underline"></i></button>
+            <button type="button" class="rp-tool" data-cmd="strikeThrough" title="Strikethrough"><i class="mdi mdi-format-strikethrough-variant"></i></button>
+            <span class="rp-tool-sep"></span>
+            <button type="button" class="rp-tool" data-size="0.9" title="Smaller text"><i class="mdi mdi-format-font-size-decrease"></i></button>
+            <button type="button" class="rp-tool" data-size="1.1" title="Larger text"><i class="mdi mdi-format-font-size-increase"></i></button>
+            <button type="button" class="rp-tool" data-cmd="uppercase" title="UPPERCASE"><i class="mdi mdi-format-letter-case-upper"></i></button>
+            <span class="rp-tool-sep"></span>
+            <button type="button" class="rp-tool" data-cmd="justifyLeft" title="Align left"><i class="mdi mdi-format-align-left"></i></button>
+            <button type="button" class="rp-tool" data-cmd="justifyCenter" title="Align center"><i class="mdi mdi-format-align-center"></i></button>
+            <button type="button" class="rp-tool" data-cmd="justifyRight" title="Align right"><i class="mdi mdi-format-align-right"></i></button>
+            <span class="rp-tool-sep"></span>
+            <button type="button" class="rp-tool" data-cmd="removeFormat" title="Clear formatting"><i class="mdi mdi-format-clear"></i></button>
+            <button type="button" class="rp-tool" data-cmd="undo" title="Undo (Ctrl+Z)"><i class="mdi mdi-undo"></i></button>
+            <button type="button" class="rp-tool" data-cmd="redo" title="Redo (Ctrl+Y)"><i class="mdi mdi-redo"></i></button>
+            <span class="rp-tools-hint"><i class="mdi mdi-information-outline"></i>Select text, then pick a format. <kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd> also work. Click <strong>&nbsp;Done&nbsp;</strong> to <?= $canSave ? 'save' : 'finish'; ?>.</span>
+        </div>
+        <?php endif; ?>
     </div>
 
     <?php if ($kind === 'spreadsheet') : ?>
@@ -121,14 +161,14 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
             <div class="rp-paper">
                 <span class="rp-page-no">Page <?= (int) $index + 1; ?> of <?= count($pages); ?></span>
                 <div class="rp-fit-box">
-                    <div class="rp-fit rp-sheet"<?= !empty($sheet['width']) ? ' style="width:' . (float) $sheet['width'] . 'pt;"' : ''; ?>><?= $sheet['html']; ?></div>
+                    <div class="rp-fit rp-sheet"<?= !empty($sheet['width']) ? ' style="width:' . (float) $sheet['width'] . 'pt;" data-width="' . (float) $sheet['width'] . '"' : ''; ?>><?= $sheet['html']; ?></div>
                 </div>
             </div>
         <?php endforeach; ?>
     <?php elseif ($kind === 'docx') : ?>
         <div class="rp-paper">
             <div class="rp-fit-box">
-                <div class="rp-fit rp-docpage"<?= $docPageWidth > 0 ? ' style="width:' . $docPageWidth . 'pt;"' : ''; ?>><?= $pages[0]['html']; ?></div>
+                <div class="rp-fit rp-docpage"<?= $docPageWidth > 0 ? ' style="width:' . $docPageWidth . 'pt;" data-width="' . $docPageWidth . '"' : ''; ?>><?= $pages[0]['html']; ?></div>
             </div>
         </div>
     <?php else : ?>
@@ -362,8 +402,157 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
         document.body.className = 'rp-fitted';
     }
 
-    // Word-like correction before printing. Edits live only on this page;
-    // reloading brings back the generated form.
+    // Word-like correction before printing. For HR/SDS accounts the edited
+    // form is saved on Done, so reopening or reprinting it needs no re-edit.
+    var CAN_SAVE = <?= $canSave ? 'true' : 'false'; ?>;
+    var SAVE_URL = <?= json_encode($saveUrl); ?>;
+    var SAVE_KEY = {
+        rec_id: <?= json_encode($recKey); ?>,
+        document_type: <?= json_encode($documentType); ?>,
+        nature: <?= json_encode($natureName); ?>
+    };
+    var KIND = <?= json_encode($kind); ?>;
+    var saveStatus = document.getElementById('rpSaveStatus');
+
+    function setStatus(text, isError) {
+        if (!saveStatus) { return; }
+        saveStatus.textContent = text;
+        saveStatus.className = 'rp-save-status' + (isError ? ' is-error' : '');
+    }
+
+    // UTF-8 safe base64 of the JSON body.
+    function toBase64(text) {
+        var bytes = new TextEncoder().encode(text), binary = '';
+        for (var i = 0; i < bytes.length; i += 0x8000) {
+            binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        }
+        return btoa(binary);
+    }
+
+    function post(fields, done) {
+        var body = [];
+        for (var k in fields) {
+            if (Object.prototype.hasOwnProperty.call(fields, k)) {
+                body.push(encodeURIComponent(k) + '=' + encodeURIComponent(fields[k]));
+            }
+        }
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', SAVE_URL, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.onload = function () {
+            var res = null;
+            try { res = JSON.parse(xhr.responseText); } catch (e) {}
+            done(res && res.status === 'success', res ? res : { message: 'The server returned an unexpected response (HTTP ' + xhr.status + ').' });
+        };
+        xhr.onerror = function () { done(false, { message: 'Network error. The edits were not saved.' }); };
+        xhr.send(body.join('&'));
+    }
+
+    function saveEdits() {
+        var areas = document.querySelectorAll('.rp-fit'), pages = [];
+        for (var a = 0; a < areas.length; a++) {
+            pages.push({ html: areas[a].innerHTML, width: parseFloat(areas[a].getAttribute('data-width')) || null });
+        }
+        var styleEl = document.getElementById('rpSheetStyle');
+        var payload = { kind: KIND, style: styleEl ? styleEl.textContent : '', pages: pages };
+        setStatus('Saving…');
+        var fields = { payload: toBase64(JSON.stringify(payload)) };
+        for (var k in SAVE_KEY) { fields[k] = SAVE_KEY[k]; }
+        post(fields, function (ok, res) {
+            setStatus(ok ? 'Saved ' + (res.savedAt || '') : (res.message || 'Save failed.'), !ok);
+        });
+    }
+
+    var resetBtn = document.getElementById('rpReset');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+            if (!window.confirm('Discard the saved edits and regenerate this form from the template and current data?')) { return; }
+            resetBtn.disabled = true;
+            var fields = { action: 'reset' };
+            for (var k in SAVE_KEY) { fields[k] = SAVE_KEY[k]; }
+            post(fields, function (ok, res) {
+                if (ok) { window.location.reload(); return; }
+                resetBtn.disabled = false;
+                setStatus(res.message || 'Reset failed.', true);
+            });
+        });
+    }
+
+    // Formatting toolbar. Buttons keep the focus (and selection) in the form.
+    var tools = document.getElementById('rpTools');
+    var STATE_CMDS = ['bold', 'italic', 'underline', 'strikeThrough'];
+
+    function selectionInForm() {
+        var sel = window.getSelection();
+        if (!sel || !sel.rangeCount) { return null; }
+        var node = sel.getRangeAt(0).commonAncestorContainer;
+        node = node.nodeType === 1 ? node : node.parentNode;
+        return node && node.closest && node.closest('.rp-fit[contenteditable]') ? sel : null;
+    }
+
+    // Scale the selected text from its current size.
+    function resizeSelection(factor) {
+        var sel = selectionInForm();
+        if (!sel || sel.isCollapsed) { return; }
+        var range = sel.getRangeAt(0), start = range.startContainer;
+        var base = parseFloat(window.getComputedStyle(start.nodeType === 1 ? start : start.parentNode).fontSize) || 14;
+        var span = document.createElement('span');
+        span.style.fontSize = (Math.round(base * factor * 10) / 10) + 'px';
+        span.appendChild(range.extractContents());
+        // Nested sizes inside the selection follow the new size.
+        var inner = span.querySelectorAll('[style*="font-size"]');
+        for (var i = 0; i < inner.length; i++) { inner[i].style.fontSize = ''; inner[i].removeAttribute('data-rp-size'); }
+        range.insertNode(span);
+        sel.removeAllRanges();
+        var next = document.createRange();
+        next.selectNodeContents(span);
+        sel.addRange(next);
+    }
+
+    function uppercaseSelection() {
+        var sel = selectionInForm();
+        if (!sel || sel.isCollapsed) { return; }
+        document.execCommand('insertText', false, sel.toString().toUpperCase());
+    }
+
+    function refreshToolState() {
+        if (!tools) { return; }
+        var inForm = !!selectionInForm();
+        for (var i = 0; i < STATE_CMDS.length; i++) {
+            var btn = tools.querySelector('[data-cmd="' + STATE_CMDS[i] + '"]');
+            var on = false;
+            try { on = inForm && document.queryCommandState(STATE_CMDS[i]); } catch (e) {}
+            if (btn) { btn.classList.toggle('active', on); }
+        }
+    }
+
+    if (tools) {
+        tools.addEventListener('mousedown', function (e) {
+            if (e.target.closest('.rp-tool')) { e.preventDefault(); }
+        });
+        tools.addEventListener('click', function (e) {
+            var btn = e.target.closest('.rp-tool');
+            if (!btn) { return; }
+            var cmd = btn.getAttribute('data-cmd');
+            if (cmd !== 'undo' && cmd !== 'redo' && !selectionInForm()) {
+                setStatus('Click inside the form and select text first.', true);
+                return;
+            }
+            setStatus('');
+            if (btn.getAttribute('data-size')) {
+                resizeSelection(parseFloat(btn.getAttribute('data-size')));
+            } else if (cmd === 'uppercase') {
+                uppercaseSelection();
+            } else {
+                try { document.execCommand('styleWithCSS', false, true); } catch (err) {}
+                document.execCommand(cmd, false, null);
+            }
+            refreshToolState();
+        });
+        document.addEventListener('selectionchange', refreshToolState);
+    }
+
     var editBtn = document.getElementById('rpEdit');
     if (editBtn) {
         editBtn.addEventListener('click', function () {
@@ -376,7 +565,10 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
             editBtn.classList.toggle('active', on);
             document.documentElement.classList.toggle('rp-editing', on);
             editBtn.querySelector('span').textContent = on ? 'Done' : 'Edit';
-            if (!on) { fitPages(); }
+            if (!on) {
+                fitPages();
+                if (CAN_SAVE) { saveEdits(); }
+            }
         });
     }
 

@@ -11,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\Cell\DataType;
 class Appointment_document_model extends CI_Model
 {
     private $templateTable = 'hris_appointment_templates';
+    private $editTable = 'hris_appointment_report_edits';
 
     public function __construct()
     {
@@ -120,7 +121,127 @@ class Appointment_document_model extends CI_Model
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8
         ");
 
+        // Corrections made on the print page, kept so the document can be
+        // reopened and reprinted exactly as last edited.
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `{$this->editTable}` (
+              `id` INT(11) NOT NULL AUTO_INCREMENT,
+              `rec_key` VARCHAR(40) NOT NULL,
+              `document_type` VARCHAR(30) NOT NULL,
+              `nature_of_appointment` VARCHAR(40) NOT NULL,
+              `template_id` INT(11) DEFAULT NULL,
+              `kind` VARCHAR(20) NOT NULL,
+              `style` MEDIUMTEXT,
+              `pages` LONGTEXT NOT NULL,
+              `saved_by` INT(11) DEFAULT NULL,
+              `created_at` DATETIME DEFAULT NULL,
+              `updated_at` DATETIME DEFAULT NULL,
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `uniq_appointment_report_edit` (`rec_key`, `document_type`, `nature_of_appointment`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+        ");
+
         $this->seed_guide_templates();
+    }
+
+    public function saved_report($recKey, $documentType, $nature)
+    {
+        return $this->db->where([
+            'rec_key' => (string) $recKey,
+            'document_type' => (string) $documentType,
+            'nature_of_appointment' => (string) $nature,
+        ])->get($this->editTable)->row();
+    }
+
+    /** Saved edit as the preview structure the print view renders. */
+    public function saved_report_preview($saved)
+    {
+        $pages = json_decode((string) $saved->pages, true);
+        if (!is_array($pages) || empty($pages)) {
+            return null;
+        }
+        return ['kind' => (string) $saved->kind, 'style' => (string) $saved->style, 'pages' => $pages];
+    }
+
+    public function save_report($recKey, $documentType, $nature, $templateId, $kind, $style, array $pages, $userId)
+    {
+        $key = [
+            'rec_key' => (string) $recKey,
+            'document_type' => (string) $documentType,
+            'nature_of_appointment' => (string) $nature,
+        ];
+        $clean = [];
+        foreach ($pages as $page) {
+            $clean[] = [
+                'html' => $this->clean_saved_html((string) ($page['html'] ?? '')),
+                'width' => isset($page['width']) && (float) $page['width'] > 0 ? round((float) $page['width'], 2) : null,
+            ];
+        }
+        $data = array_merge($key, [
+            'template_id' => $templateId ? (int) $templateId : null,
+            'kind' => $kind === 'docx' ? 'docx' : 'spreadsheet',
+            // The sheet CSS never needs "<"; dropping it means the stored
+            // stylesheet can never close its own <style> element.
+            'style' => str_replace('<', '', (string) $style),
+            'pages' => json_encode($clean),
+            'saved_by' => $userId ?: null,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        $existing = $this->saved_report($recKey, $documentType, $nature);
+        if (!empty($existing)) {
+            return $this->db->where('id', (int) $existing->id)->update($this->editTable, $data);
+        }
+        $data['created_at'] = $data['updated_at'];
+        return $this->db->insert($this->editTable, $data);
+    }
+
+    public function delete_saved_report($recKey, $documentType, $nature)
+    {
+        return $this->db->where([
+            'rec_key' => (string) $recKey,
+            'document_type' => (string) $documentType,
+            'nature_of_appointment' => (string) $nature,
+        ])->delete($this->editTable);
+    }
+
+    /**
+     * The edited page is stored as markup and printed back as-is, so anything
+     * that could run script is removed: script-type elements, event handlers,
+     * and javascript: links. Embedded data: images (letterheads) are kept.
+     */
+    private function clean_saved_html($html)
+    {
+        if (trim($html) === '') {
+            return '';
+        }
+        $dom = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8"?><div id="rp-saved-root">' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        $xpath = new DOMXPath($dom);
+        foreach ($xpath->query('//script|//iframe|//object|//embed|//link|//meta|//style|//form|//base') as $node) {
+            $node->parentNode->removeChild($node);
+        }
+        foreach ($xpath->query('//@*') as $attr) {
+            $name = strtolower($attr->nodeName);
+            $value = strtolower(preg_replace('/[\s\x00-\x1f]+/', '', (string) $attr->nodeValue));
+            if (strpos($name, 'on') === 0 || $name === 'contenteditable' || $name === 'srcdoc'
+                || (in_array($name, ['href', 'src', 'xlink:href', 'action', 'formaction'], true)
+                    && (strpos($value, 'javascript:') === 0 || strpos($value, 'vbscript:') === 0
+                        || (strpos($value, 'data:') === 0 && strpos($value, 'data:image/') !== 0)))) {
+                $attr->ownerElement->removeAttributeNode($attr);
+            }
+        }
+        $root = $dom->getElementById('rp-saved-root');
+        if (!$root) {
+            return '';
+        }
+        $out = '';
+        foreach ($root->childNodes as $child) {
+            $out .= $dom->saveHTML($child);
+        }
+        return $out;
     }
 
     private function seed_guide_templates()
@@ -598,8 +719,12 @@ class Appointment_document_model extends CI_Model
             if ($office !== '') {
                 $sheet->setCellValue('L25', $office);
             }
-            $sheet->setCellValue('G28', mb_strtoupper($values['{{MONTHLY_SALARY_WORDS}}'], 'UTF-8'));
-            $sheet->setCellValue('S28', $values['{{MONTHLY_SALARY}}'] !== '' ? '(P' . $values['{{MONTHLY_SALARY}}'] . ')' : '');
+            // Compensation in words and figures. With no plantilla/salary
+            // schedule for the grade, the rate written on the template stays.
+            if ($values['{{MONTHLY_SALARY}}'] !== '') {
+                $sheet->setCellValue('G28', mb_strtoupper($values['{{MONTHLY_SALARY_WORDS}}'], 'UTF-8'));
+                $sheet->setCellValue('S28', '(P' . $values['{{MONTHLY_SALARY}}'] . ')');
+            }
             $sheet->setCellValue('K32', mb_strtoupper($values['{{NATURE_OF_APPOINTMENT}}'], 'UTF-8'));
             $sheet->setCellValue('P32', $values['{{VICE}}']);
             $sheet->setCellValue('F38', $values['{{ITEM_NUMBER}}']);
@@ -617,11 +742,10 @@ class Appointment_document_model extends CI_Model
                 $sheet->setCellValue('L51', mb_strtoupper($values['{{SDS_NAME}}'], 'UTF-8'));
             }
             // The date of signing sits under the same L:T block as the
-            // Appointing Officer, so both lines share one centre.
+            // Appointing Officer, so both lines share one centre. The date
+            // itself is written by hand when the appointment is signed.
             $this->realign_block($sheet, 'M55:T55', 'L55:T55');
             $this->realign_block($sheet, 'M56:T56', 'L56:T56');
-            $sheet->setCellValue('L55', $values['{{DATE_SIGNING}}']);
-            $this->add_esig($sheet, 'L', 'T', 48, $this->user_signatory('sds')['esig']);
             if ($book->getSheetCount() > 1) {
                 $certs = $book->getSheet(1);
                 if ($values['{{HRMO_NAME}}'] !== '') {
@@ -636,8 +760,6 @@ class Appointment_document_model extends CI_Model
                 foreach ([15, 16, 17, 29, 30, 31] as $row) {
                     $this->realign_block($certs, 'L' . $row, 'K' . $row . ':N' . $row);
                 }
-                $this->add_esig($certs, 'K', 'N', 12, $this->user_signatory('Human Resource Admin')['esig']);
-                $this->add_esig($certs, 'K', 'N', 26, $this->user_signatory('asst_sds')['esig']);
             }
         }
 
@@ -645,73 +767,6 @@ class Appointment_document_model extends CI_Model
         $writer = IOFactory::createWriter($book, $writerType);
         $writer->save($output);
         $book->disconnectWorksheets();
-    }
-
-    /**
-     * Places an e-signature just above the signatory's name, centred on the
-     * same column block ($from:$to) as the name and position lines.
-     */
-    private function add_esig($sheet, $from, $to, $row, $path)
-    {
-        if ($path === '' || !is_file($path)) {
-            return;
-        }
-        $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
-        $drawing->setName('E-Signature');
-        $drawing->setDescription('E-Signature');
-        $drawing->setPath($path);
-        $drawing->setResizeProportional(true);
-        $drawing->setHeight(60);
-        $offset = (int) max(0, round(($this->column_span_px($sheet, $from, $to) - $drawing->getWidth()) / 2));
-
-        // The .xls format keeps an offset only within its anchor cell, so the
-        // anchor walks to the column the picture's left edge falls in.
-        $column = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($from);
-        $last = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($to);
-        while ($column < $last) {
-            $letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column);
-            $width = $this->column_span_px($sheet, $letter, $letter);
-            if ($offset < $width) {
-                break;
-            }
-            $offset -= $width;
-            $column++;
-        }
-        // A cell inside a merged range is never drawn, so step up a row
-        // until the anchor is a free cell.
-        $letter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column);
-        $merged = function ($columnIndex, $rowIndex) use ($sheet) {
-            foreach ($sheet->getMergeCells() as $range) {
-                list($start, $end) = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::rangeBoundaries($range);
-                if ($columnIndex >= $start[0] && $columnIndex <= $end[0] && $rowIndex >= $start[1] && $rowIndex <= $end[1]) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        while ($row > 1 && $merged($column, $row)) {
-            $row--;
-        }
-        $cell = $letter . $row;
-        $drawing->setCoordinates($cell);
-        $drawing->setOffsetX($offset);
-        $drawing->setWorksheet($sheet);
-    }
-
-    /** Width in pixels of the columns $from..$to, as Excel lays them out. */
-    private function column_span_px($sheet, $from, $to)
-    {
-        $first = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($from);
-        $last = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($to);
-        $font = $sheet->getParent()->getDefaultStyle()->getFont();
-        $default = $sheet->getDefaultColumnDimension()->getWidth();
-        $default = $default > 0 ? $default : 8.43;
-        $px = 0;
-        for ($column = $first; $column <= $last; $column++) {
-            $width = $sheet->getColumnDimension(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($column))->getWidth();
-            $px += \PhpOffice\PhpSpreadsheet\Shared\Drawing::cellDimensionToPixels($width > 0 ? $width : $default, $font);
-        }
-        return $px;
     }
 
     /**
@@ -757,9 +812,8 @@ class Appointment_document_model extends CI_Model
                 'PHOEBE GAY L. REFAMONTE, CESO V' => $values['{{SDS_NAME}}'],
                 'NORBERTO S. MANLANGIT CE, MPA' => $values['{{HRMO_NAME}}'],
                 'Administrative Officer V' => $values['{{HRMO_POSITION}}'] !== '' ? $values['{{HRMO_POSITION}}'] : 'Administrative Officer V',
-                // Signed and attested today, like the appointment's date of signing.
-                'Done this ________ day of ________________' => 'Done this ' . date('jS') . ' day of ' . date('F Y'),
-                'Date: ________________' => 'Date: ' . $values['{{DATE_SIGNING}}'],
+                // "Done this ___ day of ___" and the attestation date stay
+                // blank: they are written by hand on signing.
             ];
             $hired = strtotime($values['{{DATE_HIRED}}']);
             if ($values['{{DATE_HIRED}}'] !== '' && $hired) {
@@ -777,9 +831,9 @@ class Appointment_document_model extends CI_Model
                 'Monkayo West District' => $values['{{DISTRICT}}'],
                 'Monkayo, Davao de Oro' => $locality,
                 'PHOEBE GAY L. REFAMONTE, CESO V' => $values['{{SDS_NAME}}'],
-                // Order date, and the Special Order month/year; the order
-                // number itself is issued by Records, so it is left to fill in.
-                '_____________________' => $values['{{DATE_SIGNING}}'],
+                // The order date line stays blank for the date of signing.
+                // The order number itself is issued by Records, so it is left
+                // to fill in; only the Special Order month/year is set.
                 'SEPTEMBER– 0514 s. 2026' => mb_strtoupper(date('F'), 'UTF-8') . '– ______ s. ' . date('Y'),
             ];
         }
@@ -799,8 +853,6 @@ class Appointment_document_model extends CI_Model
             }
             $parts[$name] = $this->replace_word_text($xml, $replacements);
         }
-        $parts['word/_rels/document.xml.rels'] = $zip->getFromName('word/_rels/document.xml.rels');
-        $parts['[Content_Types].xml'] = $zip->getFromName('[Content_Types].xml');
 
         // Each signatory's name and position share one centre: the SDS on the
         // right half of the text column, the attesting HRMO on the left.
@@ -815,20 +867,6 @@ class Appointment_document_model extends CI_Model
             $parts['word/document.xml'] = $this->center_docx_signatories($parts['word/document.xml'], $blocks);
         }
 
-        // E-signatures of the signatories, drawn over their printed names.
-        $signatures = [];
-        if (in_array($documentType, ['assumption', 'assignment'], true)) {
-            $signatures[$values['{{SDS_NAME}}']] = $this->user_signatory('sds')['esig'];
-        }
-        if ($documentType === 'assumption') {
-            $signatures[$values['{{HRMO_NAME}}']] = $this->user_signatory('Human Resource Admin')['esig'];
-        }
-        $number = 0;
-        foreach ($signatures as $signName => $signFile) {
-            if ($signName !== '' && $signFile !== '' && isset($parts['word/document.xml'])) {
-                $this->add_docx_esig($zip, $parts, $signName, $signFile, ++$number);
-            }
-        }
         foreach ($parts as $name => $xml) {
             if ($xml !== false) {
                 $zip->addFromString($name, $xml);
@@ -960,117 +998,6 @@ class Appointment_document_model extends CI_Model
     }
 
     /**
-     * Anchors an e-signature picture on the run that starts the signatory's
-     * name, behind the text and lifted so it sits over the name as a hand
-     * signature does. The picture is added to the package (media, relation,
-     * content type) so the downloaded file carries it too.
-     */
-    private function add_docx_esig(ZipArchive $zip, array &$parts, $signName, $imagePath, $number)
-    {
-        $size = @getimagesize($imagePath);
-        $xml = $parts['word/document.xml'];
-        $relsXml = $parts['word/_rels/document.xml.rels'];
-        if (!$size || $xml === false || $relsXml === false) {
-            return;
-        }
-        $extension = strtolower(pathinfo($imagePath, PATHINFO_EXTENSION)) === 'png' ? 'png' : 'jpeg';
-
-        $dom = new DOMDocument();
-        $dom->preserveWhiteSpace = true;
-        if (!@$dom->loadXML($xml)) {
-            return;
-        }
-        $w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-        $xpath = new DOMXPath($dom);
-        $xpath->registerNamespace('w', $w);
-        $text = null;
-        foreach ($xpath->query('//w:body//w:r/w:t') as $node) {
-            if (strpos($node->nodeValue, $signName) !== false) {
-                $text = $node;
-                break;
-            }
-        }
-        if ($text === null) {
-            return;
-        }
-        $run = $text->parentNode;
-        $position = strpos($text->nodeValue, $signName);
-
-        // Signature about 0.55in tall, centred over the name.
-        $heightPt = 40;
-        $widthPt = min(150, $heightPt * $size[0] / max(1, $size[1]));
-        $sz = $xpath->query('./w:rPr/w:sz', $run)->item(0);
-        $fontPt = $sz ? ((float) $sz->getAttributeNS($w, 'val')) / 2 : 11;
-        $namePt = mb_strlen($signName, 'UTF-8') * $fontPt * 0.62;
-        $emu = function ($pt) { return (int) round($pt * 12700); };
-        $relId = 'rIdEsig' . $number;
-        $offsetX = $emu(($namePt - $widthPt) / 2);
-        $offsetY = $emu(-$heightPt * 0.75);
-        $cx = $emu($widthPt);
-        $cy = $emu($heightPt);
-        $id = 9100 + $number;
-
-        $fragment = $dom->createDocumentFragment();
-        $fragment->appendXML(
-            '<w:r xmlns:w="' . $w . '" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
-            . ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'
-            . ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:drawing>'
-            . '<wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="' . (251700000 + $number) . '" behindDoc="1" locked="0" layoutInCell="1" allowOverlap="1">'
-            . '<wp:simplePos x="0" y="0"/>'
-            . '<wp:positionH relativeFrom="character"><wp:posOffset>' . $offsetX . '</wp:posOffset></wp:positionH>'
-            . '<wp:positionV relativeFrom="paragraph"><wp:posOffset>' . $offsetY . '</wp:posOffset></wp:positionV>'
-            . '<wp:extent cx="' . $cx . '" cy="' . $cy . '"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/>'
-            . '<wp:docPr id="' . $id . '" name="E-Signature ' . $number . '"/><wp:cNvGraphicFramePr/>'
-            . '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>'
-            . '<pic:nvPicPr><pic:cNvPr id="' . $id . '" name="esig' . $number . '.' . $extension . '"/><pic:cNvPicPr/></pic:nvPicPr>'
-            . '<pic:blipFill><a:blip r:embed="' . $relId . '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
-            . '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' . $cx . '" cy="' . $cy . '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
-            . '</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>'
-        );
-        $drawingRun = $fragment->firstChild;
-
-        // Split the run so the picture anchors where the name begins.
-        if ($position > 0) {
-            $before = $run->cloneNode(true);
-            $index = 0;
-            foreach ($run->childNodes as $i => $child) {
-                if ($child === $text) {
-                    $index = $i;
-                }
-            }
-            $beforeText = $before->childNodes->item($index);
-            $beforeText->nodeValue = substr($text->nodeValue, 0, $position);
-            $beforeText->setAttribute('xml:space', 'preserve');
-            while ($beforeText->nextSibling) {
-                $before->removeChild($beforeText->nextSibling);
-            }
-            while ($text->previousSibling && !($text->previousSibling instanceof DOMElement && $text->previousSibling->localName === 'rPr')) {
-                $run->removeChild($text->previousSibling);
-            }
-            $text->nodeValue = substr($text->nodeValue, $position);
-            $text->setAttribute('xml:space', 'preserve');
-            $run->parentNode->insertBefore($before, $run);
-        }
-        $run->parentNode->insertBefore($drawingRun, $run);
-
-        $parts['word/document.xml'] = $dom->saveXML();
-        $zip->addFile($imagePath, 'word/media/esig' . $number . '.' . $extension);
-        $parts['word/_rels/document.xml.rels'] = str_replace(
-            '</Relationships>',
-            '<Relationship Id="' . $relId . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/esig' . $number . '.' . $extension . '"/></Relationships>',
-            $relsXml
-        );
-        $types = $parts['[Content_Types].xml'];
-        if ($types !== false && stripos($types, 'Extension="' . $extension . '"') === false) {
-            $parts['[Content_Types].xml'] = str_replace(
-                '</Types>',
-                '<Default Extension="' . $extension . '" ContentType="image/' . $extension . '"/></Types>',
-                $types
-            );
-        }
-    }
-
-    /**
      * Replace text even when Word has split it across several w:t runs.
      * Two passes through unique markers, so a replaced value is never
      * matched again by a later rule (e.g. the sample name inside the new one).
@@ -1171,14 +1098,37 @@ class Appointment_document_model extends CI_Model
         }
         $extension = strtolower((string) $template->extension);
         if (in_array($extension, ['xls', 'xlsx'], true)) {
-            $html = $this->spreadsheet_preview_html($source);
-            return $html === null ? null : ['kind' => 'spreadsheet', 'html' => $html];
+            // Built from the printable sheets: no "Sheet1 / Sheet2 / Sheet3"
+            // navigation, no blank worksheets, no screen-only gridlines.
+            $file = $this->preview_file($source, $extension);
+            return empty($file) ? null : ['kind' => 'spreadsheet', 'html' => $this->sheet_preview_document($file)];
         }
         if ($extension === 'docx') {
             $html = $this->docx_preview_html($source);
             return $html === null ? null : ['kind' => 'docx', 'html' => $html];
         }
         return null;
+    }
+
+    /**
+     * Stand-alone page for the template preview iframe: each worksheet on its
+     * own white sheet, centred, at the column widths the office designed.
+     */
+    private function sheet_preview_document(array $file)
+    {
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style type="text/css">' . $file['style'] . '</style>'
+            . '<style>'
+            . 'html,body{margin:0;padding:0;background:#eef2f7;}'
+            . 'body{padding:24px 16px;}'
+            . '.tp-sheet{box-sizing:border-box;width:max-content;margin:0 auto 24px;padding:28px 32px;background:#fff;border-radius:4px;box-shadow:0 10px 30px rgba(31,58,95,.12);}'
+            . '.rp-sheet table{border-collapse:collapse;table-layout:fixed;width:100%;}'
+            . '.rp-sheet td,.rp-sheet th{white-space:nowrap;}'
+            . '</style></head><body>';
+        foreach ($file['pages'] as $page) {
+            $width = !empty($page['width']) ? ' style="width:' . (float) $page['width'] . 'pt;"' : '';
+            $html .= '<div class="tp-sheet"><div class="rp-sheet"' . $width . '>' . $page['html'] . '</div></div>';
+        }
+        return $html . '</body></html>';
     }
 
     /**
@@ -1651,8 +1601,9 @@ class Appointment_document_model extends CI_Model
                 $n %= 100;
             }
             if ($n >= 20) {
-                $parts[] = $tens[(int) floor($n / 10)];
-                $n %= 10;
+                // Hyphenated as on the CS form: THIRTY-ONE.
+                $parts[] = $tens[(int) floor($n / 10)] . ($n % 10 > 0 ? '-' . $ones[$n % 10] : '');
+                $n = 0;
             }
             if ($n > 0) {
                 $parts[] = $ones[$n];

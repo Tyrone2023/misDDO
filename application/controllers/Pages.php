@@ -7317,13 +7317,27 @@ public function car_rqa_promotion()
 
         $preview = null;
         $error = '';
-        try {
-            $path = $documents->generate($template, $row);
-            $preview = $documents->preview_file($path, (string) $template->extension);
-            @unlink($path);
-        } catch (Throwable $e) {
-            log_message('error', 'Appointment report preview failed: ' . $e->getMessage());
-            $error = $e->getMessage();
+        // A copy edited and saved on this page is reopened as saved, so it
+        // can be reprinted without redoing the corrections.
+        $saved = $documents->saved_report($recId, $documentType, $nature);
+        if (!empty($saved)) {
+            $preview = $documents->saved_report_preview($saved);
+        }
+        if (empty($preview)) {
+            $saved = null;
+            try {
+                $path = $documents->generate($template, $row);
+                $preview = $documents->preview_file($path, (string) $template->extension);
+                @unlink($path);
+            } catch (Throwable $e) {
+                log_message('error', 'Appointment report preview failed: ' . $e->getMessage());
+                $error = $e->getMessage();
+            }
+        }
+        $savedBy = '';
+        if (!empty($saved) && !empty($saved->saved_by)) {
+            $user = $this->db->select('fname, lname')->where('id', (int) $saved->saved_by)->get('users')->row();
+            $savedBy = !empty($user) ? trim($user->fname . ' ' . $user->lname) : '';
         }
 
         $groups = $documents->position_groups();
@@ -7342,7 +7356,69 @@ public function car_rqa_promotion()
             'natureName' => $nature,
             'templateName' => (string) $template->original_name,
             'backUrl' => base_url('Pages/appointment_reports') . '?applicant=' . rawurlencode($recId),
+            'recKey' => (string) $recId,
+            'documentType' => (string) $documentType,
+            'canSave' => $this->appointment_template_can_manage(),
+            'saveUrl' => base_url('Pages/appointment_report_save'),
+            'savedAt' => !empty($saved) ? date('M j, Y g:i A', strtotime((string) $saved->updated_at)) : '',
+            'savedBy' => $savedBy,
         ]);
+    }
+
+    /**
+     * Saves (or, with action=reset, discards) the corrections made on the
+     * appointment print page. The edited pages arrive base64-encoded JSON so
+     * the host's WAF does not reject a POST body full of markup.
+     */
+    public function appointment_report_save()
+    {
+        header('Content-Type: application/json');
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to save this report.']);
+            return;
+        }
+
+        $this->ensure_rqa_recommendation_table();
+        $documents = $this->appointment_document_model();
+        $recId = trim((string) $this->input->post('rec_id'));
+        $documentType = trim((string) $this->input->post('document_type'));
+        $nature = trim((string) $this->input->post('nature'));
+        $row = $this->appointment_document_row($recId);
+        if (empty($row) || !isset($documents->document_types()[$documentType]) || !isset($documents->natures()[$nature])) {
+            echo json_encode(['status' => 'error', 'message' => 'The selected appointment report is invalid.']);
+            return;
+        }
+
+        if ($this->input->post('action') === 'reset') {
+            $documents->delete_saved_report($recId, $documentType, $nature);
+            echo json_encode(['status' => 'success', 'message' => 'Saved edits discarded.']);
+            return;
+        }
+
+        $payload = json_decode((string) base64_decode((string) $this->input->post('payload'), true), true);
+        $pages = is_array($payload) && isset($payload['pages']) && is_array($payload['pages']) ? array_values($payload['pages']) : [];
+        if (empty($pages) || count($pages) > 20) {
+            echo json_encode(['status' => 'error', 'message' => 'Nothing to save.']);
+            return;
+        }
+
+        $template = $documents->find_template((int) ($row->position_group ?? 0), $nature, $documentType);
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $ok = $documents->save_report(
+            $recId,
+            $documentType,
+            $nature,
+            !empty($template) ? (int) $template->id : null,
+            (string) ($payload['kind'] ?? ''),
+            (string) ($payload['style'] ?? ''),
+            $pages,
+            $userId ? (int) $userId : null
+        );
+        if (!$ok) {
+            echo json_encode(['status' => 'error', 'message' => 'The edits could not be saved. Please try again.']);
+            return;
+        }
+        echo json_encode(['status' => 'success', 'message' => 'Edits saved.', 'savedAt' => date('M j, Y g:i A')]);
     }
 
     public function appointment_report_file($recId, $documentType)
