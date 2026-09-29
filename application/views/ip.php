@@ -104,9 +104,10 @@
                       <option></option>
                       <?php if (!empty($ssa)) foreach ($ssa as $row) {
                         $sel = (isset($_SESSION['aip']) && (string)$_SESSION['aip'] === (string)$row->alloc_batch) ? 'selected' : '';
-                        // Batch code · group · program · amount (blank parts are skipped)
+                        // Batch code · FY · group · program · amount (blank parts are skipped)
                         $parts = array_filter(array(
                           $row->alloc_batch,
+                          'FY ' . $row->alloc_year,
                           trim($row->alloc_group),
                           $this->SGODModel->alloc_program_label($row),
                           'PHP ' . number_format((float) $row->alloc_amount, 2),

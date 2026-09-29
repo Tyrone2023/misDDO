@@ -89,7 +89,13 @@ foreach ($data as $r) {
                                                             </span>
                                                         </div>
                                                     </td>
-                                                    <td><span class="ap-chip"><?= html_escape($row->b_code); ?></span></td>
+                                                    <td>
+                                                        <span class="ap-chip"><?= html_escape($row->b_code); ?></span>
+                                                        <?php $program = (!empty($row->alloc_program) || !empty($row->alloc_type)) ? $this->SGODModel->alloc_program_label($row) : ''; ?>
+                                                        <?php if ($program !== '') : ?>
+                                                            <span class="ap-school-sub d-block mt-1"><?= html_escape($program); ?></span>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td>
                                                         <?php if (!empty($row->alloc_group)) : ?>
                                                             <span class="ap-badge ap-badge-info"><?= html_escape($row->alloc_group); ?></span>

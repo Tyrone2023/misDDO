@@ -82,7 +82,12 @@
 
 
                                                     <tr>
-                                                        <td><?= $row->b_code; ?></td>
+                                                        <td>
+                                                            <?= $row->b_code; ?>
+                                                            <?php if (!empty($sa)) : ?>
+                                                                <small class="d-block text-muted"><?= html_escape($this->SGODModel->alloc_program_label($sa)); ?></small>
+                                                            <?php endif; ?>
+                                                        </td>
                                                         <td><?= $school->schoolName; ?></td>
                                                         <td><?= $sa->alloc_group; ?></td>
                                                         <td><?= $row->date; ?></td>  

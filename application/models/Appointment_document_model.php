@@ -946,11 +946,13 @@ class Appointment_document_model extends CI_Model
     private function center_docx_paragraph(DOMDocument $dom, DOMXPath $xpath, DOMElement $p, $left, $right)
     {
         $w = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
-        // Drop the spaces/tabs used to push the text over.
-        foreach ($xpath->query('./w:r/w:tab|./w:r/w:ptab', $p) as $tab) {
+        // Drop the spaces/tabs used to push the text over. Runs may sit inside
+        // a content control (w:sdt), so match them at any depth.
+        $runs = './/w:r[not(ancestor::w:txbxContent)]';
+        foreach ($xpath->query($runs . '/w:tab|' . $runs . '/w:ptab', $p) as $tab) {
             $tab->parentNode->removeChild($tab);
         }
-        $texts = $xpath->query('./w:r/w:t', $p);
+        $texts = $xpath->query($runs . '/w:t', $p);
         foreach ($texts as $node) {
             $trimmed = ltrim($node->nodeValue, " \t\xC2\xA0");
             $node->nodeValue = $trimmed;

@@ -161,9 +161,14 @@
         margin-top:90px;
     }
 
-    .attested .name{
+    .attested .signatory{
+        display:inline-block;
         margin-left:15px;
         margin-top:25px;
+        text-align:center;
+    }
+
+    .attested .name{
         font-weight:bold;
     }
 
@@ -283,11 +288,12 @@
 
         Attested by:
 
-        <div class="name">
-            <?= isset($ritchie) && !empty($ritchie) ? strtoupper($ritchie->FirstName) . ' ' . (!empty($ritchie->MiddleName) ? strtoupper(substr($ritchie->MiddleName, 0, 1)) . '.' : '') . ' ' . strtoupper($ritchie->LastName) . ' ' . strtoupper($ritchie->NameExtn) : ''; ?>
+        <div class="signatory">
+            <div class="name">
+                <?= isset($ritchie) && !empty($ritchie) ? strtoupper($ritchie->FirstName) . ' ' . (!empty($ritchie->MiddleName) ? strtoupper(substr($ritchie->MiddleName, 0, 1)) . '.' : '') . ' ' . strtoupper($ritchie->LastName) . ' ' . strtoupper($ritchie->NameExtn) : ''; ?>
+            </div>
+            Administrative Officer V
         </div>
-
-        Administrative Officer V
 
     </div>
 

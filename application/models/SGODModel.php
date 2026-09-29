@@ -3100,10 +3100,11 @@ class SGODModel extends CI_Model
 		// string at all) and its fy is latin1, so that join casts b_code and matches fy to the bound
 		// literal instead of to s.fy.
 		$fy = $this->db->escape($fy);
+		$this->ensure_allocation_schema();
 
 		$this->db->select('s.id, s.fy, s.b_code, s.school_id, s.date, s.status, s.remarks,
 			sc.schoolName, sc.district, sc.course,
-			alloc.alloc_group, alloc.alloc_amount, alloc.alloc_type,
+			alloc.alloc_group, alloc.alloc_amount, alloc.alloc_type, alloc.alloc_program,
 			app.id as app_id', false);
 		$this->db->from('sgod_aip_submit s');
 		$this->db->join(
