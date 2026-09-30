@@ -12,6 +12,9 @@ class Appointment_document_model extends CI_Model
 {
     private $templateTable = 'hris_appointment_templates';
     private $editTable = 'hris_appointment_report_edits';
+    private $salaryScheduleTable = 'hris_appointment_salary_schedules';
+    private $salaryRateTable = 'hris_appointment_salary_rates';
+    private $guideSalaryFile = 'NBC 601 (01012026).xlsx';
 
     public function __construct()
     {
@@ -141,7 +144,35 @@ class Appointment_document_model extends CI_Model
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8
         ");
 
+        // Monthly salary schedule (SG x Step) used for MONTHLY_SALARY. Only
+        // the active schedule is read when a report is generated.
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `{$this->salaryScheduleTable}` (
+              `id` INT(11) NOT NULL AUTO_INCREMENT,
+              `title` VARCHAR(150) NOT NULL,
+              `effectivity_date` DATE DEFAULT NULL,
+              `source_name` VARCHAR(255) DEFAULT NULL,
+              `is_active` TINYINT(1) NOT NULL DEFAULT 0,
+              `created_by` INT(11) DEFAULT NULL,
+              `created_at` DATETIME DEFAULT NULL,
+              `updated_at` DATETIME DEFAULT NULL,
+              PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+        ");
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `{$this->salaryRateTable}` (
+              `id` INT(11) NOT NULL AUTO_INCREMENT,
+              `schedule_id` INT(11) NOT NULL,
+              `sg` TINYINT(3) NOT NULL,
+              `step` TINYINT(3) NOT NULL,
+              `monthly_salary` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `uniq_appointment_salary_rate` (`schedule_id`, `sg`, `step`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+        ");
+
         $this->seed_guide_templates();
+        $this->seed_guide_salary_schedule();
     }
 
     public function saved_report($recKey, $documentType, $nature)
@@ -161,6 +192,34 @@ class Appointment_document_model extends CI_Model
             return null;
         }
         return ['kind' => (string) $saved->kind, 'style' => (string) $saved->style, 'pages' => $pages];
+    }
+
+    /**
+     * A saved (edited) appointment keeps the SG/Step and compensation it was
+     * saved with. This rewrites only those texts — "(SG n STEP n)", the
+     * amount in words, and "(P00,000.00)" — so the saved copy follows the
+     * SG/Step selected now; every other correction is left as saved.
+     */
+    public function apply_salary_to_preview(array $preview, $sg, $step, $monthly)
+    {
+        if ((int) $sg < 1 || empty($preview['pages'])) {
+            return $preview;
+        }
+        $sgText = '(SG ' . (int) $sg . ' STEP ' . max(1, (int) $step) . ')';
+        foreach ($preview['pages'] as $i => $page) {
+            $html = (string) ($page['html'] ?? '');
+            $html = preg_replace('/\(\s*SG\s*\d+(?:\s*STEP\s*\d+)?\s*\)/i', $sgText, $html);
+            if ($monthly > 0 && preg_match('/\(\s*P\s*([\d,]+\.\d{2})\s*\)/', $html, $m)) {
+                $oldAmount = (float) str_replace(',', '', $m[1]);
+                $html = str_replace($m[0], '(P' . number_format($monthly, 2) . ')', $html);
+                $oldWords = $this->number_to_words((int) round($oldAmount));
+                if ($oldAmount > 0 && $oldWords !== '') {
+                    $html = str_ireplace($oldWords, $this->number_to_words((int) round($monthly)), $html);
+                }
+            }
+            $preview['pages'][$i]['html'] = $html;
+        }
+        return $preview;
     }
 
     public function save_report($recKey, $documentType, $nature, $templateId, $kind, $style, array $pages, $userId)
@@ -354,6 +413,308 @@ class Appointment_document_model extends CI_Model
         return FCPATH . 'uploads/appointment_templates/' . basename($stored);
     }
 
+    /* ------------------------------------------------------------------
+     * Monthly salary schedule
+     * ------------------------------------------------------------------ */
+
+    public function salary_schedules()
+    {
+        return $this->db
+            ->order_by('is_active', 'DESC')
+            ->order_by('effectivity_date', 'DESC')
+            ->order_by('id', 'DESC')
+            ->get($this->salaryScheduleTable)
+            ->result();
+    }
+
+    public function salary_schedule_by_id($id)
+    {
+        return $this->db->where('id', (int) $id)->get($this->salaryScheduleTable)->row();
+    }
+
+    public function active_salary_schedule()
+    {
+        return $this->db->where('is_active', 1)->order_by('id', 'DESC')->get($this->salaryScheduleTable)->row();
+    }
+
+    /** Rates of one schedule as [sg][step] => monthly salary. */
+    public function salary_rates($scheduleId)
+    {
+        $rates = [];
+        $rows = $this->db->where('schedule_id', (int) $scheduleId)->get($this->salaryRateTable)->result();
+        foreach ($rows as $rate) {
+            $rates[(int) $rate->sg][(int) $rate->step] = (float) $rate->monthly_salary;
+        }
+        return $rates;
+    }
+
+    public function scheduled_monthly_salary($sg, $step)
+    {
+        $schedule = $this->active_salary_schedule();
+        if (empty($schedule) || (int) $sg < 1 || (int) $step < 1) {
+            return 0;
+        }
+        $rate = $this->db->select('monthly_salary')->where([
+            'schedule_id' => (int) $schedule->id,
+            'sg' => (int) $sg,
+            'step' => (int) $step,
+        ])->get($this->salaryRateTable)->row();
+        return !empty($rate) ? (float) $rate->monthly_salary : 0;
+    }
+
+    /**
+     * Creates ($id = 0) or updates a schedule. Rates are upserted per SG/Step;
+     * a cell left blank on the setup grid removes only that one rate.
+     */
+    public function save_salary_schedule($id, array $header, array $rates, $userId, $activate = false)
+    {
+        $now = date('Y-m-d H:i:s');
+        $data = [
+            'title' => $header['title'],
+            'effectivity_date' => !empty($header['effectivity_date']) ? $header['effectivity_date'] : null,
+            'updated_at' => $now,
+        ];
+
+        $isNew = (int) $id < 1;
+        $this->db->trans_start();
+        if (!$isNew) {
+            $this->db->where('id', (int) $id)->update($this->salaryScheduleTable, $data);
+        } else {
+            $data['source_name'] = $header['source_name'] ?? null;
+            $data['is_active'] = 0;
+            $data['created_by'] = $userId ?: null;
+            $data['created_at'] = $now;
+            $this->db->insert($this->salaryScheduleTable, $data);
+            $id = (int) $this->db->insert_id();
+        }
+
+        $this->save_salary_rates($id, $rates, $isNew);
+        if ($activate) {
+            $this->activate_salary_schedule($id);
+        }
+        $this->db->trans_complete();
+
+        return $this->db->trans_status() ? (int) $id : 0;
+    }
+
+    /**
+     * Upserts rates as [sg][step] => amount; a blank or zero amount removes
+     * that one rate. Used by uploads and by the grid's cell autosave.
+     */
+    public function save_salary_rates($id, array $rates, $skipDeletes = false)
+    {
+        $values = [];
+        foreach ($rates as $sg => $steps) {
+            foreach ((array) $steps as $step => $amount) {
+                $sg = (int) $sg;
+                $step = (int) $step;
+                if ($sg < 1 || $sg > 33 || $step < 1 || $step > 8) {
+                    continue;
+                }
+                if ($amount === null || $amount === '' || (float) $amount <= 0) {
+                    if (!$skipDeletes) {
+                        $this->db->where(['schedule_id' => (int) $id, 'sg' => $sg, 'step' => $step])->delete($this->salaryRateTable);
+                    }
+                    continue;
+                }
+                $values[] = '(' . (int) $id . ',' . $sg . ',' . $step . ',' . $this->db->escape(round((float) $amount, 2)) . ')';
+            }
+        }
+        if (!empty($values)) {
+            $this->db->query(
+                "INSERT INTO `{$this->salaryRateTable}` (`schedule_id`, `sg`, `step`, `monthly_salary`) VALUES "
+                . implode(',', $values)
+                . ' ON DUPLICATE KEY UPDATE `monthly_salary` = VALUES(`monthly_salary`)'
+            );
+        }
+        $this->db->where('id', (int) $id)->update($this->salaryScheduleTable, ['updated_at' => date('Y-m-d H:i:s')]);
+    }
+
+    public function activate_salary_schedule($id)
+    {
+        $this->db->where('id !=', (int) $id)->update($this->salaryScheduleTable, ['is_active' => 0]);
+        $this->db->where('id', (int) $id)->update($this->salaryScheduleTable, ['is_active' => 1, 'updated_at' => date('Y-m-d H:i:s')]);
+    }
+
+    /** Only an inactive schedule may be removed, so reports always have one. */
+    public function delete_salary_schedule($id)
+    {
+        $schedule = $this->salary_schedule_by_id($id);
+        if (empty($schedule) || (int) $schedule->is_active === 1) {
+            return false;
+        }
+        $this->db->trans_start();
+        $this->db->where('schedule_id', (int) $id)->delete($this->salaryRateTable);
+        $this->db->where('id', (int) $id)->delete($this->salaryScheduleTable);
+        $this->db->trans_complete();
+        return $this->db->trans_status();
+    }
+
+    /**
+     * Reads a DBM/NBC "Monthly Salary Schedule" workbook: one row per SG
+     * (SG number in the SG column) with Steps 1-8 under a "1 2 ... 8" header
+     * row. The annual-salary rows beneath each SG have no SG and are skipped.
+     */
+    public function parse_salary_schedule($path, $extension)
+    {
+        if (!class_exists('PhpOffice\\PhpSpreadsheet\\IOFactory')) {
+            require_once FCPATH . 'vendor/autoload.php';
+        }
+        $reader = IOFactory::createReader(strtolower($extension) === 'xls' ? 'Xls' : 'Xlsx');
+        $reader->setReadDataOnly(true);
+        $book = $reader->load($path);
+        $rows = $book->getSheet(0)->toArray(null, true, false, false);
+        $book->disconnectWorksheets();
+
+        $title = '';
+        $effectivity = '';
+        $stepCols = [];
+        $sgCol = null;
+        $rates = [];
+        foreach ($rows as $index => $row) {
+            if (empty($stepCols)) {
+                foreach ($row as $col => $cell) {
+                    $text = trim((string) $cell);
+                    if ($title === '' && preg_match('/\b(NBC|EO|E\.O\.)\s*(NO\.?\s*)?\d+/i', $text)) {
+                        $title = $text;
+                    }
+                    if ($effectivity === '' && preg_match('/effective\s+(.+)$/i', $text, $m) && strtotime($m[1])) {
+                        $effectivity = date('Y-m-d', strtotime($m[1]));
+                    }
+                    // Some schedules repeat SG on the right edge; the left one is used.
+                    if ($sgCol === null && strcasecmp($text, 'SG') === 0) {
+                        $sgCol = $col;
+                    }
+                }
+                // Step header: the columns holding 1, 2, ... 8 in sequence.
+                $found = [];
+                foreach ($row as $col => $cell) {
+                    if (is_numeric($cell) && (int) $cell === count($found) + 1 && (float) $cell === (float) (int) $cell) {
+                        $found[(int) $cell] = $col;
+                    }
+                }
+                if (count($found) >= 8) {
+                    $stepCols = array_slice($found, 0, 8, true);
+                }
+                continue;
+            }
+
+            $sg = $row[$sgCol ?? 0] ?? null;
+            if (!is_numeric($sg) || (int) $sg < 1 || (int) $sg > 33) {
+                continue;
+            }
+            foreach ($stepCols as $step => $col) {
+                $amount = $row[$col] ?? null;
+                if (is_string($amount)) {
+                    $amount = str_replace([',', ' '], '', $amount);
+                }
+                if (is_numeric($amount) && (float) $amount > 0) {
+                    $rates[(int) $sg][(int) $step] = round((float) $amount, 2);
+                }
+            }
+        }
+
+        return ['title' => $title, 'effectivity_date' => $effectivity, 'rates' => $rates];
+    }
+
+    /** Registers the bundled NBC schedule once, when no schedule exists yet. */
+    private function seed_guide_salary_schedule()
+    {
+        if ($this->db->count_all($this->salaryScheduleTable) > 0) {
+            return;
+        }
+        $path = FCPATH . 'resources/guide/appointment guide/' . $this->guideSalaryFile;
+        if (!is_file($path)) {
+            return;
+        }
+        try {
+            $parsed = $this->parse_salary_schedule($path, 'xlsx');
+        } catch (\Throwable $e) {
+            log_message('error', 'Salary schedule seed failed: ' . $e->getMessage());
+            return;
+        }
+        if (empty($parsed['rates'])) {
+            return;
+        }
+        $this->save_salary_schedule(0, [
+            'title' => $parsed['title'] !== '' ? $parsed['title'] : 'Monthly Salary Schedule',
+            'effectivity_date' => $parsed['effectivity_date'],
+            'source_name' => $this->guideSalaryFile,
+        ], $parsed['rates'], null, true);
+    }
+
+    /**
+     * SG/Step and monthly salary for an appointee. SG comes from the plantilla
+     * item, then the position record; an SG/Step picked on the reports page
+     * (salary_grade_override / salary_step_override) replaces both. The active
+     * salary schedule supplies the amount, with plantilla/payroll fallbacks.
+     * sg = 0 means the grade is unknown and has to be selected.
+     */
+    public function resolve_salary_grade($row)
+    {
+        $plantilla = $this->db->where('itemNo', (string) ($row->item_number ?? ''))->get('hris_plantilla')->row();
+        $sg = !empty($plantilla) ? (int) $plantilla->sg : 0;
+        $step = !empty($plantilla) ? (int) $plantilla->step : 0;
+        $plantillaMonthly = !empty($plantilla) && (float) $plantilla->authAnnualSalary > 0
+            ? ((float) $plantilla->authAnnualSalary / 12)
+            : 0;
+        if ($sg < 1 && !empty($row->position_id)) {
+            $position = $this->db->select('sg')->where('id', (int) $row->position_id)->get('hris_positions')->row();
+            $sg = !empty($position) ? (int) $position->sg : 0;
+        }
+        if ($sg < 1 && !empty($row->jobTitle)) {
+            $position = $this->db->select('sg')->where('title', trim((string) $row->jobTitle))->get('hris_positions')->row();
+            $sg = !empty($position) ? (int) $position->sg : 0;
+        }
+        if ($sg < 1 || $sg > 33) {
+            $sg = 0;
+        }
+        if ($step < 1 && $sg > 0) {
+            $step = 1;
+        }
+        $autoSg = $sg;
+        $autoStep = $step;
+
+        $overrideSg = (int) ($row->salary_grade_override ?? 0);
+        if ($overrideSg >= 1 && $overrideSg <= 33) {
+            $overrideStep = (int) ($row->salary_step_override ?? 0);
+            $overrideStep = $overrideStep >= 1 && $overrideStep <= 8 ? $overrideStep : 1;
+            // The plantilla rate belongs to its own grade/step only.
+            if ($overrideSg !== $sg || $overrideStep !== $step) {
+                $plantillaMonthly = 0;
+            }
+            $sg = $overrideSg;
+            $step = $overrideStep;
+        }
+
+        $monthlySalary = $sg > 0 ? $this->scheduled_monthly_salary($sg, $step) : 0;
+        if ($monthlySalary <= 0) {
+            $monthlySalary = $plantillaMonthly;
+        }
+        if ($monthlySalary <= 0 && $sg > 0 && $this->db->table_exists('payroll_salary')) {
+            $this->db->where('sgNo', (string) $sg)->where('stepNo', (string) $step);
+            if ($this->db->field_exists('sgYear', 'payroll_salary')) {
+                $this->db->order_by('sgYear', 'DESC');
+            }
+            $salaryRow = $this->db->get('payroll_salary')->row();
+            $monthlySalary = !empty($salaryRow) ? (float) ($salaryRow->salary ?? 0) : 0;
+        }
+
+        return [
+            'sg' => $sg,
+            'step' => $step,
+            'monthly' => $monthlySalary,
+            'autoSg' => $autoSg,
+            'autoStep' => $autoStep,
+        ];
+    }
+
+    /** Monthly salary in words, as printed on the appointment. */
+    public function salary_in_words($amount)
+    {
+        return $amount > 0 ? $this->number_to_words((int) round($amount)) : '';
+    }
+
     public function values_for_row($row)
     {
         $groupNames = $this->position_groups();
@@ -385,31 +746,10 @@ class Appointment_document_model extends CI_Model
             }
         }
 
-        $plantilla = $this->db->where('itemNo', (string) ($row->item_number ?? ''))->get('hris_plantilla')->row();
-        $sg = !empty($plantilla) ? (int) $plantilla->sg : 0;
-        $step = !empty($plantilla) ? (int) $plantilla->step : 0;
-        $monthlySalary = !empty($plantilla) && (float) $plantilla->authAnnualSalary > 0
-            ? ((float) $plantilla->authAnnualSalary / 12)
-            : 0;
-        if ($sg < 1 && !empty($row->position_id)) {
-            $position = $this->db->select('sg')->where('id', (int) $row->position_id)->get('hris_positions')->row();
-            $sg = !empty($position) ? (int) $position->sg : 0;
-        }
-        if ($sg < 1 && !empty($row->jobTitle)) {
-            $position = $this->db->select('sg')->where('title', trim((string) $row->jobTitle))->get('hris_positions')->row();
-            $sg = !empty($position) ? (int) $position->sg : 0;
-        }
-        if ($step < 1 && $sg > 0) {
-            $step = 1;
-        }
-        if ($monthlySalary <= 0 && $sg > 0 && $this->db->table_exists('payroll_salary')) {
-            $this->db->where('sgNo', (string) $sg)->where('stepNo', (string) $step);
-            if ($this->db->field_exists('sgYear', 'payroll_salary')) {
-                $this->db->order_by('sgYear', 'DESC');
-            }
-            $salaryRow = $this->db->get('payroll_salary')->row();
-            $monthlySalary = !empty($salaryRow) ? (float) ($salaryRow->salary ?? 0) : 0;
-        }
+        $grade = $this->resolve_salary_grade($row);
+        $sg = $grade['sg'];
+        $step = $grade['step'];
+        $monthlySalary = $grade['monthly'];
 
         $school = null;
         if (!empty($row->school_id)) {
@@ -739,13 +1079,15 @@ class Appointment_document_model extends CI_Model
                 $sheet->setCellValue('C13', mb_strtoupper($values['{{DIVISION_ADDRESS}}'], 'UTF-8'));
             }
             if ($values['{{SDS_NAME}}'] !== '') {
-                $sheet->setCellValue('L51', mb_strtoupper($values['{{SDS_NAME}}'], 'UTF-8'));
+                // The signing account carries no name extension/title, so the
+                // one written on the template (", CESO V") is kept.
+                $sdsName = mb_strtoupper($values['{{SDS_NAME}}'], 'UTF-8');
+                $templateName = (string) $sheet->getCell('L51')->getValue();
+                if (strpos($sdsName, ',') === false && ($comma = strpos($templateName, ',')) !== false) {
+                    $sdsName .= substr($templateName, $comma);
+                }
+                $sheet->setCellValue('L51', $sdsName);
             }
-            // The date of signing sits under the same L:T block as the
-            // Appointing Officer, so both lines share one centre. The date
-            // itself is written by hand when the appointment is signed.
-            $this->realign_block($sheet, 'M55:T55', 'L55:T55');
-            $this->realign_block($sheet, 'M56:T56', 'L56:T56');
             if ($book->getSheetCount() > 1) {
                 $certs = $book->getSheet(1);
                 if ($values['{{HRMO_NAME}}'] !== '') {
@@ -755,18 +1097,39 @@ class Appointment_document_model extends CI_Model
                 if ($values['{{ASDS_NAME}}'] !== '') {
                     $certs->setCellValue('L29', $values['{{ASDS_NAME}}']);
                 }
-                // Each certification's name and titles are centred on one
-                // K:N block instead of spilling right from the narrow L cell.
-                foreach ([15, 16, 17, 29, 30, 31] as $row) {
-                    $this->realign_block($certs, 'L' . $row, 'K' . $row . ':N' . $row);
-                }
             }
+            $this->align_appointment_signatories($book);
         }
 
         $writerType = strtolower(pathinfo($output, PATHINFO_EXTENSION)) === 'xls' ? 'Xls' : 'Xlsx';
         $writer = IOFactory::createWriter($book, $writerType);
         $writer->save($output);
         $book->disconnectWorksheets();
+    }
+
+    /**
+     * CS Form 33-B signature blocks, shared by the report and the template
+     * preview so both lay the signatories out the same way.
+     */
+    private function align_appointment_signatories($book)
+    {
+        if ($book->getSheetCount() < 1) {
+            return;
+        }
+        // The date of signing sits under the same L:T block as the
+        // Appointing Officer, so both lines share one centre. The date
+        // itself is written by hand when the appointment is signed.
+        $sheet = $book->getSheet(0);
+        $this->realign_block($sheet, 'M55:T55', 'L55:T55');
+        $this->realign_block($sheet, 'M56:T56', 'L56:T56');
+        if ($book->getSheetCount() > 1) {
+            // Each certification's name and titles are centred on one
+            // K:N block instead of spilling right from the narrow L cell.
+            $certs = $book->getSheet(1);
+            foreach ([15, 16, 17, 29, 30, 31] as $row) {
+                $this->realign_block($certs, 'L' . $row, 'K' . $row . ':N' . $row);
+            }
+        }
     }
 
     /**
@@ -1102,7 +1465,11 @@ class Appointment_document_model extends CI_Model
         if (in_array($extension, ['xls', 'xlsx'], true)) {
             // Built from the printable sheets: no "Sheet1 / Sheet2 / Sheet3"
             // navigation, no blank worksheets, no screen-only gridlines.
-            $file = $this->preview_file($source, $extension);
+            if ((string) $template->document_type === 'appointment') {
+                $file = $this->aligned_appointment_preview($source, $extension);
+            } else {
+                $file = $this->preview_file($source, $extension);
+            }
             return empty($file) ? null : ['kind' => 'spreadsheet', 'html' => $this->sheet_preview_document($file)];
         }
         if ($extension === 'docx') {
@@ -1110,6 +1477,27 @@ class Appointment_document_model extends CI_Model
             return $html === null ? null : ['kind' => 'docx', 'html' => $html];
         }
         return null;
+    }
+
+    /**
+     * The template as it will print: signatories centred like the report,
+     * with the placeholder text left as written on the template.
+     */
+    private function aligned_appointment_preview($source, $extension)
+    {
+        if (!class_exists('PhpOffice\\PhpSpreadsheet\\IOFactory')) {
+            require_once FCPATH . 'vendor/autoload.php';
+        }
+        $output = $this->temp_output_path($extension);
+        try {
+            $book = IOFactory::load($source);
+            $this->align_appointment_signatories($book);
+            IOFactory::createWriter($book, $extension === 'xls' ? 'Xls' : 'Xlsx')->save($output);
+            $book->disconnectWorksheets();
+            return $this->preview_file($output, $extension);
+        } finally {
+            @unlink($output);
+        }
     }
 
     /**

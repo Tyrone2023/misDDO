@@ -17,6 +17,7 @@ if (!function_exists('h')) {
     .ar-label { font-size:.68rem; text-transform:uppercase; letter-spacing:.5px; color:var(--ar-muted); font-weight:800; }
     .ar-step { display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px; border-radius:50%; background:var(--ar-primary); color:#fff; font-size:.62rem; font-weight:800; margin-right:6px; }
     .ar-req { display:inline-block; margin-left:6px; padding:.06rem .38rem; border-radius:999px; background:#fdeee0; color:#b9741a; border:1px solid #f4d6b4; font-size:.58rem; font-weight:800; letter-spacing:.3px; }
+    #ar-salary-group.ar-need .select2-container--default .select2-selection--single,
     #ar-nature-group.ar-need .select2-container--default .select2-selection--single { border-color:#e6a23c; box-shadow:0 0 0 3px rgba(230,162,60,.16); animation:ar-pulse 1.5s ease-in-out 2; }
     @keyframes ar-pulse { 0%,100%{box-shadow:0 0 0 3px rgba(230,162,60,.16)} 50%{box-shadow:0 0 0 6px rgba(230,162,60,.28)} }
     .ar-context { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:11px 13px; background:#f8fbff; border:1px solid var(--ar-border); border-radius:12px; margin-bottom:15px; }
@@ -31,6 +32,18 @@ if (!function_exists('h')) {
     .ar-need-banner b { display:block; color:#8a5a12; font-size:.8rem; }
     .ar-need-banner span { color:#a5761f; font-size:.72rem; }
     .ar-need-banner .btn { margin-left:auto; }
+    .ar-auto { display:inline-block; margin-left:6px; padding:.06rem .38rem; border-radius:999px; background:#eaf8f3; color:#14805f; border:1px solid #cfeadf; font-size:.58rem; font-weight:800; letter-spacing:.3px; }
+    /* The three pickers share one baseline: labels stay on one line and
+       the fields sit at the bottom of each column. */
+    .ar-select-row > [class*="col-"] { display:flex; flex-direction:column; justify-content:flex-end; }
+    .ar-select-row .ar-label { display:flex; align-items:center; white-space:nowrap; min-height:22px; margin-bottom:8px; }
+    .ar-select-row .ar-req, .ar-select-row .ar-auto { flex:0 0 auto; }
+    .ar-salary-pair { display:flex; gap:8px; }
+    .ar-salary-pair > div { flex:1; min-width:0; }
+    .ar-salary-line { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:11px 14px; border:1px dashed #cfdbe8; border-radius:12px; margin-bottom:15px; font-size:.8rem; color:#2c3f55; }
+    .ar-salary-line .ar-label { margin:0; }
+    .ar-salary-line b { font-weight:800; letter-spacing:.2px; }
+    .ar-salary-line .ar-salary-warn { color:#b9741a; font-weight:700; }
     .ar-report-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
     .ar-report { position:relative; border:1px solid var(--ar-border); border-radius:14px; padding:17px; background:#fff; display:flex; flex-direction:column; min-height:205px; transition:.16s; }
     .ar-report.is-ready:hover { box-shadow:0 10px 24px rgba(31,58,95,.12); transform:translateY(-2px); }
@@ -52,6 +65,7 @@ if (!function_exists('h')) {
     .ar-empty i { font-size:46px; color:#c4d1df; margin-bottom:9px; }
     .ar-empty strong { color:#2d4055; }
     .ar-manage { color:#fff!important; border-color:rgba(255,255,255,.4)!important; }
+    @media(max-width:1199px){.ar-select-row .ar-label{white-space:normal; flex-wrap:wrap; gap:4px 0}}
     @media(max-width:991px){.ar-report-grid{grid-template-columns:1fr}.ar-need-banner .btn{margin-left:0}}
     @media(max-width:575px){.ar-hero{align-items:flex-start;flex-direction:column}.ar-card .card-body{padding:15px}.ar-need-banner{flex-wrap:wrap}}
 </style>
@@ -70,8 +84,8 @@ if (!function_exists('h')) {
             <div class="card ar-card">
                 <div class="card-body">
                     <h5 class="ar-title"><i class="mdi mdi-account-search-outline mr-1"></i>Select Appointee</h5>
-                    <div class="form-row">
-                        <div class="form-group col-lg-8">
+                    <div class="form-row ar-select-row">
+                        <div class="form-group col-lg-4">
                             <label class="ar-label" for="ar-applicant"><span class="ar-step">1</span>Applicant</label>
                             <select id="ar-applicant" class="form-control"><option value=""></option>
                                 <?php foreach ($applicants as $applicant) : ?>
@@ -84,6 +98,21 @@ if (!function_exists('h')) {
                             <select id="ar-nature" class="form-control" disabled><option value=""></option>
                                 <?php foreach ($natures as $key => $label) : ?><option value="<?= h($key); ?>"><?= h($label); ?></option><?php endforeach; ?>
                             </select>
+                        </div>
+                        <div class="form-group col-lg-4" id="ar-salary-group">
+                            <label class="ar-label" for="ar-sg"><span class="ar-step">3</span>Salary Grade &amp; Step <span class="ar-req" id="ar-salary-req">Required</span><span class="ar-auto" id="ar-salary-auto" style="display:none;">Auto</span></label>
+                            <div class="ar-salary-pair">
+                                <div>
+                                    <select id="ar-sg" class="form-control" disabled><option value=""></option>
+                                        <?php for ($sg = 1; $sg <= 33; $sg++) : ?><option value="<?= $sg; ?>">SG <?= $sg; ?></option><?php endfor; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <select id="ar-step-no" class="form-control" disabled>
+                                        <?php for ($step = 1; $step <= 8; $step++) : ?><option value="<?= $step; ?>">Step <?= $step; ?></option><?php endfor; ?>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -103,6 +132,15 @@ if (!function_exists('h')) {
                         </div>
                         <button type="button" class="btn btn-sm btn-warning" id="ar-pick-nature"><i class="mdi mdi-cursor-default-click-outline mr-1"></i>Select now</button>
                     </div>
+                    <div class="ar-need-banner" id="ar-need-salary" style="display:none;">
+                        <i class="mdi mdi-alert-circle-outline"></i>
+                        <div>
+                            <b>Step 3 &mdash; Select the Salary Grade and Step</b>
+                            <span>No Salary Grade is recorded for this position or plantilla item. Choose the SG and Step to print on the appointment.</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-warning" id="ar-pick-salary"><i class="mdi mdi-cursor-default-click-outline mr-1"></i>Select now</button>
+                    </div>
+                    <div class="ar-salary-line" id="ar-salary-line" style="display:none;"></div>
                     <div class="ar-report-grid">
                         <?php $icons = ['appointment'=>'mdi-file-document-check-outline','assumption'=>'mdi-certificate-outline','assignment'=>'mdi-school-outline']; ?>
                         <?php foreach ($documentTypes as $type => $label) : ?>
@@ -133,6 +171,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $('#ar-applicant').select2({ width:'100%', placeholder:'Search applicant, position, or item number', allowClear:true });
     $('#ar-nature').select2({ width:'100%', placeholder:'Select nature of appointment', minimumResultsForSearch:Infinity });
+    $('#ar-sg').select2({ width:'100%', placeholder:'SG' });
+    $('#ar-step-no').select2({ width:'100%', minimumResultsForSearch:Infinity });
 
     function esc(value) { return $('<div>').text(value == null || value === '' ? '—' : value).html(); }
     function chip(text, cls) { return '<span class="ar-chip ' + (cls || '') + '">' + esc(text) + '</span>'; }
@@ -174,8 +214,10 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#ar-workspace').hide(); $('#ar-empty').show();
             clearNatureWarning();
             $('#ar-nature').val('').prop('disabled', true).trigger('change.select2');
+            resetSalary(true);
             return;
         }
+        resetSalary(false);
         $('#ar-empty').hide(); $('#ar-workspace').show();
         renderContext(row);
         $('#ar-nature').prop('disabled', false).val(row.nature || '').trigger('change.select2');
@@ -203,10 +245,52 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    /** SG/Step pickers: cleared per applicant, filled from the record when known. */
+    function resetSalary(disable) {
+        $('#ar-sg').val('').prop('disabled', disable).trigger('change.select2');
+        $('#ar-step-no').val('1').prop('disabled', disable).trigger('change.select2');
+        $('#ar-salary-group').removeClass('ar-need');
+        $('#ar-salary-req').show();
+        $('#ar-salary-auto').hide();
+        $('#ar-need-salary, #ar-salary-line').hide();
+    }
+
+    /** Returns false (documents stay locked) while the SG is still unknown. */
+    function renderSalary(salary) {
+        salary = salary || {};
+        var sg = parseInt(salary.sg, 10) || 0;
+        var isAuto = !!salary.auto && String(salary.autoSg) === String(sg) && String(salary.autoStep) === String(salary.step);
+        $('#ar-salary-req').toggle(!salary.auto);
+        $('#ar-salary-auto').toggle(isAuto);
+        if (sg < 1) {
+            $('#ar-salary-group').addClass('ar-need');
+            $('#ar-need-salary').show();
+            $('#ar-salary-line').hide();
+            lockReports('Waiting for the Salary Grade and Step.');
+            return false;
+        }
+        $('#ar-salary-group').removeClass('ar-need');
+        $('#ar-need-salary').hide();
+        $('#ar-sg').val(String(sg)).trigger('change.select2');
+        $('#ar-step-no').val(String(salary.step || 1)).trigger('change.select2');
+        var html = '<span class="ar-label">Compensation</span><b>(SG ' + esc(sg) + ' STEP ' + esc(salary.step || 1) + ')</b>';
+        if (salary.monthly) {
+            html += '<b>' + esc(salary.words) + '</b><b>(P' + esc(salary.monthly) + ')</b>';
+        } else {
+            html += '<span class="ar-salary-warn"><i class="mdi mdi-alert-outline"></i> No monthly rate for this SG/Step in the active salary schedule.</span>';
+        }
+        $('#ar-salary-line').html(html).show();
+        return true;
+    }
+
     function loadReports(recId, nature) {
         resetReports();
-        $.getJSON(statusUrl, { rec_id:recId, nature:nature }).done(function (res) {
+        var row = byId[String(recId)] || {};
+        var query = { rec_id:recId, nature:nature };
+        if (row.sgChosen) { query.sg = row.sgChosen; query.step = row.stepChosen || 1; }
+        $.getJSON(statusUrl, query).done(function (res) {
             if (!res || res.status !== 'success') { resetReports((res && res.message) || 'Unable to load report formats.'); return; }
+            if (!renderSalary(res.salary)) { return; }
             Object.keys(res.reports).forEach(function (key) {
                 var report = res.reports[key], $card = $('.ar-report[data-report="' + key + '"]');
                 var $meta = $card.find('.ar-report-meta'), $state = $card.find('.ar-report-state');
@@ -232,6 +316,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $('#ar-applicant').on('change', function () { renderApplicant(false); });
     $('#ar-pick-nature').on('click', function () { $('#ar-nature').select2('open'); });
+    $('#ar-pick-salary').on('click', function () { $('#ar-sg').select2('open'); });
+    $('#ar-sg, #ar-step-no').on('change', function () {
+        var row = byId[String($('#ar-applicant').val() || '')], nature = $('#ar-nature').val() || '';
+        var sg = $('#ar-sg').val() || '';
+        if (!row || !sg) { return; }
+        row.sgChosen = sg;
+        row.stepChosen = $('#ar-step-no').val() || '1';
+        if (nature) { loadReports(row.recId, nature); }
+    });
     $('#ar-nature').on('change', function () {
         var id = String($('#ar-applicant').val() || ''), nature = $(this).val() || '', row = byId[id];
         if (row && !nature) { requireNature(false); return; }

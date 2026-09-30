@@ -6907,6 +6907,7 @@ public function car_rqa_promotion()
             'templates' => $documents->all_templates(),
         ];
 
+
         $this->load->view('templates/head');
         $this->load->view('templates/header');
         $this->load->view('pages/appointment_template_setup', $data);
@@ -7120,6 +7121,271 @@ public function car_rqa_promotion()
         redirect('Pages/appointment_template_setup');
     }
 
+    /**
+     * Monthly Salary Schedule (SG x Step) used for {{MONTHLY_SALARY}}.
+     * Uploading an NBC/DBM schedule workbook creates a new schedule and makes
+     * it active; earlier schedules are kept and can be re-activated.
+     */
+    public function appointment_salary_setup()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+        if (!$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to manage appointment templates.', 403);
+            return;
+        }
+
+        // The schedule opened on the page: the one picked from the switcher,
+        // otherwise the active one. Cells are edited in place on the grid.
+        $documents = $this->appointment_document_model();
+        $selected = $documents->salary_schedule_by_id((int) $this->input->get('schedule'));
+        if (empty($selected)) {
+            $selected = $documents->active_salary_schedule();
+        }
+
+        $data = [
+            'title' => 'Monthly Salary Schedule',
+            'schedules' => $documents->salary_schedules(),
+            'schedule' => $selected,
+            'rates' => !empty($selected) ? $documents->salary_rates((int) $selected->id) : [],
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/appointment_salary_setup', $data);
+        $this->load->view('templates/footer');
+    }
+
+    public function appointment_salary_upload()
+    {
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to manage appointment templates.', 403);
+            return;
+        }
+
+        $back = 'Pages/appointment_salary_setup';
+        if (empty($_FILES['salary_file']) || (int) $_FILES['salary_file']['error'] !== UPLOAD_ERR_OK) {
+            $this->session->set_flashdata('appointment_error', 'Choose the salary schedule Excel file (.xls/.xlsx) to upload.');
+            redirect($back);
+            return;
+        }
+        $upload = $_FILES['salary_file'];
+        $originalName = basename((string) $upload['name']);
+        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if (!in_array($extension, ['xls', 'xlsx'], true) || (int) $upload['size'] < 1 || (int) $upload['size'] > 10 * 1024 * 1024) {
+            $this->session->set_flashdata('appointment_error', 'The salary schedule must be an XLS or XLSX file smaller than 10 MB.');
+            redirect($back);
+            return;
+        }
+
+        $documents = $this->appointment_document_model();
+        try {
+            $parsed = $documents->parse_salary_schedule($upload['tmp_name'], $extension);
+        } catch (Throwable $e) {
+            log_message('error', 'Salary schedule upload failed: ' . $e->getMessage());
+            $parsed = ['rates' => []];
+        }
+        if (empty($parsed['rates'])) {
+            $this->session->set_flashdata('appointment_error', 'No salary rates were found. The sheet needs an SG column and a Step 1 to 8 header row, like the NBC Monthly Salary Schedule.');
+            redirect($back);
+            return;
+        }
+
+        $title = trim((string) $this->input->post('salary_title'));
+        if ($title === '') {
+            $title = $parsed['title'] !== '' ? $parsed['title'] : pathinfo($originalName, PATHINFO_FILENAME);
+        }
+        $effectivity = $this->appointment_salary_date($this->input->post('effectivity_date'));
+        if ($effectivity === '') {
+            $effectivity = (string) $parsed['effectivity_date'];
+        }
+
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $id = $documents->save_salary_schedule(0, [
+            'title' => mb_substr($title, 0, 150),
+            'effectivity_date' => $effectivity,
+            'source_name' => $originalName,
+        ], $parsed['rates'], $userId ? (int) $userId : null, true);
+        if (!$id) {
+            $this->session->set_flashdata('appointment_error', 'The salary schedule could not be saved. Please try again.');
+            redirect($back);
+            return;
+        }
+
+        $count = 0;
+        foreach ($parsed['rates'] as $steps) {
+            $count += count($steps);
+        }
+        $this->session->set_flashdata('appointment_success', 'Salary schedule "' . $title . '" saved with ' . $count . ' rates and set as active.');
+        redirect('Pages/appointment_salary_setup?schedule=' . (int) $id);
+    }
+
+    /** Saves the title, effectivity date, and amounts edited on the grid. */
+    public function appointment_salary_save()
+    {
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to manage appointment templates.', 403);
+            return;
+        }
+
+        $documents = $this->appointment_document_model();
+        $id = (int) $this->input->post('schedule_id');
+        $title = trim((string) $this->input->post('salary_title'));
+        $rates = $this->input->post('rates');
+        $rates = is_array($rates) ? $rates : [];
+        foreach ($rates as $sg => $steps) {
+            foreach ((array) $steps as $step => $amount) {
+                $rates[$sg][$step] = str_replace([',', ' '], '', (string) $amount);
+            }
+        }
+
+        if ($id > 0 && empty($documents->salary_schedule_by_id($id))) {
+            $this->session->set_flashdata('appointment_error', 'Salary schedule not found.');
+            redirect('Pages/appointment_salary_setup');
+            return;
+        }
+        if ($title === '') {
+            $this->session->set_flashdata('appointment_error', 'Enter a title for the salary schedule (e.g. NBC 601, s. 2026).');
+            redirect('Pages/appointment_salary_setup' . ($id > 0 ? '?schedule=' . $id : ''));
+            return;
+        }
+
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        // A schedule typed in from scratch becomes active when it is the first one.
+        $activate = $id === 0 && empty($documents->active_salary_schedule());
+        $saved = $documents->save_salary_schedule($id, [
+            'title' => mb_substr($title, 0, 150),
+            'effectivity_date' => $this->appointment_salary_date($this->input->post('effectivity_date')),
+            'source_name' => 'Manual entry',
+        ], $rates, $userId ? (int) $userId : null, $activate);
+
+        if (!$saved) {
+            $this->session->set_flashdata('appointment_error', 'The salary schedule could not be saved. Please try again.');
+        } else {
+            $this->session->set_flashdata('appointment_success', 'Salary schedule "' . $title . '" saved.' . ($id === 0 && !$activate ? ' Click Set Active to use it on reports.' : ''));
+        }
+        redirect('Pages/appointment_salary_setup?schedule=' . (int) ($saved ?: $id));
+    }
+
+    /**
+     * Grid autosave (AJAX). cells[] = {sg, step, amount}; a blank amount
+     * clears that rate. Pasting a block from Excel sends several cells.
+     */
+    public function appointment_salary_cells()
+    {
+        header('Content-Type: application/json');
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to edit the salary schedule.']);
+            return;
+        }
+        $documents = $this->appointment_document_model();
+        $id = (int) $this->input->post('schedule_id');
+        $cells = $this->input->post('cells');
+        if (empty($documents->salary_schedule_by_id($id)) || !is_array($cells) || empty($cells) || count($cells) > 264) {
+            echo json_encode(['status' => 'error', 'message' => 'Nothing to save.']);
+            return;
+        }
+
+        $rates = [];
+        $saved = [];
+        foreach ($cells as $cell) {
+            $sg = (int) ($cell['sg'] ?? 0);
+            $step = (int) ($cell['step'] ?? 0);
+            $raw = str_replace([',', ' ', "\xE2\x82\xB1"], '', trim((string) ($cell['amount'] ?? '')));
+            if ($sg < 1 || $sg > 33 || $step < 1 || $step > 8 || ($raw !== '' && !is_numeric($raw))) {
+                continue;
+            }
+            $amount = $raw === '' || (float) $raw <= 0 ? '' : round((float) $raw, 2);
+            $rates[$sg][$step] = $amount;
+            $saved[] = ['sg' => $sg, 'step' => $step, 'amount' => $amount === '' ? null : $amount];
+        }
+        if (empty($saved)) {
+            echo json_encode(['status' => 'error', 'message' => 'Enter a valid amount.']);
+            return;
+        }
+
+        $this->db->trans_start();
+        $documents->save_salary_rates($id, $rates);
+        $this->db->trans_complete();
+        if (!$this->db->trans_status()) {
+            echo json_encode(['status' => 'error', 'message' => 'The amount could not be saved.']);
+            return;
+        }
+        echo json_encode(['status' => 'success', 'cells' => $saved]);
+    }
+
+    /** Autosaves the schedule title / effectivity date edited in the header. */
+    public function appointment_salary_details()
+    {
+        header('Content-Type: application/json');
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to edit the salary schedule.']);
+            return;
+        }
+        $documents = $this->appointment_document_model();
+        $id = (int) $this->input->post('schedule_id');
+        $title = trim((string) $this->input->post('salary_title'));
+        if (empty($documents->salary_schedule_by_id($id)) || $title === '') {
+            echo json_encode(['status' => 'error', 'message' => 'The schedule title cannot be blank.']);
+            return;
+        }
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $ok = $documents->save_salary_schedule($id, [
+            'title' => mb_substr($title, 0, 150),
+            'effectivity_date' => $this->appointment_salary_date($this->input->post('effectivity_date')),
+        ], [], $userId ? (int) $userId : null);
+        echo json_encode($ok ? ['status' => 'success'] : ['status' => 'error', 'message' => 'The details could not be saved.']);
+    }
+
+    public function appointment_salary_activate($id)
+    {
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to manage appointment templates.', 403);
+            return;
+        }
+        if (strtoupper((string) $this->input->method()) !== 'POST') {
+            show_404();
+            return;
+        }
+        $documents = $this->appointment_document_model();
+        $schedule = $documents->salary_schedule_by_id((int) $id);
+        if (empty($schedule)) {
+            $this->session->set_flashdata('appointment_error', 'Salary schedule not found.');
+        } else {
+            $documents->activate_salary_schedule((int) $id);
+            $this->session->set_flashdata('appointment_success', '"' . $schedule->title . '" is now the active salary schedule for appointment reports.');
+        }
+        redirect('Pages/appointment_salary_setup?schedule=' . (int) $id);
+    }
+
+    public function appointment_salary_delete($id)
+    {
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to manage appointment templates.', 403);
+            return;
+        }
+        if (strtoupper((string) $this->input->method()) !== 'POST') {
+            show_404();
+            return;
+        }
+        $documents = $this->appointment_document_model();
+        if ($documents->delete_salary_schedule((int) $id)) {
+            $this->session->set_flashdata('appointment_success', 'Salary schedule removed.');
+        } else {
+            $this->session->set_flashdata('appointment_error', 'The active salary schedule cannot be deleted. Activate another schedule first.');
+        }
+        redirect('Pages/appointment_salary_setup');
+    }
+
+    private function appointment_salary_date($value)
+    {
+        $value = trim((string) $value);
+        $time = $value !== '' ? strtotime($value) : false;
+        return $time ? date('Y-m-d', $time) : '';
+    }
+
     public function appointment_reports()
     {
         if ($this->session->logged_in == false) {
@@ -7212,6 +7478,21 @@ public function car_rqa_promotion()
         $this->load->view('templates/footer');
     }
 
+    /**
+     * Applies the SG/Step picked on the reports page (?sg=&step=) to the row
+     * and returns the resolved grade. sg = 0 means it is still unknown.
+     */
+    private function appointment_salary_selection($row, $documents)
+    {
+        $sg = (int) $this->input->get('sg');
+        $step = (int) $this->input->get('step');
+        if ($sg >= 1 && $sg <= 33) {
+            $row->salary_grade_override = $sg;
+            $row->salary_step_override = $step >= 1 && $step <= 8 ? $step : 1;
+        }
+        return $documents->resolve_salary_grade($row);
+    }
+
     public function appointment_report_status()
     {
         header('Content-Type: application/json');
@@ -7230,6 +7511,9 @@ public function car_rqa_promotion()
             return;
         }
 
+        $grade = $this->appointment_salary_selection($row, $documents);
+        $salaryQuery = $grade['sg'] > 0 ? '&sg=' . $grade['sg'] . '&step=' . $grade['step'] : '';
+
         $reports = [];
         foreach ($documents->document_types() as $type => $label) {
             $template = $documents->find_template((int) ($row->position_group ?? 0), $nature, $type);
@@ -7240,11 +7524,24 @@ public function car_rqa_promotion()
                 'extension' => !empty($template) ? strtoupper((string) $template->extension) : '',
                 'templateUrl' => !empty($template) ? base_url('Pages/appointment_template_view/' . (int) $template->id) : '',
                 'url' => !empty($template)
-                    ? base_url('Pages/appointment_report_view/' . rawurlencode($recId) . '/' . $type) . '?nature=' . rawurlencode($nature)
+                    ? base_url('Pages/appointment_report_view/' . rawurlencode($recId) . '/' . $type) . '?nature=' . rawurlencode($nature) . $salaryQuery
                     : '',
             ];
         }
-        echo json_encode(['status' => 'success', 'reports' => $reports]);
+        echo json_encode([
+            'status' => 'success',
+            'reports' => $reports,
+            // sg = 0: no SG on record, so it must be selected before printing.
+            'salary' => [
+                'sg' => $grade['sg'],
+                'step' => $grade['step'],
+                'auto' => $grade['autoSg'] > 0,
+                'autoSg' => $grade['autoSg'],
+                'autoStep' => $grade['autoStep'],
+                'monthly' => $grade['monthly'] > 0 ? number_format($grade['monthly'], 2) : '',
+                'words' => $documents->salary_in_words($grade['monthly']),
+            ],
+        ]);
     }
 
     public function appointment_report_nature()
@@ -7309,6 +7606,11 @@ public function car_rqa_promotion()
             return;
         }
         $row->nature_of_appointment = $nature;
+        $grade = $this->appointment_salary_selection($row, $documents);
+        if ($grade['sg'] < 1) {
+            show_error('Select the Salary Grade and Step for this applicant on the Appointment Reports page first.', 400);
+            return;
+        }
         $template = $documents->find_template((int) ($row->position_group ?? 0), $nature, $documentType);
         if (empty($template)) {
             show_error('No ' . $documents->document_types()[$documentType] . ' template is configured for this Position Group and Nature of Appointment.', 404);
@@ -7322,6 +7624,9 @@ public function car_rqa_promotion()
         $saved = $documents->saved_report($recId, $documentType, $nature);
         if (!empty($saved)) {
             $preview = $documents->saved_report_preview($saved);
+            if (!empty($preview) && $documentType === 'appointment') {
+                $preview = $documents->apply_salary_to_preview($preview, $grade['sg'], $grade['step'], $grade['monthly']);
+            }
         }
         if (empty($preview)) {
             $saved = null;
@@ -7439,6 +7744,10 @@ public function car_rqa_promotion()
         // Honour the nature chosen on screen — application rows (no
         // recommendation record) have no stored nature of their own.
         $row->nature_of_appointment = $nature;
+        if ($this->appointment_salary_selection($row, $documents)['sg'] < 1) {
+            show_error('Select the Salary Grade and Step for this applicant on the Appointment Reports page first.', 400);
+            return;
+        }
         $template = $documents->find_template((int) ($row->position_group ?? 0), $nature, $documentType);
         if (empty($template)) {
             show_error('No ' . $documents->document_types()[$documentType] . ' template is configured for this Position Group and Nature of Appointment.', 404);

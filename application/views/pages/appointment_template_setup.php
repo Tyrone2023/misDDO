@@ -158,6 +158,7 @@ $extMeta = function ($ext) {
                     <div class="appt-upload-actions">
                         <button class="btn btn-primary appt-btn-save" type="submit"><i class="mdi mdi-content-save-outline mr-1"></i>Save Template Format</button>
                         <a class="btn btn-outline-secondary" href="<?= base_url('Pages/appointment_reports'); ?>"><i class="mdi mdi-file-document-multiple-outline mr-1"></i>Appointment Reports</a>
+                        <a class="btn btn-outline-secondary" href="<?= base_url('Pages/appointment_salary_setup'); ?>"><i class="mdi mdi-cash-multiple mr-1"></i>Monthly Salary Schedule</a>
                     </div>
                     </form>
                 </div>

@@ -11,7 +11,12 @@ $pages = $preview['pages'] ?? [];
 $margin = '6mm';
 $availableWidth = 746;   // (210mm - 2 x 6mm) at 96dpi, less a safety pixel or two
 $availableHeight = 1074; // (297mm - 2 x 6mm) at 96dpi, less a safety pixel or two
-if ($kind === 'docx') {
+if ($kind === 'spreadsheet') {
+    // CS Form 33-B page setup: top .75in, right .2in, bottom .5in, left .5in.
+    $margin = '0.75in 0.2in 0.5in 0.5in';
+    $availableWidth = 725;   // (8.27in - 0.7in) at 96dpi, less a safety pixel or two
+    $availableHeight = 1000; // (11.69in - 1.25in) at 96dpi, less a safety pixel or two
+} elseif ($kind === 'docx') {
     // A Word page already carries its own margins (and a letterhead that runs
     // to the paper edge), so it is laid on the A4 sheet without a border.
     $margin = '0mm';

@@ -638,7 +638,6 @@ class Csv extends BaseReader
 
         return $mimeTypes[$extension] ?? 'application/octet-stream';
     }
-    }
 
     private static function guessEncodingTestNoBom(string &$encoding, string &$contents, string $compare, string $setEncoding): void
     {
