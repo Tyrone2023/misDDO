@@ -439,6 +439,52 @@ class SGODModel extends CI_Model
 		$this->Common->ensure_columns('sgod_school_allocation', array(
 			'alloc_program' => "varchar(45) NOT NULL DEFAULT ''",
 		));
+
+		$this->repair_allocation_amounts();
+	}
+
+	// Amounts were once saved as "2,714.84"; PHP and MySQL both read that as 2, so every
+	// consumer showed 2.00 and the monthly split came out as 0.17. Idempotent: rows that are
+	// already clean and correctly split are not matched.
+	public function repair_allocation_amounts()
+	{
+		$clean = "REPLACE(REPLACE(TRIM(alloc_amount), ',', ''), ' ', '')";
+		$this->db->query("UPDATE sgod_school_allocation
+			SET alloc_amount = CAST($clean AS DECIMAL(15,2))
+			WHERE alloc_amount REGEXP '[, ]' AND $clean REGEXP '^[0-9]+(\\\\.[0-9]+)?$'");
+
+		// MOOE is spread across the 12 months in whole centavos; December absorbs the rounding.
+		$m   = "ROUND(alloc_amount / 12, 2)";
+		$dec = "ROUND(alloc_amount - 11 * $m, 2)";
+		$set = array();
+		$bad = array();
+		foreach (array('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov') as $mo) {
+			$set[] = "mo_$mo = $m";
+			$bad[] = "mo_$mo <> $m";
+		}
+		$set[] = "mo_dec = $dec";
+		$bad[] = "mo_dec <> $dec";
+		$this->db->query("UPDATE sgod_school_allocation SET " . implode(', ', $set) . "
+			WHERE alloc_type = 'MOOE' AND alloc_amount REGEXP '^[0-9]+(\\\\.[0-9]+)?$'
+			AND (" . implode(' OR ', $bad) . ")");
+	}
+
+	// "2,714.84" / "PHP 2,714.84" -> 2714.84
+	public function parse_amount($value)
+	{
+		return round((float) preg_replace('/[^\d.]/', '', (string) $value), 2);
+	}
+
+	// 12 monthly shares in centavos that add back up exactly to $amount.
+	public function monthly_split($amount)
+	{
+		$m = round($amount / 12, 2);
+		$split = array_fill(0, 11, $m);
+		$split[] = round($amount - 11 * $m, 2);
+		return array_combine(
+			array('mo_jan', 'mo_feb', 'mo_mar', 'mo_apr', 'mo_may', 'mo_jun', 'mo_jul', 'mo_aug', 'mo_sep', 'mo_oct', 'mo_nov', 'mo_dec'),
+			$split
+		);
 	}
 
 	// Program acronym shown for an allocation row. Untagged rows are labelled from
@@ -1843,29 +1889,13 @@ class SGODModel extends CI_Model
 
 	public function update_fund_allocation()
 	{
-
 		$id = $this->input->post('id');
-		$fund = $this->input->post('alloc_amount');
-		$m = $fund / 12;
+		$fund = $this->parse_amount($this->input->post('alloc_amount'));
+		$row = $this->db->select('alloc_type')->where('id', $id)->get('sgod_school_allocation')->row();
 
-		$data = array(
-			'alloc_amount' => $fund,
-			// 'alloc_group' => $this->input->post('group'),
-			// 'alloc_type' => $this->input->post('type'),
-			// 'alloc_year' => $this->input->post('fy'),
-			'mo_jan' => $m,
-			'mo_feb' => $m,
-			'mo_mar' => $m,
-			'mo_apr' => $m,
-			'mo_may' => $m,
-			'mo_jun' => $m,
-			'mo_jul' => $m,
-			'mo_aug' => $m,
-			'mo_sep' => $m,
-			'mo_oct' => $m,
-			'mo_nov' => $m,
-			'mo_dec' => $m
-		);
+		// Same rule as insert_fund_allocation(): only MOOE is distributed monthly.
+		$data = array('alloc_amount' => number_format($fund, 2, '.', ''))
+			+ ($row && strtoupper(trim($row->alloc_type)) === 'MOOE' ? $this->monthly_split($fund) : array_fill_keys(array_keys($this->monthly_split(0)), 0));
 
 		// The quick-edit modal posts only the amount; keep the program unless the edit page sent one.
 		$program = $this->input->post('program');
@@ -1894,59 +1924,18 @@ class SGODModel extends CI_Model
 
 	public function insert_fund_allocation()
 	{
-		$fund = str_replace(',', '', $this->input->post('alloc_amount'));
-		$f = $fund / 12;
-
-		if ($this->input->post('type') == 'MOOE') {
-			$jan = $f;
-			$feb = $f;
-			$mar = $f;
-			$apr = $f;
-			$may = $f;
-			$jun = $f;
-			$jul = $f;
-			$aug = $f;
-			$sep = $f;
-			$oct = $f;
-			$nov = $f;
-			$dec = $f;
-		} else {
-			$jan = 0;
-			$feb = 0;
-			$mar = 0;
-			$apr = 0;
-			$may = 0;
-			$jun = 0;
-			$jul = 0;
-			$aug = 0;
-			$sep = 0;
-			$oct = 0;
-			$nov = 0;
-			$dec = 0;
-		}
-
+		$fund = $this->parse_amount($this->input->post('alloc_amount'));
+		$months = $this->input->post('type') == 'MOOE' ? $this->monthly_split($fund) : array_fill_keys(array_keys($this->monthly_split(0)), 0);
 
 		$data = array(
 			'schoolID' => $this->input->post('schoolID'),
 			'alloc_year' => $this->input->post('fy'),
 			'alloc_batch' => $this->input->post('bcode'),
-			'alloc_amount' => $fund,
+			'alloc_amount' => number_format($fund, 2, '.', ''),
 			'alloc_type' => $this->input->post('type'),
 			'alloc_group' => $this->input->post('group'),
 			'alloc_program' => in_array($this->input->post('program'), $this->alloc_programs(), true) ? $this->input->post('program') : '',
-			'mo_jan' => $jan,
-			'mo_feb' => $feb,
-			'mo_mar' => $mar,
-			'mo_apr' => $apr,
-			'mo_may' => $may,
-			'mo_jun' => $jun,
-			'mo_jul' => $jul,
-			'mo_aug' => $aug,
-			'mo_sep' => $sep,
-			'mo_oct' => $oct,
-			'mo_nov' => $nov,
-			'mo_dec' => $dec
-		);
+		) + $months;
 
 		return $this->db->insert('sgod_school_allocation', $data);
 	}

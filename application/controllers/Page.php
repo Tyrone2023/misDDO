@@ -7725,6 +7725,8 @@ class Page extends CI_Controller
 			$fy = !empty($_SESSION['fy']) ? $_SESSION['fy'] : date('Y');
 		}
 
+		$this->SGODModel->ensure_allocation_schema();
+
 		$result['fys'] = $fy;
 		$result['years'] = $this->Common->one_cond_group('sgod_school_allocation', 'schoolID', $school, 'alloc_year');
 		$result['ssa'] = $this->SGODModel->two_cond('sgod_school_allocation', 'schoolID', $school, 'alloc_year', $fy);
