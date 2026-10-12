@@ -1165,7 +1165,7 @@ class SGODModel extends CI_Model
 			'pr' => $this->input->post('pr'),
 			'schedule' => $this->input->post('schedule'),
 			'venue' => $this->input->post('venue'),
-			'budget' => $this->input->post('budget'),
+			'budget' => $this->parse_amount($this->input->post('budget')),
 			'budget_source' => $bs,
 			'materials' => $this->input->post('materials'),
 			'matatag' => $this->input->post('matatag'),
@@ -1221,48 +1221,40 @@ class SGODModel extends CI_Model
 		}
 	}
 
-	// Strict mode is off (stricton FALSE), so MySQL silently truncates "4,636.36" to 4 in the double
-	// columns. The keypress filter blocks typed commas but not pasted ones, so strip them here.
-	private function app_number($val)
-	{
-		$val = str_replace(array(',', ' '), '', (string) $val);
-		return is_numeric($val) ? $val : 0;
-	}
-
 	public function reupdate_app()
 	{
 
 		$id = $this->input->post('id');
 		$data = array(
-			'unit_price' => $this->app_number($this->input->post('unit_price')),
+			'unit_price' => $this->parse_amount($this->input->post('unit_price')),
 			'quantity' => 0,
 			'unit_measure' => $this->input->post('unit_measure'),
 			'budget_alloc' => 0,
-			'jan' => $this->app_number($this->input->post('jan')),
-			'feb' => $this->app_number($this->input->post('feb')),
-			'mar' => $this->app_number($this->input->post('mar')),
-			'april' => $this->app_number($this->input->post('april')),
-			'may' => $this->app_number($this->input->post('may')),
-			'june' => $this->app_number($this->input->post('june')),
-			'july' => $this->app_number($this->input->post('july')),
-			'aug' => $this->app_number($this->input->post('aug')),
-			'sept' => $this->app_number($this->input->post('sept')),
-			'oct' => $this->app_number($this->input->post('oct')),
-			'nov' => $this->app_number($this->input->post('nov')),
-			'ddec' => $this->app_number($this->input->post('dec')),
+			'jan' => $this->parse_amount($this->input->post('jan')),
+			'feb' => $this->parse_amount($this->input->post('feb')),
+			'mar' => $this->parse_amount($this->input->post('mar')),
+			'april' => $this->parse_amount($this->input->post('april')),
+			'may' => $this->parse_amount($this->input->post('may')),
+			'june' => $this->parse_amount($this->input->post('june')),
+			'july' => $this->parse_amount($this->input->post('july')),
+			'aug' => $this->parse_amount($this->input->post('aug')),
+			'sept' => $this->parse_amount($this->input->post('sept')),
+			'oct' => $this->parse_amount($this->input->post('oct')),
+			'nov' => $this->parse_amount($this->input->post('nov')),
+			'ddec' => $this->parse_amount($this->input->post('dec')),
 			'stat' => 1,
-			'qjan' => $this->app_number($this->input->post('qjan')),
-			'qfeb' => $this->app_number($this->input->post('qfeb')),
-			'qmar' => $this->app_number($this->input->post('qmar')),
-			'qapril' => $this->app_number($this->input->post('qapril')),
-			'qmay' => $this->app_number($this->input->post('qmay')),
-			'qjune' => $this->app_number($this->input->post('qjune')),
-			'qjuly' => $this->app_number($this->input->post('qjuly')),
-			'qaug' => $this->app_number($this->input->post('qaug')),
-			'qsept' => $this->app_number($this->input->post('qsept')),
-			'qoct' => $this->app_number($this->input->post('qoct')),
-			'qnov' => $this->app_number($this->input->post('qnov')),
-			'qdec' => $this->app_number($this->input->post('qdec')),
+			'qjan' => $this->parse_amount($this->input->post('qjan')),
+			'qfeb' => $this->parse_amount($this->input->post('qfeb')),
+			'qmar' => $this->parse_amount($this->input->post('qmar')),
+			'qapril' => $this->parse_amount($this->input->post('qapril')),
+			'qmay' => $this->parse_amount($this->input->post('qmay')),
+			'qjune' => $this->parse_amount($this->input->post('qjune')),
+			'qjuly' => $this->parse_amount($this->input->post('qjuly')),
+			'qaug' => $this->parse_amount($this->input->post('qaug')),
+			'qsept' => $this->parse_amount($this->input->post('qsept')),
+			'qoct' => $this->parse_amount($this->input->post('qoct')),
+			'qnov' => $this->parse_amount($this->input->post('qnov')),
+			'qdec' => $this->parse_amount($this->input->post('qdec')),
 		);
 
 		$this->db->where('id', $id);
@@ -1273,11 +1265,11 @@ class SGODModel extends CI_Model
 	{
 		$data = array(
 			'aip_id' => $this->input->post('aip_id'),
-			'q1' => $this->input->post('q1'),
-			'q2' => $this->input->post('q2'),
-			'q3' => $this->input->post('q3'),
-			'q4' => $this->input->post('q4'),
-			'total' => $this->input->post('total'),
+			'q1' => $this->parse_amount($this->input->post('q1')),
+			'q2' => $this->parse_amount($this->input->post('q2')),
+			'q3' => $this->parse_amount($this->input->post('q3')),
+			'q4' => $this->parse_amount($this->input->post('q4')),
+			'total' => $this->parse_amount($this->input->post('total')),
 			'type' => $this->input->post('type')
 		);
 
@@ -1286,11 +1278,11 @@ class SGODModel extends CI_Model
 	public function update_sop($id)
 	{
 		$data = array(
-			'q1' => $this->input->post('q1'),
-			'q2' => $this->input->post('q2'),
-			'q3' => $this->input->post('q3'),
-			'q4' => $this->input->post('q4'),
-			'total' => $this->input->post('total'),
+			'q1' => $this->parse_amount($this->input->post('q1')),
+			'q2' => $this->parse_amount($this->input->post('q2')),
+			'q3' => $this->parse_amount($this->input->post('q3')),
+			'q4' => $this->parse_amount($this->input->post('q4')),
+			'total' => $this->parse_amount($this->input->post('total')),
 		);
 
 		$this->db->where('id', $id);
@@ -1323,7 +1315,7 @@ class SGODModel extends CI_Model
 			'schedule' => $this->input->post('schedule'),
 			'venue' => $this->input->post('venue'),
 			'category' => $this->input->post('category'),
-			'budget' => $this->input->post('budget'),
+			'budget' => $this->parse_amount($this->input->post('budget')),
 			'budget_source' => $bs,
 			'matatag' => $this->input->post('matatag'),
 			'io' => $this->input->post('io'),

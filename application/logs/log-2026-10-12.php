@@ -29,3 +29,5 @@ ERROR - 2026-10-12 08:05:40 --> Query error: Table 'depedddomis_db.hris_rater_as
 ERROR - 2026-10-12 02:17:02 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-10-12 02:17:10 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-10-12 02:17:13 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-12 09:06:17 --> Appointment report preview failed: The selected template file is missing.
+ERROR - 2026-10-12 09:08:09 --> Appointment report preview failed: The selected template file is missing.

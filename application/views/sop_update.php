@@ -44,7 +44,7 @@
                                                     <div class="col-lg-6">
                                                         <div class="form-group">
                                                             <label >1ST QUARTER<span class="text-danger">*</span></label>
-                                                            <input type="text" id="value1" oninput="calculateTotal()" name="q1" class="form-control amount" value="<?= $sop->q1; ?>" >
+                                                            <input type="text" id="value1" data-money oninput="calculateTotal()" name="q1" class="form-control amount" value="<?= $sop->q1; ?>" >
                                                         </div>
                                                     </div>
                                             </div>
@@ -52,7 +52,7 @@
                                                     <div class="col-lg-6">
                                                         <div class="form-group">
                                                             <label >2ND QUARTER <span class="text-danger">*</span></label>
-                                                            <input type="text" id="value2"  oninput="calculateTotal()" name="q2" class="form-control amount" value="<?= $sop->q2; ?>" >
+                                                            <input type="text" id="value2" data-money  oninput="calculateTotal()" name="q2" class="form-control amount" value="<?= $sop->q2; ?>" >
                                                         </div>
                                                     </div>
                                             </div>
@@ -60,7 +60,7 @@
                                                     <div class="col-lg-6">
                                                         <div class="form-group">
                                                             <label >3RD QUARTER <span class="text-danger">*</span></label>
-                                                            <input type="text" id="value3"  oninput="calculateTotal()" name="q3" class="form-control amount" value="<?= $sop->q3; ?>" >
+                                                            <input type="text" id="value3" data-money  oninput="calculateTotal()" name="q3" class="form-control amount" value="<?= $sop->q3; ?>" >
                                                         </div>
                                                     </div>
                                             </div>
@@ -68,7 +68,7 @@
                                                     <div class="col-lg-6">
                                                         <div class="form-group">
                                                             <label >4TH QUARTER <span class="text-danger">*</span></label>
-                                                            <input type="text" id="value4" oninput="calculateTotal()" name="q4" class="form-control amount" value="<?= $sop->q4; ?>" >
+                                                            <input type="text" id="value4" data-money oninput="calculateTotal()" name="q4" class="form-control amount" value="<?= $sop->q4; ?>" >
                                                         </div>
                                                     </div>
                                             </div>
@@ -76,7 +76,7 @@
                                                     <div class="col-lg-6">
                                                         <div class="form-group">
                                                             <label>TOTAL<span class="text-danger">*</span></label>
-                                                            <input type="text" name="total" id="total" class="form-control" value="<?= $sop->total; ?>" >
+                                                            <input type="text" name="total" id="total" data-money class="form-control" value="<?= $sop->total; ?>" >
                                                         </div>
                                                     </div>
                                             </div>
@@ -133,6 +133,7 @@
 
         <!-- App js -->
         <script src="<?= base_url(); ?>assets/js/app.min.js"></script>
+        <script src="<?= base_url(); ?>assets/js/money-input.js"></script>
 
 
  <!-- Required datatable js -->
@@ -180,13 +181,13 @@
             </script>
             <script>
                     function calculateTotal() {
-                        var value1 = parseFloat(document.getElementById('value1').value) || 0;
-                        var value2 = parseFloat(document.getElementById('value2').value) || 0;
-                        var value3 = parseFloat(document.getElementById('value3').value) || 0;
-                        var value4 = parseFloat(document.getElementById('value4').value) || 0;
+                        var value1 = moneyVal(document.getElementById('value1').value) || 0;
+                        var value2 = moneyVal(document.getElementById('value2').value) || 0;
+                        var value3 = moneyVal(document.getElementById('value3').value) || 0;
+                        var value4 = moneyVal(document.getElementById('value4').value) || 0;
                         var total = value1 + value2 + value3 + value4;
                         
-                        document.getElementById('total').value = total;
+                        document.getElementById('total').value = moneyFmt(total);
                     }
                 </script>
 

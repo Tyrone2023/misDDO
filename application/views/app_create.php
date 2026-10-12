@@ -89,7 +89,7 @@
                               <div class="col-lg-3">
                                 <div class="form-group">
                                   <label >Unit Price</label>
-                                  <input value="" required type="text" class="form-control" onkeypress="return isNumberKey(event)" name="unit_price">
+                                  <input value="" required type="text" class="form-control" data-money onkeypress="return isNumberKey(event)" name="unit_price">
                                 </div>
                               </div>
 
@@ -135,17 +135,17 @@
                                                   <div class="col-lg-4">
                                                     <div class="form-group">
                                                       <label >January</label>
-                                                      <input type="text" class="form-control" id="PPRICE" onkeyup="multiply()" onkeypress="return isNumberKey(event)" value="<?= set_value('jan'); ?>" name="jan" placeholder="Unit Price">
+                                                      <input type="text" class="form-control" id="PPRICE" onkeyup="multiply()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('jan'); ?>" name="jan" placeholder="Unit Price">
                                                     </div>
                                                     <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="QTY" onkeyup="multiply()" onkeypress="return isNumberKey(event)" value="" name="qjan" placeholder="qty">
+                                                          <input type="text" class="form-control" id="QTY" onkeyup="multiply()" data-money onkeypress="return isNumberKey(event)" value="" name="qjan" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="TOTAL" readonly value="" name="tjan" placeholder="Total">
+                                                          <input type="text" class="form-control" id="TOTAL" readonly data-money value="" name="tjan" placeholder="Total">
                                                         </div>
                                                           </div>
                                                     </div>
@@ -157,17 +157,17 @@
                                                   <div class="col-lg-4">
                                                     <div class="form-group">
                                                     <label >February</label>
-                                                      <input type="text" class="form-control" id="FEBPRICE" onkeyup="multiplyfeb()" onkeypress="return isNumberKey(event)" value="<?= set_value('feb'); ?>" name="feb" placeholder="Unit Price">
+                                                      <input type="text" class="form-control" id="FEBPRICE" onkeyup="multiplyfeb()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('feb'); ?>" name="feb" placeholder="Unit Price">
                                                     </div>
                                                     <div class="row">
                                                         <div class="col-lg-4">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="FEBQTY" onkeyup="multiplyfeb()" onkeypress="return isNumberKey(event)" value="" name="qfeb" placeholder="qty">
+                                                            <input type="text" class="form-control" id="FEBQTY" onkeyup="multiplyfeb()" data-money onkeypress="return isNumberKey(event)" value="" name="qfeb" placeholder="qty">
                                                           </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="FEBTOTAL" readonly value="" name="tfeb" placeholder="Total">
+                                                            <input type="text" class="form-control" id="FEBTOTAL" readonly data-money value="" name="tfeb" placeholder="Total">
                                                           </div>
                                                         </div>
                                                     </div>
@@ -176,17 +176,17 @@
                                                   <div class="col-lg-4">
                                                     <div class="form-group">
                                                     <label >March</label>
-                                                      <input type="text" class="form-control" id="MARPRICE" onkeyup="multiplymar()" onkeypress="return isNumberKey(event)" value="" name="mar" placeholder="Unit Price">
+                                                      <input type="text" class="form-control" id="MARPRICE" onkeyup="multiplymar()" data-money onkeypress="return isNumberKey(event)" value="" name="mar" placeholder="Unit Price">
                                                     </div>
                                                     <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="MARQTY" onkeyup="multiplymar()" onkeypress="return isNumberKey(event)" value="" name="qmar" placeholder="qty">
+                                                          <input type="text" class="form-control" id="MARQTY" onkeyup="multiplymar()" data-money onkeypress="return isNumberKey(event)" value="" name="qmar" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="MARTOTAL" readonly value="" name="tmar" placeholder="Total">
+                                                          <input type="text" class="form-control" id="MARTOTAL" readonly data-money value="" name="tmar" placeholder="Total">
                                                         </div>
                                                           </div>
                                                     </div>
@@ -201,17 +201,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label >April</label>
-                                                        <input type="text" class="form-control" id="APPRICE" onkeyup="multiplyapril()" onkeypress="return isNumberKey(event)" value="<?= set_value('april'); ?>" name="april" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id="APPRICE" onkeyup="multiplyapril()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('april'); ?>" name="april" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="APQTY" onkeyup="multiplyapril()" onkeypress="return isNumberKey(event)" value="" name="qapril" placeholder="qty">
+                                                          <input type="text" class="form-control" id="APQTY" onkeyup="multiplyapril()" data-money onkeypress="return isNumberKey(event)" value="" name="qapril" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="APTOTAL" readonly value="" name="tapril" placeholder="Total">
+                                                            <input type="text" class="form-control" id="APTOTAL" readonly data-money value="" name="tapril" placeholder="Total">
                                                           </div>
                                                         </div>
                                                     </div>
@@ -222,17 +222,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label >May</label>
-                                                        <input type="text" class="form-control" id="MAYPRICE" onkeyup="multiplymay()" onkeypress="return isNumberKey(event)" value="<?= set_value('may'); ?>" name="may" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id="MAYPRICE" onkeyup="multiplymay()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('may'); ?>" name="may" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="MAYQTY" onkeyup="multiplymay()" onkeypress="return isNumberKey(event)" value="" name="qmay" placeholder="qty">
+                                                          <input type="text" class="form-control" id="MAYQTY" onkeyup="multiplymay()" data-money onkeypress="return isNumberKey(event)" value="" name="qmay" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="MAYTOTAL" readonly value="" name="tmay" placeholder="Total">
+                                                            <input type="text" class="form-control" id="MAYTOTAL" readonly data-money value="" name="tmay" placeholder="Total">
                                                           </div>
                                                           </div>
                                                     </div>
@@ -243,17 +243,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label >June</label>
-                                                        <input type="text" class="form-control" id="JUNPRICE" onkeyup="multiplyjune()" onkeypress="return isNumberKey(event)" value="<?= set_value('june'); ?>" name="june" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id="JUNPRICE" onkeyup="multiplyjune()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('june'); ?>" name="june" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="JUNQTY" onkeyup="multiplyjune()" onkeypress="return isNumberKey(event)" value="" name="qjune" placeholder="qty">
+                                                          <input type="text" class="form-control" id="JUNQTY" onkeyup="multiplyjune()" data-money onkeypress="return isNumberKey(event)" value="" name="qjune" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="JUNTOTAL" readonly value="" name="tapril" placeholder="Total">
+                                                            <input type="text" class="form-control" id="JUNTOTAL" readonly data-money value="" name="tapril" placeholder="Total">
                                                           </div>
                                                           </div>
                                                     </div>
@@ -269,17 +269,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label >July</label>
-                                                        <input type="text" class="form-control" id="JULPRICE" onkeyup="multiplyjul()" onkeypress="return isNumberKey(event)" value="<?= set_value('july'); ?>" name="july" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id="JULPRICE" onkeyup="multiplyjul()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('july'); ?>" name="july" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="JULQTY" onkeyup="multiplyjul()" onkeypress="return isNumberKey(event)" value="" name="qjuly" placeholder="qty">
+                                                          <input type="text" class="form-control" id="JULQTY" onkeyup="multiplyjul()" data-money onkeypress="return isNumberKey(event)" value="" name="qjuly" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="JULTOTAL" readonly value="" name="tjuly" placeholder="Total">
+                                                            <input type="text" class="form-control" id="JULTOTAL" readonly data-money value="" name="tjuly" placeholder="Total">
                                                           </div>
                                                           </div>
                                                     </div>
@@ -290,17 +290,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label>August</label>
-                                                        <input type="text" class="form-control" id="AUGPRICE" onkeyup="multiplyaug()" onkeypress="return isNumberKey(event)" value="<?= set_value('aug'); ?>" name="aug" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id="AUGPRICE" onkeyup="multiplyaug()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('aug'); ?>" name="aug" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="AUGQTY" onkeyup="multiplyaug()" onkeypress="return isNumberKey(event)" value="" name="qaug" placeholder="qty">
+                                                          <input type="text" class="form-control" id="AUGQTY" onkeyup="multiplyaug()" data-money onkeypress="return isNumberKey(event)" value="" name="qaug" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="AUGTOTAL" readonly value="" name="taug" placeholder="Total">
+                                                            <input type="text" class="form-control" id="AUGTOTAL" readonly data-money value="" name="taug" placeholder="Total">
                                                           </div>
                                                           </div>
                                                     </div>
@@ -311,17 +311,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label >September</label>
-                                                        <input type="text" class="form-control" id="SEPPRICE" onkeyup="multiplysep()" onkeypress="return isNumberKey(event)" value="<?= set_value('sept'); ?>" name="sept" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id="SEPPRICE" onkeyup="multiplysep()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('sept'); ?>" name="sept" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="SEPQTY" onkeyup="multiplysep()" onkeypress="return isNumberKey(event)" value="" name="qsept" placeholder="qty">
+                                                          <input type="text" class="form-control" id="SEPQTY" onkeyup="multiplysep()" data-money onkeypress="return isNumberKey(event)" value="" name="qsept" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="SEPTOTAL" readonly value="" name="tsept" placeholder="Total">
+                                                            <input type="text" class="form-control" id="SEPTOTAL" readonly data-money value="" name="tsept" placeholder="Total">
                                                           </div>
                                                           </div>
                                                     </div>
@@ -337,17 +337,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label >October</label>
-                                                        <input type="text" class="form-control" id='OCTPRICE' onkeyup="multiplyoct()" onkeypress="return isNumberKey(event)" value="<?= set_value('oct'); ?>" name="oct" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id='OCTPRICE' onkeyup="multiplyoct()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('oct'); ?>" name="oct" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="OCTQTY" onkeyup="multiplyoct()" onkeypress="return isNumberKey(event)" value="" name="qoct" placeholder="qty">
+                                                          <input type="text" class="form-control" id="OCTQTY" onkeyup="multiplyoct()" data-money onkeypress="return isNumberKey(event)" value="" name="qoct" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="OCTTOTAL" readonly value="" name="toct" placeholder="Total">
+                                                            <input type="text" class="form-control" id="OCTTOTAL" readonly data-money value="" name="toct" placeholder="Total">
                                                           </div>
                                                           </div>
                                                     </div>
@@ -358,17 +358,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label >November</label>
-                                                        <input type="text" class="form-control" id="NOVPRICE" onkeyup="multiplynov()" onkeypress="return isNumberKey(event)" value="<?= set_value('nov'); ?>" name="nov" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id="NOVPRICE" onkeyup="multiplynov()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('nov'); ?>" name="nov" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="NOVQTY" onkeyup="multiplynov()" onkeypress="return isNumberKey(event)" value="" name="qnov" placeholder="qty">
+                                                          <input type="text" class="form-control" id="NOVQTY" onkeyup="multiplynov()" data-money onkeypress="return isNumberKey(event)" value="" name="qnov" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="NOVTOTAL" readonly value="" name="tnov" placeholder="Total">
+                                                            <input type="text" class="form-control" id="NOVTOTAL" readonly data-money value="" name="tnov" placeholder="Total">
                                                           </div>
                                                           </div>
                                                     </div>
@@ -379,17 +379,17 @@
                                                     <div class="col-lg-4">
                                                       <div class="form-group">
                                                       <label >December</label>
-                                                        <input type="text" class="form-control" id="DECPRICE" onkeyup="multiplydec()" onkeypress="return isNumberKey(event)" value="<?= set_value('dec'); ?>" name="dec" placeholder="Unit Price">
+                                                        <input type="text" class="form-control" id="DECPRICE" onkeyup="multiplydec()" data-money onkeypress="return isNumberKey(event)" value="<?= set_value('dec'); ?>" name="dec" placeholder="Unit Price">
                                                       </div>
                                                       <div class="row">
                                                         <div class="col-lg-4">
                                                         <div class="form-group">
-                                                          <input type="text" class="form-control" id="DECQTY" onkeyup="multiplydec()" onkeypress="return isNumberKey(event)" value="" name="qdec" placeholder="qty">
+                                                          <input type="text" class="form-control" id="DECQTY" onkeyup="multiplydec()" data-money onkeypress="return isNumberKey(event)" value="" name="qdec" placeholder="qty">
                                                         </div>
                                                         </div>
                                                         <div class="col-lg-8">
                                                           <div class="form-group">
-                                                            <input type="text" class="form-control" id="DECTOTAL" readonly value="" name="tdec" placeholder="Total">
+                                                            <input type="text" class="form-control" id="DECTOTAL" readonly data-money value="" name="tdec" placeholder="Total">
                                                           </div>
                                                           </div>
                                                     </div>
@@ -445,6 +445,7 @@
 
         <!-- App js -->
         <script src="<?= base_url(); ?>assets/js/app.min.js"></script>
+        <script src="<?= base_url(); ?>assets/js/money-input.js"></script>
         
 
      <script src="<?= base_url(); ?>assets/libs/custombox/custombox.min.js"></script>
@@ -458,87 +459,87 @@
                 });
 
                 function multiply(){
-                  a=Number(document.abc.QTY.value);
-                  b=Number(document.abc.PPRICE.value);
+                  a=moneyVal(document.abc.QTY.value);
+                  b=moneyVal(document.abc.PPRICE.value);
                   c=a*b;
-                  document.abc.TOTAL.value=c;
+                  document.abc.TOTAL.value=moneyFmt(c);
                 }
                 
                 function multiplyfeb(){
-                  fa=Number(document.abc.FEBQTY.value);
-                  fb=Number(document.abc.FEBPRICE.value);
+                  fa=moneyVal(document.abc.FEBQTY.value);
+                  fb=moneyVal(document.abc.FEBPRICE.value);
                   fc=fa*fb;
-                  document.abc.FEBTOTAL.value=fc;
+                  document.abc.FEBTOTAL.value=moneyFmt(fc);
                 }
 
                 function multiplymar(){
-                  a=Number(document.abc.MARQTY.value);
-                  b=Number(document.abc.MARPRICE.value);
+                  a=moneyVal(document.abc.MARQTY.value);
+                  b=moneyVal(document.abc.MARPRICE.value);
                   c=a*b;
-                  document.abc.MARTOTAL.value=c;
+                  document.abc.MARTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplyapril(){
-                  a=Number(document.abc.APQTY.value);
-                  b=Number(document.abc.APPRICE.value);
+                  a=moneyVal(document.abc.APQTY.value);
+                  b=moneyVal(document.abc.APPRICE.value);
                   c=a*b;
-                  document.abc.APTOTAL.value=c;
+                  document.abc.APTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplymay(){
-                  a=Number(document.abc.MAYQTY.value);
-                  b=Number(document.abc.MAYPRICE.value);
+                  a=moneyVal(document.abc.MAYQTY.value);
+                  b=moneyVal(document.abc.MAYPRICE.value);
                   c=a*b;
-                  document.abc.MAYTOTAL.value=c;
+                  document.abc.MAYTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplyjune(){
-                  a=Number(document.abc.JUNQTY.value);
-                  b=Number(document.abc.JUNPRICE.value);
+                  a=moneyVal(document.abc.JUNQTY.value);
+                  b=moneyVal(document.abc.JUNPRICE.value);
                   c=a*b;
-                  document.abc.JUNTOTAL.value=c;
+                  document.abc.JUNTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplyjul(){
-                  a=Number(document.abc.JULQTY.value);
-                  b=Number(document.abc.JULPRICE.value);
+                  a=moneyVal(document.abc.JULQTY.value);
+                  b=moneyVal(document.abc.JULPRICE.value);
                   c=a*b;
-                  document.abc.JULTOTAL.value=c;
+                  document.abc.JULTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplyaug(){
-                  a=Number(document.abc.AUGQTY.value);
-                  b=Number(document.abc.AUGPRICE.value);
+                  a=moneyVal(document.abc.AUGQTY.value);
+                  b=moneyVal(document.abc.AUGPRICE.value);
                   c=a*b;
-                  document.abc.AUGTOTAL.value=c;
+                  document.abc.AUGTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplysep(){
-                  a=Number(document.abc.SEPQTY.value);
-                  b=Number(document.abc.SEPPRICE.value);
+                  a=moneyVal(document.abc.SEPQTY.value);
+                  b=moneyVal(document.abc.SEPPRICE.value);
                   c=a*b;
-                  document.abc.SEPTOTAL.value=c;
+                  document.abc.SEPTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplyoct(){
-                  a=Number(document.abc.OCTQTY.value);
-                  b=Number(document.abc.OCTPRICE.value);
+                  a=moneyVal(document.abc.OCTQTY.value);
+                  b=moneyVal(document.abc.OCTPRICE.value);
                   c=a*b;
-                  document.abc.OCTTOTAL.value=c;
+                  document.abc.OCTTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplynov(){
-                  a=Number(document.abc.NOVQTY.value);
-                  b=Number(document.abc.NOVPRICE.value);
+                  a=moneyVal(document.abc.NOVQTY.value);
+                  b=moneyVal(document.abc.NOVPRICE.value);
                   c=a*b;
-                  document.abc.NOVTOTAL.value=c;
+                  document.abc.NOVTOTAL.value=moneyFmt(c);
                 }
 
                 function multiplydec(){
-                  a=Number(document.abc.DECQTY.value);
-                  b=Number(document.abc.DECPRICE.value);
+                  a=moneyVal(document.abc.DECQTY.value);
+                  b=moneyVal(document.abc.DECPRICE.value);
                   c=a*b;
-                  document.abc.DECTOTAL.value=c;
+                  document.abc.DECTOTAL.value=moneyFmt(c);
                 }
 
                 function add(){

@@ -298,7 +298,7 @@
                                                 <div class="col-lg-2">
                                                     <div class="form-group">
                                                         <label >BUDGET PER ACTIVITY</label>
-                                                        <input type="text"  class="form-control" value="<?= $data->budget; ?>" name="budget" >
+                                                        <input type="text"  class="form-control" data-money value="<?= $data->budget; ?>" name="budget" >
                                                     </div>
                                                 </div>
                                                 
@@ -385,6 +385,7 @@
 
         <!-- App js -->
         <script src="<?= base_url(); ?>assets/js/app.min.js"></script>
+        <script src="<?= base_url(); ?>assets/js/money-input.js"></script>
 
 
  <!-- Required datatable js -->

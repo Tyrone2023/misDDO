@@ -169,24 +169,24 @@
                                                             <input type="hidden"  name="type" value="" id="field" />
 
                                                             <label>1ST QUARTER</label>
-                                                            <input type="text" id="value1" onkeypress="return isNumberKey(event)" oninput="calculateTotal()" name="q1" value="" class="form-control amount" >
+                                                            <input type="text" id="value1" data-money onkeypress="return isNumberKey(event)" oninput="calculateTotal()" name="q1" value="" class="form-control amount" >
                                                         </div>
                                                         <div class="form-group">
                                                             <label>2ND QUARTER</label>
-                                                            <input type="text"  id="value2" onkeypress="return isNumberKey(event)" oninput="calculateTotal()"  name="q2" class="form-control amount" />
+                                                            <input type="text"  id="value2" data-money onkeypress="return isNumberKey(event)" oninput="calculateTotal()"  name="q2" class="form-control amount" />
                                                         </div>
                                                         <div class="form-group">
                                                             <label>3RD QUARTER</label>
-                                                            <input type="text"  id="value3" onkeypress="return isNumberKey(event)" oninput="calculateTotal()"  name="q3" class="form-control amount" />
+                                                            <input type="text"  id="value3" data-money onkeypress="return isNumberKey(event)" oninput="calculateTotal()"  name="q3" class="form-control amount" />
                                                         </div>
                                                         <div class="form-group">
                                                             <label>4TH QUARTER</label>
-                                                            <input type="text"  id="value4" onkeypress="return isNumberKey(event)" oninput="calculateTotal()" name="q4" class="form-control amount" />
+                                                            <input type="text"  id="value4" data-money onkeypress="return isNumberKey(event)" oninput="calculateTotal()" name="q4" class="form-control amount" />
                                                             
                                                         </div>
                                                         <div class="form-group">
                                                             <label><a href="javascript:sumInputs()">TOTAL</a></label>
-                                                            <input type="text"  name="total" id="total" class="form-control amount" />
+                                                            <input type="text"  name="total" id="total" data-money class="form-control amount" />
                                                         </div>
 
                                                         
@@ -267,6 +267,7 @@
 
         <!-- App js -->
         <script src="<?= base_url(); ?>assets/js/app.min.js"></script>
+        <script src="<?= base_url(); ?>assets/js/money-input.js"></script>
 
         <script type="text/javascript">
                 $(document).on("click", ".open-AddBookDialog", function () {
@@ -305,13 +306,13 @@
 
     <script>
         function calculateTotal() {
-            var value1 = parseFloat(document.getElementById('value1').value) || 0;
-            var value2 = parseFloat(document.getElementById('value2').value) || 0;
-            var value3 = parseFloat(document.getElementById('value3').value) || 0;
-            var value4 = parseFloat(document.getElementById('value4').value) || 0;
+            var value1 = moneyVal(document.getElementById('value1').value) || 0;
+            var value2 = moneyVal(document.getElementById('value2').value) || 0;
+            var value3 = moneyVal(document.getElementById('value3').value) || 0;
+            var value4 = moneyVal(document.getElementById('value4').value) || 0;
             var total = value1 + value2 + value3 + value4;
             
-            document.getElementById('total').value = total;
+            document.getElementById('total').value = moneyFmt(total);
         }
     </script>
 
