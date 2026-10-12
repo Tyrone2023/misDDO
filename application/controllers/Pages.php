@@ -6866,6 +6866,10 @@ public function car_rqa_promotion()
      */
     private function appointment_document_row($key)
     {
+        // "man_{id}": appointee encoded on the Manual Appointment Reports page.
+        if (strpos((string) $key, 'man_') === 0) {
+            return $this->appointment_document_model()->manual_document_row((int) substr((string) $key, 4));
+        }
         if (strpos((string) $key, 'app_') === 0) {
             $row = $this->Page_model->rqa_application_rows((int) substr((string) $key, 4));
             if (empty($row) || !$this->rqa_job_title_allowed($row->jobTitle ?? '')) {
@@ -7473,6 +7477,149 @@ public function car_rqa_promotion()
     }
 
     /**
+     * Appointment Reports for appointees with no record in the system: the
+     * name, position, Nature and SG/Step are typed in, saved as "man_{id}",
+     * and the same templates/preview/print flow is used.
+     */
+    public function appointment_reports_manual()
+    {
+        if ($this->session->logged_in == false) {
+            redirect(base_url() . 'log_in');
+            return;
+        }
+        if (!$this->appointment_template_can_manage()) {
+            show_error('You are not authorised to encode manual appointees.', 403);
+            return;
+        }
+
+        $documents = $this->appointment_document_model();
+        $applicants = [];
+        foreach ($documents->manual_applicants() as $m) {
+            $applicants[] = $this->appointment_manual_payload($m, $documents);
+        }
+
+        $data = [
+            'title' => 'Manual Appointment Reports',
+            'settings' => $this->SettingsModel->get_mis_settings(),
+            'applicants' => $applicants,
+            'groups' => $documents->position_groups(),
+            'natures' => $documents->natures(),
+            'documentTypes' => $documents->document_types(),
+            'schools' => $this->db->select('recID, schoolName')->order_by('schoolName', 'ASC')->get('schools')->result(),
+            'selectedRecId' => (string) $this->input->get('applicant'),
+        ];
+
+        $this->load->view('templates/head');
+        $this->load->view('templates/header');
+        $this->load->view('pages/appointment_reports_manual', $data);
+        $this->load->view('templates/footer');
+    }
+
+    private function appointment_manual_payload($m, $documents)
+    {
+        $name = trim(implode(' ', array_filter([trim((string) $m->first_name), trim((string) $m->middle_name), trim((string) $m->last_name), trim((string) $m->name_extn)])));
+        return [
+            'recId' => 'man_' . (int) $m->id,
+            'id' => (int) $m->id,
+            'name' => $name,
+            'firstName' => (string) $m->first_name,
+            'middleName' => (string) $m->middle_name,
+            'lastName' => (string) $m->last_name,
+            'nameExtn' => (string) $m->name_extn,
+            'sex' => (string) $m->sex,
+            'position' => (string) $m->position_title,
+            'positionGroup' => (int) $m->position_group,
+            'positionGroupName' => $documents->position_groups()[(int) $m->position_group] ?? 'Not Set',
+            'itemNumber' => (string) $m->item_number,
+            'schoolId' => (int) $m->school_id,
+            'school' => (string) $m->school_name,
+            'empType' => (string) $m->emp_type,
+            'dateHired' => (string) $m->date_hired,
+            'nature' => (string) $m->nature_of_appointment,
+            'sg' => (int) $m->sg,
+            'step' => (int) $m->step,
+        ];
+    }
+
+    public function appointment_manual_save()
+    {
+        header('Content-Type: application/json');
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to encode manual appointees.']);
+            return;
+        }
+
+        $documents = $this->appointment_document_model();
+        $post = function ($field, $max) {
+            return mb_substr(trim((string) $this->input->post($field)), 0, $max);
+        };
+        $id = (int) $this->input->post('id');
+        $group = (int) $this->input->post('position_group');
+        $nature = $post('nature_of_appointment', 40);
+        $sg = (int) $this->input->post('sg');
+        $step = (int) $this->input->post('step');
+        $dateHired = $this->appointment_salary_date($this->input->post('date_hired'));
+        $data = [
+            'first_name' => $post('first_name', 100),
+            'middle_name' => $post('middle_name', 100),
+            'last_name' => $post('last_name', 100),
+            'name_extn' => $post('name_extn', 20),
+            'sex' => in_array($this->input->post('sex'), ['Male', 'Female'], true) ? $this->input->post('sex') : null,
+            'position_title' => $post('position_title', 255),
+            'position_group' => $group,
+            'item_number' => $post('item_number', 100),
+            'school_id' => (int) $this->input->post('school_id') ?: null,
+            'emp_type' => $post('emp_type', 60),
+            'date_hired' => $dateHired !== '' ? $dateHired : null,
+            'nature_of_appointment' => $nature,
+            'sg' => $sg,
+            'step' => $step >= 1 && $step <= 8 ? $step : 1,
+        ];
+
+        if ($data['first_name'] === '' || $data['last_name'] === '') {
+            echo json_encode(['status' => 'error', 'message' => 'First Name and Last Name are required.']);
+            return;
+        }
+        if (!isset($documents->position_groups()[$group]) || !isset($documents->natures()[$nature]) || $sg < 1 || $sg > 33) {
+            echo json_encode(['status' => 'error', 'message' => 'Select the Position Group, Nature of Appointment, and Salary Grade.']);
+            return;
+        }
+        if ($id > 0 && empty($documents->manual_applicants($id))) {
+            echo json_encode(['status' => 'error', 'message' => 'The manual appointee no longer exists.']);
+            return;
+        }
+
+        $userId = $this->session->id ?? $this->session->userdata('id');
+        $id = $documents->save_manual_applicant($id, $data, $userId ? (int) $userId : null);
+        if ($id < 1) {
+            echo json_encode(['status' => 'error', 'message' => 'The appointee could not be saved.']);
+            return;
+        }
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Appointee saved.',
+            'applicant' => $this->appointment_manual_payload($documents->manual_applicants($id), $documents),
+        ]);
+    }
+
+    public function appointment_manual_delete()
+    {
+        header('Content-Type: application/json');
+        if ($this->session->logged_in == false || !$this->appointment_template_can_manage()) {
+            echo json_encode(['status' => 'error', 'message' => 'You are not authorised to remove manual appointees.']);
+            return;
+        }
+        $documents = $this->appointment_document_model();
+        $id = (int) $this->input->post('id');
+        if ($id < 1 || empty($documents->manual_applicants($id))) {
+            echo json_encode(['status' => 'error', 'message' => 'Appointee not found.']);
+            return;
+        }
+        $documents->delete_manual_applicant($id);
+        echo json_encode(['status' => 'success', 'message' => 'Appointee removed.']);
+    }
+
+    /**
      * Applies the SG/Step picked on the reports page (?sg=&step=) to the row
      * and returns the resolved grade. sg = 0 means it is still unknown.
      */
@@ -7654,7 +7801,7 @@ public function car_rqa_promotion()
             'groupName' => $groups[(int) ($row->position_group ?? 0)] ?? 'Not Set',
             'natureName' => $nature,
             'templateName' => (string) $template->original_name,
-            'backUrl' => base_url('Pages/appointment_reports') . '?applicant=' . rawurlencode($recId),
+            'backUrl' => base_url(strpos((string) $recId, 'man_') === 0 ? 'Pages/appointment_reports_manual' : 'Pages/appointment_reports') . '?applicant=' . rawurlencode($recId),
             'recKey' => (string) $recId,
             'documentType' => (string) $documentType,
             'canSave' => $this->appointment_template_can_manage(),

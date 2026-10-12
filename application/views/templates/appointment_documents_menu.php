@@ -11,6 +11,7 @@ $canManageAppointmentTemplates = in_array((string) $this->session->position, $ap
     <ul class="nav-second-level" aria-expanded="false">
         <li><a href="<?= base_url(); ?>Pages/appointment_reports">Applicant Reports</a></li>
         <?php if ($canManageAppointmentTemplates) : ?>
+            <li><a href="<?= base_url(); ?>Pages/appointment_reports_manual">Manual Reports</a></li>
             <li><a href="<?= base_url(); ?>Pages/appointment_template_setup">Template Setup</a></li>
             <li><a href="<?= base_url(); ?>Pages/appointment_salary_setup">Salary Schedule</a></li>
         <?php endif; ?>

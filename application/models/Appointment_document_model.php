@@ -14,6 +14,7 @@ class Appointment_document_model extends CI_Model
     private $editTable = 'hris_appointment_report_edits';
     private $salaryScheduleTable = 'hris_appointment_salary_schedules';
     private $salaryRateTable = 'hris_appointment_salary_rates';
+    private $manualTable = 'hris_appointment_manual_applicants';
     private $guideSalaryFile = 'NBC 601 (01012026).xlsx';
 
     public function __construct()
@@ -171,6 +172,32 @@ class Appointment_document_model extends CI_Model
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8
         ");
 
+        // Appointees encoded by hand on the Manual Appointment Reports page —
+        // people with no application/recommendation record in the system.
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `{$this->manualTable}` (
+              `id` INT(11) NOT NULL AUTO_INCREMENT,
+              `first_name` VARCHAR(100) NOT NULL,
+              `middle_name` VARCHAR(100) DEFAULT NULL,
+              `last_name` VARCHAR(100) NOT NULL,
+              `name_extn` VARCHAR(20) DEFAULT NULL,
+              `sex` VARCHAR(10) DEFAULT NULL,
+              `position_title` VARCHAR(255) DEFAULT NULL,
+              `position_group` TINYINT(3) NOT NULL DEFAULT 0,
+              `item_number` VARCHAR(100) DEFAULT NULL,
+              `school_id` INT(11) DEFAULT NULL,
+              `emp_type` VARCHAR(60) DEFAULT NULL,
+              `date_hired` DATE DEFAULT NULL,
+              `nature_of_appointment` VARCHAR(40) DEFAULT NULL,
+              `sg` TINYINT(3) DEFAULT NULL,
+              `step` TINYINT(3) DEFAULT NULL,
+              `created_by` INT(11) DEFAULT NULL,
+              `created_at` DATETIME DEFAULT NULL,
+              `updated_at` DATETIME DEFAULT NULL,
+              PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+        ");
+
         $this->seed_guide_salary_schedule();
     }
 
@@ -260,6 +287,73 @@ class Appointment_document_model extends CI_Model
             'document_type' => (string) $documentType,
             'nature_of_appointment' => (string) $nature,
         ])->delete($this->editTable);
+    }
+
+    /** Manually encoded appointees, newest first, with the school name. */
+    public function manual_applicants($id = null)
+    {
+        $this->db->select('m.*, s.schoolName AS school_name')
+            ->from($this->manualTable . ' m')
+            ->join('schools s', 's.recID = m.school_id', 'left');
+        if ($id !== null) {
+            return $this->db->where('m.id', (int) $id)->get()->row();
+        }
+        return $this->db->order_by('m.updated_at', 'DESC')->get()->result();
+    }
+
+    /** Inserts (id = 0) or updates a manual appointee; returns its id. */
+    public function save_manual_applicant($id, array $data, $userId)
+    {
+        $data['updated_at'] = date('Y-m-d H:i:s');
+        if ($id > 0) {
+            $this->db->where('id', (int) $id)->update($this->manualTable, $data);
+            return (int) $id;
+        }
+        $data['created_by'] = $userId;
+        $data['created_at'] = $data['updated_at'];
+        $this->db->insert($this->manualTable, $data);
+        return (int) $this->db->insert_id();
+    }
+
+    /** Removes a manual appointee together with its saved print edits. */
+    public function delete_manual_applicant($id)
+    {
+        $this->db->where('rec_key', 'man_' . (int) $id)->delete($this->editTable);
+        return $this->db->where('id', (int) $id)->delete($this->manualTable);
+    }
+
+    /**
+     * Shapes a manual appointee like an application row so values_for_row()
+     * and the template lookup treat it the same way. The stored SG/Step act
+     * as the override; the reports page may still pass its own.
+     */
+    public function manual_document_row($id)
+    {
+        $m = $this->manual_applicants($id);
+        if (empty($m)) {
+            return null;
+        }
+        $parts = array_filter([trim((string) $m->first_name), trim((string) $m->middle_name), trim((string) $m->last_name), trim((string) $m->name_extn)]);
+        return (object) [
+            'rec_id' => 'man_' . (int) $m->id,
+            'rec_name' => implode(' ', $parts),
+            'FirstName' => (string) $m->first_name,
+            'MiddleName' => (string) $m->middle_name,
+            'LastName' => (string) $m->last_name,
+            'NameExtn' => (string) $m->name_extn,
+            'Sex' => (string) $m->sex,
+            'jobTitle' => (string) $m->position_title,
+            'position_group' => (int) $m->position_group,
+            'item_number' => (string) $m->item_number,
+            'school_id' => (int) $m->school_id,
+            'school_name' => (string) $m->school_name,
+            'empType' => (string) $m->emp_type,
+            'date_hired' => (string) $m->date_hired,
+            'nature_of_appointment' => (string) $m->nature_of_appointment,
+            'salary_grade_override' => (int) $m->sg,
+            'salary_step_override' => (int) $m->step,
+            'status' => 'manual',
+        ];
     }
 
     /**
