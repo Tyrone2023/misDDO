@@ -7178,15 +7178,43 @@ public function car_rqa_promotion()
             return;
         }
 
+        // Keep a copy in uploads/salary_schedules and read it from there - the
+        // host's PHP temp file could not be read by the XLSX reader online.
+        $path = $upload['tmp_name'];
+        $uploadDir = FCPATH . 'uploads/salary_schedules/';
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0777, true);
+            @chmod($uploadDir, 0777);
+        }
+        $storedName = 'salary_' . date('Ymd_His') . '_' . bin2hex(random_bytes(3)) . '.' . $extension;
+        if (is_dir($uploadDir) && is_writable($uploadDir) && move_uploaded_file($upload['tmp_name'], $uploadDir . $storedName)) {
+            $path = $uploadDir . $storedName;
+        }
+
         $documents = $this->appointment_document_model();
+        $readError = '';
         try {
-            $parsed = $documents->parse_salary_schedule($upload['tmp_name'], $extension);
+            $parsed = $documents->parse_salary_schedule($path, $extension);
         } catch (Throwable $e) {
             log_message('error', 'Salary schedule upload failed: ' . $e->getMessage());
+            $readError = $e->getMessage();
             $parsed = ['rates' => []];
         }
+        // Fallback for XLSX: the native ZipArchive reader used by the RQA imports.
+        if (empty($parsed['rates']) && $extension === 'xlsx') {
+            try {
+                $rows = array_map(function ($row) {
+                    return $row['values'];
+                }, $this->rqa_read_xlsx_rows($path));
+                $parsed = $documents->parse_salary_rows($rows);
+            } catch (Throwable $e) {
+                log_message('error', 'Salary schedule fallback read failed: ' . $e->getMessage());
+                $readError = $readError !== '' ? $readError : $e->getMessage();
+            }
+        }
         if (empty($parsed['rates'])) {
-            $this->session->set_flashdata('appointment_error', 'No salary rates were found. The sheet needs an SG column and a Step 1 to 8 header row, like the NBC Monthly Salary Schedule.');
+            $this->session->set_flashdata('appointment_error', 'No salary rates were found. The sheet needs an SG column and a Step 1 to 8 header row, like the NBC Monthly Salary Schedule.'
+                . ($readError !== '' ? ' (Read error: ' . $readError . ')' : ''));
             redirect($back);
             return;
         }

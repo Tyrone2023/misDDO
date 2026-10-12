@@ -620,6 +620,15 @@ class Appointment_document_model extends CI_Model
         $rows = $book->getSheet(0)->toArray(null, true, false, false);
         $book->disconnectWorksheets();
 
+        return $this->parse_salary_rows($rows);
+    }
+
+    /**
+     * Finds the SG column, the Step 1-8 header and the monthly rates in rows
+     * already read from the first sheet (each row a 0-based list of cells).
+     */
+    public function parse_salary_rows(array $rows)
+    {
         $title = '';
         $effectivity = '';
         $stepCols = [];
