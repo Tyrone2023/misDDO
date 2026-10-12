@@ -5592,8 +5592,8 @@ class Page extends CI_Controller
 
 		$data['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
 
-		$bs = $this->SGODModel->one_cond_row('sgod_school_allocation', 'alloc_batch', $bcode);
-		$data['bs'] = $bs;
+		// alloc_batch is shared across schools; scope to this school or another school's group (e.g. SENIOR HS) prints.
+		$data['bs'] = $this->SGODModel->three_cond_row('sgod_school_allocation', 'schoolID', $school_id, 'alloc_year', $fy, 'alloc_batch', $bcode);
 
 		// fund_type is 0 on every allocation row, so the batch fund is read off alloc_type.
 		// A MOOE batch lists MOOE line items only; SBFP/SNED batches keep listing everything
@@ -5631,6 +5631,7 @@ class Page extends CI_Controller
 
 		$data['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
 		$data['data_row'] = $this->SGODModel->get_aip_row($school_id, $fy, $bcode);
+		$data['bs'] = $this->SGODModel->three_cond_row('sgod_school_allocation', 'schoolID', $school_id, 'alloc_year', $fy, 'alloc_batch', $bcode);
 
 
 		// Only a MOOE batch is restricted to MOOE line items; SBFP/SNED batches keep
@@ -5660,7 +5661,7 @@ class Page extends CI_Controller
 
 		$data['school'] = $this->SGODModel->one_cond_row('schools', 'schoolId', $school_id);
 
-		$bs = $this->SGODModel->one_cond_row('sgod_school_allocation', 'alloc_batch', $bcode);
+		$data['bs'] = $this->SGODModel->three_cond_row('sgod_school_allocation', 'schoolID', $school_id, 'alloc_year', $fy, 'alloc_batch', $bcode);
 
 		if ($this->SGODModel->batch_fund_type($school_id, $fy, $bcode) == 0) {
 			$data['mr'] = $this->SGODModel->aip_category('sgod_aip', $school_id, $fy, $bcode, 'MINOR REPAIR');

@@ -1221,40 +1221,48 @@ class SGODModel extends CI_Model
 		}
 	}
 
+	// Strict mode is off (stricton FALSE), so MySQL silently truncates "4,636.36" to 4 in the double
+	// columns. The keypress filter blocks typed commas but not pasted ones, so strip them here.
+	private function app_number($val)
+	{
+		$val = str_replace(array(',', ' '), '', (string) $val);
+		return is_numeric($val) ? $val : 0;
+	}
+
 	public function reupdate_app()
 	{
 
 		$id = $this->input->post('id');
 		$data = array(
-			'unit_price' => $this->input->post('unit_price'),
+			'unit_price' => $this->app_number($this->input->post('unit_price')),
 			'quantity' => 0,
 			'unit_measure' => $this->input->post('unit_measure'),
 			'budget_alloc' => 0,
-			'jan' => $this->input->post('jan'),
-			'feb' => $this->input->post('feb'),
-			'mar' => $this->input->post('mar'),
-			'april' => $this->input->post('april'),
-			'may' => $this->input->post('may'),
-			'june' => $this->input->post('june'),
-			'july' => $this->input->post('july'),
-			'aug' => $this->input->post('aug'),
-			'sept' => $this->input->post('sept'),
-			'oct' => $this->input->post('oct'),
-			'nov' => $this->input->post('nov'),
-			'ddec' => $this->input->post('dec'),
+			'jan' => $this->app_number($this->input->post('jan')),
+			'feb' => $this->app_number($this->input->post('feb')),
+			'mar' => $this->app_number($this->input->post('mar')),
+			'april' => $this->app_number($this->input->post('april')),
+			'may' => $this->app_number($this->input->post('may')),
+			'june' => $this->app_number($this->input->post('june')),
+			'july' => $this->app_number($this->input->post('july')),
+			'aug' => $this->app_number($this->input->post('aug')),
+			'sept' => $this->app_number($this->input->post('sept')),
+			'oct' => $this->app_number($this->input->post('oct')),
+			'nov' => $this->app_number($this->input->post('nov')),
+			'ddec' => $this->app_number($this->input->post('dec')),
 			'stat' => 1,
-			'qjan' => $this->input->post('qjan'),
-			'qfeb' => $this->input->post('qfeb'),
-			'qmar' => $this->input->post('qmar'),
-			'qapril' => $this->input->post('qapril'),
-			'qmay' => $this->input->post('qmay'),
-			'qjune' => $this->input->post('qjune'),
-			'qjuly' => $this->input->post('qjuly'),
-			'qaug' => $this->input->post('qaug'),
-			'qsept' => $this->input->post('qsept'),
-			'qoct' => $this->input->post('qoct'),
-			'qnov' => $this->input->post('qnov'),
-			'qdec' => $this->input->post('qdec'),
+			'qjan' => $this->app_number($this->input->post('qjan')),
+			'qfeb' => $this->app_number($this->input->post('qfeb')),
+			'qmar' => $this->app_number($this->input->post('qmar')),
+			'qapril' => $this->app_number($this->input->post('qapril')),
+			'qmay' => $this->app_number($this->input->post('qmay')),
+			'qjune' => $this->app_number($this->input->post('qjune')),
+			'qjuly' => $this->app_number($this->input->post('qjuly')),
+			'qaug' => $this->app_number($this->input->post('qaug')),
+			'qsept' => $this->app_number($this->input->post('qsept')),
+			'qoct' => $this->app_number($this->input->post('qoct')),
+			'qnov' => $this->app_number($this->input->post('qnov')),
+			'qdec' => $this->app_number($this->input->post('qdec')),
 		);
 
 		$this->db->where('id', $id);
