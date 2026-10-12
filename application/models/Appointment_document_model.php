@@ -171,7 +171,6 @@ class Appointment_document_model extends CI_Model
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8
         ");
 
-        $this->seed_guide_templates();
         $this->seed_guide_salary_schedule();
     }
 
@@ -301,45 +300,6 @@ class Appointment_document_model extends CI_Model
             $out .= $dom->saveHTML($child);
         }
         return $out;
-    }
-
-    private function seed_guide_templates()
-    {
-        $guideDir = FCPATH . 'resources/guide/appointment guide/';
-        $seeds = [
-            [4, 'Original', 'appointment', 'AOII (PERM-ORIG) PAPAS, NOVE JEAN (1).xls'],
-            [4, 'Reemployment', 'appointment', 'AOII (PERM-REEM) POMOY, LEOVY MAE.xls'],
-            [4, 'Promotion', 'appointment', 'AOII (PROM) ALBIOS, GRACE.xls'],
-            [4, 'ALL', 'assumption', 'NEW FORMAT -AOII.docx'],
-            [4, 'ALL', 'assignment', 'PERMANENT-NEW-ADAS III.docx'],
-        ];
-
-        foreach ($seeds as $seed) {
-            list($group, $nature, $type, $name) = $seed;
-            if (!is_file($guideDir . $name)) {
-                continue;
-            }
-            $exists = $this->db->where([
-                'position_group' => $group,
-                'nature_of_appointment' => $nature,
-                'document_type' => $type,
-            ])->get($this->templateTable)->row();
-            if (!empty($exists)) {
-                continue;
-            }
-            $this->db->insert($this->templateTable, [
-                'position_group' => $group,
-                'nature_of_appointment' => $nature,
-                'document_type' => $type,
-                'original_name' => $name,
-                'stored_path' => 'guide/' . $name,
-                'extension' => strtolower(pathinfo($name, PATHINFO_EXTENSION)),
-                'file_size' => filesize($guideDir . $name),
-                'is_guide' => 1,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
-        }
     }
 
     public function all_templates()
@@ -1078,15 +1038,10 @@ class Appointment_document_model extends CI_Model
             if ($values['{{DIVISION_ADDRESS}}'] !== '') {
                 $sheet->setCellValue('C13', mb_strtoupper($values['{{DIVISION_ADDRESS}}'], 'UTF-8'));
             }
-            if ($values['{{SDS_NAME}}'] !== '') {
-                // The signing account carries no name extension/title, so the
-                // one written on the template (", CESO V") is kept.
-                $sdsName = mb_strtoupper($values['{{SDS_NAME}}'], 'UTF-8');
-                $templateName = (string) $sheet->getCell('L51')->getValue();
-                if (strpos($sdsName, ',') === false && ($comma = strpos($templateName, ',')) !== false) {
-                    $sdsName .= substr($templateName, $comma);
-                }
-                $sheet->setCellValue('L51', $sdsName);
+            // The Appointing Officer's name written on the template is the
+            // basis; the signing account only fills a blank template line.
+            if (trim((string) $sheet->getCell('L51')->getValue()) === '' && $values['{{SDS_NAME}}'] !== '') {
+                $sheet->setCellValue('L51', mb_strtoupper($values['{{SDS_NAME}}'], 'UTF-8'));
             }
             if ($book->getSheetCount() > 1) {
                 $certs = $book->getSheet(1);
@@ -1172,7 +1127,6 @@ class Appointment_document_model extends CI_Model
                 'Ms. CELING' => $values['{{PREFIX}}'] . ' ' . mb_strtoupper($values['{{LAST_NAME}}'], 'UTF-8'),
                 'MANELYN S. CELING' => $values['{{APPLICANT_NAME_UPPER}}'],
                 'Administrative Officer II' => $values['{{POSITION_TITLE}}'],
-                'PHOEBE GAY L. REFAMONTE, CESO V' => $values['{{SDS_NAME}}'],
                 'NORBERTO S. MANLANGIT CE, MPA' => $values['{{HRMO_NAME}}'],
                 'Administrative Officer V' => $values['{{HRMO_POSITION}}'] !== '' ? $values['{{HRMO_POSITION}}'] : 'Administrative Officer V',
                 // "Done this ___ day of ___" and the attestation date stay
@@ -1193,7 +1147,6 @@ class Appointment_document_model extends CI_Model
                 'Bagong Taas Elementary School' => $values['{{SCHOOL_NAME}}'],
                 'Monkayo West District' => $values['{{DISTRICT}}'],
                 'Monkayo, Davao de Oro' => $locality,
-                'PHOEBE GAY L. REFAMONTE, CESO V' => $values['{{SDS_NAME}}'],
                 // The order date line stays blank for the date of signing.
                 // The order number itself is issued by Records, so it is left
                 // to fill in; only the Special Order month/year is set.
@@ -1222,7 +1175,11 @@ class Appointment_document_model extends CI_Model
         if (isset($parts['word/document.xml'])) {
             $blocks = [];
             if (in_array($documentType, ['assumption', 'assignment'], true)) {
-                $blocks[] = [$values['{{SDS_NAME}}'], 'right'];
+                // The SDS name written on the template is kept as the basis;
+                // {{SDS_NAME}} only fills templates that use the placeholder.
+                foreach (array_unique([$values['{{SDS_NAME}}'], 'PHOEBE GAY L. REFAMONTE, CESO V']) as $sdsName) {
+                    $blocks[] = [$sdsName, 'right'];
+                }
             }
             if ($documentType === 'assumption') {
                 $blocks[] = [$values['{{HRMO_NAME}}'], 'left'];

@@ -71,6 +71,8 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
        the single line Excel puts it on, so nothing reflows. */
     .rp-sheet table { border-collapse:collapse; table-layout:fixed; width:100%; }
     .rp-sheet td, .rp-sheet th { white-space:nowrap; }
+    /* Hyperlinks carried over from the workbook print as plain text. */
+    .rp-sheet a, .rp-sheet a:hover, .rp-sheet a:visited { color:#000 !important; text-decoration:none !important; }
     /* E-signatures float over the name as in Excel, not shrunk into one cell. */
     .rp-sheet td > img { max-width:none !important; pointer-events:none; mix-blend-mode:multiply; }
     /* Edit mode: the form can be corrected in place before printing. */

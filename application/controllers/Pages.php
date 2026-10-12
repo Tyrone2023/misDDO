@@ -7083,9 +7083,8 @@ public function car_rqa_promotion()
     }
 
     /**
-     * Remove a saved format (POST). Bundled appointment-guide rows cannot be
-     * deleted — upload over them to replace them. Deleting a row that had
-     * replaced a guide seed simply lets the guide format be re-registered.
+     * Remove a saved format (POST). Formats come only from the database, so a
+     * deleted row stays deleted.
      */
     public function appointment_template_delete($id)
     {
@@ -7105,19 +7104,14 @@ public function car_rqa_promotion()
             redirect('Pages/appointment_template_setup');
             return;
         }
-        if ((int) $template->is_guide === 1) {
-            $this->session->set_flashdata('appointment_error', 'The bundled appointment-guide format cannot be deleted. Upload a new file over it to replace it.');
-            redirect('Pages/appointment_template_setup');
-            return;
-        }
-
         $documents->delete_template((int) $id);
         $path = $documents->source_path($template);
-        if (is_file($path)) {
+        // Rows pointing at the bundled resources/guide files only drop the row, never the file.
+        if (strpos((string) $template->stored_path, 'guide/') !== 0 && is_file($path)) {
             @unlink($path);
         }
 
-        $this->session->set_flashdata('appointment_success', 'Template removed. This Position Group / Nature now falls back to an "All Natures" or appointment-guide format.');
+        $this->session->set_flashdata('appointment_success', 'Template removed. This Position Group / Nature now falls back to an "All Natures" format, if one is saved.');
         redirect('Pages/appointment_template_setup');
     }
 

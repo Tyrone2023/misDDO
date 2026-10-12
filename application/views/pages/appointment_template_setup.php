@@ -3,13 +3,9 @@ if (!function_exists('h')) {
     function h($value) { return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); }
 }
 $groupCounts = array_fill_keys(array_keys($groups), 0);
-$guideCount = 0;
 foreach ($templates as $template) {
     if (isset($groupCounts[(int) $template->position_group])) {
         $groupCounts[(int) $template->position_group]++;
-    }
-    if ((int) $template->is_guide === 1) {
-        $guideCount++;
     }
 }
 $docShort = ['appointment' => 'Appointment', 'assumption' => 'Assumption', 'assignment' => 'Assignment Order'];
@@ -79,7 +75,6 @@ $extMeta = function ($ext) {
     .appt-tags { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
     .appt-pill { display:inline-flex; padding:.18rem .5rem; border-radius:999px; font-size:.63rem; font-weight:800; background:#eef5ff; color:#315a85; border:1px solid #dae8f8; }
     .appt-pill.appt-pill-nature { background:#f0f9f6; color:#14805f; border-color:#d3ece3; }
-    .appt-pill.appt-guide { background:#fff6e8; color:#926719; border-color:#f3dfb8; }
     .appt-item-actions { display:flex; gap:6px; flex:0 0 auto; }
     .appt-btn-view { background:var(--appt-primary); border:0; border-radius:9px; font-weight:700; }
     .appt-btn-view:hover { background:#274a77; }
@@ -103,8 +98,6 @@ $extMeta = function ($ext) {
                 </div>
                 <div class="appt-hero-stats">
                     <div class="appt-hero-stat"><b><?= count($templates); ?></b><span>Saved formats</span></div>
-                    <div class="appt-hero-stat"><b><?= count($templates) - $guideCount; ?></b><span>Uploaded</span></div>
-                    <div class="appt-hero-stat"><b><?= $guideCount; ?></b><span>Guide formats</span></div>
                 </div>
             </div>
 
@@ -170,7 +163,7 @@ $extMeta = function ($ext) {
                         <div class="appt-card-ic"><i class="mdi mdi-folder-multiple-outline"></i></div>
                         <div>
                             <h5 class="appt-title">Saved Formats</h5>
-                            <p class="appt-sub">The five supplied appointment-guide files are registered below as initial Non-Teaching formats. Uploading over one retains the new file as the active format. Click <b>View</b> to inspect a format in the browser.</p>
+                            <p class="appt-sub">Formats saved in the database for each Position Group, Nature, and Document Type. Uploading over one replaces it as the active format. Click <b>View</b> to inspect a format in the browser.</p>
                         </div>
                     </div>
                     <div class="appt-tabs" id="appt-tabs">
@@ -197,17 +190,14 @@ $extMeta = function ($ext) {
                                         <span class="appt-pill"><?= h($groups[(int) $template->position_group] ?? 'Not Set'); ?></span>
                                         <span class="appt-pill appt-pill-nature"><?= h($natures[$template->nature_of_appointment] ?? $template->nature_of_appointment); ?></span>
                                         <span class="appt-pill"><?= h($docShort[$template->document_type] ?? $template->document_type); ?></span>
-                                        <?php if ((int) $template->is_guide === 1) : ?><span class="appt-pill appt-guide">Appointment guide</span><?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="appt-item-actions">
                                     <a class="btn btn-sm btn-primary appt-btn-view" target="_blank" href="<?= base_url('Pages/appointment_template_view/' . (int) $template->id); ?>"><i class="mdi mdi-eye-outline mr-1"></i>View</a>
                                     <a class="appt-btn-icon" title="Download file" href="<?= base_url('Pages/appointment_template_download/' . (int) $template->id); ?>"><i class="mdi mdi-download"></i></a>
-                                    <?php if (!(int) $template->is_guide) : ?>
-                                        <?= form_open('Pages/appointment_template_delete/' . (int) $template->id, ['style' => 'display:inline;', 'onsubmit' => "return confirm('Delete this saved format? The Position Group and Nature will fall back to an All Natures or appointment-guide format.');"]); ?>
+                                        <?= form_open('Pages/appointment_template_delete/' . (int) $template->id, ['style' => 'display:inline;', 'onsubmit' => "return confirm('Delete this saved format? The Position Group and Nature will fall back to an All Natures format, if one is saved.');"]); ?>
                                             <button type="submit" class="appt-btn-icon appt-btn-del" title="Delete format"><i class="mdi mdi-delete-outline"></i></button>
                                         </form>
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>

@@ -19,7 +19,6 @@ $ext = strtolower((string) $template->extension);
     .tp-bar h6 { margin:0; font-weight:800; color:#26384d; font-size:.9rem; }
     .tp-meta { color:var(--tp-muted); font-size:.72rem; margin-top:3px; }
     .tp-pill { display:inline-flex; padding:.14rem .5rem; border-radius:999px; font-size:.63rem; font-weight:800; background:#eef5ff; color:#315a85; border:1px solid #dae8f8; margin-right:4px; }
-    .tp-pill.tp-guide { background:#fff6e8; color:#926719; border-color:#f3dfb8; }
     .tp-actions { margin-left:auto; display:flex; gap:8px; }
     .tp-frame-wrap { padding:18px; }
     .tp-frame { width:100%; border:0; background:#fff; border-radius:14px; box-shadow:0 10px 30px rgba(31,58,95,.10); height:calc(100vh - 120px); }
@@ -43,7 +42,6 @@ $ext = strtolower((string) $template->extension);
                 <span class="tp-pill"><?= h($groupName); ?></span>
                 <span class="tp-pill"><?= h($natureName); ?></span>
                 <span class="tp-pill"><?= h($typeName); ?></span>
-                <?php if ((int) $template->is_guide === 1) : ?><span class="tp-pill tp-guide">Appointment guide</span><?php endif; ?>
                 <?= strtoupper(h($ext)); ?> · <?= number_format(((int) $template->file_size) / 1024, 1); ?> KB
             </div>
         </div>
