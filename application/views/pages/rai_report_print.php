@@ -1,125 +1,236 @@
 <?php
 /**
- * MISDDO RAI prototype printable preview
- * Expected from RaiReport::preview(): $header, $pages, $applicantCount, $isDraft
- * Read-only view: no database access, JavaScript data parsing, or persistence.
+ * Enhanced CS Form No. 2 (Revised 2025) printable RAI.
+ * Static labels and certification text follow the supplied CSC workbook;
+ * report and applicant values are the only dynamic portions.
  */
 defined('BASEPATH') OR exit('No direct script access allowed');
 $header = isset($header) && is_array($header) ? $header : array();
-$pages  = isset($pages) && is_array($pages) ? $pages : array();
+$pages = isset($pages) && is_array($pages) ? $pages : array();
 $isDraft = !empty($isDraft);
-$esc = static function ($value) { return html_escape((string)($value === null ? '' : $value)); };
-$h = static function ($key) use ($header, $esc) { return $esc(isset($header[$key]) && is_scalar($header[$key]) ? $header[$key] : ''); };
-$monthNames = array(1=>'January',2=>'February',3=>'March',4=>'April',5=>'May',6=>'June',7=>'July',8=>'August',9=>'September',10=>'October',11=>'November',12=>'December');
-$monthIndex = isset($header['report_month']) ? (int)$header['report_month'] : 0;
-$period = (isset($monthNames[$monthIndex]) ? $monthNames[$monthIndex] : '__________') . ' ' . $h('report_year');
+$esc = static function ($value) { return html_escape((string) ($value === null ? '' : $value)); };
+$raw = static function ($key) use ($header) {
+    return isset($header[$key]) && is_scalar($header[$key]) ? trim((string) $header[$key]) : '';
+};
+$monthNames = array(1=>'JANUARY',2=>'FEBRUARY',3=>'MARCH',4=>'APRIL',5=>'MAY',6=>'JUNE',7=>'JULY',8=>'AUGUST',9=>'SEPTEMBER',10=>'OCTOBER',11=>'NOVEMBER',12=>'DECEMBER');
+$monthIndex = (int) $raw('report_month');
+$period = (isset($monthNames[$monthIndex]) ? $monthNames[$monthIndex] : '__________') . ' ' . $raw('report_year');
+
 $fmtDate = static function ($value) use ($esc) {
-    $value = trim((string)$value);
+    $value = trim((string) $value);
     if ($value === '') return '';
-    $dt = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-    return $dt && $dt->format('Y-m-d') === $value ? $esc($dt->format('m/d/Y')) : $esc($value);
+    $dt = DateTimeImmutable::createFromFormat('!Y-m-d', substr($value, 0, 10));
+    return $dt && $dt->format('Y-m-d') === substr($value, 0, 10) ? $esc($dt->format('m/d/Y')) : $esc($value);
 };
 $fmtRange = static function ($from, $to) use ($fmtDate) {
-    $a = $fmtDate($from); $b = $fmtDate($to);
-    return $a && $b ? $a . ' – ' . $b : ($a ?: $b);
+    $a = $fmtDate($from);
+    $b = $fmtDate($to);
+    return $a && $b ? $a . ' to ' . $b : ($a ?: $b);
 };
 $fmtMoney = static function ($value) use ($esc) {
     if ($value === '' || $value === null) return '';
-    return is_numeric($value) && (float)$value >= 0 ? number_format((float)$value,2,'.',',') : $esc($value);
+    return is_numeric($value) && (float) $value >= 0 ? number_format((float) $value, 2, '.', ',') : $esc($value);
 };
-$labels = array(
-    'No.', 'Date Issued / Effectivity', 'Last Name', 'First Name', 'Ext.', 'Middle Name',
-    'Sex', 'PWD', 'Position Level', 'Position Title', 'Item Number', 'Salary / Job / Pay Grade & Step',
-    'Monthly Salary Rate', 'Employment Status', 'Period of Employment', 'Nature of Appointment',
-    'Date / Period', 'Mode of Publication', 'Appointment Identification Number', 'CSC Action',
-    'Date of CSC Action', 'Date of Release'
-);
+$itemValue = static function ($item, $key) {
+    return isset($item[$key]) && is_scalar($item[$key]) ? trim((string) $item[$key]) : '';
+};
+
+// These two labels are prescribed text in the supplied Division RAI template.
+$agencyLine = 'Department of Education-DIVISION OF Davao De Oro';
+$resolutionText = 'CSC Resolution No. 2100919 dated November 19, 2021';
+
+// A blank report still renders the prescribed form instead of a placeholder.
+$renderPages = $pages;
+if (empty($renderPages)) {
+    $renderPages[] = array('classification' => '', 'applicants' => array(), 'nothing_follows' => false);
+}
+$totalPrintedPages = count($renderPages) + 1; // one Checklist of Common Requirements page
 $widths = array(1.461,4.626,7.547,6.865,2.872,5.599,1.849,1.849,3.213,4.528,13.779,2.969,4.090,5.355,4.673,4.820,3.895,3.895,3.992,3.749,4.235,4.138);
 ?>
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RAI Preview — <?= $esc($period) ?></title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;background:#edf1f5;color:#151515;font-family:Arial,Helvetica,sans-serif}
-.toolbar{position:sticky;top:0;z-index:10;background:#193a58;color:#fff;padding:11px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;font-size:13px}
+*{box-sizing:border-box}html,body{margin:0;background:#e9edf2;color:#000;font-family:Arial,Helvetica,sans-serif}
+.toolbar{position:sticky;top:0;z-index:10;background:#193a58;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;font-size:13px}
 .toolbar button{background:#fff;border:0;border-radius:5px;padding:9px 16px;font-weight:700;cursor:pointer;color:#173750}.toolbar .muted{color:#d4e4ed}
-.preview-info{margin:12px auto;max-width:13in;font-size:12px;color:#41536a;padding:0 8px}
-.sheet{width:13in;height:8.5in;margin:16px auto;background:white;box-shadow:0 4px 24px rgba(0,0,0,.14);position:relative;padding:.2in;overflow:hidden;page-break-after:always;break-after:page}
+.preview-info{margin:12px auto;max-width:14in;font-size:12px;color:#41536a;padding:0 8px}
+.sheet{width:14in;height:8.5in;margin:16px auto;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.14);position:relative;padding:.5in .18in .11in;overflow:hidden;page-break-after:always;break-after:page}
 .sheet:last-of-type{page-break-after:auto;break-after:auto}
-.form-header{display:flex;justify-content:space-between;align-items:start;font-size:8px;margin:0 0 5px}
-.form-header .form-code{text-align:right;font-weight:700}
-.form-title{font-size:15px;font-weight:800;text-align:center;text-transform:uppercase;line-height:1.15;margin:2px 0 3px;letter-spacing:.2px}
-.form-subtitle{text-align:center;font-weight:700;font-size:8px;margin-bottom:5px}
-.top-meta{width:100%;border-collapse:collapse;font-size:8px;table-layout:fixed;margin:2px 0 5px}
-.top-meta td{padding:2px 4px;vertical-align:top}.top-meta .value{border-bottom:1px solid #555;font-weight:700}
-.instruction{font-size:7.15px;line-height:1.2;margin:4px 0 6px;border:1px solid #444;padding:4px 6px}
-.rai-table{width:100%;border-collapse:collapse;table-layout:fixed;font-family:'Arial Narrow',Arial,sans-serif}
-.rai-table th,.rai-table td{border:1px solid #272727;text-align:center;vertical-align:middle;overflow-wrap:anywhere;word-break:normal;padding:1px 1.2px}
-.rai-table thead th{font-size:6.3px;line-height:1.14;font-weight:700;height:47px}
-.rai-table .group-head th{height:16px;font-size:7px;background:#f7f7f7}
-.rai-table .minor-head th{height:20px;font-size:6px}
-.rai-table tbody tr.applicant{height:24px}
-.rai-table tbody td{font-size:6.65px;line-height:1.1;max-height:24px}
-.rai-table .left{text-align:left;padding-left:2px}
-.rai-table .nothing td{height:24px;text-align:center;font-size:8px;font-weight:700;letter-spacing:.1px}
-.rai-table .blank-row td{height:24px}
-.certifications{display:grid;grid-template-columns:1fr 1fr;column-gap:11px;margin-top:6px;font-size:7.3px;line-height:1.22}
-.cert{border:1px solid #333;min-height:91px;padding:5px 6px;position:relative}
-.cert .cert-title{font-weight:700;text-align:center;text-transform:uppercase;font-size:8px;margin-bottom:4px}
-.cert .signature{margin-top:21px;text-align:center;font-size:7.3px;font-weight:700}
-.cert .designation{text-align:center;font-size:6.6px}
-.post-audit{margin-top:7px;border:1px solid #333;display:grid;grid-template-columns:1fr 1fr 1fr;font-size:7px;min-height:37px}
-.post-audit>div{padding:5px;border-right:1px solid #333}.post-audit>div:last-child{border-right:0}
-.remarks{border:1px solid #333;border-top:0;min-height:42px;padding:4px 6px;font-size:7px;white-space:pre-wrap;overflow-wrap:anywhere}
-.remarks strong{display:block;text-align:center;margin-bottom:3px}
-.sheet-foot{position:absolute;bottom:.12in;left:.2in;right:.2in;display:flex;justify-content:space-between;font-size:7px;color:#555}
-.draft-mark{position:absolute;top:4px;right:50%;transform:translateX(50%);opacity:.6;font-size:8px;letter-spacing:1px}
-.no-records{padding:22px;text-align:center;border:1px solid #ccc;font-weight:600}
-@page{size:13in 8.5in;margin:0}
-@media print{html,body{background:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.toolbar,.preview-info{display:none!important}.sheet{margin:0!important;box-shadow:none!important;width:13in;height:8.5in;padding:.2in;page-break-after:always;break-after:page}.sheet:last-of-type{page-break-after:auto;break-after:auto}}
-@media screen and (max-width:1300px){.sheet{transform-origin:top left}.preview-info{max-width:100%}}
-</style></head><body>
-<div class="toolbar"><div><strong>RAI — Print Preview</strong> <span class="muted">| <?= $esc($period) ?> · <?= (int)($applicantCount ?? 0) ?> applicant(s) · <?= count($pages) ?> page(s)</span></div><div><span class="muted">Folio 13 × 8.5 in · Landscape</span> &nbsp; <button type="button" onclick="window.print()">Print / Save as PDF</button> <button type="button" onclick="window.close()">Close</button></div></div>
-<div class="preview-info">This is a temporary, unsaved preview. Check print settings: Folio 8.5 × 13 in, landscape, 100% scale, no browser headers/footers. Confirm certification wording against your official CSC template before submission.</div>
-<?php if (empty($pages)): ?><section class="sheet"><h2 class="form-title">Report on Appointments Issued (RAI)</h2><div class="no-records">No applicants selected. Return to the report builder to add applicants.</div></section><?php endif; ?>
-<?php foreach ($pages as $pageIndex => $page):
-    $items = isset($page['applicants']) && is_array($page['applicants']) ? array_slice($page['applicants'],0,10) : array();
+.draft-mark{position:absolute;top:5px;left:50%;transform:translateX(-50%);font-size:7px;letter-spacing:1.2px;color:#777}
+.form-ident{display:flex;justify-content:space-between;align-items:flex-start;min-height:.31in;font-size:8px;line-height:1.35}.form-ident strong{font-size:9px;font-style:italic}.form-ident .revision{font-style:italic}.accredited{border:1px solid #111;font-size:7px;font-weight:700;text-align:center;padding:2px 12px}
+.form-title{text-align:center;font-size:13px;font-weight:800;line-height:1.1;margin:0}.form-month{text-align:center;font-size:9px;font-style:italic;margin:1px 0 4px}.form-month strong{font-size:10px}
+.csc-use{width:25%;margin:0 0 3px auto;font-size:6.7px;line-height:1.25}.csc-use strong{display:block;border:1px solid #111;background:#d9d9d9;padding:3px 5px}.csc-use span{display:block;border:1px solid #111;border-top:0;background:#fff;padding:3px 5px 8px}
+.agency-block{display:grid;grid-template-columns:1fr auto;align-items:end;gap:14px;font-size:7.4px;margin:2px 0 4px}.agency-row{display:flex;align-items:flex-end;justify-content:flex-start;gap:5px}.agency-label{font-weight:800}.agency-value{display:inline-block;border-bottom:1px solid #111;font-weight:800;font-size:8px;padding:0 5px 2px}.resolution{text-align:left;white-space:nowrap}.resolution strong{font-size:7.7px}
+.instructions{display:grid;grid-template-columns:1.18in 1fr;font-size:7px;line-height:1.25;margin-bottom:3px}.instructions-title{font-weight:800}.instructions-lines div{margin-bottom:1px}.instructions-lines .indent{padding-left:10px}
+.section-caption{font-size:7.1px;font-weight:800;margin:7px 0 2px}
+.rai-table{width:100%;border-collapse:collapse;table-layout:fixed;font-family:"Arial Narrow",Arial,sans-serif}
+.rai-table th,.rai-table td{border:1px solid #111;text-align:center;vertical-align:middle;padding:1px;overflow-wrap:anywhere}
+.rai-table thead th{font-size:5.65px;line-height:1.06;font-weight:400}
+.rai-table .group-head{height:13px;font-size:6px}.rai-table .group-head .major-head{font-weight:800}.rai-table .minor-head{height:72px}.rai-table .minor-head th{vertical-align:middle}.rai-table .stack{height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:2px 0;text-align:center}.rai-table .stack b{font-weight:400}.rai-table .tiny{font-size:5px;line-height:1.05}.rai-table tbody tr{height:17px}.rai-table tbody td{font-size:5.9px;line-height:1.02;text-transform:uppercase;white-space:normal}.rai-table tbody .left{text-align:left;padding-left:2px}.rai-table tbody .nothing td{font-weight:800;text-align:center;padding-left:0}.rai-table tbody .blank-row td{color:transparent}
+.certifications{display:grid;grid-template-columns:36.4% 35.6% 28%;font-size:6.2px;line-height:1.23;margin-top:5px;min-height:1.05in}.cert,.post-audit{padding:3px 8px;display:flex;flex-direction:column}.cert-title{font-weight:800;margin-bottom:6px}.signature{width:78%;align-self:center;margin-top:auto;border-bottom:1px solid #000;padding:0 3px 2px;text-align:center;font-weight:800;font-size:6.8px;text-transform:uppercase}.designation{text-align:center;font-size:6.1px;min-height:14px;padding-top:2px}.post-audit .line{margin:auto auto 2px;width:78%;border-bottom:1px solid #000}.post-audit .designation{text-align:center}
+.csc-only-label{font-size:6.2px;font-weight:800;line-height:1.25;margin-top:1px;padding:1px 4px}.remarks{border:1px solid #111;font-size:6.2px;line-height:1.25}.remarks .label{font-weight:800;padding:2px 4px;border-bottom:1px solid #111}.remarks-row{height:.13in;padding:2px 5px;white-space:pre-wrap}.remarks-row+.remarks-row{border-top:1px solid #111}
+.checklist-sheet{padding:1.02in 1.18in .55in 1.82in}.checklist-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8px}.checklist-table th,.checklist-table td{border:1px solid #111;padding:4px 6px;vertical-align:middle}.checklist-table th{font-weight:800}.checklist-title{text-align:left;font-size:11px}.checklist-instructions{font-weight:400;text-align:left}.checklist-no{text-align:center;width:4%}.checklist-requirement{width:72%}.checklist-status{text-align:center;width:12%;font-weight:700}.checklist-table .req-row{height:.47in}.checklist-table .proof-row{height:.64in;font-size:7.2px;line-height:1.2}.checklist-cert{height:.72in;font-size:7.2px;line-height:1.3;text-align:left}.checklist-signature{height:.48in;text-align:center;font-size:7.2px}.checklist-signature strong{display:block;text-transform:uppercase}.page-two{text-align:right;margin-top:5px;font-size:7px}
+@page{size:14in 8.5in;margin:0}
+@media print{html,body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.toolbar,.preview-info,.draft-mark{display:none!important}.sheet{margin:0!important;box-shadow:none!important;width:14in;height:8.5in;padding:.5in .18in .11in;page-break-after:always;break-after:page}.checklist-sheet{padding:1.02in 1.18in .55in 1.82in}.sheet:last-of-type{page-break-after:auto;break-after:auto}}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <div><strong>RAI — Print Preview</strong> <span class="muted">| <?= $esc($period) ?> · <?= (int) ($applicantCount ?? 0) ?> applicant(s) · <?= $totalPrintedPages ?> printed page(s)</span></div>
+  <div><span class="muted">Legal 8.5 × 14 in · Landscape</span> &nbsp; <button type="button" onclick="window.print()">Print / Save as PDF</button> <button type="button" onclick="window.close()">Close</button></div>
+</div>
+<div class="preview-info">Print on Legal (8.5 × 14 in), landscape, at 100% scale with browser headers and footers disabled. Applicant cells come from the saved report and linked HRIS records; CSC-use cells remain blank until official action.</div>
+
+<?php foreach ($renderPages as $pageIndex => $page):
+    $items = isset($page['applicants']) && is_array($page['applicants']) ? array_slice($page['applicants'], 0, 10) : array();
     $count = count($items);
     $nothing = !empty($page['nothing_follows']) && $count < 10;
-    $classification = isset($page['classification']) ? (string)$page['classification'] : '';
-    $classificationLabel = $classification;
-    foreach ($items as $row) { if (!empty($row['classification_label'])) {$classificationLabel=(string)$row['classification_label'];break;} }
-    $classificationLabel = trim(str_replace('_',' ', $classificationLabel));
-    $line = static function ($item,$key) use ($esc) { return $esc(isset($item[$key]) && is_scalar($item[$key]) ? $item[$key] : ''); };
 ?>
-<section class="sheet" aria-label="RAI page <?= $pageIndex+1 ?>">
+<section class="sheet" aria-label="RAI data page <?= $pageIndex + 1 ?>">
   <?php if ($isDraft): ?><span class="draft-mark">UNSAVED DRAFT PREVIEW</span><?php endif; ?>
-  <div class="form-header"><div>Republic of the Philippines<br><strong>CIVIL SERVICE COMMISSION</strong></div><div class="form-code">Enhanced CS Form No. 2<br>Revised 2025</div></div>
-  <div class="form-title">Report on Appointments Issued (RAI)</div>
-  <div class="form-subtitle">For the Month of <?= $esc($period) ?></div>
-  <table class="top-meta"><tr><td width="12%">Agency:</td><td class="value" width="52%"> <?= $h('agency_name') ?> <?= $h('division_name') !== '' ? ' — ' . $h('division_name') : '' ?></td><td width="18%">CSC Resolution No.:</td><td class="value"><?= $h('csc_resolution_no') ?></td></tr><tr><td>Classification:</td><td class="value"><?= $esc(ucwords($classificationLabel)) ?></td><td>Resolution Date:</td><td class="value"><?= $fmtDate($header['csc_resolution_date'] ?? '') ?></td></tr></table>
-  <div class="instruction"><strong>Instructions:</strong> Enter issued appointments for the reporting period using the prescribed CSC format. Dates, salary, appointment details, and CSC action entries must be verified against official records. Blank CSC-use fields must remain blank until official action is recorded.</div>
-  <table class="rai-table"><colgroup><?php foreach($widths as $width): ?><col style="width:<?= number_format($width,3,'.','') ?>% "><?php endforeach; ?></colgroup>
-  <thead><tr class="group-head"><th rowspan="2">No.</th><th rowspan="2">Date Issued / Effectivity</th><th colspan="4">Name of Appointee</th><th rowspan="2">Sex</th><th rowspan="2">PWD</th><th rowspan="2">Position Level</th><th rowspan="2">Position Title</th><th rowspan="2">Item Number</th><th rowspan="2">Salary / Job / Pay Grade &amp; Step</th><th rowspan="2">Monthly Salary Rate</th><th rowspan="2">Employment Status</th><th rowspan="2">Period of Employment</th><th rowspan="2">Nature of Appointment</th><th colspan="2">Publication</th><th colspan="4">For CSC Use</th></tr>
-  <tr class="minor-head"><th>Last Name</th><th>First Name</th><th>Ext.</th><th>Middle Name</th><th>Date / Period</th><th>Mode</th><th>Appointment ID No.</th><th>CSC Action</th><th>Date of CSC Action</th><th>Date of Release</th></tr></thead>
-  <tbody>
-  <?php foreach ($items as $item):
-  $grade=trim((string)($item['salary_grade']??'')); $step=trim((string)($item['salary_step']??''));
-  if($step !== '') $grade .= ($grade!==''?' / ':'') . 'Step ' . $step;
-  $action = (string)($item['csc_action']??''); if($action==='V') $action='Validated'; elseif($action==='INV') $action='Invalidated';
-  ?>
-  <tr class="applicant"><td><?= (int)($item['sequence_number'] ?? 0) ?></td><td><?= $fmtDate($item['date_issued']??'') ?></td><td class="left"><?= $line($item,'last_name') ?></td><td class="left"><?= $line($item,'first_name') ?></td><td><?= $line($item,'name_extension') ?></td><td class="left"><?= $line($item,'middle_name') ?></td><td><?= $line($item,'sex') ?></td><td><?= $line($item,'pwd') ?></td><td><?= $line($item,'position_level') ?></td><td class="left"><?= $line($item,'position_title') ?></td><td class="left"><?= $line($item,'item_number') ?></td><td><?= $esc($grade) ?></td><td><?= $fmtMoney($item['monthly_salary']??'') ?></td><td><?= $line($item,'employment_status') ?></td><td><?= $fmtRange($item['employment_period_from']??'', $item['employment_period_to']??'') ?></td><td><?= $line($item,'nature_of_appointment') ?></td><td><?= $fmtRange($item['publication_from']??'', $item['publication_to']??'') ?></td><td><?= $line($item,'publication_mode') ?></td><td><?= $line($item,'appointment_identification_no') ?></td><td><?= $esc($action) ?></td><td><?= $fmtDate($item['csc_action_date']??'') ?></td><td><?= $fmtDate($item['csc_release_date']??'') ?></td></tr>
-  <?php endforeach; ?>
-  <?php if($nothing): ?><tr class="nothing"><td colspan="22">***Nothing Follows***</td></tr><?php endif; ?>
-  <?php for($i=$count+($nothing?1:0);$i<10;$i++): ?><tr class="blank-row"><?php for($c=0;$c<22;$c++): ?><td>&nbsp;</td><?php endfor; ?></tr><?php endfor; ?>
-  </tbody></table>
-  <div class="certifications">
-    <section class="cert"><div class="cert-title">Certification</div>I certify that the information entered in this report is based on the available appointment records and has been checked for accuracy.<div class="signature"><?= $h('certifying_officer') ?: '________________________________' ?></div><div class="designation"><?= $h('certifying_position') ?: 'Certifying Officer / Position' ?></div></section>
-    <section class="cert"><div class="cert-title">Certification</div>I certify that the appointments listed above have been issued in accordance with applicable rules and are submitted for the appropriate CSC action.<div class="signature"><?= $h('appointing_officer') ?: '________________________________' ?></div><div class="designation"><?= $h('appointing_position') ?: 'Appointing Officer / Position' ?></div></section>
+  <div class="form-ident">
+    <div><strong>Enhanced CS Form No. 2</strong><br><span class="revision">Revised 2025</span></div>
+    <div class="accredited">For Use of Accredited Agencies Only</div>
   </div>
-  <div class="post-audit"><div><strong>CSC Post-Audit / Evaluated by:</strong><br><br>____________________________</div><div><strong>Date Received / Evaluated:</strong><br><br>____________________________</div><div><strong>CSC Official / Action:</strong><br><br>____________________________</div></div>
-  <div class="remarks"><strong>CSC REMARKS / COMMENTS / RECOMMENDATIONS</strong><?= $h('remarks') ?></div>
-  <div class="sheet-foot"><span>Enhanced CS Form No. 2 • Revised 2025</span><span>Page <?= $pageIndex+1 ?> of <?= count($pages) ?></span></div>
+  <div class="form-title">REPORT ON APPOINTMENTS ISSUED (RAI)</div>
+  <div class="form-month">For the month of <strong><?= $esc($period) ?></strong></div>
+  <div class="csc-use"><strong>For CSC RO/FO's Use:</strong><span>Date Received:</span></div>
+  <div class="agency-block">
+    <div class="agency-row">
+      <div class="agency-label">AGENCY:</div>
+      <div class="agency-value"><?= $esc($agencyLine) ?></div>
+    </div>
+    <div class="resolution">CSC Resolution No: <strong><?= $esc($resolutionText) ?></strong></div>
+  </div>
+  <div class="instructions">
+    <div class="instructions-title">INSTRUCTIONS:</div>
+    <div class="instructions-lines">
+      <div>(1) Fill out the data needed in the form completely and accurately.</div>
+      <div>(2) Do not abbreviate entries in the form.</div>
+      <div>(3) Accomplish the Checklist of Common Requirements and sign the certification.</div>
+      <div>(4) Submit the duly accomplished form in electronic and printed copy (2 copies) to the CSC Field Office</div>
+      <div class="indent">together with the original CSC copy of appointments and supporting documents within the 30th day of the succeeding month.</div>
+    </div>
+  </div>
+  <div class="section-caption">Pertinent data on appointment/s issued</div>
+
+  <table class="rai-table">
+    <colgroup><?php foreach ($widths as $width): ?><col style="width:<?= number_format($width, 3, '.', '') ?>%"><?php endforeach; ?></colgroup>
+    <thead>
+      <tr class="group-head">
+        <th rowspan="2"></th>
+        <th rowspan="2"><div class="stack"><b>Date Issued/</b><span>Effectivity<br>(mm/dd/yyyy)</span></div></th>
+        <th colspan="4" class="major-head">NAME OF APPOINTEE/S</th>
+        <th rowspan="2"><div class="stack"><b>Sex</b><span>(M/F)</span></div></th>
+        <th rowspan="2"><div class="stack"><b>PWD</b><span>(Y/N)</span></div></th>
+        <th rowspan="2"><div class="stack"><b>Position<br>Level</b><span>(1st<br>/ 2nd)</span></div></th>
+        <th rowspan="2"><div class="stack"><b>POSITION TITLE</b><span class="tiny">(Indicate<br>parenthetical title,<br>if applicable)</span></div></th>
+        <th rowspan="2">ITEM NO.</th>
+        <th rowspan="2">SALARY/<br>JOB/<br><br>PAY<br>GRADE</th>
+        <th rowspan="2">SALARY RATE<br>(Monthly)</th>
+        <th rowspan="2">EMPLOYMENT<br>STATUS</th>
+        <th rowspan="2"><span class="tiny">PERIOD OF EMPLOYMENT<br>(For Temporary, Casual/<br>Contractual Appointments)<br>(mm/dd/yyyy to mm/dd/yyyy)</span></th>
+        <th rowspan="2">NATURE OF<br>APPOINTMENT</th>
+        <th colspan="2" class="major-head">PUBLICATION</th>
+        <th colspan="4" class="major-head">CSC ACTION</th>
+      </tr>
+      <tr class="minor-head">
+        <th>Last Name</th><th>First Name</th><th>Name Extension<br>(Jr./III)</th><th>Middle Name</th>
+        <th><span class="tiny">DATE<br>(Indicate period of publication)<br>(mm/dd/yyyy to mm/dd/yyyy)</span></th>
+        <th><span class="tiny">MODE<br>(CSC Bulletin of Vacant Positions,<br>Agency Website, Newspaper, etc.)</span></th>
+        <th>Appointment<br>Identification No.</th><th>V-Validated<br>INV- Invalidated</th><th>Date of Action<br>(mm/dd/yyyy)</th><th>Date of Release<br>(mm/dd/yyyy)</th>
+      </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($items as $item):
+        $grade = $itemValue($item, 'salary_grade');
+        $step = $itemValue($item, 'salary_step');
+        $gradeStep = $grade . ($grade !== '' && $step !== '' ? '-' . $step : '');
+        $employmentRange = $fmtRange($itemValue($item, 'employment_period_from'), $itemValue($item, 'employment_period_to'));
+        $publicationRange = $fmtRange($itemValue($item, 'publication_from'), $itemValue($item, 'publication_to'));
+        $publicationMode = $itemValue($item, 'publication_mode');
+        $nameExtension = trim((string) $itemValue($item, 'name_extension'));
+        if (preg_match('/^(?:N\/?A|NONE|-)$/i', $nameExtension)) $nameExtension = '';
+        $employmentStatus = trim((string) preg_replace('/\s+Position$/i', '', $itemValue($item, 'employment_status')));
+        $action = strtoupper($itemValue($item, 'csc_action'));
+        if ($action === 'VALIDATED') $action = 'V';
+        if ($action === 'INVALIDATED') $action = 'INV';
+    ?>
+      <tr>
+        <td><?= (int) ($item['sequence_number'] ?? 0) ?></td>
+        <td><?= $fmtDate($itemValue($item, 'date_issued')) ?></td>
+        <td class="left"><?= $esc($itemValue($item, 'last_name')) ?></td>
+        <td class="left"><?= $esc($itemValue($item, 'first_name')) ?></td>
+        <td><?= $esc($nameExtension) ?></td>
+        <td class="left"><?= $esc($itemValue($item, 'middle_name')) ?></td>
+        <td><?= $esc($itemValue($item, 'sex')) ?></td><td><?= $esc($itemValue($item, 'pwd')) ?></td>
+        <td><?= $esc($itemValue($item, 'position_level')) ?></td>
+        <td class="left"><?= $esc($itemValue($item, 'position_title')) ?></td>
+        <td class="left"><?= $esc($itemValue($item, 'item_number')) ?></td>
+        <td><?= $esc($gradeStep) ?></td><td><?= $fmtMoney($itemValue($item, 'monthly_salary')) ?></td>
+        <td><?= $esc($employmentStatus) ?></td>
+        <td><?= $employmentRange !== '' ? $employmentRange : 'N/A' ?></td>
+        <td><?= $esc($itemValue($item, 'nature_of_appointment')) ?></td>
+        <td><?= $publicationRange !== '' ? $publicationRange : 'N/A' ?></td>
+        <td><?= $publicationMode !== '' ? $esc($publicationMode) : 'N/A' ?></td>
+        <td><?= $esc($itemValue($item, 'appointment_identification_no')) ?></td><td><?= $esc($action) ?></td>
+        <td><?= $fmtDate($itemValue($item, 'csc_action_date')) ?></td><td><?= $fmtDate($itemValue($item, 'csc_release_date')) ?></td>
+      </tr>
+    <?php endforeach; ?>
+    <?php if ($nothing): ?><tr class="nothing"><td colspan="22">***Nothing Follows***</td></tr><?php endif; ?>
+    <?php for ($i = $count + ($nothing ? 1 : 0); $i < 10; $i++): ?><tr class="blank-row"><?php for ($column = 0; $column < 22; $column++): ?><td>&nbsp;</td><?php endfor; ?></tr><?php endfor; ?>
+    </tbody>
+  </table>
+
+  <div class="certifications">
+    <section class="cert">
+      <div class="cert-title">CERTIFICATION:</div>
+      This is to certify that the information contained in this<br>
+      report are true, correct, and complete based on the Plantilla<br>
+      of Personnel and appointment/s issued.
+      <div class="signature"><?= $raw('certifying_officer') !== '' ? $esc($raw('certifying_officer')) : '________________________________' ?></div>
+      <div class="designation"><?= $raw('certifying_position') !== '' ? $esc($raw('certifying_position')) : 'HRMO' ?></div>
+    </section>
+    <section class="cert">
+      <div class="cert-title">CERTIFICATION:</div>
+      This is to certify that the appointment/s issued<br>
+      is/are in accordance with existing Civil Service Law,<br>
+      rules, and regulations.
+      <div class="signature"><?= $raw('appointing_officer') !== '' ? $esc($raw('appointing_officer')) : '________________________________' ?></div>
+      <div class="designation"><?= $raw('appointing_position') !== '' ? $esc($raw('appointing_position')) : 'Appointing Officer' ?></div>
+    </section>
+    <section class="post-audit"><strong>Post-Audited by:</strong><div class="line"></div><div class="designation">CSC Official</div></section>
+  </div>
+  <div class="csc-only-label">For CSC Use Only:</div>
+  <div class="remarks">
+    <div class="label">REMARKS/COMMENTS/RECOMMENDATIONS (e.g. Reasons for Invalidation):</div>
+    <div class="remarks-row"><?= $esc($raw('remarks')) ?></div>
+    <div class="remarks-row"></div>
+    <div class="remarks-row"></div>
+  </div>
 </section>
 <?php endforeach; ?>
-</body></html>
+
+<section class="sheet checklist-sheet" aria-label="Checklist of Common Requirements">
+  <table class="checklist-table">
+    <colgroup><col style="width:4%"><col style="width:72%"><col style="width:12%"><col style="width:12%"></colgroup>
+    <tr><th colspan="2" class="checklist-title">CHECKLIST OF COMMON REQUIREMENTS</th><th>HRMO</th><th>CSC FO</th></tr>
+    <tr><th colspan="4" class="checklist-instructions">Instructions: Put a check if the requirements are complete. If incomplete, use the space provided to indicate the name of appointee and the lacking requirement/s.</th></tr>
+    <tr class="req-row"><td class="checklist-no">1</td><td class="checklist-requirement">APPOINTMENT FORM (CS Form No. 33-B, Revised 2025) - Certified True Copy of appointment form</td><td class="checklist-status"></td><td></td></tr>
+    <tr class="req-row"><td class="checklist-no">2</td><td class="checklist-requirement">PLANTILLA OF CASUAL APPOINTMENT (CS Form No. 34-B, Revised 2025)- Certified True Copy for CSC</td><td class="checklist-status"></td><td></td></tr>
+    <tr class="req-row"><td class="checklist-no">3</td><td class="checklist-requirement">PERSONAL DATA SHEET (CS Form No. 212, Revised 2025)</td><td class="checklist-status"></td><td></td></tr>
+    <tr class="req-row proof-row"><td class="checklist-no">4</td><td class="checklist-requirement">PROOF OF ELIGIBILITY - Report of rating/license/certificate of admission to the Bar/ certificate of eligibility/ eligibility card (original copy, authenticated copy, certified true copy, photocopy, scanned copy, or site/screen capture of eligibility using CSC's CSEVS, PRC's LERIS, or SC's Lawyer's List)</td><td class="checklist-status"></td><td></td></tr>
+    <tr class="req-row"><td class="checklist-no">5</td><td class="checklist-requirement">POSITION DESCRIPTION FORM (DBM-CSC Form No. 1, Revised 2017)</td><td class="checklist-status"></td><td></td></tr>
+    <tr class="req-row"><td class="checklist-no">6</td><td class="checklist-requirement">PANUNUMPA SA KATUNGKULAN (SS Porma Blg. 32, Narebisa 2025)</td><td class="checklist-status"></td><td></td></tr>
+    <tr class="req-row"><td class="checklist-no">7</td><td class="checklist-requirement">CERTIFICATE OF ASSUMPTION TO DUTY (CS Form No. 4, Revised 2025)</td><td class="checklist-status"></td><td></td></tr>
+    <tr class="checklist-cert"><td colspan="2"></td><td>This is to certify that I have checked the veracity, authenticity, and completeness of all the requirements in support of the appointments attached herein.</td><td>This is to certify that I have checked all the requirements in support of the appointments attached herein and found these to be [ ] complete / [ ] lacking.</td></tr>
+    <tr class="checklist-signature"><td colspan="2"></td><td><strong><?= $raw('certifying_officer') !== '' ? $esc($raw('certifying_officer')) : '________________________________' ?></strong><?= $raw('certifying_position') !== '' ? $esc($raw('certifying_position')) : 'HRMO' ?></td><td>____________________________________<br>CSC FO Receiving Officer</td></tr>
+  </table>
+  <div class="page-two">Page 2 of 2</div>
+</section>
+</body>
+</html>

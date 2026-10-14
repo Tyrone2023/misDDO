@@ -4,6 +4,7 @@ if (!function_exists('h')) {
 }
 $reports = isset($reports) && is_array($reports) ? $reports : array();
 $defaults = isset($defaults) && is_array($defaults) ? $defaults : array();
+$natureOptions = isset($natureOptions) && is_array($natureOptions) ? $natureOptions : array();
 $months = array(1=>'January',2=>'February',3=>'March',4=>'April',5=>'May',6=>'June',7=>'July',8=>'August',9=>'September',10=>'October',11=>'November',12=>'December');
 $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
 $storeUrl = isset($storeUrl) ? $storeUrl : site_url('RaiReport/store');
@@ -208,7 +209,7 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                                 <tr>
                                     <th>Reporting Period</th>
                                     <th>Agency / Division</th>
-                                    <th>CSC Resolution</th>
+                                    <th>Nature of Appointment</th>
                                     <th class="text-center">Applicants</th>
                                     <th>Last Updated</th>
                                     <th style="width:170px">Manage</th>
@@ -227,7 +228,7 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                                         <?= h(isset($report['agency_name']) ? $report['agency_name'] : '') ?>
                                         <span class="rai-sub"><?= h(isset($report['division_name']) ? $report['division_name'] : '') ?></span>
                                     </td>
-                                    <td><?= h(isset($report['csc_resolution_no']) && $report['csc_resolution_no'] !== '' ? $report['csc_resolution_no'] : '—') ?></td>
+                                    <td><?= h(isset($report['nature_of_appointment']) && $report['nature_of_appointment'] !== '' ? $report['nature_of_appointment'] : '—') ?></td>
                                     <td class="text-center"><span class="rai-count-pill" data-count="<?= (int) (isset($report['applicant_count']) ? $report['applicant_count'] : 0) ?>"><?= (int) (isset($report['applicant_count']) ? $report['applicant_count'] : 0) ?></span></td>
                                     <td><span class="rai-sub"><?= h($updated) ?></span></td>
                                     <td>
@@ -293,6 +294,14 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                         <div class="form-group col-lg-2 col-md-6">
                             <label for="rf_report_year">Reporting Year <span class="rai-req">*</span></label>
                             <input name="report_year" id="rf_report_year" type="number" min="2000" max="2100" class="form-control" value="<?= (int) (isset($defaults['report_year']) ? $defaults['report_year'] : date('Y')) ?>">
+                        </div>
+                        <div class="form-group col-lg-4 col-md-6">
+                            <label for="rf_nature_of_appointment">Nature of Appointment <span class="rai-req">*</span></label>
+                            <select name="nature_of_appointment" id="rf_nature_of_appointment" class="form-control" required>
+                                <?php foreach ($natureOptions as $natureValue => $natureLabel): ?>
+                                    <option value="<?= h($natureValue) ?>" <?= (string) (isset($defaults['nature_of_appointment']) ? $defaults['nature_of_appointment'] : '') === (string) $natureValue ? 'selected' : '' ?>><?= h($natureLabel) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="form-group col-lg-4 col-md-6">
                             <label for="rf_agency_name">Agency <span class="rai-req">*</span></label>
@@ -488,9 +497,10 @@ const bulkCandidatesUrl = <?= json_encode($bulkCandidatesUrl, $jsonFlags) ?>;
 const saveApplicantsUrl = <?= json_encode($saveApplicantsUrl, $jsonFlags) ?>;
 const previewUrl = <?= json_encode($previewUrl, $jsonFlags) ?>;
 const raiToken = <?= json_encode($raiToken, $jsonFlags) ?>;
+const reportDefaults = <?= json_encode($defaults, $jsonFlags) ?>;
 
 const classifications = [['','Choose'],['sub_original','Substitute — Original'],['sub_reemployment','Substitute — Reemployment'],['perm_original','Permanent — Original'],['perm_transfer','Permanent — Transfer'],['perm_reemployment','Permanent — Reemployment'],['reclassification','Reclassification'],['other','Other']];
-const natureOptions = ['','Original','Reemployment','Transfer','Promotion','Reclassification','Reappointment','Other'];
+const natureOptions = <?= json_encode(array_keys($natureOptions), $jsonFlags) ?>;
 const applicantFields = ['source_type','source_id','classification_key','classification_label','date_issued','last_name','first_name','name_extension','middle_name','sex','pwd','position_level','position_title','item_number','salary_grade','salary_step','monthly_salary','employment_status','employment_period_from','employment_period_to','nature_of_appointment','publication_from','publication_to','publication_mode','appointment_identification_no','csc_action','csc_action_date','csc_release_date'];
 
 let currentReportId = null;
@@ -500,7 +510,7 @@ let saveTimer = null;
 let systemSelectReady = false;
 
 const $ = id => document.getElementById(id);
-const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[c]));
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function classificationName(k){ const f = classifications.find(c => c[0]===k); return f ? f[1] : (k || 'Unclassified'); }
 function blankItem(){ const x = {source_type:'manual',source_id:'',classification_label:''}; applicantFields.forEach(k => x[k]=''); return x; }
 function setAlert(el, msg, isError){ el.innerHTML = msg ? '<div class="alert alert-'+(isError?'danger':'success')+' py-2"><i class="ph ph-'+(isError?'warning-circle':'check-circle')+' mr-1"></i>'+esc(msg)+'</div>' : ''; }
@@ -519,14 +529,15 @@ function openReportModal(mode, report){
     const r = report || {};
     $('rf_report_month').value = r.report_month || (currentReport.report_month || <?= (int) date('n') ?>);
     $('rf_report_year').value = r.report_year || (currentReport.report_year || <?= (int) date('Y') ?>);
-    $('rf_agency_name').value = r.agency_name || '<?= h($defaultAgency) ?>';
-    $('rf_division_name').value = r.division_name || '<?= h($defaultDivision) ?>';
-    $('rf_csc_resolution_no').value = r.csc_resolution_no || '';
-    $('rf_csc_resolution_date').value = (r.csc_resolution_date || '').split(' ')[0];
-    $('rf_certifying_officer').value = r.certifying_officer || '';
-    $('rf_certifying_position').value = r.certifying_position || '';
-    $('rf_appointing_officer').value = r.appointing_officer || '';
-    $('rf_appointing_position').value = r.appointing_position || '';
+    $('rf_nature_of_appointment').value = r.nature_of_appointment || reportDefaults.nature_of_appointment || 'Original';
+    $('rf_agency_name').value = r.agency_name || reportDefaults.agency_name || '';
+    $('rf_division_name').value = r.division_name || reportDefaults.division_name || '';
+    $('rf_csc_resolution_no').value = r.csc_resolution_no || reportDefaults.csc_resolution_no || '';
+    $('rf_csc_resolution_date').value = (r.csc_resolution_date || reportDefaults.csc_resolution_date || '').split(' ')[0];
+    $('rf_certifying_officer').value = r.certifying_officer || reportDefaults.certifying_officer || '';
+    $('rf_certifying_position').value = r.certifying_position || reportDefaults.certifying_position || '';
+    $('rf_appointing_officer').value = r.appointing_officer || reportDefaults.appointing_officer || '';
+    $('rf_appointing_position').value = r.appointing_position || reportDefaults.appointing_position || '';
     $('rf_remarks').value = r.remarks || '';
     jq('#raiReportModal').modal('show');
 }
@@ -593,6 +604,7 @@ function renderSummary(){
     const period = monthName + ' ' + (r.report_year || '');
     $('raiReportSummary').innerHTML = [
         ['Reporting Period', period],
+        ['Nature of Appointment', r.nature_of_appointment || '—'],
         ['Agency', r.agency_name || '—'],
         ['Division', r.division_name || '—'],
         ['CSC Resolution No.', r.csc_resolution_no || '—'],
@@ -685,6 +697,7 @@ $('raiAddSystemBtn').addEventListener('click', async () => {
             if (existing.has(String(a.source_id))) return;
             const entry = Object.assign(blankItem(), a);
             entry.source_type = 'rqa_recommendation';
+            if (!entry.nature_of_appointment) entry.nature_of_appointment = currentReport.nature_of_appointment || '';
             items.push(entry);
             added++;
         });
@@ -701,7 +714,8 @@ $('raiAddSystemBtn').addEventListener('click', async () => {
 
 /* ---------- Manual staging table ---------- */
 function manualRowHtml(){
-    const opts = arr => arr.map(o => '<option value="'+esc(o)+'">'+esc(o||'—')+'</option>').join('');
+    const reportNature = currentReport.nature_of_appointment || '';
+    const opts = arr => arr.map(o => '<option value="'+esc(o)+'" '+(o===reportNature?'selected':'')+'>'+esc(o||'—')+'</option>').join('');
     return '<tr class="rai-staging-row">'
         + '<td><input class="form-control form-control-sm m-last" placeholder="Last"></td>'
         + '<td><input class="form-control form-control-sm m-first" placeholder="First"></td>'
@@ -737,7 +751,7 @@ $('raiAddManualAllBtn').addEventListener('click', () => {
         entry.position_title = tr.querySelector('.m-position').value.trim();
         entry.item_number = tr.querySelector('.m-item').value.trim();
         entry.date_issued = tr.querySelector('.m-date').value;
-        entry.nature_of_appointment = tr.querySelector('.m-nature').value;
+        entry.nature_of_appointment = tr.querySelector('.m-nature').value || currentReport.nature_of_appointment || '';
         items.push(entry);
         added++;
     });
@@ -800,9 +814,8 @@ async function persistApplicants(){
 $('raiPreviewBtn').addEventListener('click', () => {
     if (!items.length) { alert('Add at least one applicant before previewing.'); return; }
     const header = {};
-    ['report_month','report_year','agency_name','division_name','csc_resolution_no','csc_resolution_date','certifying_officer','certifying_position','appointing_officer','appointing_position','remarks'].forEach(k => header[k] = currentReport[k] || '');
-    const normalized = items.map(x => Object.assign({}, x, { classification_key: x.classification_key || 'Unclassified' }));
-    $('raiPayload').value = JSON.stringify({ header, applicants: normalized });
+    ['report_month','report_year','nature_of_appointment','agency_name','division_name','csc_resolution_no','csc_resolution_date','certifying_officer','certifying_position','appointing_officer','appointing_position','remarks'].forEach(k => header[k] = currentReport[k] || '');
+    $('raiPayload').value = JSON.stringify({ header, applicants: items });
     $('raiPreviewForm').submit();
 });
 
@@ -813,7 +826,7 @@ function updateRowInTable(report){
     const monthName = monthMap[report.report_month] || ('Month ' + report.report_month);
     row.cells[0].innerHTML = '<strong>'+esc(monthName+' '+report.report_year)+'</strong>';
     row.cells[1].innerHTML = esc(report.agency_name||'')+'<span class="rai-sub">'+esc(report.division_name||'')+'</span>';
-    row.cells[2].textContent = report.csc_resolution_no || '—';
+    row.cells[2].textContent = report.nature_of_appointment || '—';
     row.cells[4].innerHTML = '<span class="rai-sub">'+esc(report.updated_at||'')+'</span>';
 }
 function updateCountInTable(reportId, count){

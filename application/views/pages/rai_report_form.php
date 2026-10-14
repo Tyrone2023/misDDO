@@ -6,6 +6,7 @@ $mode = isset($mode) ? $mode : 'create';
 $report = isset($report) && is_array($report) ? $report : array();
 $defaults = isset($defaults) && is_array($defaults) ? $defaults : array();
 $old = isset($old) && is_array($old) ? $old : array();
+$natureOptions = isset($natureOptions) && is_array($natureOptions) ? $natureOptions : array();
 $months = array(1=>'January',2=>'February',3=>'March',4=>'April',5=>'May',6=>'June',7=>'July',8=>'August',9=>'September',10=>'October',11=>'November',12=>'December');
 
 $value = static function ($key) use ($old, $report, $defaults) {
@@ -21,6 +22,10 @@ $selectedMonth = (int) (isset($old['report_month']) ? $old['report_month']
     : (isset($report['report_month']) ? $report['report_month'] : date('n')));
 $selectedYear = (int) (isset($old['report_year']) ? $old['report_year']
     : (isset($report['report_year']) ? $report['report_year'] : date('Y')));
+$selectedNature = (string) (isset($old['nature_of_appointment']) ? $old['nature_of_appointment']
+    : (isset($report['nature_of_appointment']) && $report['nature_of_appointment'] !== ''
+        ? $report['nature_of_appointment']
+        : (isset($defaults['nature_of_appointment']) ? $defaults['nature_of_appointment'] : 'Original')));
 $agency = $value('agency_name') !== '' ? $value('agency_name') : 'Department of Education';
 $division = $value('division_name') !== '' ? $value('division_name') : 'Schools Division of Davao de Oro';
 ?>
@@ -205,6 +210,14 @@ $division = $value('division_name') !== '' ? $value('division_name') : 'Schools 
                             <div class="form-group col-lg-2 col-md-6">
                                 <label for="report_year">Reporting Year <span class="rai-req">*</span></label>
                                 <input name="report_year" id="report_year" type="number" min="2000" max="2100" class="form-control" value="<?= (int) $selectedYear ?>">
+                            </div>
+                            <div class="form-group col-lg-4 col-md-6">
+                                <label for="nature_of_appointment">Nature of Appointment <span class="rai-req">*</span></label>
+                                <select name="nature_of_appointment" id="nature_of_appointment" class="form-control" required>
+                                    <?php foreach ($natureOptions as $natureValue => $natureLabel): ?>
+                                        <option value="<?= h($natureValue) ?>" <?= $selectedNature === (string) $natureValue ? 'selected' : '' ?>><?= h($natureLabel) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                             <div class="form-group col-lg-4 col-md-6">
                                 <label for="agency_name">Agency <span class="rai-req">*</span></label>

@@ -153,6 +153,7 @@ class RaiReport extends CI_Controller
             'pageTitle'    => 'Report on Appointments Issued (RAI)',
             'reports'      => $this->rai->list_reports(),
             'defaults'     => $this->rai->get_report_defaults(),
+            'natureOptions'=> $this->rai->nature_options(),
             'raiToken'     => $this->form_token(),
             'createUrl'    => site_url('RaiReport/create'),
             'storeUrl'     => site_url('RaiReport/store'),
@@ -346,6 +347,7 @@ class RaiReport extends CI_Controller
             'formRevision'=> 'Revised 2025',
             'report'      => $report,
             'applicants'  => $this->rai->get_applicants($report_id),
+            'natureOptions' => $this->rai->nature_options(),
             'raiToken'    => $this->form_token(),
             'candidateUrl' => site_url('RaiReport/candidates'),
             'detailUrl'    => site_url('RaiReport/candidate'),
@@ -422,6 +424,7 @@ class RaiReport extends CI_Controller
         $fields = array(
             'report_month',
             'report_year',
+            'nature_of_appointment',
             'agency_name',
             'division_name',
             'csc_resolution_no',
@@ -448,6 +451,9 @@ class RaiReport extends CI_Controller
         if ($year < 2000 || $year > 2100) {
             $errors[] = 'Enter a reporting year between 2000 and 2100.';
         }
+        if (!isset($this->rai->nature_options()[$values['nature_of_appointment']])) {
+            $errors[] = 'Choose a valid Nature of Appointment.';
+        }
         if ($values['agency_name'] === '') {
             $errors[] = 'Agency is required.';
         }
@@ -470,6 +476,7 @@ class RaiReport extends CI_Controller
             'mode'      => $mode,
             'report'    => is_array($report) ? $report : array(),
             'defaults'  => $this->rai->get_report_defaults(),
+            'natureOptions' => $this->rai->nature_options(),
             'old'       => (array) $this->session->flashdata('rai_report_old'),
             'formAction'=> $mode === 'edit'
                 ? site_url('RaiReport/update/' . (int) $report['id'])
@@ -803,6 +810,7 @@ class RaiReport extends CI_Controller
         return array(
             'report_month',
             'report_year',
+            'nature_of_appointment',
             'agency_name',
             'division_name',
             'csc_resolution_no',
@@ -897,7 +905,7 @@ class RaiReport extends CI_Controller
 
     /**
      * Preserve the submitted order, group adjacent applicants by
-     * classification, and paginate to 10 entries per Folio page.
+     * classification, and paginate to 10 entries per Legal landscape page.
      */
     private function render_pages($clean_header, $clean_items, $isDraft = true)
     {
@@ -928,6 +936,20 @@ class RaiReport extends CI_Controller
         $sequence = 1;
 
         foreach ($clean_items as $item) {
+            if ($item['nature_of_appointment'] === '' && !empty($clean_header['nature_of_appointment'])) {
+                $item['nature_of_appointment'] = $clean_header['nature_of_appointment'];
+            }
+            if ($item['classification_key'] === '') {
+                $parts = array_filter(array(
+                    trim((string) $item['employment_status']),
+                    trim((string) $item['nature_of_appointment'])
+                ), function ($value) {
+                    return $value !== '';
+                });
+                $label = !empty($parts) ? implode(' — ', $parts) : 'Unclassified';
+                $item['classification_label'] = $label;
+                $item['classification_key'] = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '_', $label)), '_');
+            }
             $group = $item['classification_key'];
 
             if ($group === '') {
@@ -956,7 +978,7 @@ class RaiReport extends CI_Controller
             'header'         => $clean_header,
             'pages'          => $pages,
             'applicantCount' => count($clean_items),
-            'paperSize'      => 'Folio',
+            'paperSize'      => 'Legal',
             'orientation'    => 'landscape',
             'isDraft'        => $isDraft
         );
