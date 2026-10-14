@@ -474,6 +474,14 @@
                                         <span>Appointed List</span>
                                     </a>
                                 </li>
+
+
+                                <li>
+    <a href="<?= base_url('RaiReport'); ?>">
+        <i class="fa fa-file-text-o"></i>
+        <span>RAI Reports</span>
+    </a>
+</li>
                                 <?php $this->load->view('templates/appointment_documents_menu'); ?>
 
                                 <?php if ($this->session->position === 'Admin') { ?>
