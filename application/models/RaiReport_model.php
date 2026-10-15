@@ -412,14 +412,85 @@ class RaiReport_model extends CI_Model
     private function default_checklist_json()
     {
         return json_encode(array(
+            'items' => array(
             array('code' => 'appointment_form', 'label' => 'APPOINTMENT FORM (CS Form No. 33-B, Revised 2025) - Certified True Copy of appointment form', 'hrmo_status' => '', 'csc_status' => '', 'note' => ''),
             array('code' => 'plantilla_casual', 'label' => 'PLANTILLA OF CASUAL APPOINTMENT (CS Form No. 34-B, Revised 2025)- Certified True Copy for CSC', 'hrmo_status' => '', 'csc_status' => '', 'note' => ''),
             array('code' => 'personal_data_sheet', 'label' => 'PERSONAL DATA SHEET (CS Form No. 212, Revised 2025)', 'hrmo_status' => '', 'csc_status' => '', 'note' => ''),
-            array('code' => 'proof_of_eligibility', 'label' => 'PROOF OF ELIGIBILITY', 'hrmo_status' => '', 'csc_status' => '', 'note' => ''),
+            array('code' => 'proof_of_eligibility', 'label' => "PROOF OF ELIGIBILITY - Report of rating/license/certificate of admission to the Bar/ certificate of eligibility/ eligibility card (original copy, authenticated copy, certified true copy, photocopy, scanned copy, or site/screen capture of eligibility using CSC's CSEVS, PRC's LERIS, or SC's Lawyer's List)", 'hrmo_status' => '', 'csc_status' => '', 'note' => ''),
             array('code' => 'position_description_form', 'label' => 'POSITION DESCRIPTION FORM (DBM-CSC Form No. 1, Revised 2017)', 'hrmo_status' => '', 'csc_status' => '', 'note' => ''),
             array('code' => 'panunumpa', 'label' => 'PANUNUMPA SA KATUNGKULAN (SS Porma Blg. 32, Narebisa 2025)', 'hrmo_status' => '', 'csc_status' => '', 'note' => ''),
             array('code' => 'assumption_to_duty', 'label' => 'CERTIFICATE OF ASSUMPTION TO DUTY (CS Form No. 4, Revised 2025)', 'hrmo_status' => '', 'csc_status' => '', 'note' => '')
+            ),
+            'csc_receiving_officer' => '',
+            'csc_receiving_position' => 'CSC FO Receiving Officer'
         ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /** Return a complete, bounded Page 2 checklist payload. */
+    public function normalize_checklist($value = null)
+    {
+        $defaults = json_decode($this->default_checklist_json(), true);
+        $decoded = $value;
+        if (is_string($decoded)) {
+            $decoded = json_decode($decoded, true);
+        }
+        if (!is_array($decoded)) {
+            return $defaults;
+        }
+
+        // Earlier reports stored the requirements as a top-level array.
+        $source_items = isset($decoded['items']) && is_array($decoded['items'])
+            ? $decoded['items']
+            : (isset($decoded[0]) && is_array($decoded[0]) ? $decoded : array());
+
+        foreach ($defaults['items'] as $index => &$item) {
+            $source = array();
+            foreach ($source_items as $candidate) {
+                if (is_array($candidate) && isset($candidate['code']) && $candidate['code'] === $item['code']) {
+                    $source = $candidate;
+                    break;
+                }
+            }
+            if (empty($source) && isset($source_items[$index]) && is_array($source_items[$index])) {
+                $source = $source_items[$index];
+            }
+            foreach (array('hrmo_status', 'csc_status') as $field) {
+                $item[$field] = mb_substr(trim((string) ($source[$field] ?? '')), 0, 50);
+            }
+            $item['note'] = mb_substr(trim((string) ($source['note'] ?? '')), 0, 500);
+        }
+        unset($item);
+
+        $defaults['csc_receiving_officer'] = mb_substr(
+            trim((string) ($decoded['csc_receiving_officer'] ?? '')),
+            0,
+            150
+        );
+        $position = trim((string) ($decoded['csc_receiving_position'] ?? ''));
+        $defaults['csc_receiving_position'] = mb_substr(
+            $position !== '' ? $position : 'CSC FO Receiving Officer',
+            0,
+            150
+        );
+        return $defaults;
+    }
+
+    public function checklist_defaults()
+    {
+        return $this->normalize_checklist();
+    }
+
+    public function save_checklist($report_id, $value)
+    {
+        if (!$this->db->field_exists('checklist_json', $this->reports)) {
+            return false;
+        }
+        $payload = $this->normalize_checklist($value);
+        $this->db->where('id', (int) $report_id)->update($this->reports, array(
+            'checklist_json' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'updated_at' => date('Y-m-d H:i:s')
+        ));
+        return $this->db->affected_rows() >= 0;
     }
 
     private function clean_applicant($input)

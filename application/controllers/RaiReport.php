@@ -163,6 +163,9 @@ class RaiReport extends CI_Controller
             'candidatesUrl'=> site_url('RaiReport/candidates'),
             'bulkCandidatesUrl' => site_url('RaiReport/bulk_candidates'),
             'saveApplicantsUrl' => site_url('RaiReport/save_applicants'),
+            'saveChecklistUrl' => site_url('RaiReport/save_checklist'),
+            'savePreviewUrl' => site_url('RaiReport/save_preview'),
+            'checklistDefaults' => $this->rai->checklist_defaults(),
             'previewUrl'   => site_url('RaiReport/preview'),
             'manageUrl'    => site_url('RaiReport/manage'),
             'editUrl'      => site_url('RaiReport/edit')
@@ -418,6 +421,122 @@ class RaiReport extends CI_Controller
         ), $ok ? 200 : 500);
     }
 
+    /** Save editable Page 2 checklist statuses, notes, and CSC receiver. */
+    public function save_checklist($report_id = 0)
+    {
+        $this->require_post();
+
+        if (!$this->verify_form_token()) {
+            $this->json_response(array('status' => 'error', 'message' => 'Invalid or expired RAI form token.'), 403);
+            return;
+        }
+
+        $report_id = (int) $report_id;
+        if (empty($this->rai->get_report($report_id))) {
+            $this->json_response(array('status' => 'error', 'message' => 'Report not found.'), 404);
+            return;
+        }
+
+        $raw = $this->input->post('payload', false);
+        $payload = is_string($raw) ? json_decode($raw, true) : null;
+        if (!is_array($payload)) {
+            $this->json_response(array('status' => 'error', 'message' => 'Invalid checklist data.'), 400);
+            return;
+        }
+
+        $checklist = $this->rai->normalize_checklist($payload);
+        $ok = $this->rai->save_checklist($report_id, $checklist);
+        $this->json_response(array(
+            'status' => $ok ? 'success' : 'error',
+            'message' => $ok ? 'Page 2 checklist saved.' : 'Checklist could not be saved.',
+            'checklist' => $checklist
+        ), $ok ? 200 : 500);
+    }
+
+    /** Save structured edits made directly in a saved RAI preview. */
+    public function save_preview($report_id = 0)
+    {
+        $this->require_post();
+
+        if (!$this->verify_form_token()) {
+            $this->json_response(array('status' => 'error', 'message' => 'Invalid or expired RAI form token.'), 403);
+            return;
+        }
+
+        $report_id = (int) $report_id;
+        $report = $this->rai->get_report($report_id);
+        if (empty($report)) {
+            $this->json_response(array('status' => 'error', 'message' => 'Report not found.'), 404);
+            return;
+        }
+
+        $raw = $this->input->post('payload', false);
+        if (!is_string($raw) || strlen($raw) > 250000) {
+            $this->json_response(array('status' => 'error', 'message' => 'Invalid preview data.'), 400);
+            return;
+        }
+        $payload = json_decode($raw, true);
+        if (!is_array($payload) || !isset($payload['applicants']) || !is_array($payload['applicants'])) {
+            $this->json_response(array('status' => 'error', 'message' => 'Invalid preview data.'), 400);
+            return;
+        }
+        if (count($payload['applicants']) > $this->max_applicants) {
+            $this->json_response(array('status' => 'error', 'message' => 'Maximum applicant count exceeded.'), 400);
+            return;
+        }
+
+        $items = array();
+        foreach ($payload['applicants'] as $item) {
+            if (!is_array($item)) {
+                $this->json_response(array('status' => 'error', 'message' => 'Invalid applicant data.'), 400);
+                return;
+            }
+            $clean_item = $this->clean_preview_item($item);
+            // This is prescribed as a static value in the current RAI template.
+            $clean_item['publication_mode'] = 'CSC WEBSITE';
+            $items[] = $clean_item;
+        }
+
+        $header = isset($payload['header']) && is_array($payload['header']) ? $payload['header'] : array();
+        $report_data = array(
+            'report_month' => $report['report_month'] ?? '',
+            'report_year' => $report['report_year'] ?? '',
+            'nature_of_appointment' => $report['nature_of_appointment'] ?? '',
+            'agency_name' => 'Department of Education',
+            'division_name' => 'Davao De Oro',
+            'csc_resolution_no' => '2100919',
+            'csc_resolution_date' => '2021-11-19',
+            'certifying_officer' => $report['certifying_officer'] ?? '',
+            'certifying_position' => $report['certifying_position'] ?? '',
+            'appointing_officer' => $report['appointing_officer'] ?? '',
+            'appointing_position' => $report['appointing_position'] ?? '',
+            'remarks' => $report['remarks'] ?? ''
+        );
+        foreach (array('certifying_officer', 'certifying_position', 'remarks') as $field) {
+            if (isset($header[$field]) && is_scalar($header[$field])) {
+                $report_data[$field] = mb_substr(trim((string) $header[$field]), 0, 500);
+            }
+        }
+
+        $checklist = $this->rai->normalize_checklist($payload['checklist'] ?? array());
+        $this->db->trans_begin();
+        $applicants_saved = $this->rai->save_applicants($report_id, $items);
+        $checklist_saved = $this->rai->save_checklist($report_id, $checklist);
+        $header_saved = $this->rai->update_report($report_id, $report_data);
+        $ok = $applicants_saved && $checklist_saved && $header_saved && $this->db->trans_status();
+        if ($ok) {
+            $this->db->trans_commit();
+        } else {
+            $this->db->trans_rollback();
+        }
+
+        $this->json_response(array(
+            'status' => $ok ? 'success' : 'error',
+            'message' => $ok ? 'RAI preview changes saved.' : 'Some preview changes could not be saved.',
+            'savedAt' => date('M j, Y g:i A')
+        ), $ok ? 200 : 500);
+    }
+
     /** Read + validate the report information form fields. */
     private function collect_report_input()
     {
@@ -425,14 +544,8 @@ class RaiReport extends CI_Controller
             'report_month',
             'report_year',
             'nature_of_appointment',
-            'agency_name',
-            'division_name',
-            'csc_resolution_no',
-            'csc_resolution_date',
             'certifying_officer',
             'certifying_position',
-            'appointing_officer',
-            'appointing_position',
             'remarks'
         );
 
@@ -440,6 +553,20 @@ class RaiReport extends CI_Controller
         foreach ($fields as $field) {
             $values[$field] = trim((string) $this->input->post($field));
         }
+
+        // Prescribed Division template values are static and are no longer
+        // exposed as editable report fields.
+        $values['agency_name'] = 'Department of Education';
+        $values['division_name'] = 'Davao De Oro';
+        $values['csc_resolution_no'] = '2100919';
+        $values['csc_resolution_date'] = '2021-11-19';
+        $defaults = $this->rai->get_report_defaults();
+        $values['appointing_officer'] = isset($defaults['appointing_officer'])
+            ? (string) $defaults['appointing_officer']
+            : '';
+        $values['appointing_position'] = isset($defaults['appointing_position'])
+            ? (string) $defaults['appointing_position']
+            : '';
 
         $errors = array();
         $month = (int) $values['report_month'];
@@ -454,13 +581,6 @@ class RaiReport extends CI_Controller
         if (!isset($this->rai->nature_options()[$values['nature_of_appointment']])) {
             $errors[] = 'Choose a valid Nature of Appointment.';
         }
-        if ($values['agency_name'] === '') {
-            $errors[] = 'Agency is required.';
-        }
-        if ($values['division_name'] === '') {
-            $errors[] = 'Division is required.';
-        }
-
         if (!empty($errors)) {
             return array('errors' => $errors, 'values' => $values);
         }
@@ -785,7 +905,7 @@ class RaiReport extends CI_Controller
             $clean_header[$field] = mb_substr(
                 trim($value),
                 0,
-                500
+                $field === 'checklist_json' ? 20000 : 500
             );
         }
 
@@ -802,7 +922,7 @@ class RaiReport extends CI_Controller
             $clean_items[] = $this->clean_preview_item($item);
         }
 
-        $this->render_pages($clean_header, $clean_items, true);
+        $this->render_pages($clean_header, $clean_items, true, 0);
     }
 
     private function preview_header_fields()
@@ -819,6 +939,7 @@ class RaiReport extends CI_Controller
             'certifying_position',
             'appointing_officer',
             'appointing_position',
+            'checklist_json',
             'remarks'
         );
     }
@@ -891,7 +1012,7 @@ class RaiReport extends CI_Controller
             $clean_header[$field] = mb_substr(
                 trim((string) (isset($report[$field]) ? $report[$field] : '')),
                 0,
-                500
+                $field === 'checklist_json' ? 20000 : 500
             );
         }
 
@@ -900,40 +1021,15 @@ class RaiReport extends CI_Controller
             $clean_items[] = $this->clean_preview_item($item);
         }
 
-        $this->render_pages($clean_header, $clean_items, false);
+        $this->render_pages($clean_header, $clean_items, false, $report_id);
     }
 
-    /**
-     * Preserve the submitted order, group adjacent applicants by
-     * classification, and paginate to 10 entries per Legal landscape page.
-     */
-    private function render_pages($clean_header, $clean_items, $isDraft = true)
+    /** Preserve submitted order and paginate every 10 applicants. */
+    private function render_pages($clean_header, $clean_items, $isDraft = true, $report_id = 0)
     {
         $pages = array();
-        $current_group = null;
-        $group_items = array();
-
-        $flush_group = function () use (
-            &$pages,
-            &$current_group,
-            &$group_items
-        ) {
-            if (empty($group_items)) {
-                return;
-            }
-
-            foreach (array_chunk($group_items, 10) as $chunk) {
-                $pages[] = array(
-                    'classification' => $current_group,
-                    'applicants'      => $chunk,
-                    'nothing_follows' => count($chunk) < 10
-                );
-            }
-
-            $group_items = array();
-        };
-
         $sequence = 1;
+        $prepared_items = array();
 
         foreach ($clean_items as $item) {
             if ($item['nature_of_appointment'] === '' && !empty($clean_header['nature_of_appointment'])) {
@@ -950,26 +1046,17 @@ class RaiReport extends CI_Controller
                 $item['classification_label'] = $label;
                 $item['classification_key'] = trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', '_', $label)), '_');
             }
-            $group = $item['classification_key'];
-
-            if ($group === '') {
-                $group = 'Unclassified';
-            }
-
-            if (
-                $current_group !== null
-                && $group !== $current_group
-            ) {
-                $flush_group();
-            }
-
-            $current_group = $group;
             $item['sequence_number'] = $sequence++;
-
-            $group_items[] = $item;
+            $prepared_items[] = $item;
         }
 
-        $flush_group();
+        foreach (array_chunk($prepared_items, 10) as $chunk) {
+            $pages[] = array(
+                'classification'  => '',
+                'applicants'      => $chunk,
+                'nothing_follows' => count($chunk) < 10
+            );
+        }
 
         $data = array(
             'title'          => 'RAI Report Preview',
@@ -980,7 +1067,10 @@ class RaiReport extends CI_Controller
             'applicantCount' => count($clean_items),
             'paperSize'      => 'Legal',
             'orientation'    => 'landscape',
-            'isDraft'        => $isDraft
+            'isDraft'        => $isDraft,
+            'reportId'       => (int) $report_id,
+            'raiToken'       => $this->form_token(),
+            'savePreviewUrl' => site_url('RaiReport/save_preview')
         );
 
         $this->output->set_header(

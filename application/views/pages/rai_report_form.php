@@ -26,8 +26,6 @@ $selectedNature = (string) (isset($old['nature_of_appointment']) ? $old['nature_
     : (isset($report['nature_of_appointment']) && $report['nature_of_appointment'] !== ''
         ? $report['nature_of_appointment']
         : (isset($defaults['nature_of_appointment']) ? $defaults['nature_of_appointment'] : 'Original')));
-$agency = $value('agency_name') !== '' ? $value('agency_name') : 'Department of Education';
-$division = $value('division_name') !== '' ? $value('division_name') : 'Schools Division of Davao de Oro';
 ?>
 <style>
     :root {
@@ -219,22 +217,6 @@ $division = $value('division_name') !== '' ? $value('division_name') : 'Schools 
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="form-group col-lg-4 col-md-6">
-                                <label for="agency_name">Agency <span class="rai-req">*</span></label>
-                                <input name="agency_name" id="agency_name" class="form-control" value="<?= h($agency) ?>">
-                            </div>
-                            <div class="form-group col-lg-4 col-md-6">
-                                <label for="division_name">Division <span class="rai-req">*</span></label>
-                                <input name="division_name" id="division_name" class="form-control" value="<?= h($division) ?>">
-                            </div>
-                            <div class="form-group col-lg-3 col-md-6">
-                                <label for="csc_resolution_no">CSC Resolution Number</label>
-                                <input name="csc_resolution_no" id="csc_resolution_no" class="form-control" value="<?= h($value('csc_resolution_no')) ?>">
-                            </div>
-                            <div class="form-group col-lg-3 col-md-6">
-                                <label for="csc_resolution_date">CSC Resolution Date</label>
-                                <input name="csc_resolution_date" id="csc_resolution_date" type="date" class="form-control" value="<?= h($value('csc_resolution_date')) ?>">
-                            </div>
                             <div class="form-group col-lg-3 col-md-6">
                                 <label for="certifying_officer">Certifying Officer</label>
                                 <input name="certifying_officer" id="certifying_officer" class="form-control" value="<?= h($value('certifying_officer')) ?>">
@@ -243,16 +225,8 @@ $division = $value('division_name') !== '' ? $value('division_name') : 'Schools 
                                 <label for="certifying_position">Certifying Officer Position</label>
                                 <input name="certifying_position" id="certifying_position" class="form-control" value="<?= h($value('certifying_position')) ?>">
                             </div>
-                            <div class="form-group col-lg-6 col-md-6">
-                                <label for="appointing_officer">Appointing Officer</label>
-                                <input name="appointing_officer" id="appointing_officer" class="form-control" value="<?= h($value('appointing_officer')) ?>">
-                            </div>
-                            <div class="form-group col-lg-6 col-md-6">
-                                <label for="appointing_position">Appointing Officer Position</label>
-                                <input name="appointing_position" id="appointing_position" class="form-control" value="<?= h($value('appointing_position')) ?>">
-                            </div>
                             <div class="form-group col-12">
-                                <label for="remarks">CSC Remarks (optional)</label>
+                                <label for="remarks">CSC Remarks</label>
                                 <textarea name="remarks" id="remarks" class="form-control" rows="3"><?= h($value('remarks')) ?></textarea>
                             </div>
                         </div>

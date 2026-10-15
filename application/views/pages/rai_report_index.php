@@ -14,10 +14,10 @@ $deleteUrl = isset($deleteUrl) ? $deleteUrl : site_url('RaiReport/delete');
 $candidatesUrl = isset($candidatesUrl) ? $candidatesUrl : site_url('RaiReport/candidates');
 $bulkCandidatesUrl = isset($bulkCandidatesUrl) ? $bulkCandidatesUrl : site_url('RaiReport/bulk_candidates');
 $saveApplicantsUrl = isset($saveApplicantsUrl) ? $saveApplicantsUrl : site_url('RaiReport/save_applicants');
+$saveChecklistUrl = isset($saveChecklistUrl) ? $saveChecklistUrl : site_url('RaiReport/save_checklist');
+$checklistDefaults = isset($checklistDefaults) && is_array($checklistDefaults) ? $checklistDefaults : array('items' => array(), 'csc_receiving_officer' => '', 'csc_receiving_position' => 'CSC FO Receiving Officer');
 $previewUrl = isset($previewUrl) ? $previewUrl : site_url('RaiReport/preview');
 $raiToken = isset($raiToken) ? $raiToken : '';
-$defaultAgency = isset($defaults['agency_name']) ? $defaults['agency_name'] : 'Department of Education';
-$defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'] : 'Schools Division of Davao de Oro';
 ?>
 <style>
     :root {
@@ -87,20 +87,26 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
     .modal-dialog.rai-modal-lg { max-width: 920px; }
     .modal-dialog.rai-modal-xl { max-width: 1200px; }
     .rai-modal .modal-content { border: 0; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 70px rgba(15,29,47,.32); }
-    .rai-modal .modal-header { background: linear-gradient(135deg, var(--rai-primary), var(--rai-primary-2)); color: #fff; padding: 18px 22px; border-bottom: 0; position: relative; }
-    .rai-modal .modal-header .modal-title { font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; gap: 10px; }
-    .rai-modal .modal-header .modal-title i { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,.14); display: inline-flex; align-items: center; justify-content: center; font-size: 20px; }
-    .rai-modal .modal-header .close { color: #fff; opacity: .85; text-shadow: none; font-size: 1.6rem; padding: 0; margin: 0; line-height: 1; }
-    .rai-modal .modal-header .close:hover { opacity: 1; }
+    .rai-modal .modal-header { background: linear-gradient(135deg, #193552, var(--rai-primary-2)); color: #fff !important; padding: 18px 22px; border-bottom: 3px solid var(--rai-accent); position: relative; align-items:center; }
+    .rai-modal .modal-heading { min-width:0; }
+    .rai-modal .modal-header .modal-title { margin:0; color:#fff !important; font-weight: 800; font-size: 1.08rem; display: flex; align-items: center; gap: 10px; letter-spacing:.1px; }
+    .rai-modal .modal-header .modal-title span { color:#fff !important; }
+    .rai-modal .modal-header .modal-title i { width: 38px; height: 38px; border-radius: 11px; color:#fff !important; background: rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.24); display: inline-flex; align-items: center; justify-content: center; font-size: 21px; }
+    .rai-modal .modal-subtitle { display:block; margin:4px 0 0 48px; color:rgba(255,255,255,.82) !important; font-size:.73rem; font-weight:600; }
+    .rai-modal .modal-header .close { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,.12); color: #fff !important; opacity: 1; text-shadow: none; font-size: 1.55rem; padding: 0; margin: 0; line-height: 1; }
+    .rai-modal .modal-header .close span { color:#fff !important; transform:translateY(-1px); }
+    .rai-modal .modal-header .close:hover { background:rgba(255,255,255,.22); }
     .rai-modal .modal-body { padding: 22px; max-height: calc(100vh - 200px); overflow-y: auto; background: #fafcff; }
     .rai-modal .modal-footer { background: #fff; padding: 14px 22px; border-top: 1px solid var(--rai-border); }
     .rai-modal .btn { border-radius: 10px; font-weight: 700; }
 
     /* Form inside modal */
+    .rai-form-card { margin:0; padding:18px 12px 4px; background:#fff; border:1px solid var(--rai-border); border-radius:12px; box-shadow:0 5px 18px rgba(31,58,95,.05); }
     .rai-form-card label { font-weight:800; font-size:.68rem; text-transform:uppercase; letter-spacing:.55px; color:var(--rai-muted); margin-bottom:6px; }
     .rai-form-card .form-group { margin-bottom:14px; }
     .rai-form-card .form-control { border-radius: 8px; border-color: #d6dfeb; font-size: .84rem; }
     .rai-form-card .form-control:focus { border-color: var(--rai-primary); box-shadow: 0 0 0 3px rgba(31,58,95,.1); }
+    .rai-form-card textarea.form-control { min-height:38px; resize:vertical; }
     .rai-req { color:#c0392b; }
 
     /* Summary grid */
@@ -146,6 +152,23 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
     .rai-manual-staging input, .rai-manual-staging select { font-size:.76rem; padding:4px 6px; height:34px; border-radius:6px; border-color:#d6dfeb; }
     .rai-manual-staging input:focus, .rai-manual-staging select:focus { border-color: var(--rai-primary); box-shadow: 0 0 0 2px rgba(31,58,95,.1); outline: none; }
 
+    /* Saved first-page applicant editor */
+    .rai-editor-card { border:1px solid #cfdced; background:#f9fbfe; }
+    .rai-editor-sections { display:grid; grid-template-columns:1fr; gap:14px; }
+    .rai-editor-section { background:#fff; border:1px solid var(--rai-border); border-radius:12px; padding:14px; }
+    .rai-editor-section-title { color:var(--rai-primary); font-size:.72rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase; margin-bottom:10px; }
+    .rai-editor-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .rai-editor-field label { display:block; color:var(--rai-muted); font-size:.65rem; font-weight:800; letter-spacing:.35px; text-transform:uppercase; margin-bottom:4px; }
+    .rai-editor-field .form-control { height:36px; border-radius:8px; border-color:#d6dfeb; font-size:.8rem; }
+
+    /* Editable Page 2 checklist */
+    .rai-checklist-edit th { font-size:.65rem; text-transform:uppercase; letter-spacing:.3px; color:#516070; background:#f8fbff; vertical-align:middle; }
+    .rai-checklist-edit td { font-size:.76rem; vertical-align:middle; }
+    .rai-checklist-edit .form-control { min-width:80px; height:34px; padding:5px 7px; border-radius:7px; font-size:.76rem; }
+    .rai-checklist-edit .rai-check-note { min-width:180px; }
+    .rai-checklist-signers { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+    .rai-checklist-signers .form-group { margin-bottom:0; }
+
     @media (max-width: 991.98px) {
         .rai-hero-content { align-items:flex-start; }
         .rai-hero-icon { display:none; }
@@ -161,7 +184,10 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
         #rai-table td { font-size:.72rem; padding:7px 5px; }
         .rai-summary { grid-template-columns: 1fr; }
         .rai-tab { font-size: .72rem; padding: 8px 6px; }
+        .rai-editor-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .rai-checklist-signers { grid-template-columns:1fr; }
     }
+    @media (max-width: 575.98px) { .rai-editor-grid { grid-template-columns:1fr; } }
 </style>
 
 <div class="content-page">
@@ -208,7 +234,6 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                             <thead>
                                 <tr>
                                     <th>Reporting Period</th>
-                                    <th>Agency / Division</th>
                                     <th>Nature of Appointment</th>
                                     <th class="text-center">Applicants</th>
                                     <th>Last Updated</th>
@@ -224,10 +249,6 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                             ?>
                                 <tr data-report-id="<?= $reportId ?>">
                                     <td><strong><?= h($period) ?></strong></td>
-                                    <td>
-                                        <?= h(isset($report['agency_name']) ? $report['agency_name'] : '') ?>
-                                        <span class="rai-sub"><?= h(isset($report['division_name']) ? $report['division_name'] : '') ?></span>
-                                    </td>
                                     <td><?= h(isset($report['nature_of_appointment']) && $report['nature_of_appointment'] !== '' ? $report['nature_of_appointment'] : '—') ?></td>
                                     <td class="text-center"><span class="rai-count-pill" data-count="<?= (int) (isset($report['applicant_count']) ? $report['applicant_count'] : 0) ?>"><?= (int) (isset($report['applicant_count']) ? $report['applicant_count'] : 0) ?></span></td>
                                     <td><span class="rai-sub"><?= h($updated) ?></span></td>
@@ -274,7 +295,10 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
     <div class="modal-dialog rai-modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="ph ph-file-text"></i><span id="raiReportModalTitle">New Report Information</span></h5>
+                <div class="modal-heading">
+                    <h5 class="modal-title"><i class="ph ph-file-plus" id="raiReportModalIcon"></i><span id="raiReportModalTitle">New Report Information</span></h5>
+                    <small class="modal-subtitle" id="raiReportModalSubtitle">Create a new monthly RAI record.</small>
+                </div>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <form id="raiReportForm">
@@ -283,7 +307,7 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                     <input type="hidden" name="rai_token" value="<?= h($raiToken) ?>">
                     <input type="hidden" id="raiReportEditId" name="rai_report_edit_id" value="">
                     <div class="form-row rai-form-card">
-                        <div class="form-group col-lg-2 col-md-6">
+                        <div class="form-group col-lg-6 col-md-6">
                             <label for="rf_report_month">Reporting Month <span class="rai-req">*</span></label>
                             <select name="report_month" id="rf_report_month" class="form-control">
                                 <?php foreach ($months as $number => $name): ?>
@@ -291,7 +315,7 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-group col-lg-2 col-md-6">
+                        <div class="form-group col-lg-6 col-md-6">
                             <label for="rf_report_year">Reporting Year <span class="rai-req">*</span></label>
                             <input name="report_year" id="rf_report_year" type="number" min="2000" max="2100" class="form-control" value="<?= (int) (isset($defaults['report_year']) ? $defaults['report_year'] : date('Y')) ?>">
                         </div>
@@ -304,39 +328,15 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                             </select>
                         </div>
                         <div class="form-group col-lg-4 col-md-6">
-                            <label for="rf_agency_name">Agency <span class="rai-req">*</span></label>
-                            <input name="agency_name" id="rf_agency_name" class="form-control" value="<?= h($defaultAgency) ?>">
-                        </div>
-                        <div class="form-group col-lg-4 col-md-6">
-                            <label for="rf_division_name">Division <span class="rai-req">*</span></label>
-                            <input name="division_name" id="rf_division_name" class="form-control" value="<?= h($defaultDivision) ?>">
-                        </div>
-                        <div class="form-group col-lg-3 col-md-6">
-                            <label for="rf_csc_resolution_no">CSC Resolution Number</label>
-                            <input name="csc_resolution_no" id="rf_csc_resolution_no" class="form-control" value="">
-                        </div>
-                        <div class="form-group col-lg-3 col-md-6">
-                            <label for="rf_csc_resolution_date">CSC Resolution Date</label>
-                            <input name="csc_resolution_date" id="rf_csc_resolution_date" type="date" class="form-control" value="">
-                        </div>
-                        <div class="form-group col-lg-3 col-md-6">
                             <label for="rf_certifying_officer">Certifying Officer</label>
                             <input name="certifying_officer" id="rf_certifying_officer" class="form-control" value="">
                         </div>
-                        <div class="form-group col-lg-3 col-md-6">
+                        <div class="form-group col-lg-4 col-md-6">
                             <label for="rf_certifying_position">Certifying Officer Position</label>
                             <input name="certifying_position" id="rf_certifying_position" class="form-control" value="">
                         </div>
-                        <div class="form-group col-lg-6 col-md-6">
-                            <label for="rf_appointing_officer">Appointing Officer</label>
-                            <input name="appointing_officer" id="rf_appointing_officer" class="form-control" value="">
-                        </div>
-                        <div class="form-group col-lg-6 col-md-6">
-                            <label for="rf_appointing_position">Appointing Officer Position</label>
-                            <input name="appointing_position" id="rf_appointing_position" class="form-control" value="">
-                        </div>
                         <div class="form-group col-12">
-                            <label for="rf_remarks">CSC Remarks (optional)</label>
+                            <label for="rf_remarks">CSC Remarks</label>
                             <textarea name="remarks" id="rf_remarks" class="form-control" rows="3"></textarea>
                         </div>
                     </div>
@@ -434,6 +434,26 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                     </div>
                 </div>
 
+                <!-- Editable fields printed on RAI Page 1 -->
+                <div class="card rai-card rai-editor-card mb-3 rai-hide" id="raiApplicantEditorCard">
+                    <div class="card-body">
+                        <form id="raiApplicantEditorForm">
+                            <div class="rai-section-head">
+                                <div>
+                                    <h5 class="rai-section-title"><i class="ph ph-pencil-simple"></i><span id="raiApplicantEditorTitle">Edit Applicant</span></h5>
+                                    <div class="rai-muted mt-1">These changes are saved only to this RAI report. Publication Mode remains the prescribed <strong>CSC WEBSITE</strong>.</div>
+                                </div>
+                                <button type="button" class="rai-icon-btn is-secondary" id="raiCloseApplicantEditor" title="Close editor"><i class="ph ph-x"></i></button>
+                            </div>
+                            <div class="rai-editor-sections" id="raiApplicantEditorFields"></div>
+                            <div class="d-flex justify-content-end mt-3" style="gap:8px;">
+                                <button type="button" class="btn btn-light btn-sm" id="raiCancelApplicantEdit"><i class="ph ph-x mr-1"></i>Cancel</button>
+                                <button type="submit" class="btn btn-primary btn-sm"><i class="ph ph-floppy-disk mr-1"></i>Save Applicant Data</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Current applicants -->
                 <div class="card rai-card">
                     <div class="card-body">
@@ -470,6 +490,38 @@ $defaultDivision = isset($defaults['division_name']) ? $defaults['division_name'
                     </div>
                 </div>
 
+                <!-- Editable fields printed on RAI Page 2 -->
+                <div class="card rai-card mt-3">
+                    <div class="card-body">
+                        <div class="rai-section-head">
+                            <div>
+                                <h5 class="rai-section-title"><i class="ph ph-check-square"></i>Page 2 Checklist</h5>
+                                <div class="rai-muted mt-1">Enter HRMO/CSC FO marks or notes when available. The official requirement wording remains fixed.</div>
+                            </div>
+                            <span class="rai-help-chip" id="raiChecklistSaveStatus"><i class="ph ph-info"></i>Saved with this report</span>
+                        </div>
+                        <div class="rai-table-wrap">
+                            <table class="table table-bordered rai-checklist-edit mb-0">
+                                <thead><tr><th style="width:42px">No.</th><th>Requirement</th><th style="width:110px">HRMO</th><th style="width:110px">CSC FO</th><th style="width:24%">Note</th></tr></thead>
+                                <tbody id="raiChecklistRows"></tbody>
+                            </table>
+                        </div>
+                        <div class="rai-checklist-signers">
+                            <div class="form-group">
+                                <label class="font-weight-bold small" for="raiCscReceivingOfficer">CSC FO Receiving Officer Name</label>
+                                <input id="raiCscReceivingOfficer" class="form-control form-control-sm" maxlength="150" placeholder="Leave blank for signature line only">
+                            </div>
+                            <div class="form-group">
+                                <label class="font-weight-bold small" for="raiCscReceivingPosition">CSC FO Receiving Officer Position</label>
+                                <input id="raiCscReceivingPosition" class="form-control form-control-sm" maxlength="150" value="CSC FO Receiving Officer">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="button" class="btn btn-primary btn-sm font-weight-bold" id="raiSaveChecklistBtn"><i class="ph ph-floppy-disk mr-1"></i>Save Page 2</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light btn-sm font-weight-bold" data-dismiss="modal"><i class="ph ph-check mr-1"></i>Done</button>
@@ -495,17 +547,29 @@ const dataUrl = <?= json_encode($dataUrl, $jsonFlags) ?>;
 const candidatesUrl = <?= json_encode($candidatesUrl, $jsonFlags) ?>;
 const bulkCandidatesUrl = <?= json_encode($bulkCandidatesUrl, $jsonFlags) ?>;
 const saveApplicantsUrl = <?= json_encode($saveApplicantsUrl, $jsonFlags) ?>;
+const saveChecklistUrl = <?= json_encode($saveChecklistUrl, $jsonFlags) ?>;
 const previewUrl = <?= json_encode($previewUrl, $jsonFlags) ?>;
 const raiToken = <?= json_encode($raiToken, $jsonFlags) ?>;
 const reportDefaults = <?= json_encode($defaults, $jsonFlags) ?>;
+const checklistDefaults = <?= json_encode($checklistDefaults, $jsonFlags) ?>;
 
 const classifications = [['','Choose'],['sub_original','Substitute — Original'],['sub_reemployment','Substitute — Reemployment'],['perm_original','Permanent — Original'],['perm_transfer','Permanent — Transfer'],['perm_reemployment','Permanent — Reemployment'],['reclassification','Reclassification'],['other','Other']];
 const natureOptions = <?= json_encode(array_keys($natureOptions), $jsonFlags) ?>;
 const applicantFields = ['source_type','source_id','classification_key','classification_label','date_issued','last_name','first_name','name_extension','middle_name','sex','pwd','position_level','position_title','item_number','salary_grade','salary_step','monthly_salary','employment_status','employment_period_from','employment_period_to','nature_of_appointment','publication_from','publication_to','publication_mode','appointment_identification_no','csc_action','csc_action_date','csc_release_date'];
+const applicantEditSections = [
+    ['Personal Information', [['last_name','Last Name'],['first_name','First Name'],['middle_name','Middle Name'],['name_extension','Name Extension'],['sex','Sex','sex'],['pwd','PWD','pwd']]],
+    ['Appointment Information', [['date_issued','Date Issued / Effectivity','date'],['position_level','Position Level','level'],['position_title','Position Title'],['item_number','Item Number'],['employment_status','Employment Status'],['nature_of_appointment','Nature of Appointment','nature'],['classification_key','Classification','class']]],
+    ['Salary Information', [['salary_grade','Salary / Job / Pay Grade'],['salary_step','Step'],['monthly_salary','Monthly Salary Rate','number']]],
+    ['Employment and Publication', [['employment_period_from','Employment Period From','date'],['employment_period_to','Employment Period To','date'],['publication_from','Publication From','date'],['publication_to','Publication To','date']]],
+    ['CSC Information', [['appointment_identification_no','Appointment Identification Number'],['csc_action','CSC Action','action'],['csc_action_date','Date of CSC Action','date'],['csc_release_date','Date of Release','date']]]
+];
+const editableApplicantFields = applicantEditSections.flatMap(section => section[1]).map(field => field[0]);
 
 let currentReportId = null;
 let currentReport = {};
 let items = [];
+let editingApplicantIndex = null;
+let currentChecklist = JSON.parse(JSON.stringify(checklistDefaults));
 let saveTimer = null;
 let systemSelectReady = false;
 
@@ -514,6 +578,22 @@ const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp
 function classificationName(k){ const f = classifications.find(c => c[0]===k); return f ? f[1] : (k || 'Unclassified'); }
 function blankItem(){ const x = {source_type:'manual',source_id:'',classification_label:''}; applicantFields.forEach(k => x[k]=''); return x; }
 function setAlert(el, msg, isError){ el.innerHTML = msg ? '<div class="alert alert-'+(isError?'danger':'success')+' py-2"><i class="ph ph-'+(isError?'warning-circle':'check-circle')+' mr-1"></i>'+esc(msg)+'</div>' : ''; }
+function normalizeChecklist(value){
+    const result = JSON.parse(JSON.stringify(checklistDefaults));
+    let parsed = value;
+    if (typeof parsed === 'string' && parsed.trim()) { try { parsed = JSON.parse(parsed); } catch (_) { parsed = {}; } }
+    if (!parsed || typeof parsed !== 'object') parsed = {};
+    const sourceItems = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.items) ? parsed.items : []);
+    result.items.forEach((item, index) => {
+        const source = sourceItems.find(x => x && x.code === item.code) || sourceItems[index] || {};
+        item.hrmo_status = String(source.hrmo_status || '');
+        item.csc_status = String(source.csc_status || '');
+        item.note = String(source.note || '');
+    });
+    result.csc_receiving_officer = String(parsed.csc_receiving_officer || '');
+    result.csc_receiving_position = String(parsed.csc_receiving_position || 'CSC FO Receiving Officer');
+    return result;
+}
 
 /* ---------- jQuery shorthand (only for Bootstrap/Select2 calls) ---------- */
 function jq(selector) { return window.jQuery(selector); }
@@ -522,6 +602,8 @@ function jq(selector) { return window.jQuery(selector); }
 function openReportModal(mode, report){
     const isEdit = mode === 'edit';
     $('raiReportModalTitle').textContent = isEdit ? 'Edit Report Information' : 'New Report Information';
+    $('raiReportModalSubtitle').textContent = isEdit ? 'Update this report’s period, appointment type, and certification details.' : 'Create a new monthly RAI record.';
+    $('raiReportModalIcon').className = isEdit ? 'ph ph-pencil-simple' : 'ph ph-file-plus';
     $('raiReportEditId').value = isEdit ? (report.id || '') : '';
     const f = $('raiReportForm');
     f.reset();
@@ -530,14 +612,8 @@ function openReportModal(mode, report){
     $('rf_report_month').value = r.report_month || (currentReport.report_month || <?= (int) date('n') ?>);
     $('rf_report_year').value = r.report_year || (currentReport.report_year || <?= (int) date('Y') ?>);
     $('rf_nature_of_appointment').value = r.nature_of_appointment || reportDefaults.nature_of_appointment || 'Original';
-    $('rf_agency_name').value = r.agency_name || reportDefaults.agency_name || '';
-    $('rf_division_name').value = r.division_name || reportDefaults.division_name || '';
-    $('rf_csc_resolution_no').value = r.csc_resolution_no || reportDefaults.csc_resolution_no || '';
-    $('rf_csc_resolution_date').value = (r.csc_resolution_date || reportDefaults.csc_resolution_date || '').split(' ')[0];
     $('rf_certifying_officer').value = r.certifying_officer || reportDefaults.certifying_officer || '';
     $('rf_certifying_position').value = r.certifying_position || reportDefaults.certifying_position || '';
-    $('rf_appointing_officer').value = r.appointing_officer || reportDefaults.appointing_officer || '';
-    $('rf_appointing_position').value = r.appointing_position || reportDefaults.appointing_position || '';
     $('rf_remarks').value = r.remarks || '';
     jq('#raiReportModal').modal('show');
 }
@@ -588,9 +664,12 @@ async function openManage(reportId){
         if (!res.ok || j.status !== 'success') throw new Error(j.message || 'Failed to load report');
         currentReport = j.report || {};
         items = Array.isArray(j.applicants) ? j.applicants : [];
+        currentChecklist = normalizeChecklist(currentReport.checklist_json || {});
         $('raiManageAlert').innerHTML = '';
+        closeApplicantEditor();
         renderSummary();
         renderApplicants();
+        renderChecklist();
         resetSystemSelect();
         resetManualStaging();
     } catch (err) {
@@ -605,12 +684,7 @@ function renderSummary(){
     $('raiReportSummary').innerHTML = [
         ['Reporting Period', period],
         ['Nature of Appointment', r.nature_of_appointment || '—'],
-        ['Agency', r.agency_name || '—'],
-        ['Division', r.division_name || '—'],
-        ['CSC Resolution No.', r.csc_resolution_no || '—'],
-        ['Resolution Date', (r.csc_resolution_date || '—').split(' ')[0]],
         ['Certifying Officer', r.certifying_officer || '—'],
-        ['Appointing Officer', r.appointing_officer || '—'],
         ['Remarks', r.remarks || '—']
     ].map(([k,v]) => '<div><label>'+esc(k)+'</label>'+esc(v)+'</div>').join('');
 }
@@ -761,6 +835,60 @@ $('raiAddManualAllBtn').addEventListener('click', () => {
     resetManualStaging();
 });
 
+/* ---------- Editable Page 1 applicant fields ---------- */
+function applicantEditorControl(key, label, type, item){
+    const value = String(item[key] || '');
+    let options = null;
+    if (type === 'sex') options = [['','Select'],['M','Male'],['F','Female']];
+    if (type === 'pwd') options = [['','Not provided'],['Y','Yes'],['N','No']];
+    if (type === 'level') options = [['','Select'],['1st','1st'],['2nd','2nd']];
+    if (type === 'action') options = [['','Blank / Not yet recorded'],['V','Validated'],['INV','Invalidated']];
+    if (type === 'class') options = classifications.slice();
+    if (type === 'nature') options = [['','Select']].concat(natureOptions.map(x => [x,x]));
+    let control = '';
+    if (options) {
+        if (value && !options.some(option => option[0] === value)) options.push([value, type === 'class' ? (item.classification_label || value) : value]);
+        control = '<select class="form-control" name="'+esc(key)+'">'+options.map(option => '<option value="'+esc(option[0])+'" '+(value===option[0]?'selected':'')+'>'+esc(option[1])+'</option>').join('')+'</select>';
+    } else {
+        const inputType = type === 'date' ? 'date' : (type === 'number' ? 'number' : 'text');
+        control = '<input class="form-control" name="'+esc(key)+'" type="'+inputType+'" '+(inputType==='number'?'min="0" step="0.01"':'maxlength="255"')+' value="'+esc(value)+'">';
+    }
+    return '<div class="rai-editor-field"><label>'+esc(label)+'</label>'+control+'</div>';
+}
+function openApplicantEditor(index){
+    if (!items[index]) return;
+    editingApplicantIndex = index;
+    const item = items[index];
+    $('raiApplicantEditorTitle').textContent = 'Edit Applicant '+(index+1)+' — '+([item.last_name,item.first_name].filter(Boolean).join(', ') || 'Unnamed');
+    $('raiApplicantEditorFields').innerHTML = applicantEditSections.map(section => '<section class="rai-editor-section"><div class="rai-editor-section-title">'+esc(section[0])+'</div><div class="rai-editor-grid">'+section[1].map(field => applicantEditorControl(field[0],field[1],field[2],item)).join('')+'</div></section>').join('');
+    $('raiApplicantEditorCard').classList.remove('rai-hide');
+    $('raiApplicantEditorCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function closeApplicantEditor(){
+    editingApplicantIndex = null;
+    $('raiApplicantEditorCard').classList.add('rai-hide');
+    $('raiApplicantEditorFields').innerHTML = '';
+}
+$('raiCloseApplicantEditor').addEventListener('click', closeApplicantEditor);
+$('raiCancelApplicantEdit').addEventListener('click', closeApplicantEditor);
+$('raiApplicantEditorForm').addEventListener('submit', event => {
+    event.preventDefault();
+    if (editingApplicantIndex === null || !items[editingApplicantIndex]) return;
+    const form = new FormData(event.target);
+    const entry = Object.assign({}, items[editingApplicantIndex]);
+    editableApplicantFields.forEach(key => entry[key] = String(form.get(key) || '').trim());
+    if (entry.employment_period_from && entry.employment_period_to && entry.employment_period_from > entry.employment_period_to) { alert('Employment period end date must not precede its start date.'); return; }
+    if (entry.publication_from && entry.publication_to && entry.publication_from > entry.publication_to) { alert('Publication end date must not precede its start date.'); return; }
+    const classificationSelect = event.target.elements.classification_key;
+    entry.classification_label = classificationSelect && classificationSelect.selectedIndex >= 0
+        ? classificationSelect.options[classificationSelect.selectedIndex].text
+        : classificationName(entry.classification_key);
+    items[editingApplicantIndex] = entry;
+    closeApplicantEditor();
+    renderApplicants();
+    scheduleSave();
+});
+
 /* ---------- Applicants table ---------- */
 function renderApplicants(){
     const body = $('raiApplicantRows');
@@ -774,6 +902,7 @@ function renderApplicants(){
             + '<td>'+esc(x.nature_of_appointment||'—')+'<div class="rai-muted">'+esc(classificationName(x.classification_key))+'</div></td>'
             + '<td><span class="rai-pill">'+(x.source_type==='manual'?'Manual':'RQA')+'</span></td>'
             + '<td><div class="rai-actions">'
+            + '<button type="button" class="rai-icon-btn" data-act="edit" data-i="'+i+'" data-toggle="tooltip" title="Edit saved report data"><i class="ph ph-pencil-simple"></i></button>'
             + '<button type="button" class="rai-icon-btn" data-act="up" data-i="'+i+'" '+(i===0?'disabled':'')+' data-toggle="tooltip" title="Move up"><i class="ph ph-arrow-up"></i></button>'
             + '<button type="button" class="rai-icon-btn" data-act="down" data-i="'+i+'" '+(i===items.length-1?'disabled':'')+' data-toggle="tooltip" title="Move down"><i class="ph ph-arrow-down"></i></button>'
             + '<button type="button" class="rai-icon-btn is-danger" data-act="remove" data-i="'+i+'" data-toggle="tooltip" title="Remove"><i class="ph ph-trash"></i></button>'
@@ -788,9 +917,62 @@ $('raiApplicantRows').addEventListener('click', e => {
     const b = e.target.closest('button[data-act]');
     if (!b) return;
     const i = Number(b.dataset.i);
+    if (b.dataset.act === 'edit') { openApplicantEditor(i); return; }
     if (b.dataset.act === 'up' && i > 0) { [items[i-1], items[i]] = [items[i], items[i-1]]; renderApplicants(); scheduleSave(); }
     if (b.dataset.act === 'down' && i < items.length-1) { [items[i+1], items[i]] = [items[i], items[i+1]]; renderApplicants(); scheduleSave(); }
     if (b.dataset.act === 'remove') { if (confirm('Remove this applicant from the report?')) { items.splice(i,1); renderApplicants(); scheduleSave(); } }
+});
+
+/* ---------- Editable Page 2 checklist ---------- */
+function renderChecklist(){
+    const body = $('raiChecklistRows');
+    body.innerHTML = '';
+    currentChecklist.items.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td class="text-center font-weight-bold">'+(index+1)+'</td>'
+            + '<td>'+esc(item.label)+'</td>'
+            + '<td><input class="form-control cl-hrmo" maxlength="50" value="'+esc(item.hrmo_status||'')+'" placeholder="✓ / status"></td>'
+            + '<td><input class="form-control cl-csc" maxlength="50" value="'+esc(item.csc_status||'')+'" placeholder="✓ / status"></td>'
+            + '<td><input class="form-control rai-check-note cl-note" maxlength="500" value="'+esc(item.note||'')+'" placeholder="Optional note"></td>';
+        body.appendChild(tr);
+    });
+    $('raiCscReceivingOfficer').value = currentChecklist.csc_receiving_officer || '';
+    $('raiCscReceivingPosition').value = currentChecklist.csc_receiving_position || 'CSC FO Receiving Officer';
+}
+function collectChecklist(){
+    const rows = $('raiChecklistRows').querySelectorAll('tr');
+    rows.forEach((row,index) => {
+        if (!currentChecklist.items[index]) return;
+        currentChecklist.items[index].hrmo_status = row.querySelector('.cl-hrmo').value.trim();
+        currentChecklist.items[index].csc_status = row.querySelector('.cl-csc').value.trim();
+        currentChecklist.items[index].note = row.querySelector('.cl-note').value.trim();
+    });
+    currentChecklist.csc_receiving_officer = $('raiCscReceivingOfficer').value.trim();
+    currentChecklist.csc_receiving_position = $('raiCscReceivingPosition').value.trim() || 'CSC FO Receiving Officer';
+}
+$('raiSaveChecklistBtn').addEventListener('click', async () => {
+    if (!currentReportId) return;
+    collectChecklist();
+    const button = $('raiSaveChecklistBtn');
+    const status = $('raiChecklistSaveStatus');
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm mr-1"></span>Saving...';
+    status.innerHTML = '<i class="ph ph-circle-notch"></i>Saving Page 2...';
+    try {
+        const body = new URLSearchParams({rai_token:raiToken,payload:JSON.stringify(currentChecklist)});
+        const response = await fetch(saveChecklistUrl+'/'+currentReportId,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},body});
+        const data = await response.json();
+        if (!response.ok || data.status !== 'success') throw new Error(data.message || 'Save failed');
+        currentChecklist = normalizeChecklist(data.checklist || currentChecklist);
+        currentReport.checklist_json = JSON.stringify(currentChecklist);
+        renderChecklist();
+        status.innerHTML = '<i class="ph ph-check-circle"></i>Page 2 saved';
+    } catch (error) {
+        status.innerHTML = '<i class="ph ph-warning-circle"></i>'+esc(error.message);
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="ph ph-floppy-disk mr-1"></i>Save Page 2';
+    }
 });
 
 /* ---------- Auto-save ---------- */
@@ -814,7 +996,7 @@ async function persistApplicants(){
 $('raiPreviewBtn').addEventListener('click', () => {
     if (!items.length) { alert('Add at least one applicant before previewing.'); return; }
     const header = {};
-    ['report_month','report_year','nature_of_appointment','agency_name','division_name','csc_resolution_no','csc_resolution_date','certifying_officer','certifying_position','appointing_officer','appointing_position','remarks'].forEach(k => header[k] = currentReport[k] || '');
+    ['report_month','report_year','nature_of_appointment','certifying_officer','certifying_position','appointing_officer','appointing_position','checklist_json','remarks'].forEach(k => header[k] = currentReport[k] || '');
     $('raiPayload').value = JSON.stringify({ header, applicants: items });
     $('raiPreviewForm').submit();
 });
@@ -825,9 +1007,8 @@ function updateRowInTable(report){
     if (!row) return;
     const monthName = monthMap[report.report_month] || ('Month ' + report.report_month);
     row.cells[0].innerHTML = '<strong>'+esc(monthName+' '+report.report_year)+'</strong>';
-    row.cells[1].innerHTML = esc(report.agency_name||'')+'<span class="rai-sub">'+esc(report.division_name||'')+'</span>';
-    row.cells[2].textContent = report.nature_of_appointment || '—';
-    row.cells[4].innerHTML = '<span class="rai-sub">'+esc(report.updated_at||'')+'</span>';
+    row.cells[1].textContent = report.nature_of_appointment || '—';
+    row.cells[3].innerHTML = '<span class="rai-sub">'+esc(report.updated_at||'')+'</span>';
 }
 function updateCountInTable(reportId, count){
     const row = document.querySelector('#raiReportRows tr[data-report-id="'+reportId+'"]');
