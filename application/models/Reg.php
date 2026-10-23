@@ -3770,6 +3770,7 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
               applicant_id INT UNSIGNED NOT NULL,
               job_id INT UNSIGNED NOT NULL,
               stat TINYINT(1) NOT NULL DEFAULT 0,
+              remarks TEXT NULL,
               updated_by INT UNSIGNED NULL,
               updated_at DATETIME NULL DEFAULT NULL,
               UNIQUE KEY uniq_record_job (record_type, record_id, job_id),
@@ -3777,6 +3778,13 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
               KEY idx_job (job_id)
           ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
       ");
+
+      // Existing installations pre-date evaluator remarks. Keep the runtime
+      // migration beside the CREATE guard so opening the profile is enough to
+      // make the new field available without a manual deployment step.
+      $this->Common->ensure_columns('hris_record_relevance', array(
+          'remarks' => 'TEXT NULL',
+          ));
 
       // A short-lived migration copied the old global stat into every open
       // vacancy. Those rows have no evaluator and caused one job's credential
@@ -3879,7 +3887,9 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
      * Everything the profile needs to show relevance per vacancy.
      *
      * @return array vacancies (see relevance_vacancies()),
-     *               map[type][record_id][job_id] = stat, open vacancies only
+     *               map[type][record_id][job_id] = stat,
+     *               remarks[type][record_id][job_id] = evaluator note,
+     *               open vacancies only
      */
     public function record_relevance_context($applicant_id, $context_job = 0){
 
@@ -3888,10 +3898,11 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
       $vacancies = $this->relevance_vacancies($applicant_id, $context_job);
       $job_ids   = array_map(function ($v) { return (int) $v->jobID; }, $vacancies);
       $map       = array('training' => array(), 'experience' => array());
+      $remarks   = array('training' => array(), 'experience' => array());
 
       if (!empty($job_ids)) {
         $rows = $this->db
-            ->select('record_type, record_id, job_id, stat')
+            ->select('record_type, record_id, job_id, stat, remarks')
             ->where('applicant_id', (int) $applicant_id)
             // NULL identifies the temporary legacy copies made before choices
             // were strictly vacancy-specific. Only an evaluator's explicit
@@ -3904,11 +3915,12 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
         foreach ($rows as $row) {
           if (isset($map[$row->record_type])) {
             $map[$row->record_type][(int) $row->record_id][(int) $row->job_id] = (int) $row->stat;
+            $remarks[$row->record_type][(int) $row->record_id][(int) $row->job_id] = (string) ($row->remarks ?? '');
           }
         }
       }
 
-      return array('vacancies' => $vacancies, 'map' => $map);
+      return array('vacancies' => $vacancies, 'map' => $map, 'remarks' => $remarks);
     }
 
     /**
@@ -4055,6 +4067,97 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           'description'  => 'Marked ' . $src['noun'] . ' "' . ($record->{$src['title']} ?? '') . '" as '
               . $this->relevance_label($stat) . ' for ' . $vacancy->jobTitle
               . ' (vacancy #' . (int) $vacancy->jobID . '), saved ' . $now . '.',
+          ));
+
+      return '';
+    }
+
+    /**
+     * Save an evaluator's note against the same credential/vacancy pair as
+     * the relevance decision. A blank note deliberately clears it.
+     *
+     * @return string '' when saved, otherwise why it was refused
+     */
+    public function set_record_remarks($type, $record_id, $job_id, $remarks){
+
+      $this->ensure_record_relevance_table();
+
+      $src = $this->relevance_source($type);
+      if (!$src || (int) $record_id < 1 || (int) $job_id < 1) {
+        return 'Invalid remarks request.';
+      }
+
+      if (is_array($remarks) || is_object($remarks)) {
+        return 'Invalid remarks request.';
+      }
+
+      $remarks = trim((string) $remarks);
+      $length = function_exists('mb_strlen') ? mb_strlen($remarks, 'UTF-8') : strlen($remarks);
+      if ($length > 2000) {
+        return 'Remarks must not exceed 2,000 characters.';
+      }
+
+      $record = $this->Common->one_cond_row($src['table'], $src['pk'], (int) $record_id);
+      if (empty($record)) {
+        return 'That record no longer exists.';
+      }
+
+      $applicant_id = (int) $record->{$src['owner']};
+
+      if (!$this->can_set_relevance($applicant_id, (int) $job_id)) {
+        return 'You are not assigned to evaluate this applicant for that vacancy.';
+      }
+
+      $vacancy = $this->db->query(
+          "select a.appID, j.jobID, j.jobTitle
+             from hris_applications a
+             join hris_jobvacancy j on j.jobID = a.jobID
+            where a.applicant_id = ? and a.jobID = ? and j.jvStatus <> 'Closed'
+            limit 1",
+          array($applicant_id, (int) $job_id)
+          )->row();
+
+      if (empty($vacancy)) {
+        return 'Remarks can only be saved for an open vacancy the applicant applied for.';
+      }
+
+      $now = $this->record_stamp();
+      $by  = (int) ($this->session->id ?? 0);
+      $before = $this->db
+          ->select('remarks')
+          ->where('record_type', $type)
+          ->where('record_id', (int) $record_id)
+          ->where('job_id', (int) $job_id)
+          ->get('hris_record_relevance')
+          ->row();
+
+      // stat defaults to No Action only when this is the first interaction
+      // with the credential. An existing relevance choice is left untouched.
+      $saved = $this->db->query(
+          "insert into hris_record_relevance
+              (record_type, record_id, applicant_id, job_id, stat, remarks, updated_by, updated_at)
+           values (?, ?, ?, ?, 0, ?, ?, ?)
+           on duplicate key update remarks = values(remarks), updated_by = values(updated_by), updated_at = values(updated_at)",
+          array($type, (int) $record_id, $applicant_id, (int) $job_id, $remarks, $by > 0 ? $by : null, $now)
+          );
+
+      if (!$saved) {
+        return 'The evaluator remarks could not be saved. Please try again.';
+      }
+
+      $this->Audit->log('update_' . $type, array(
+          'entity_type'  => $type,
+          'entity_table' => $src['table'],
+          'entity_id'    => (int) $record_id,
+          'app_id'       => (int) ($vacancy->appID ?? 0),
+          'applicant_id' => $applicant_id,
+          'job_id'       => (int) $vacancy->jobID,
+          'field'        => $type . '_remarks',
+          'old_value'    => (string) ($before->remarks ?? ''),
+          'new_value'    => $remarks,
+          'description'  => ($remarks === '' ? 'Cleared' : 'Updated') . ' evaluator remarks for '
+              . $src['noun'] . ' "' . ($record->{$src['title']} ?? '') . '" for '
+              . $vacancy->jobTitle . ' (vacancy #' . (int) $vacancy->jobID . '), saved ' . $now . '.',
           ));
 
       return '';

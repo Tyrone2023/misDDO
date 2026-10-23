@@ -12699,4 +12699,49 @@ class Page extends CI_Controller
 		$this->session->set_flashdata($error === '' ? 'success' : 'danger', $error === '' ? 'Relevance updated.' : $error);
 		redirect($back);
 	}
+
+	/**
+	 * Evaluator remarks for one training/work-experience item in one vacancy.
+	 * Remarks share the vacancy-scoped relevance row but do not alter its status.
+	 */
+	public function update_record_remarks()
+	{
+		$typeInput = $this->input->post('record_type', true);
+		$recordInput = $this->input->post('record_id');
+		$jobInput = $this->input->post('job_id');
+		$type = is_scalar($typeInput) ? (string) $typeInput : '';
+		$recordId = is_scalar($recordInput) ? (int) $recordInput : 0;
+		$jobId = is_scalar($jobInput) ? (int) $jobInput : 0;
+		$remarks = $this->input->post('remarks', true);
+		$anchor = $type === 'experience' ? '#work' : '#trainings';
+		$back = ($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor;
+		$isAjax = $this->input->is_ajax_request();
+
+		if (!$this->Reg->can_set_relevance()) {
+			$error = 'You are not allowed to save evaluator remarks.';
+		} else {
+			$error = $this->Reg->set_record_remarks($type, $recordId, $jobId, $remarks);
+		}
+
+		if ($isAjax) {
+			$storedRemarks = is_scalar($remarks) ? trim((string) $remarks) : '';
+			$this->output
+				->set_content_type('application/json')
+				->set_output(json_encode(array(
+					'success' => $error === '',
+					'title' => $error === '' ? 'Remarks saved' : 'Unable to save remarks',
+					'message' => $error === ''
+						? ($storedRemarks === '' ? 'The evaluator remarks were cleared.' : 'The evaluator remarks were saved.')
+						: $error,
+					'remarks' => $error === '' ? $storedRemarks : null,
+				)));
+			return;
+		}
+
+		$this->session->set_flashdata(
+			$error === '' ? 'success' : 'danger',
+			$error === '' ? 'Evaluator remarks saved.' : $error
+		);
+		redirect($back);
+	}
 }

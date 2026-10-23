@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS `hris_record_relevance` (
   `applicant_id` int unsigned NOT NULL,
   `job_id` int unsigned NOT NULL,
   `stat` tinyint(1) NOT NULL DEFAULT 0 COMMENT '0 No Action, 1 Relevant, 2 Not Relevant',
+  `remarks` text DEFAULT NULL COMMENT 'Evaluator remarks for this record and vacancy',
   `updated_by` int unsigned DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),

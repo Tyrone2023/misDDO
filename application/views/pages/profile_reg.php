@@ -29,6 +29,7 @@
 
                 $relevanceVacancies = $relevance['vacancies'] ?? array();
                 $relevanceMap       = $relevance['map'] ?? array('training' => array(), 'experience' => array());
+                $relevanceRemarks   = $relevance['remarks'] ?? array('training' => array(), 'experience' => array());
                 $selectedVacancy    = null;
                 foreach ($relevanceVacancies as $vacancy) {
                     if (!empty($vacancy->is_context)) {
@@ -180,6 +181,17 @@
                 .relevance-editor.is-saving .form-control { opacity: .62; cursor: wait; }
                 .relevance-save-state { display: none; color: #348cd4; font-size: .75rem; white-space: nowrap; }
                 .relevance-editor.is-saving .relevance-save-state { display: inline-flex; align-items: center; gap: .2rem; }
+                .evaluation-cell { min-width: 285px; }
+                .record-remarks-editor { margin-top: .65rem; padding-top: .65rem; border-top: 1px solid #e8edf3; }
+                .record-remarks-label { display: block; margin-bottom: .3rem; color: #52606d; font-size: .75rem; font-weight: 700; }
+                .record-remarks-editor textarea.form-control { min-height: 68px; resize: vertical; font-size: .78rem; line-height: 1.4; }
+                .record-remarks-actions { display: flex; align-items: center; gap: .55rem; margin-top: .4rem; }
+                .record-remarks-actions .btn { white-space: nowrap; }
+                .remarks-save-state { color: #6c757d; font-size: .73rem; line-height: 1.25; }
+                .record-remarks-editor.is-saving textarea,
+                .record-remarks-editor.is-saving .btn { opacity: .65; cursor: wait; }
+                .record-remarks-editor.is-saved .remarks-save-state { color: #18845c; }
+                .record-remarks-editor.has-error .remarks-save-state { color: #c03946; }
                 .swal2-popup.relevance-feedback-modal { border-radius: 14px; }
                 .relevance-feedback-copy { color: #52606d; font-size: .82rem; line-height: 1.5; text-align: left; }
                 .relevance-feedback-total { margin-top: .7rem; padding: .55rem .65rem; border-radius: 7px; background: #f2f7ff; color: #244b78; font-weight: 600; }
@@ -670,10 +682,10 @@
                                                                 <table class="table table-hover profile-record-table mb-0">
                                                                     <thead class="thead-light">
                                                                         <tr>
-                                                                            <th style="width:32%">Training</th>
-                                                                            <th style="width:21%">Inclusive Schedule</th>
-                                                                            <th style="width:17%" class="text-center">Hours &amp; File</th>
-                                                                            <th style="width:30%">Relevance</th>
+                                                                            <th style="width:29%">Training</th>
+                                                                            <th style="width:19%">Inclusive Schedule</th>
+                                                                            <th style="width:15%" class="text-center">Hours &amp; File</th>
+                                                                            <th style="width:37%">Evaluator Review</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -688,6 +700,7 @@
                                                                                 . ' data-hours="' . html_escape((string) $row->noHours) . '"';
 
                                                                             $trainingStat = (int) ($relevanceMap['training'][$trainingId][$selectedJobId] ?? 0);
+                                                                            $trainingRemarks = (string) ($relevanceRemarks['training'][$trainingId][$selectedJobId] ?? '');
                                                                             if ($selectedJobId > 0 && $trainingStat === 1) {
                                                                                 $trainingTotal += (float) $row->noHours;
                                                                             }
@@ -720,7 +733,7 @@
                                                                                     <?php endif; ?>
                                                                                 </div>
                                                                             </td>
-                                                                            <td data-label="Vacancy Relevance">
+                                                                            <td class="evaluation-cell" data-label="Evaluator Review">
                                                                                 <?php $status = $relevance_label($trainingStat); ?>
                                                                                 <?php if($selectedJobId < 1): ?>
                                                                                     <span class="badge badge-secondary">No vacancy selected</span>
@@ -732,6 +745,17 @@
                                                                                             <option value="training:<?= $trainingId; ?>:<?= $selectedJobId; ?>:2" <?= $trainingStat === 2 ? 'selected' : ''; ?>>Not Relevant</option>
                                                                                         </select>
                                                                                         <span class="relevance-save-state"><i class="mdi mdi-loading mdi-spin"></i>Saving</span>
+                                                                                    </form>
+                                                                                    <?= form_open('Page/update_record_remarks', array('class' => 'record-remarks-editor js-record-remarks-form')); ?>
+                                                                                        <input type="hidden" name="record_type" value="training">
+                                                                                        <input type="hidden" name="record_id" value="<?= $trainingId; ?>">
+                                                                                        <input type="hidden" name="job_id" value="<?= $selectedJobId; ?>">
+                                                                                        <label class="record-remarks-label" for="training-remarks-<?= $trainingId; ?>">Evaluator Remarks</label>
+                                                                                        <textarea id="training-remarks-<?= $trainingId; ?>" name="remarks" maxlength="2000" rows="2" class="form-control" placeholder="Add remarks for this training..." aria-label="Evaluator remarks for <?= html_escape((string) $row->trainingTitle); ?>"><?= html_escape($trainingRemarks); ?></textarea>
+                                                                                        <div class="record-remarks-actions">
+                                                                                            <button type="submit" class="btn btn-sm btn-outline-info"><i class="mdi mdi-content-save-outline mr-1"></i>Save Remarks</button>
+                                                                                            <span class="remarks-save-state" role="status" aria-live="polite"></span>
+                                                                                        </div>
                                                                                     </form>
                                                                                 <?php else: ?>
                                                                                     <span class="badge badge-<?= $status[1]; ?>"><?= $status[0]; ?></span>
@@ -779,10 +803,10 @@
                                                                 <table class="table table-hover profile-record-table mb-0">
                                                                     <thead class="thead-light">
                                                                         <tr>
-                                                                            <th style="width:32%">Experience</th>
-                                                                            <th style="width:21%">Inclusive Dates</th>
-                                                                            <th style="width:17%" class="text-center">Duration &amp; File</th>
-                                                                            <th style="width:30%">Relevance</th>
+                                                                            <th style="width:29%">Experience</th>
+                                                                            <th style="width:19%">Inclusive Dates</th>
+                                                                            <th style="width:15%" class="text-center">Duration &amp; File</th>
+                                                                            <th style="width:37%">Evaluator Review</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -802,6 +826,7 @@
                                                                                 . ' data-to="' . html_escape((string) $xpTo) . '"';
 
                                                                             $experienceStat = (int) ($relevanceMap['experience'][$experienceId][$selectedJobId] ?? 0);
+                                                                            $experienceRemarks = (string) ($relevanceRemarks['experience'][$experienceId][$selectedJobId] ?? '');
                                                                             if ($selectedJobId > 0 && $experienceStat === 1) {
                                                                                 $experienceTotal += $xpSpan;
                                                                             }
@@ -835,7 +860,7 @@
                                                                                     <?php endif; ?>
                                                                                 </div>
                                                                             </td>
-                                                                            <td data-label="Vacancy Relevance">
+                                                                            <td class="evaluation-cell" data-label="Evaluator Review">
                                                                                 <?php $status = $relevance_label($experienceStat); ?>
                                                                                 <?php if($selectedJobId < 1): ?>
                                                                                     <span class="badge badge-secondary">No vacancy selected</span>
@@ -847,6 +872,17 @@
                                                                                             <option value="experience:<?= $experienceId; ?>:<?= $selectedJobId; ?>:2" <?= $experienceStat === 2 ? 'selected' : ''; ?>>Not Relevant</option>
                                                                                         </select>
                                                                                         <span class="relevance-save-state"><i class="mdi mdi-loading mdi-spin"></i>Saving</span>
+                                                                                    </form>
+                                                                                    <?= form_open('Page/update_record_remarks', array('class' => 'record-remarks-editor js-record-remarks-form')); ?>
+                                                                                        <input type="hidden" name="record_type" value="experience">
+                                                                                        <input type="hidden" name="record_id" value="<?= $experienceId; ?>">
+                                                                                        <input type="hidden" name="job_id" value="<?= $selectedJobId; ?>">
+                                                                                        <label class="record-remarks-label" for="experience-remarks-<?= $experienceId; ?>">Evaluator Remarks</label>
+                                                                                        <textarea id="experience-remarks-<?= $experienceId; ?>" name="remarks" maxlength="2000" rows="2" class="form-control" placeholder="Add remarks for this work experience..." aria-label="Evaluator remarks for <?= html_escape($xpJobTitle !== '' ? $xpJobTitle : (string) $row->title); ?>"><?= html_escape($experienceRemarks); ?></textarea>
+                                                                                        <div class="record-remarks-actions">
+                                                                                            <button type="submit" class="btn btn-sm btn-outline-info"><i class="mdi mdi-content-save-outline mr-1"></i>Save Remarks</button>
+                                                                                            <span class="remarks-save-state" role="status" aria-live="polite"></span>
+                                                                                        </div>
                                                                                     </form>
                                                                                 <?php else: ?>
                                                                                     <span class="badge badge-<?= $status[1]; ?>"><?= $status[0]; ?></span>
@@ -1479,6 +1515,67 @@
                                                         select.disabled = false;
                                                         form.classList.remove('is-saving');
                                                     });
+                                                });
+
+                                                // Remarks use an explicit save button so evaluators can finish a
+                                                // thought before the note is written. Keep the typed text on errors
+                                                // so a temporary connection problem never discards their work.
+                                                document.addEventListener('submit', function (e) {
+                                                    var form = e.target;
+                                                    if (!form || !form.classList || !form.classList.contains('js-record-remarks-form')) return;
+                                                    if (!window.fetch) return;
+
+                                                    e.preventDefault();
+                                                    if (form.classList.contains('is-saving')) return;
+
+                                                    var textarea = form.querySelector('textarea[name="remarks"]');
+                                                    var button = form.querySelector('button[type="submit"]');
+                                                    var state = form.querySelector('.remarks-save-state');
+                                                    var formData = new FormData(form);
+
+                                                    form.classList.remove('is-saved', 'has-error');
+                                                    form.classList.add('is-saving');
+                                                    if (textarea) textarea.disabled = true;
+                                                    if (button) button.disabled = true;
+                                                    if (state) state.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-1"></i>Saving...';
+
+                                                    window.fetch(form.action, {
+                                                        method: 'POST',
+                                                        body: formData,
+                                                        credentials: 'same-origin',
+                                                        headers: {
+                                                            'X-Requested-With': 'XMLHttpRequest',
+                                                            'Accept': 'application/json'
+                                                        }
+                                                    }).then(function (response) {
+                                                        return response.json();
+                                                    }).then(function (data) {
+                                                        if (!data || !data.success) {
+                                                            throw new Error(data && data.message ? data.message : 'The remarks could not be saved.');
+                                                        }
+
+                                                        if (textarea && typeof data.remarks === 'string') textarea.value = data.remarks;
+                                                        form.classList.add('is-saved');
+                                                        if (state) state.innerHTML = '<i class="mdi mdi-check-circle-outline mr-1"></i>' + safeMarkup(data.message || 'Remarks saved.');
+                                                    }).catch(function (error) {
+                                                        form.classList.add('has-error');
+                                                        if (state) state.textContent = error.message || 'Unable to save. Please try again.';
+                                                    }).then(function () {
+                                                        if (textarea) textarea.disabled = false;
+                                                        if (button) button.disabled = false;
+                                                        form.classList.remove('is-saving');
+                                                    });
+                                                });
+
+                                                document.addEventListener('input', function (e) {
+                                                    var textarea = e.target;
+                                                    if (!textarea || textarea.name !== 'remarks') return;
+                                                    var form = textarea.closest ? textarea.closest('.js-record-remarks-form') : null;
+                                                    if (!form || form.classList.contains('is-saving')) return;
+
+                                                    form.classList.remove('is-saved', 'has-error');
+                                                    var state = form.querySelector('.remarks-save-state');
+                                                    if (state) state.textContent = '';
                                                 });
                                             })();
                                         </script>
