@@ -5,9 +5,10 @@ defined('BASEPATH') or exit('No direct script access allowed');
  * Selective IER / RQA - second (and later) round selection.
  *
  * One vacancy can be deliberated more than once. The later round should not
- * carry the applicants already acted on, so HR picks by hand who belongs to it
- * here. The picked list is a batch; the existing IER and RQA reports are then
- * opened with ?batch={id} and print only those applicants.
+ * carry the applicants already acted on, so HR chooses who belongs to it here,
+ * either manually or by pulling the vacancy's DQ list. The picked list is a
+ * batch; the existing IER and RQA reports are then opened with ?batch={id} and
+ * print only those applicants.
  *
  * Reached from the vacancy list (Page/jobVacancy) action menu.
  */
@@ -163,6 +164,7 @@ class Reselection extends CI_Controller
         $data['job']       = $job;
         $data['title']     = 'Selective IER / RQA';
         $data['batches']   = $this->resel->get_batches($jobID);
+        $data['dq_total']  = $this->resel->dq_applicant_count($jobID);
         $data['next']      = $this->resel->next_round($jobID);
         $data['job_types'] = $this->job_types();
         $data['groups']    = $this->resel->position_groups();
@@ -207,6 +209,62 @@ class Reselection extends CI_Controller
 
         $this->session->set_flashdata('success', 'Selection batch created. Pick the applicants included in this round.');
         redirect(base_url() . 'Reselection/select/' . (int) $id);
+    }
+
+    /**
+     * Adds all disqualified applicants from this batch's vacancy. The model
+     * performs one indexed INSERT ... SELECT and ignores applicants already in
+     * the round, keeping the action quick and safe to repeat.
+     */
+    public function pull_dq($id = null)
+    {
+        $this->guard();
+
+        if ($this->input->method(true) !== 'POST') {
+            show_error('This action only accepts POST requests.', 405, 'Method Not Allowed');
+            return;
+        }
+
+        $batch  = $this->batch_or_redirect($id);
+        $job    = $this->job_or_redirect($batch->jobID);
+        $jobID  = (int) $job->jobID;
+        $result = $this->resel->add_dq_members($batch->id, $jobID);
+
+        if (empty($result['success'])) {
+            $this->session->set_flashdata('danger', 'The DQ applicants could not be added. Please try again.');
+            redirect(base_url() . 'Reselection/index/' . $jobID);
+            return;
+        }
+
+        $matched = (int) $result['matched'];
+        $added   = (int) $result['added'];
+        $total   = (int) $result['total'];
+
+        if ($matched === 0) {
+            $message = 'No disqualified applicants were found for this vacancy.';
+        } elseif ($added === 0) {
+            $message = 'All ' . $matched . ' DQ applicant(s) from this vacancy are already in this round.';
+        } else {
+            $message = $added . ' DQ applicant(s) added from this vacancy. This round now has ' . $total . ' applicant(s).';
+        }
+
+        $this->Audit->log('reselection_pull_dq', array(
+            'entity_type'  => 'reselection_batch',
+            'entity_table' => 'hris_reselection_batch',
+            'entity_id'    => (int) $batch->id,
+            'job_id'       => $jobID,
+            'field'        => 'members',
+            'description'  => $message,
+            'meta'         => array(
+                'batch_name' => (string) $batch->batch_name,
+                'matched'    => $matched,
+                'added'      => $added,
+                'total'      => $total
+            )
+        ));
+
+        $this->session->set_flashdata($matched === 0 ? 'danger' : 'success', $message);
+        redirect(base_url() . 'Reselection/index/' . $jobID);
     }
 
     /**

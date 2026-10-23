@@ -4,8 +4,8 @@
 <?php
 /*
  * Selective IER / RQA - selection rounds of one vacancy.
- * A round holds the applicants manually picked for a later deliberation;
- * the IER / RQA reports read it through ?batch={id}.
+ * A round holds applicants selected manually or pulled from the vacancy's DQ
+ * list; the IER / RQA reports read it through ?batch={id}.
  */
 $rs_h = static function ($value) {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
@@ -15,6 +15,7 @@ $jobID     = (int) $job->jobID;
 $jobTypes  = isset($job_types) && is_array($job_types) ? $job_types : array();
 $groupName = (int) $job->promotion === 1 ? 'Promotion' : ($groups[(int) $job->position] ?? 'Vacancy');
 $typeLabel = $jobTypes[(int) $job->job_type] ?? '';
+$dqAvailable = (int) ($dq_total ?? 0);
 $totalPicked = 0;
 foreach ($batches as $b) {
     $totalPicked += (int) $b->total;
@@ -46,6 +47,10 @@ foreach ($batches as $b) {
     .rs-page .rs-btn:hover { background:#f2f6fd; border-color:#b9cbe8; color:var(--rs-blue); text-decoration:none; }
     .rs-page .rs-btn-primary { background:var(--rs-blue); border-color:var(--rs-blue); color:#fff; }
     .rs-page .rs-btn-primary:hover { background:#1c48b8; border-color:#1c48b8; color:#fff; }
+    .rs-page .rs-dq-form { display:inline-flex; margin:0; }
+    .rs-page .rs-btn-dq { background:#fff5f3; border-color:#f2d0ca; color:#b4473d; cursor:pointer; }
+    .rs-page .rs-btn-dq:hover { background:#feeae6; border-color:#e8b4ab; color:#9f3028; }
+    .rs-page .rs-btn-dq:disabled { background:#f6f7f9; border-color:#e5e9ef; color:#9ba6b4; cursor:not-allowed; opacity:.8; }
     .rs-page .rs-btn-quiet { border-color:transparent; color:#93a0b2; }
     .rs-page .rs-btn-quiet:hover { background:#fdf1f0; border-color:#f6ded9; color:#c0453c; }
     .rs-page .rs-round { align-items:center; border-bottom:1px solid #f1f5fa; display:flex; flex-wrap:wrap; gap:12px; padding:16px 20px; }
@@ -58,6 +63,7 @@ foreach ($batches as $b) {
     .rs-page .rs-round-meta { color:var(--rs-muted); font-size:12px; margin:3px 0 0; }
     .rs-page .rs-picked { background:#e9f7ef; border-radius:20px; color:#1c7a55; font-size:11px; font-weight:800; padding:3px 10px; }
     .rs-page .rs-picked.is-zero { background:#fdf3e8; color:#95610b; }
+    .rs-page .rs-dq-count { background:#fff0ed; border-radius:20px; color:#ad4238; font-size:11px; font-weight:800; padding:3px 9px; }
     .rs-page .rs-round-acts { align-items:center; display:flex; flex-wrap:wrap; gap:7px; margin-left:auto; }
     .rs-page .dropdown-menu { border:1px solid #e3e9f2; border-radius:10px; box-shadow:0 10px 26px rgba(24,52,88,.12); font-size:13px; padding:6px; }
     .rs-page .dropdown-item { border-radius:7px; color:#3d5876; padding:7px 10px; }
@@ -88,6 +94,7 @@ foreach ($batches as $b) {
                 <div class="rs-hero-stats">
                     <div class="rs-hero-stat"><strong><?= count($batches); ?></strong><span>Rounds</span></div>
                     <div class="rs-hero-stat"><strong><?= $totalPicked; ?></strong><span>Picked</span></div>
+                    <div class="rs-hero-stat"><strong><?= $dqAvailable; ?></strong><span>DQ Available</span></div>
                 </div>
             </div>
 
@@ -102,7 +109,7 @@ foreach ($batches as $b) {
                 <div class="rs-card-head">
                     <div>
                         <h5 class="rs-card-title">Selection rounds</h5>
-                        <p class="rs-card-sub">Each round prints its own IER and RQA, covering only the applicants you pick.</p>
+                        <p class="rs-card-sub">Pick applicants manually, or pull only the DQ applicants from this vacancy in one click.</p>
                     </div>
                     <form method="post" action="<?= base_url(); ?>Reselection/create" class="rs-new">
                         <input type="hidden" name="jobID" value="<?= $jobID; ?>">
@@ -123,6 +130,8 @@ foreach ($batches as $b) {
                     <?php foreach ($batches as $b) :
                         $bid    = (int) $b->id;
                         $picked = (int) $b->total;
+                        $batchDq = (int) ($b->dq_total ?? 0);
+                        $dqSynced = $dqAvailable > 0 && $batchDq >= $dqAvailable;
                     ?>
                         <div class="rs-round">
                             <div class="rs-round-no">
@@ -133,6 +142,7 @@ foreach ($batches as $b) {
                                 <p class="rs-round-name">
                                     <?= $rs_h($b->batch_name); ?>
                                     <span class="rs-picked <?= $picked === 0 ? 'is-zero' : ''; ?>"><?= $picked; ?> picked</span>
+                                    <?php if ($batchDq > 0) : ?><span class="rs-dq-count"><?= $batchDq; ?> DQ</span><?php endif; ?>
                                 </p>
                                 <p class="rs-round-meta">
                                     <?= !empty($b->created_by_name) ? $rs_h($b->created_by_name) . ' &middot; ' : ''; ?>
@@ -141,6 +151,15 @@ foreach ($batches as $b) {
                                 </p>
                             </div>
                             <div class="rs-round-acts">
+                                <form method="post" action="<?= base_url(); ?>Reselection/pull_dq/<?= $bid; ?>" class="rs-dq-form"
+                                      onsubmit="return confirm('Add all DQ applicants from this vacancy to this round? Existing picks will stay selected.');">
+                                    <button type="submit" class="rs-btn rs-btn-dq"
+                                            <?= ($dqAvailable === 0 || $dqSynced) ? 'disabled' : ''; ?>
+                                            title="<?= $dqAvailable === 0 ? 'No DQ applicants in this vacancy' : ($dqSynced ? 'All DQ applicants are already included' : 'Add all DQ applicants from this vacancy'); ?>">
+                                        <i class="mdi mdi-database-import"></i>
+                                        <?= $dqSynced ? 'DQ Synced' : 'Pull DQ'; ?>
+                                    </button>
+                                </form>
                                 <a class="rs-btn rs-btn-primary" href="<?= base_url(); ?>Reselection/select/<?= $bid; ?>">
                                     <i class="mdi mdi-checkbox-marked-outline"></i> <?= $picked === 0 ? 'Pick Applicants' : 'Edit Picks'; ?>
                                 </a>
@@ -181,7 +200,7 @@ foreach ($batches as $b) {
 
             <p class="rs-hint">
                 <i class="mdi mdi-information-outline"></i>
-                The reports keep their own rules (rated, qualified, 50 points and above) - a round only narrows them to the applicants you picked.
+                Pull DQ uses only disqualified applications tied to this vacancy, keeps existing picks, and skips duplicates. The reports still keep their own eligibility and score rules.
                 The full lists stay on <a target="_blank" href="<?= base_url(); ?>Pages/rqa_list/<?= $rs_h($job->sy); ?>?jobID=<?= $jobID; ?>&jobTitle=<?= urlencode($job->jobTitle); ?>">the vacancy's RQA page</a>.
             </p>
 

@@ -6,8 +6,8 @@ defined('BASEPATH') or exit('No direct script access allowed');
  *
  * A vacancy is sometimes deliberated more than once - the later round must
  * leave out the applicants already acted on in the first one. Each batch keeps
- * the manually picked hris_applications.appID rows of one round; the existing
- * IER and RQA reports print only those rows when opened with ?batch={id}.
+ * the selected hris_applications.appID rows of one round; the existing IER and
+ * RQA reports print only those rows when opened with ?batch={id}.
  *
  * Nothing here writes to hris_applications - the batch is only a filter.
  */
@@ -53,6 +53,22 @@ class Reselection_model extends CI_Model
                 KEY `idx_batch` (`batch_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
         ");
+
+        // The DQ pull is always scoped to one vacancy. This key lets MySQL
+        // seek directly to that vacancy's DQ rows instead of scanning the
+        // full applications table (or every status inside the vacancy).
+        $hasDqIndex = $this->db->query(
+            "SHOW INDEX FROM `hris_applications` WHERE Key_name = 'idx_job_dq'"
+        )->row();
+
+        if (empty($hasDqIndex)) {
+            $debug = $this->db->db_debug;
+            $this->db->db_debug = false;
+            $this->db->query(
+                "ALTER TABLE `hris_applications` ADD KEY `idx_job_dq` (`jobID`, `dq`)"
+            );
+            $this->db->db_debug = $debug;
+        }
     }
 
     /* ------------------------------------------------------------------ */
@@ -62,7 +78,16 @@ class Reselection_model extends CI_Model
     public function get_batches($jobID): array
     {
         return $this->db->query(
-            "select b.*, (select count(*) from `{$this->member_table}` m where m.batch_id = b.id) as total
+            "select b.*,
+                    (select count(*)
+                       from `{$this->member_table}` m
+                      where m.batch_id = b.id) as total,
+                    (select count(*)
+                       from `{$this->member_table}` mdq
+                       join hris_applications adq on adq.appID = mdq.appID
+                      where mdq.batch_id = b.id
+                        and adq.jobID = b.jobID
+                        and adq.dq = 2) as dq_total
                from `{$this->batch_table}` b
               where b.jobID = ?
               order by b.round_no asc, b.id asc",
@@ -296,6 +321,64 @@ class Reselection_model extends CI_Model
         }
 
         return count($clean);
+    }
+
+    /** Number of disqualified applications belonging to one vacancy. */
+    public function dq_applicant_count($jobID): int
+    {
+        return (int) $this->db
+            ->where('jobID', (int) $jobID)
+            ->where('dq', 2)
+            ->count_all_results('hris_applications');
+    }
+
+    /** Number of applicants currently saved in one selection round. */
+    public function member_count($batch_id): int
+    {
+        return (int) $this->db
+            ->where('batch_id', (int) $batch_id)
+            ->count_all_results($this->member_table);
+    }
+
+    /**
+     * Add every DQ application from the selected vacancy in one SQL pass.
+     *
+     * INSERT IGNORE works with uniq_batch_app, so existing manual picks stay
+     * untouched and clicking Pull DQ again only adds newly-disqualified rows.
+     */
+    public function add_dq_members($batch_id, $jobID): array
+    {
+        $batch_id = (int) $batch_id;
+        $jobID    = (int) $jobID;
+        $matched  = $this->dq_applicant_count($jobID);
+
+        if ($batch_id < 1 || $jobID < 1 || $matched === 0) {
+            return array(
+                'success' => $batch_id > 0 && $jobID > 0,
+                'matched' => $matched,
+                'added'   => 0,
+                'total'   => $batch_id > 0 ? $this->member_count($batch_id) : 0
+            );
+        }
+
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = false;
+        $saved = $this->db->query(
+            "insert ignore into `{$this->member_table}` (`batch_id`, `appID`)
+             select ?, a.appID
+               from hris_applications a
+              where a.jobID = ? and a.dq = 2",
+            array($batch_id, $jobID)
+        );
+        $added = $saved ? (int) $this->db->affected_rows() : 0;
+        $this->db->db_debug = $debug;
+
+        return array(
+            'success' => (bool) $saved,
+            'matched' => $matched,
+            'added'   => $added,
+            'total'   => $this->member_count($batch_id)
+        );
     }
 
     /* ------------------------------------------------------------------ */

@@ -37,6 +37,16 @@
                         break;
                     }
                 }
+                // The vacancy comes from ?jobID= in the URL. "My Profile" opens
+                // without one, so fall back to the latest application; the
+                // switcher below changes the URL, never shows two at once.
+                if ($selectedVacancy === null && !empty($relevanceVacancies)) {
+                    foreach ($relevanceVacancies as $vacancy) {
+                        if ($selectedVacancy === null || (int) $vacancy->appID > (int) $selectedVacancy->appID) {
+                            $selectedVacancy = $vacancy;
+                        }
+                    }
+                }
                 $selectedJobId = (int) ($selectedVacancy->jobID ?? 0);
                 $selectedVacancyLabel = trim((string) ($selectedVacancy->label ?? ''));
                 $canRateSelectedVacancy = $selectedJobId > 0
@@ -46,6 +56,75 @@
                     if ((int) $stat === 1) return array('Relevant', 'success');
                     if ((int) $stat === 2) return array('Not Relevant', 'danger');
                     return array('No Action', 'secondary');
+                };
+
+                // Relevant first, then Not Relevant, then not yet reviewed;
+                // the original order is kept inside each group.
+                $sort_by_relevance = function ($rows, $type, $pk) use ($relevanceMap, $selectedJobId) {
+                    if ($selectedJobId < 1 || !is_array($rows)) return $rows;
+                    $rank = array(1 => 0, 2 => 1, 0 => 2);
+                    $keyed = array();
+                    foreach (array_values($rows) as $i => $row) {
+                        $stat = (int) ($relevanceMap[$type][(int) $row->{$pk}][$selectedJobId] ?? 0);
+                        $keyed[] = array($rank[$stat] ?? 2, $i, $row);
+                    }
+                    usort($keyed, function ($a, $b) {
+                        return $a[0] === $b[0] ? $a[1] - $b[1] : $a[0] - $b[0];
+                    });
+                    return array_map(function ($k) { return $k[2]; }, $keyed);
+                };
+
+                $relevance_counts = function ($rows, $type, $pk) use ($relevanceMap, $selectedJobId) {
+                    $counts = array(1 => 0, 2 => 0, 0 => 0);
+                    foreach ((array) $rows as $row) {
+                        $stat = (int) ($relevanceMap[$type][(int) $row->{$pk}][$selectedJobId] ?? 0);
+                        $counts[isset($counts[$stat]) ? $stat : 0]++;
+                    }
+                    return $counts;
+                };
+
+                if (isset($training)) $training = $sort_by_relevance($training, 'training', 'trainingID');
+                if (isset($experience)) $experience = $sort_by_relevance($experience, 'experience', 'id');
+
+                // Evaluator Review cell: status for the URL vacancy, plus the
+                // Review button for whoever may rate it.
+                $review_cell = function ($type, $id, $stat, $remarks, $title) use ($relevance_label, $selectedJobId, $selectedVacancyLabel, $canRateSelectedVacancy) {
+                    if ($selectedJobId < 1) return '<span class="badge badge-secondary">No vacancy selected</span>';
+                    $status = $relevance_label($stat);
+                    $out = '<div class="review-summary" data-review-row="' . $type . ':' . (int) $id . ':' . $selectedJobId . '">'
+                        . '<div class="review-status">'
+                        . '<span class="badge badge-' . $status[1] . ' review-status-badge">' . $status[0] . '</span>'
+                        . '<small class="review-for" title="' . html_escape($selectedVacancyLabel) . '">for ' . html_escape($selectedVacancyLabel) . '</small>'
+                        . '</div>';
+                    if ($canRateSelectedVacancy) {
+                        $out .= '<button type="button" class="btn btn-sm open-record-review"'
+                            . ' data-toggle="modal" data-target=".record-review-modal"'
+                            . ' data-record-type="' . $type . '" data-record-id="' . (int) $id . '" data-job-id="' . $selectedJobId . '"'
+                            . ' data-stat="' . (int) $stat . '" data-remarks="' . html_escape(rawurlencode($remarks)) . '"'
+                            . ' data-title="' . html_escape($title) . '">'
+                            . '<i class="mdi mdi-tune-variant"></i>Review</button>';
+                    }
+                    return $out . '</div>';
+                };
+
+                // Remark row under the record, tinted by its relevance status.
+                $review_note = function ($type, $id, $stat, $remarks) use ($relevance_label, $selectedJobId, $selectedVacancyLabel) {
+                    if ($selectedJobId < 1) return '';
+                    $status = $relevance_label($stat);
+                    return '<tr class="record-note-row' . ($remarks === '' ? ' d-none' : '') . '" data-review-note="' . $type . ':' . (int) $id . ':' . $selectedJobId . '">'
+                        . '<td colspan="4"><div class="record-note tone-' . (int) $stat . '" role="note" aria-label="Evaluator remark">'
+                        . '<span class="record-note-icon"><i class="mdi mdi-comment-quote-outline"></i></span>'
+                        . '<div class="record-note-body"><div class="record-note-header">'
+                        . '<span class="record-note-label">Evaluator Remark</span>'
+                        . '<span class="record-note-status">' . $status[0] . '</span>'
+                        . '<span class="record-note-vacancy">' . html_escape($selectedVacancyLabel) . '</span>'
+                        . '</div><div class="record-note-text">' . html_escape($remarks) . '</div></div>'
+                        . '</div></td></tr>';
+                };
+
+                // Switching vacancy only changes ?jobID=; appID belongs to one job.
+                $vacancy_url = function ($jobId) use ($a_user) {
+                    return base_url() . 'registered_profile/' . (int) $a_user->id . '?jobID=' . (int) $jobId;
                 };
 
                 // "Saved on" stamp for a record. Rows encoded before the column
@@ -68,27 +147,54 @@
                 };
 
                 // One compact line replaces the repeated vacancy and lock notices.
-                $record_context_strip = function () use (
+                $record_context_strip = function ($type = '', $counts = null, $anchor = '') use (
                     $selectedJobId,
                     $selectedVacancyLabel,
+                    $relevanceVacancies,
+                    $vacancy_url,
                     $recordLock,
                     $settingsLock,
                     $detailsEditable,
                     $lockReason
                 ) {
-                    $vacancy = $selectedJobId > 0 ? $selectedVacancyLabel : 'No active vacancy';
                     $lockText = $recordLock ? 'Records closed' : ($settingsLock ? 'Attachments locked' : 'Attachments open');
                     $lockIcon = $recordLock ? 'mdi-lock-outline' : ($settingsLock ? 'mdi-paperclip-off' : 'mdi-paperclip');
                     $lockTitle = $recordLock && $lockReason !== '' ? ' title="' . html_escape($lockReason) . '"' : '';
                     $editText = $detailsEditable ? 'Details editable' : 'Read-only';
                     $editClass = $detailsEditable ? 'is-editable' : 'is-readonly';
 
+                    if ($selectedJobId < 1) {
+                        $vacancyHtml = '<div class="context-vacancy-name is-empty">No active vacancy</div>';
+                    } elseif (count($relevanceVacancies) > 1) {
+                        $options = '';
+                        foreach ($relevanceVacancies as $v) {
+                            $options .= '<option value="' . html_escape($vacancy_url($v->jobID) . $anchor) . '"'
+                                . ((int) $v->jobID === $selectedJobId ? ' selected' : '') . '>'
+                                . html_escape($v->label) . '</option>';
+                        }
+                        $vacancyHtml = '<select class="custom-select custom-select-sm context-vacancy-switch js-vacancy-switch" aria-label="Show relevance for vacancy">'
+                            . $options . '</select>';
+                    } else {
+                        $vacancyHtml = '<div class="context-vacancy-name">' . html_escape($selectedVacancyLabel) . '</div>';
+                    }
+
+                    $countsHtml = '';
+                    if ($selectedJobId > 0 && is_array($counts)) {
+                        $countsHtml = '<div class="context-counts">'
+                            . '<span class="count-pill tone-1"><i class="mdi mdi-check-circle"></i><b data-relevance-count="' . $type . ':1">' . (int) $counts[1] . '</b> Relevant</span>'
+                            . '<span class="count-pill tone-2"><i class="mdi mdi-close-circle"></i><b data-relevance-count="' . $type . ':2">' . (int) $counts[2] . '</b> Not Relevant</span>'
+                            . '<span class="count-pill tone-0"><i class="mdi mdi-clock-outline"></i><b data-relevance-count="' . $type . ':0">' . (int) $counts[0] . '</b> Pending</span>'
+                            . '</div>';
+                    }
+
                     return '<div class="record-context-strip" role="status">'
-                        . '<span class="context-vacancy"><i class="mdi mdi-information-outline"></i><strong>Relevance: '
-                        . html_escape($vacancy) . '</strong></span>'
+                        . '<div class="context-vacancy"><i class="mdi mdi-briefcase-check-outline"></i>'
+                        . '<div class="context-vacancy-body"><small>Relevance for vacancy</small>' . $vacancyHtml . '</div></div>'
+                        . $countsHtml
+                        . '<div class="context-flags">'
                         . '<span' . $lockTitle . '><i class="mdi ' . $lockIcon . '"></i>' . $lockText . '</span>'
                         . '<span class="' . $editClass . '"><i class="mdi mdi-pencil-outline"></i>' . $editText . '</span>'
-                        . '</div>';
+                        . '</div></div>';
                 };
              ?>
 
@@ -147,7 +253,20 @@
                     font-size: .78rem;
                 }
                 .record-context-strip span { display: inline-flex; align-items: center; gap: .28rem; white-space: nowrap; }
-                .record-context-strip .context-vacancy { color: #244b78; }
+                .record-context-strip .context-vacancy { display: flex; align-items: center; gap: .55rem; color: #244b78; min-width: 0; flex: 1 1 260px; }
+                .record-context-strip .context-vacancy > .mdi { font-size: 1.35rem; color: #2f75b5; }
+                .context-vacancy-body { min-width: 0; flex: 1; }
+                .context-vacancy-body small { display: block; color: #7a8998; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+                .context-vacancy-name { color: #1f3f63; font-size: .9rem; font-weight: 700; line-height: 1.3; }
+                .context-vacancy-name.is-empty { color: #8995a3; font-weight: 600; }
+                .context-vacancy-switch { max-width: 420px; height: 32px; margin-top: .15rem; border-color: #c9dbf0; color: #1f3f63; font-size: .84rem; font-weight: 700; }
+                .context-counts { display: flex; flex-wrap: wrap; gap: .35rem; }
+                .count-pill { padding: .22rem .6rem; border-radius: 999px; font-size: .74rem; font-weight: 600; }
+                .count-pill b { font-weight: 800; }
+                .count-pill.tone-1 { background: #e9f7ef; color: #187a55; }
+                .count-pill.tone-2 { background: #fdeef0; color: #ad3340; }
+                .count-pill.tone-0 { background: #f1f3f6; color: #5f6b76; }
+                .context-flags { display: flex; flex-wrap: wrap; gap: .4rem .9rem; margin-left: auto; }
                 .record-context-strip .is-editable { color: #18845c; }
                 .record-context-strip .is-readonly { color: #9a6700; }
                 .vacancy-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem; margin-top: 1rem; }
@@ -155,15 +274,24 @@
                 .vacancy-total-label { color: #667085; font-size: .76rem; line-height: 1.25; }
                 .vacancy-total-value { color: #253858; font-size: 1.15rem; font-weight: 700; margin-top: .25rem; }
                 .vacancy-total-card.is-context { border-color: #8cb4ff; background: #f2f7ff; }
-                .record-actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: .45rem; align-items: center; padding-top: .15rem; }
-                .record-actions .btn { white-space: nowrap; }
-                .record-edit-button {
-                    border: 0;
-                    border-radius: 7px;
-                    box-shadow: 0 3px 8px rgba(52, 140, 212, .24);
-                    font-weight: 600;
+                .record-actions { display: flex; gap: .4rem; align-items: center; padding-top: .25rem; }
+                .record-icon-button {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 32px;
+                    height: 32px;
+                    padding: 0;
+                    border: 1px solid #dbe3ec;
+                    border-radius: 9px;
+                    background: #fff;
+                    color: #52667d;
+                    box-shadow: 0 2px 6px rgba(31, 45, 61, .06);
+                    transition: all .16s ease;
                 }
-                .record-edit-button:hover { box-shadow: 0 5px 12px rgba(52, 140, 212, .32); transform: translateY(-1px); }
+                .record-icon-button:hover { border-color: #8cb4e8; background: #f2f7fd; color: #2571b8; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(31, 45, 61, .1); }
+                .record-icon-button.is-danger:hover { border-color: #efadb3; background: #fff5f6; color: #c03946; }
+                .record-readonly { display: inline-flex; align-items: center; gap: .25rem; color: #8995a3; font-size: .74rem; }
                 .relevance-editor { display: flex; align-items: center; gap: .35rem; margin: 0; }
                 .relevance-editor .form-control {
                     min-width: 142px;
@@ -181,20 +309,76 @@
                 .relevance-editor.is-saving .form-control { opacity: .62; cursor: wait; }
                 .relevance-save-state { display: none; color: #348cd4; font-size: .75rem; white-space: nowrap; }
                 .relevance-editor.is-saving .relevance-save-state { display: inline-flex; align-items: center; gap: .2rem; }
-                .evaluation-cell { min-width: 285px; }
-                .record-remarks-editor { margin-top: .65rem; padding-top: .65rem; border-top: 1px solid #e8edf3; }
-                .record-remarks-label { display: block; margin-bottom: .3rem; color: #52606d; font-size: .75rem; font-weight: 700; }
-                .record-remarks-editor textarea.form-control { min-height: 68px; resize: vertical; font-size: .78rem; line-height: 1.4; }
-                .record-remarks-actions { display: flex; align-items: center; gap: .55rem; margin-top: .4rem; }
-                .record-remarks-actions .btn { white-space: nowrap; }
+                .evaluation-cell { min-width: 180px; }
+                .review-summary { display: flex; align-items: center; flex-wrap: wrap; gap: .45rem; }
+                .review-status { display: flex; flex-direction: column; align-items: flex-start; gap: .2rem; min-width: 0; }
+                .review-for { max-width: 190px; overflow: hidden; color: #7a8998; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+                .review-status-badge { border-radius: 999px; padding: .42em .72em !important; font-weight: 600; }
+                .open-record-review {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: .28rem;
+                    margin-left: auto;
+                    border: 1px solid #c8dbef;
+                    border-radius: 8px;
+                    background: #f7fbff;
+                    color: #256aa5;
+                    font-size: .75rem;
+                    font-weight: 700;
+                }
+                .open-record-review:hover { border-color: #79aee0; background: #edf6ff; color: #174f82; }
+                .profile-record-table .record-note-row > td { padding: .15rem .75rem .85rem; border-top: 0; background: #fff; }
+                .profile-record-table .record-note-row:hover > td { background: #fff; }
+                .record-note {
+                    display: grid;
+                    grid-template-columns: 34px minmax(0, 1fr);
+                    gap: .7rem;
+                    padding: .72rem .85rem;
+                    border: 1px solid #dce8f4;
+                    border-left: 3px solid #4c8dc7;
+                    border-radius: 10px;
+                    background: #f8fbff;
+                    color: #34495e;
+                }
+                .record-note-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9px; background: #e6f1fc; color: #2f75b5; font-size: 1rem; }
+                .record-note-header { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .5rem; margin-bottom: .35rem; }
+                .record-note-label { color: #274b6d; font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+                .record-note-status { padding: .1rem .5rem; border-radius: 999px; background: #eef1f5; color: #5f6b76; font-size: .7rem; font-weight: 700; }
+                .record-note-vacancy { color: #7a8998; font-size: .72rem; }
+                .record-note-vacancy::before { content: "\2022"; margin-right: .4rem; color: #c2ccd6; }
+                .record-note-text { color: #2b3d50; font-size: .9rem; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+                .record-note.tone-1 { border-color: #cdebdc; border-left-color: #2fa36f; background: #f6fcf9; }
+                .record-note.tone-1 .record-note-icon { background: #dff4ea; color: #1d8a5b; }
+                .record-note.tone-1 .record-note-status { background: #dff4ea; color: #187a55; }
+                .record-note.tone-2 { border-color: #f3d3d7; border-left-color: #d0505d; background: #fff8f9; }
+                .record-note.tone-2 .record-note-icon { background: #fde6e9; color: #c03946; }
+                .record-note.tone-2 .record-note-status { background: #fde6e9; color: #ad3340; }
+                .record-review-modal .modal-content { overflow: hidden; border: 0; border-radius: 16px; box-shadow: 0 18px 50px rgba(23, 43, 77, .2); }
+                .record-review-modal .modal-header { align-items: flex-start; padding: 1.15rem 1.25rem; border-bottom: 1px solid #e9eef4; background: linear-gradient(135deg, #f4f9ff, #fff); }
+                .review-modal-heading { display: flex; align-items: center; gap: .75rem; }
+                .review-modal-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 11px; background: #e7f2ff; color: #2875b9; font-size: 1.25rem; }
+                .review-modal-kicker { color: #7a8795; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+                .review-modal-title { margin: .12rem 0 0; color: #24364b; font-size: 1rem; font-weight: 700; line-height: 1.3; }
+                .review-vacancy-context { display: flex; align-items: flex-start; gap: .5rem; margin-bottom: 1rem; padding: .65rem .75rem; border: 1px solid #dce9f7; border-radius: 9px; background: #f7fbff; color: #45627f; font-size: .78rem; }
+                .review-form-section { padding: .9rem; border: 1px solid #e4eaf1; border-radius: 11px; background: #fbfcfe; }
+                .review-form-section + .review-form-section { margin-top: .8rem; }
+                .review-field-label { display: block; margin-bottom: .4rem; color: #34465a; font-size: .78rem; font-weight: 700; }
+                .review-field-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+                .review-character-count { color: #8a96a3; font-size: .7rem; }
+                .record-review-modal .relevance-editor { align-items: center; }
+                .record-review-modal .relevance-editor .form-control { flex: 1; min-width: 0; }
+                .record-review-modal .relevance-save-state { display: inline-flex; align-items: center; min-width: 68px; }
+                .record-review-modal .relevance-editor.is-saved .relevance-save-state { color: #18845c; }
+                .record-review-modal .relevance-editor.has-error .relevance-save-state { color: #c03946; }
+                .record-review-modal textarea.form-control { min-height: 124px; resize: vertical; border-color: #d9e2ec; border-radius: 9px; font-size: .84rem; line-height: 1.5; }
+                .record-review-modal textarea.form-control:focus { border-color: #72aee6; box-shadow: 0 0 0 .15rem rgba(52, 140, 212, .12); }
+                .record-remarks-editor { margin: 0; }
+                .record-remarks-actions { display: flex; align-items: center; justify-content: flex-end; gap: .65rem; padding-top: .8rem; }
                 .remarks-save-state { color: #6c757d; font-size: .73rem; line-height: 1.25; }
                 .record-remarks-editor.is-saving textarea,
                 .record-remarks-editor.is-saving .btn { opacity: .65; cursor: wait; }
                 .record-remarks-editor.is-saved .remarks-save-state { color: #18845c; }
                 .record-remarks-editor.has-error .remarks-save-state { color: #c03946; }
-                .swal2-popup.relevance-feedback-modal { border-radius: 14px; }
-                .relevance-feedback-copy { color: #52606d; font-size: .82rem; line-height: 1.5; text-align: left; }
-                .relevance-feedback-total { margin-top: .7rem; padding: .55rem .65rem; border-radius: 7px; background: #f2f7ff; color: #244b78; font-weight: 600; }
                 .profile-record-table .btn-lg { padding: 0; line-height: 1; }
                 @media (max-width: 767.98px) {
                     .tab-content { padding-left: .75rem !important; padding-right: .75rem !important; }
@@ -212,6 +396,11 @@
                     .profile-record-table tbody td.record-primary::before { display: none; }
                     .profile-record-table tbody td[colspan] { display: block; }
                     .profile-record-table tbody td[colspan]::before { display: none; }
+                    .profile-record-table tbody tr.has-record-note { border-bottom: 0; border-radius: 12px 12px 0 0; box-shadow: none; }
+                    .profile-record-table tbody tr.record-note-row { margin-top: -.75rem; padding: 0 .8rem .75rem; border-top: 0; border-radius: 0 0 12px 12px; box-shadow: 0 4px 12px rgba(31,45,61,.05); }
+                    .profile-record-table tbody tr.record-note-row td { padding: 0; border: 0; }
+                    .record-note { grid-template-columns: 30px minmax(0, 1fr); padding: .65rem .7rem; }
+                    .record-note-icon { width: 29px; height: 29px; }
                     .relevance-editor { align-items: stretch; flex-direction: column; }
                     .relevance-editor .form-control { width: 100%; }
                     .vacancy-totals { grid-template-columns: 1fr; }
@@ -676,16 +865,16 @@
                                                             <?php endif; ?>
                                                         </div>
                                                         <div class="record-section-body">
-                                                            <?= $record_context_strip(); ?>
+                                                            <?= $record_context_strip('training', $relevance_counts($training, 'training', 'trainingID'), '#trainings'); ?>
 
                                                             <div class="table-responsive">
                                                                 <table class="table table-hover profile-record-table mb-0">
                                                                     <thead class="thead-light">
                                                                         <tr>
-                                                                            <th style="width:29%">Training</th>
-                                                                            <th style="width:19%">Inclusive Schedule</th>
-                                                                            <th style="width:15%" class="text-center">Hours &amp; File</th>
-                                                                            <th style="width:37%">Evaluator Review</th>
+                                                                            <th style="width:35%">Training</th>
+                                                                            <th style="width:23%">Inclusive Schedule</th>
+                                                                            <th style="width:18%" class="text-center">Hours &amp; File</th>
+                                                                            <th style="width:24%">Evaluator Review</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -705,18 +894,18 @@
                                                                                 $trainingTotal += (float) $row->noHours;
                                                                             }
                                                                         ?>
-                                                                        <tr>
+                                                                        <tr class="<?= $trainingRemarks !== '' ? 'has-record-note' : ''; ?>">
                                                                             <td class="record-primary" data-label="Training">
                                                                                 <div class="record-title"><?= html_escape($row->trainingTitle); ?></div>
                                                                                 <div class="record-meta">Saved <?= $saved_stamp($row->created_at ?? null, $row->updated_at ?? null); ?></div>
                                                                                 <div class="record-actions mt-2">
                                                                                     <?php if($detailsEditable): ?>
-                                                                                        <a data-toggle="modal" <?= $trainingAttrs; ?> class="open-training-edit btn btn-sm btn-info record-edit-button" href=".training-edit"><i class="mdi mdi-pencil-outline mr-1"></i>Edit details</a>
+                                                                                        <a data-toggle="modal" <?= $trainingAttrs; ?> class="open-training-edit record-icon-button" href=".training-edit" title="Edit training details" aria-label="Edit training details"><i class="mdi mdi-pencil-outline"></i></a>
                                                                                     <?php endif; ?>
                                                                                     <?php if($canDeleteTrainings): ?>
-                                                                                        <a onclick="return confirm('Delete this training and its attachment?')" href="<?= base_url(); ?>Page/training_delete_staff/<?= $trainingId; ?>" class="btn btn-sm btn-outline-danger"><i class="mdi mdi-trash-can-outline mr-1"></i>Delete</a>
+                                                                                        <a onclick="return confirm('Delete this training and its attachment?')" href="<?= base_url(); ?>Page/training_delete_staff/<?= $trainingId; ?>" class="record-icon-button is-danger" title="Delete training" aria-label="Delete training"><i class="mdi mdi-trash-can-outline"></i></a>
                                                                                     <?php elseif(!$detailsEditable): ?>
-                                                                                        <span class="text-muted"><i class="mdi mdi-lock-outline mr-1"></i>Read-only</span>
+                                                                                        <span class="record-readonly"><i class="mdi mdi-lock-outline"></i>Read-only</span>
                                                                                     <?php endif; ?>
                                                                                 </div>
                                                                             </td>
@@ -734,34 +923,10 @@
                                                                                 </div>
                                                                             </td>
                                                                             <td class="evaluation-cell" data-label="Evaluator Review">
-                                                                                <?php $status = $relevance_label($trainingStat); ?>
-                                                                                <?php if($selectedJobId < 1): ?>
-                                                                                    <span class="badge badge-secondary">No vacancy selected</span>
-                                                                                <?php elseif($canRateSelectedVacancy): ?>
-                                                                                    <?= form_open('Page/update_record_relevance', array('class' => 'relevance-editor js-relevance-form')); ?>
-                                                                                        <select name="relevance" class="form-control custom-select js-relevance-select relevance-status-<?= $trainingStat; ?>" data-previous-value="training:<?= $trainingId; ?>:<?= $selectedJobId; ?>:<?= $trainingStat; ?>" aria-label="Training relevance for <?= html_escape($selectedVacancyLabel); ?>">
-                                                                                            <option value="training:<?= $trainingId; ?>:<?= $selectedJobId; ?>:0" <?= $trainingStat === 0 ? 'selected' : ''; ?>>No Action</option>
-                                                                                            <option value="training:<?= $trainingId; ?>:<?= $selectedJobId; ?>:1" <?= $trainingStat === 1 ? 'selected' : ''; ?>>Relevant</option>
-                                                                                            <option value="training:<?= $trainingId; ?>:<?= $selectedJobId; ?>:2" <?= $trainingStat === 2 ? 'selected' : ''; ?>>Not Relevant</option>
-                                                                                        </select>
-                                                                                        <span class="relevance-save-state"><i class="mdi mdi-loading mdi-spin"></i>Saving</span>
-                                                                                    </form>
-                                                                                    <?= form_open('Page/update_record_remarks', array('class' => 'record-remarks-editor js-record-remarks-form')); ?>
-                                                                                        <input type="hidden" name="record_type" value="training">
-                                                                                        <input type="hidden" name="record_id" value="<?= $trainingId; ?>">
-                                                                                        <input type="hidden" name="job_id" value="<?= $selectedJobId; ?>">
-                                                                                        <label class="record-remarks-label" for="training-remarks-<?= $trainingId; ?>">Evaluator Remarks</label>
-                                                                                        <textarea id="training-remarks-<?= $trainingId; ?>" name="remarks" maxlength="2000" rows="2" class="form-control" placeholder="Add remarks for this training..." aria-label="Evaluator remarks for <?= html_escape((string) $row->trainingTitle); ?>"><?= html_escape($trainingRemarks); ?></textarea>
-                                                                                        <div class="record-remarks-actions">
-                                                                                            <button type="submit" class="btn btn-sm btn-outline-info"><i class="mdi mdi-content-save-outline mr-1"></i>Save Remarks</button>
-                                                                                            <span class="remarks-save-state" role="status" aria-live="polite"></span>
-                                                                                        </div>
-                                                                                    </form>
-                                                                                <?php else: ?>
-                                                                                    <span class="badge badge-<?= $status[1]; ?>"><?= $status[0]; ?></span>
-                                                                                <?php endif; ?>
+                                                                                <?= $review_cell('training', $trainingId, $trainingStat, $trainingRemarks, (string) $row->trainingTitle); ?>
                                                                             </td>
                                                                         </tr>
+                                                                        <?= $review_note('training', $trainingId, $trainingStat, $trainingRemarks); ?>
                                                                         <?php } ?>
                                                                         <?php if(empty($training)): ?>
                                                                             <tr><td colspan="4" class="text-center text-muted py-4">No trainings or seminars recorded yet.</td></tr>
@@ -797,16 +962,16 @@
                                                             <?php endif; ?>
                                                         </div>
                                                         <div class="record-section-body">
-                                                            <?= $record_context_strip(); ?>
+                                                            <?= $record_context_strip('experience', $relevance_counts($experience, 'experience', 'id'), '#work'); ?>
 
                                                             <div class="table-responsive">
                                                                 <table class="table table-hover profile-record-table mb-0">
                                                                     <thead class="thead-light">
                                                                         <tr>
-                                                                            <th style="width:29%">Experience</th>
-                                                                            <th style="width:19%">Inclusive Dates</th>
-                                                                            <th style="width:15%" class="text-center">Duration &amp; File</th>
-                                                                            <th style="width:37%">Evaluator Review</th>
+                                                                            <th style="width:35%">Experience</th>
+                                                                            <th style="width:23%">Inclusive Dates</th>
+                                                                            <th style="width:18%" class="text-center">Duration &amp; File</th>
+                                                                            <th style="width:24%">Evaluator Review</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -831,19 +996,19 @@
                                                                                 $experienceTotal += $xpSpan;
                                                                             }
                                                                         ?>
-                                                                        <tr>
+                                                                        <tr class="<?= $experienceRemarks !== '' ? 'has-record-note' : ''; ?>">
                                                                             <td class="record-primary" data-label="Experience">
                                                                                 <div class="record-title"><?= $xpJobTitle !== '' ? html_escape($xpJobTitle) : '<span class="text-warning">Job title not set</span>'; ?></div>
                                                                                 <div class="text-muted mt-1"><?= html_escape($row->title); ?></div>
                                                                                 <div class="record-meta">Saved <?= $saved_stamp($row->created_at ?? null, $row->updated_at ?? null); ?></div>
                                                                                 <div class="record-actions mt-2">
                                                                                     <?php if($detailsEditable): ?>
-                                                                                        <a data-toggle="modal" <?= $experienceAttrs; ?> class="open-experience-edit btn btn-sm btn-info record-edit-button" href=".experience-edit"><i class="mdi mdi-pencil-outline mr-1"></i>Edit details</a>
+                                                                                        <a data-toggle="modal" <?= $experienceAttrs; ?> class="open-experience-edit record-icon-button" href=".experience-edit" title="Edit work experience details" aria-label="Edit work experience details"><i class="mdi mdi-pencil-outline"></i></a>
                                                                                     <?php endif; ?>
                                                                                     <?php if($recordsOpen): ?>
-                                                                                        <a onclick="return confirm('Delete this experience and its attachment?')" href="<?= base_url(); ?>Page/experience_delete/<?= $experienceId; ?>" class="btn btn-sm btn-outline-danger"><i class="mdi mdi-trash-can-outline mr-1"></i>Delete</a>
+                                                                                        <a onclick="return confirm('Delete this experience and its attachment?')" href="<?= base_url(); ?>Page/experience_delete/<?= $experienceId; ?>" class="record-icon-button is-danger" title="Delete work experience" aria-label="Delete work experience"><i class="mdi mdi-trash-can-outline"></i></a>
                                                                                     <?php elseif(!$detailsEditable): ?>
-                                                                                        <span class="text-muted"><i class="mdi mdi-lock-outline mr-1"></i>Read-only</span>
+                                                                                        <span class="record-readonly"><i class="mdi mdi-lock-outline"></i>Read-only</span>
                                                                                     <?php endif; ?>
                                                                                 </div>
                                                                             </td>
@@ -861,34 +1026,10 @@
                                                                                 </div>
                                                                             </td>
                                                                             <td class="evaluation-cell" data-label="Evaluator Review">
-                                                                                <?php $status = $relevance_label($experienceStat); ?>
-                                                                                <?php if($selectedJobId < 1): ?>
-                                                                                    <span class="badge badge-secondary">No vacancy selected</span>
-                                                                                <?php elseif($canRateSelectedVacancy): ?>
-                                                                                    <?= form_open('Page/update_record_relevance', array('class' => 'relevance-editor js-relevance-form')); ?>
-                                                                                        <select name="relevance" class="form-control custom-select js-relevance-select relevance-status-<?= $experienceStat; ?>" data-previous-value="experience:<?= $experienceId; ?>:<?= $selectedJobId; ?>:<?= $experienceStat; ?>" aria-label="Experience relevance for <?= html_escape($selectedVacancyLabel); ?>">
-                                                                                            <option value="experience:<?= $experienceId; ?>:<?= $selectedJobId; ?>:0" <?= $experienceStat === 0 ? 'selected' : ''; ?>>No Action</option>
-                                                                                            <option value="experience:<?= $experienceId; ?>:<?= $selectedJobId; ?>:1" <?= $experienceStat === 1 ? 'selected' : ''; ?>>Relevant</option>
-                                                                                            <option value="experience:<?= $experienceId; ?>:<?= $selectedJobId; ?>:2" <?= $experienceStat === 2 ? 'selected' : ''; ?>>Not Relevant</option>
-                                                                                        </select>
-                                                                                        <span class="relevance-save-state"><i class="mdi mdi-loading mdi-spin"></i>Saving</span>
-                                                                                    </form>
-                                                                                    <?= form_open('Page/update_record_remarks', array('class' => 'record-remarks-editor js-record-remarks-form')); ?>
-                                                                                        <input type="hidden" name="record_type" value="experience">
-                                                                                        <input type="hidden" name="record_id" value="<?= $experienceId; ?>">
-                                                                                        <input type="hidden" name="job_id" value="<?= $selectedJobId; ?>">
-                                                                                        <label class="record-remarks-label" for="experience-remarks-<?= $experienceId; ?>">Evaluator Remarks</label>
-                                                                                        <textarea id="experience-remarks-<?= $experienceId; ?>" name="remarks" maxlength="2000" rows="2" class="form-control" placeholder="Add remarks for this work experience..." aria-label="Evaluator remarks for <?= html_escape($xpJobTitle !== '' ? $xpJobTitle : (string) $row->title); ?>"><?= html_escape($experienceRemarks); ?></textarea>
-                                                                                        <div class="record-remarks-actions">
-                                                                                            <button type="submit" class="btn btn-sm btn-outline-info"><i class="mdi mdi-content-save-outline mr-1"></i>Save Remarks</button>
-                                                                                            <span class="remarks-save-state" role="status" aria-live="polite"></span>
-                                                                                        </div>
-                                                                                    </form>
-                                                                                <?php else: ?>
-                                                                                    <span class="badge badge-<?= $status[1]; ?>"><?= $status[0]; ?></span>
-                                                                                <?php endif; ?>
+                                                                                <?= $review_cell('experience', $experienceId, $experienceStat, $experienceRemarks, $xpJobTitle !== '' ? $xpJobTitle : (string) $row->title); ?>
                                                                             </td>
                                                                         </tr>
+                                                                        <?= $review_note('experience', $experienceId, $experienceStat, $experienceRemarks); ?>
                                                                         <?php } ?>
                                                                         <?php if(empty($experience)): ?>
                                                                             <tr><td colspan="4" class="text-center text-muted py-4">No work experience recorded yet.</td></tr>
@@ -1039,6 +1180,60 @@
 
                 </div>
                 <!-- end content -->
+
+                                        <?php if($canRateSelectedVacancy): ?>
+                                        <div class="modal fade record-review-modal" tabindex="-1" role="dialog" aria-labelledby="recordReviewLabel" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <div class="review-modal-heading">
+                                                            <span class="review-modal-icon"><i class="mdi mdi-clipboard-check-outline"></i></span>
+                                                            <div>
+                                                                <div class="review-modal-kicker" id="record_review_type">Evaluator Review</div>
+                                                                <h5 class="review-modal-title" id="recordReviewLabel">Review record</h5>
+                                                            </div>
+                                                        </div>
+                                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                                    </div>
+                                                    <div class="modal-body p-3 p-md-4">
+                                                        <div class="review-vacancy-context">
+                                                            <i class="mdi mdi-briefcase-search-outline font-18"></i>
+                                                            <div><small class="d-block text-muted">Reviewing for vacancy</small><strong><?= html_escape($selectedVacancyLabel); ?></strong></div>
+                                                        </div>
+
+                                                        <div class="review-form-section">
+                                                            <label class="review-field-label" for="record_review_relevance">Relevance</label>
+                                                            <?= form_open('Page/update_record_relevance', array('class' => 'relevance-editor js-relevance-form')); ?>
+                                                                <select name="relevance" id="record_review_relevance" class="form-control custom-select js-relevance-select relevance-status-0" aria-label="Record relevance for <?= html_escape($selectedVacancyLabel); ?>">
+                                                                    <option value="">No Action</option>
+                                                                    <option value="">Relevant</option>
+                                                                    <option value="">Not Relevant</option>
+                                                                </select>
+                                                                <span class="relevance-save-state" role="status" aria-live="polite"></span>
+                                                            </form>
+                                                            <small class="form-text text-muted">Changes to relevance save automatically.</small>
+                                                        </div>
+
+                                                        <?= form_open('Page/update_record_remarks', array('class' => 'record-remarks-editor js-record-remarks-form review-form-section')); ?>
+                                                            <input type="hidden" name="record_type" id="record_review_record_type" value="">
+                                                            <input type="hidden" name="record_id" id="record_review_record_id" value="">
+                                                            <input type="hidden" name="job_id" id="record_review_job_id" value="">
+                                                            <div class="review-field-header">
+                                                                <label class="review-field-label mb-0" for="record_review_remarks">Evaluator Remarks</label>
+                                                                <span class="review-character-count"><span id="record_review_count">0</span> / 2,000</span>
+                                                            </div>
+                                                            <textarea id="record_review_remarks" name="remarks" maxlength="2000" rows="5" class="form-control mt-2" placeholder="Add a concise note about this record..."></textarea>
+                                                            <div class="record-remarks-actions">
+                                                                <span class="remarks-save-state mr-auto" role="status" aria-live="polite"></span>
+                                                                <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Close</button>
+                                                                <button type="submit" class="btn btn-info btn-sm px-3"><i class="mdi mdi-content-save-outline mr-1"></i>Save Remarks</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
 
                                         <div class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="addTrainingLabel" aria-hidden="true">
                                             <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -1265,6 +1460,8 @@
                                             // Plain JS throughout: jQuery is not loaded until the footer runs.
                                             (function () {
 
+                                                var activeReviewTrigger = null;
+
                                                 // Handles both the date-only experience fields and the training
                                                 // fields, which carry a time (2025-01-15T08:00).
                                                 function parseDate(value) {
@@ -1420,6 +1617,57 @@
                                                     document.getElementById('training_edit_hours').value = trigger.getAttribute('data-hours') || '';
                                                 });
 
+                                                // One reusable modal keeps the table compact while retaining the
+                                                // record and vacancy context for every save.
+                                                document.addEventListener('click', function (e) {
+                                                    var trigger = e.target && e.target.closest ? e.target.closest('.open-record-review') : null;
+                                                    if (!trigger) return;
+
+                                                    activeReviewTrigger = trigger;
+
+                                                    var type = trigger.getAttribute('data-record-type') || '';
+                                                    var recordId = trigger.getAttribute('data-record-id') || '';
+                                                    var jobId = trigger.getAttribute('data-job-id') || '';
+                                                    var stat = trigger.getAttribute('data-stat') || '0';
+                                                    var encodedRemarks = trigger.getAttribute('data-remarks') || '';
+                                                    var remarks = '';
+                                                    try { remarks = decodeURIComponent(encodedRemarks); } catch (ignore) { remarks = encodedRemarks; }
+                                                    var prefix = type + ':' + recordId + ':' + jobId + ':';
+                                                    var select = document.getElementById('record_review_relevance');
+                                                    var textarea = document.getElementById('record_review_remarks');
+                                                    var remarkForm = textarea ? textarea.closest('.js-record-remarks-form') : null;
+                                                    var relevanceForm = select ? select.closest('.js-relevance-form') : null;
+
+                                                    document.getElementById('recordReviewLabel').textContent = trigger.getAttribute('data-title') || 'Review record';
+                                                    document.getElementById('record_review_type').textContent = type === 'training' ? 'Training Review' : 'Work Experience Review';
+                                                    document.getElementById('record_review_record_type').value = type;
+                                                    document.getElementById('record_review_record_id').value = recordId;
+                                                    document.getElementById('record_review_job_id').value = jobId;
+
+                                                    if (select) {
+                                                        select.options[0].value = prefix + '0';
+                                                        select.options[1].value = prefix + '1';
+                                                        select.options[2].value = prefix + '2';
+                                                        select.value = prefix + stat;
+                                                        select.setAttribute('data-previous-value', select.value);
+                                                        paintRelevance(select, stat);
+                                                    }
+
+                                                    if (textarea) textarea.value = remarks;
+                                                    updateRemarkCount(textarea);
+
+                                                    if (relevanceForm) {
+                                                        relevanceForm.classList.remove('is-saving', 'is-saved', 'has-error');
+                                                        var relevanceState = relevanceForm.querySelector('.relevance-save-state');
+                                                        if (relevanceState) relevanceState.textContent = '';
+                                                    }
+                                                    if (remarkForm) {
+                                                        remarkForm.classList.remove('is-saving', 'is-saved', 'has-error');
+                                                        var remarksState = remarkForm.querySelector('.remarks-save-state');
+                                                        if (remarksState) remarksState.textContent = '';
+                                                    }
+                                                });
+
                                                 function relevanceStatus(value) {
                                                     var parts = String(value || '').split(':');
                                                     return parts.length === 4 ? parts[3] : '0';
@@ -1430,35 +1678,76 @@
                                                     select.classList.add('relevance-status-' + stat);
                                                 }
 
+                                                function relevancePresentation(stat) {
+                                                    if (String(stat) === '1') return { label: 'Relevant', tone: 'success' };
+                                                    if (String(stat) === '2') return { label: 'Not Relevant', tone: 'danger' };
+                                                    return { label: 'No Action', tone: 'secondary' };
+                                                }
+
+                                                function updateReviewSummary(trigger, stat) {
+                                                    if (!trigger) return;
+
+                                                    var oldStat = trigger.getAttribute('data-stat') || '0';
+                                                    var type = trigger.getAttribute('data-record-type') || '';
+                                                    trigger.setAttribute('data-stat', String(stat));
+                                                    var summary = trigger.closest('.review-summary');
+                                                    var badge = summary ? summary.querySelector('.review-status-badge') : null;
+                                                    if (!badge) return;
+
+                                                    var presentation = relevancePresentation(stat);
+                                                    badge.classList.remove('badge-secondary', 'badge-success', 'badge-danger');
+                                                    badge.classList.add('badge-' + presentation.tone);
+                                                    badge.textContent = presentation.label;
+
+                                                    // Keep the remark tint and the section counters in step.
+                                                    var key = summary.getAttribute('data-review-row');
+                                                    var note = key ? document.querySelector('[data-review-note="' + key + '"] .record-note') : null;
+                                                    if (note) {
+                                                        note.classList.remove('tone-0', 'tone-1', 'tone-2');
+                                                        note.classList.add('tone-' + stat);
+                                                        var noteStatus = note.querySelector('.record-note-status');
+                                                        if (noteStatus) noteStatus.textContent = presentation.label;
+                                                    }
+                                                    if (String(oldStat) !== String(stat)) {
+                                                        var from = document.querySelector('[data-relevance-count="' + type + ':' + oldStat + '"]');
+                                                        var to = document.querySelector('[data-relevance-count="' + type + ':' + stat + '"]');
+                                                        if (from) from.textContent = Math.max(0, (parseInt(from.textContent, 10) || 0) - 1);
+                                                        if (to) to.textContent = (parseInt(to.textContent, 10) || 0) + 1;
+                                                    }
+                                                }
+
+                                                document.addEventListener('change', function (e) {
+                                                    var sw = e.target;
+                                                    if (sw && sw.classList && sw.classList.contains('js-vacancy-switch') && sw.value) {
+                                                        window.location.href = sw.value;
+                                                    }
+                                                });
+
+                                                function updateRemarksSummary(trigger, remarks) {
+                                                    if (!trigger) return;
+
+                                                    trigger.setAttribute('data-remarks', encodeURIComponent(remarks || ''));
+                                                    var summary = trigger.closest('.review-summary');
+                                                    var key = summary ? summary.getAttribute('data-review-row') : '';
+                                                    var noteRow = key ? document.querySelector('[data-review-note="' + key + '"]') : null;
+                                                    var recordRow = summary ? summary.closest('tr') : null;
+                                                    var noteText = noteRow ? noteRow.querySelector('.record-note-text') : null;
+                                                    var hasRemarks = String(remarks || '').trim() !== '';
+
+                                                    if (noteText) noteText.textContent = remarks || '';
+                                                    if (noteRow) noteRow.classList.toggle('d-none', !hasRemarks);
+                                                    if (recordRow) recordRow.classList.toggle('has-record-note', hasRemarks);
+                                                }
+
+                                                function updateRemarkCount(textarea) {
+                                                    var counter = document.getElementById('record_review_count');
+                                                    if (counter) counter.textContent = textarea ? String(textarea.value.length) : '0';
+                                                }
+
                                                 function safeMarkup(value) {
                                                     var element = document.createElement('span');
                                                     element.textContent = String(value || '');
                                                     return element.innerHTML;
-                                                }
-
-                                                function showRelevanceMessage(data, success) {
-                                                    var message = data && data.message
-                                                        ? data.message
-                                                        : 'The relevance change could not be saved. Your previous selection was restored.';
-                                                    var total = data && data.total
-                                                        ? '<div class="relevance-feedback-total">' + safeMarkup(data.total) + '</div>'
-                                                        : '';
-
-                                                    if (window.Swal && typeof window.Swal.fire === 'function') {
-                                                        window.Swal.fire({
-                                                            title: safeMarkup((data && data.title) || (success ? 'Relevance updated' : 'Unable to save relevance')),
-                                                            html: '<div class="relevance-feedback-copy">' + safeMarkup(message) + total + '</div>',
-                                                            type: success ? 'success' : 'error',
-                                                            width: 410,
-                                                            padding: '1.2rem',
-                                                            customClass: 'relevance-feedback-modal',
-                                                            showCloseButton: true,
-                                                            confirmButtonText: 'OK',
-                                                            confirmButtonColor: '#348cd4'
-                                                        });
-                                                    } else {
-                                                        window.alert(message + (data && data.total ? '\n\n' + data.total : ''));
-                                                    }
                                                 }
 
                                                 // Relevance saves as soon as an evaluator changes the selection.
@@ -1471,8 +1760,12 @@
 
                                                     var previous = select.getAttribute('data-previous-value') || select.value;
                                                     var formData = new FormData(form);
+                                                    var state = form.querySelector('.relevance-save-state');
+                                                    var reviewTrigger = activeReviewTrigger;
+                                                    form.classList.remove('is-saved', 'has-error');
                                                     form.classList.add('is-saving');
                                                     select.disabled = true;
+                                                    if (state) state.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-1"></i>Saving';
 
                                                     if (!window.fetch) {
                                                         select.disabled = false;
@@ -1499,18 +1792,18 @@
 
                                                         select.setAttribute('data-previous-value', select.value);
                                                         paintRelevance(select, String(data.stat));
+                                                        updateReviewSummary(reviewTrigger, data.stat);
+                                                        form.classList.add('is-saved');
+                                                        if (state) state.innerHTML = '<i class="mdi mdi-check-circle-outline mr-1"></i>Saved';
 
                                                         var total = document.querySelector('[data-relevance-total="' + data.record_type + '"]');
                                                         if (total && data.total_value) total.textContent = data.total_value;
-
-                                                        showRelevanceMessage(data, true);
                                                     }).catch(function (error) {
                                                         select.value = previous;
                                                         paintRelevance(select, relevanceStatus(previous));
-                                                        showRelevanceMessage(error.responseData || {
-                                                            title: 'Unable to save relevance',
-                                                            message: 'The relevance change could not be saved. Your previous selection was restored. Please check your connection and try again.'
-                                                        }, false);
+                                                        form.classList.add('has-error');
+                                                        var responseData = error.responseData || {};
+                                                        if (state) state.textContent = responseData.message || 'Save failed';
                                                     }).then(function () {
                                                         select.disabled = false;
                                                         form.classList.remove('is-saving');
@@ -1532,6 +1825,7 @@
                                                     var button = form.querySelector('button[type="submit"]');
                                                     var state = form.querySelector('.remarks-save-state');
                                                     var formData = new FormData(form);
+                                                    var reviewTrigger = activeReviewTrigger;
 
                                                     form.classList.remove('is-saved', 'has-error');
                                                     form.classList.add('is-saving');
@@ -1555,6 +1849,8 @@
                                                         }
 
                                                         if (textarea && typeof data.remarks === 'string') textarea.value = data.remarks;
+                                                        updateRemarksSummary(reviewTrigger, data.remarks || '');
+                                                        updateRemarkCount(textarea);
                                                         form.classList.add('is-saved');
                                                         if (state) state.innerHTML = '<i class="mdi mdi-check-circle-outline mr-1"></i>' + safeMarkup(data.message || 'Remarks saved.');
                                                     }).catch(function (error) {
@@ -1576,6 +1872,7 @@
                                                     form.classList.remove('is-saved', 'has-error');
                                                     var state = form.querySelector('.remarks-save-state');
                                                     if (state) state.textContent = '';
+                                                    updateRemarkCount(textarea);
                                                 });
                                             })();
                                         </script>
