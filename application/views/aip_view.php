@@ -62,8 +62,8 @@ if ($submitted) {
     }
 }
 
-// Unlock request state for this batch. The original rules are kept: no new request
-// while one is pending, and at most three granted requests per batch.
+// Only one unlock request may be pending at a time. Once it is approved or denied,
+// the school may submit another request whenever the plan is locked again.
 $requestPending  = !empty($aip_r) && (int) $aip_r->stat === 0;
 
 // stat 2 = the reviewer turned the request down. The plan was never unlocked, so it
@@ -72,14 +72,7 @@ $requestDenied = !empty($aip_r) && (int) $aip_r->stat === 2;
 if ($requestDenied) {
     $canEdit = false;
 }
-$grantedRequests = 0;
-if (!empty($aip_r) && !$requestPending) {
-    $grantedRequests = $this->SGODModel
-        ->count_all_two_cond('sgod_aip_request', 'stat', 1, 'b_code', $bcode)
-        ->num_rows();
-}
-$requestCapReached = !empty($aip_r) && !$requestPending && $grantedRequests > 2;
-$canRequestUnlock  = $submitted && !$canEdit && !$requestPending && !$requestCapReached;
+$canRequestUnlock = $submitted && !$canEdit && !$requestPending;
 
 // Which submit action applies depends on the fund the batch was allocated from.
 $allocType  = isset($alloc->alloc_type) ? $alloc->alloc_type : '';
@@ -238,14 +231,6 @@ foreach ($data as $row) {
                                                     <div class="mt-1"><strong>Reason:</strong> <em><?= html_escape($aip_r->deny_remarks); ?></em></div>
                                                 <?php endif; ?>
                                                 <div class="mt-1">Your request: <em><?= html_escape($aip_r->remarks); ?></em></div>
-                                            </div>
-                                        </div>
-                                    <?php elseif ($requestCapReached) : ?>
-                                        <div class="ap-note mt-3 mb-0">
-                                            <i class="mdi mdi-lock-outline"></i>
-                                            <div>
-                                                <strong>No more unlock requests for this batch.</strong>
-                                                This plan has already been unlocked <?= (int) $grantedRequests; ?> times. Contact the SGOD Planning Unit if you still need to make a change.
                                             </div>
                                         </div>
                                     <?php elseif ($submitted && !$canEdit) : ?>

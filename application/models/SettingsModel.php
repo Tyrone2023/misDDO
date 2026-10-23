@@ -1602,7 +1602,8 @@ public function get_barangays()
 
 public function get_mis_settings()
 {
-    $this->db->select('division');
+    // RAI uses the division SDS as its appointing-officer signatory.
+    $this->db->select('division, sds, sdsPosition');
     $query = $this->db->get('mis_settings');
     return $query->row(); // Fetch a single row as an object
 }

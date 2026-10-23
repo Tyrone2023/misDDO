@@ -10412,13 +10412,55 @@ public function rqa_municipality_print_shsv2()
 
         $applicantId = (int) $this->input->post('id');
         $appId = (int) $this->input->post('appID');
+        $jobId = (int) $this->input->post('jobID');
+        $schoolId = trim((string) $this->input->post('school_id'));
         $applicant = $this->Common->one_cond_row('hris_applicant', 'id', $applicantId);
-        $application = $this->Common->one_cond_row('hris_applications', 'appID', $appId);
 
-        if (empty($applicant) || empty($application)) {
+        if (empty($applicant)) {
             show_404();
             return;
         }
+
+        // Older applicant/rating links have only applicant/job/school in the
+        // URL (for example Pages/ma/14933/73/202401), so segment 6 and the
+        // submitted appID are empty. Resolve that legacy URL to its application
+        // instead of rejecting the save with a 404.
+        $application = $appId > 0
+            ? $this->Common->one_cond_row('hris_applications', 'appID', $appId)
+            : null;
+
+        if (empty($application) && $appId <= 0 && $jobId > 0 && $schoolId !== '') {
+            $applicationQuery = $this->db
+                ->from('hris_applications')
+                ->where('jobID', $jobId)
+                ->where('pre_school', $schoolId)
+                ->group_start()
+                    ->where('applicant_id', $applicantId);
+
+            $applicantEmail = trim((string) ($applicant->empEmail ?? ''));
+            if ($applicantEmail !== '') {
+                $applicationQuery->or_where('empEmail', $applicantEmail);
+            }
+
+            $application = $applicationQuery
+                ->group_end()
+                ->order_by('appID', 'DESC')
+                ->limit(1)
+                ->get()
+                ->row();
+        }
+
+        if (empty($application)) {
+            show_404();
+            return;
+        }
+
+        $appId = (int) $application->appID;
+        $returnUrl = base_url()
+            . 'Pages/ma/' . rawurlencode((string) $applicantId)
+            . '/' . rawurlencode((string) $application->jobID)
+            . '/' . rawurlencode($schoolId !== '' ? $schoolId : (string) ($application->pre_school ?? ''))
+            . '#er';
 
         $sameApplicant = (int) ($application->applicant_id ?? 0) === $applicantId
             || (string) ($application->empEmail ?? '') === (string) ($applicant->empEmail ?? '');
@@ -10437,7 +10479,7 @@ public function rqa_municipality_print_shsv2()
 
         if (mb_strlen($type) > 45 || mb_strlen($rating) > 45) {
             $this->session->set_flashdata('danger', 'Eligibility type and rating must each be 45 characters or fewer.');
-            $this->redirect_back('#er');
+            $this->redirect_back('#er', $returnUrl);
             return;
         }
 
@@ -10446,7 +10488,7 @@ public function rqa_municipality_print_shsv2()
 
         if ($type === $oldType && $rating === $oldRating) {
             $this->session->set_flashdata('info', 'No eligibility changes were made.');
-            $this->redirect_back('#er');
+            $this->redirect_back('#er', $returnUrl);
             return;
         }
 
@@ -10459,7 +10501,7 @@ public function rqa_municipality_print_shsv2()
 
         if (!$updated) {
             $this->session->set_flashdata('danger', 'The eligibility information could not be updated. Please try again.');
-            $this->redirect_back('#er');
+            $this->redirect_back('#er', $returnUrl);
             return;
         }
 
@@ -10479,7 +10521,7 @@ public function rqa_municipality_print_shsv2()
         ]);
 
         $this->session->set_flashdata('success', 'Eligibility type and rating updated successfully.');
-        $this->redirect_back('#er');
+        $this->redirect_back('#er', $returnUrl);
     }
 
     /**

@@ -498,6 +498,7 @@ class RaiReport extends CI_Controller
         }
 
         $header = isset($payload['header']) && is_array($payload['header']) ? $payload['header'] : array();
+        $settings_defaults = $this->rai->get_report_defaults();
         $report_data = array(
             'report_month' => $report['report_month'] ?? '',
             'report_year' => $report['report_year'] ?? '',
@@ -508,8 +509,12 @@ class RaiReport extends CI_Controller
             'csc_resolution_date' => '2021-11-19',
             'certifying_officer' => $report['certifying_officer'] ?? '',
             'certifying_position' => $report['certifying_position'] ?? '',
-            'appointing_officer' => $report['appointing_officer'] ?? '',
-            'appointing_position' => $report['appointing_position'] ?? '',
+            'appointing_officer' => !empty($settings_defaults['appointing_officer'])
+                ? $settings_defaults['appointing_officer']
+                : ($report['appointing_officer'] ?? ''),
+            'appointing_position' => !empty($settings_defaults['appointing_position'])
+                ? $settings_defaults['appointing_position']
+                : ($report['appointing_position'] ?? ''),
             'remarks' => $report['remarks'] ?? ''
         );
         foreach (array('certifying_officer', 'certifying_position', 'remarks') as $field) {
@@ -1027,6 +1032,16 @@ class RaiReport extends CI_Controller
     /** Preserve submitted order and paginate every 10 applicants. */
     private function render_pages($clean_header, $clean_items, $isDraft = true, $report_id = 0)
     {
+        // Always render the appointing officer from the central MIS settings.
+        // Fall back to the report snapshot only when a setting is unavailable.
+        $settings_defaults = $this->rai->get_report_defaults();
+        if (!empty($settings_defaults['appointing_officer'])) {
+            $clean_header['appointing_officer'] = $settings_defaults['appointing_officer'];
+        }
+        if (!empty($settings_defaults['appointing_position'])) {
+            $clean_header['appointing_position'] = $settings_defaults['appointing_position'];
+        }
+
         $pages = array();
         $sequence = 1;
         $prepared_items = array();

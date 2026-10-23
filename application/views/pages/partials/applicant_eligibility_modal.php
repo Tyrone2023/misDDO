@@ -24,6 +24,8 @@ $h = static function ($value) {
                 <div class="modal-body">
                     <input type="hidden" name="id" value="<?= (int) $staff->id; ?>">
                     <input type="hidden" name="appID" value="<?= (int) $this->uri->segment(6); ?>">
+                    <input type="hidden" name="jobID" value="<?= (int) $this->uri->segment(4); ?>">
+                    <input type="hidden" name="school_id" value="<?= $h($this->uri->segment(5)); ?>">
 
                     <div class="form-group">
                         <label for="eligibilityType">Eligibility Type</label>
