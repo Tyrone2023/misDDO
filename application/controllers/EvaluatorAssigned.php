@@ -363,9 +363,17 @@ class EvaluatorAssigned extends CI_Controller
     $redirectJobId = !empty($app->jobID) ? (int)$app->jobID : $job_id;
     $redirectPreSchool = !empty($app->pre_school) ? trim((string)$app->pre_school) : $pre_school;
 
+    // Pages/ma treats segment 3 as hris_applicant.id, and record_no is not
+    // unique (several applicants share one), so land on the resolved
+    // applicant's id directly instead of bouncing through the ambiguous
+    // record_no lookup.
+    $identitySegment = ($applicant && !empty($applicant->id))
+        ? (string)(int)$applicant->id
+        : $cleanRecordNo;
+
     redirect(base_url(
         'Pages/ma/' .
-        rawurlencode($cleanRecordNo) . '/' .
+        rawurlencode($identitySegment) . '/' .
         $redirectJobId . '/' .
         rawurlencode($redirectPreSchool) . '/' .
         $appID . '/' .

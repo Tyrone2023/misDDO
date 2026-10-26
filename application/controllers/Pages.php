@@ -9978,40 +9978,41 @@ public function rqa_municipality_print_shsv2()
             return null;
         }
 
-        $lookups = ($route === 'ma_staff')
-            ? [['hris_staff', 'IDNumber'], ['hris_applicant', 'record_no'], ['hris_applicant', 'id']]
-            : [['hris_applicant', 'id'], ['hris_applicant', 'record_no'], ['hris_staff', 'IDNumber']];
-
         $row = null;
         $table = null;
 
-        foreach ($lookups as $lookup) {
-            // hris_applicant.id is an integer column; handing MySQL a record_no
-            // there matches every id = 0 row instead of nothing.
-            if ($lookup[1] === 'id' && !ctype_digit($key)) {
-                continue;
-            }
+        // The appID in segment 6 names the application this page rates, so the
+        // applicant it belongs to is authoritative. Resolve it before the id
+        // slot: hris_applicant rows can share one record_no, and a numeric
+        // record_no can collide with another applicant's id - a plain
+        // segment-3 lookup then resolves to the wrong person and the redirect
+        // below "canonicalizes" the URL onto that stranger.
+        $appId = (int) $this->uri->segment(6);
+        if ($appId > 0) {
+            $application = $this->Common->one_cond_row('hris_applications', 'appID', $appId);
 
-            $row = $this->Common->one_cond_row($lookup[0], $lookup[1], $key);
-
-            if (!empty($row)) {
-                $table = $lookup[0];
-                break;
+            if (!empty($application)) {
+                [$row, $table] = $this->applicant_of_application($application);
             }
         }
 
-        // Last resort: the appID in the URL still says whose application this is,
-        // even when the id slot holds something unusable.
-        if (empty($row) && !empty($this->uri->segment(6))) {
-            $application = $this->Common->one_cond_row('hris_applications', 'appID', $this->uri->segment(6));
+        if (empty($row)) {
+            $lookups = ($route === 'ma_staff')
+                ? [['hris_staff', 'IDNumber'], ['hris_applicant', 'record_no'], ['hris_applicant', 'id']]
+                : [['hris_applicant', 'id'], ['hris_applicant', 'record_no'], ['hris_staff', 'IDNumber']];
 
-            if (!empty($application)) {
-                $row = $this->Common->one_cond_row('hris_applicant', 'empEmail', $application->empEmail);
-                $table = 'hris_applicant';
+            foreach ($lookups as $lookup) {
+                // hris_applicant.id is an integer column; handing MySQL a record_no
+                // there matches every id = 0 row instead of nothing.
+                if ($lookup[1] === 'id' && !ctype_digit($key)) {
+                    continue;
+                }
 
-                if (empty($row)) {
-                    $row = $this->Common->one_cond_row('hris_staff', 'IDNumber', $application->empEmail);
-                    $table = 'hris_staff';
+                $row = $this->Common->one_cond_row($lookup[0], $lookup[1], $key);
+
+                if (!empty($row)) {
+                    $table = $lookup[0];
+                    break;
                 }
             }
         }
@@ -10034,6 +10035,53 @@ public function rqa_municipality_print_shsv2()
         }
 
         return $row;
+    }
+
+    /**
+     * Resolve the person an hris_applications row belongs to. applicant_id
+     * normally holds hris_applicant.id, but some rows store the record_no
+     * there instead; empEmail is the fallback and can also point at
+     * hris_staff. Returns [row, table] or [null, null].
+     */
+    private function applicant_of_application($application)
+    {
+        $applicantKey = trim((string) ($application->applicant_id ?? ''));
+        $email = trim((string) ($application->empEmail ?? ''));
+
+        if ($applicantKey !== '') {
+            if (ctype_digit($applicantKey)) {
+                $row = $this->Common->one_cond_row('hris_applicant', 'id', $applicantKey);
+                if (!empty($row)) {
+                    return [$row, 'hris_applicant'];
+                }
+            }
+
+            // record_no is not unique in practice; when several rows share it,
+            // prefer the one whose email matches the application.
+            $row = $email !== ''
+                ? $this->Common->two_cond_row('hris_applicant', 'record_no', $applicantKey, 'empEmail', $email)
+                : null;
+            if (empty($row)) {
+                $row = $this->Common->one_cond_row('hris_applicant', 'record_no', $applicantKey);
+            }
+            if (!empty($row)) {
+                return [$row, 'hris_applicant'];
+            }
+        }
+
+        if ($email !== '') {
+            $row = $this->Common->one_cond_row('hris_applicant', 'empEmail', $email);
+            if (!empty($row)) {
+                return [$row, 'hris_applicant'];
+            }
+
+            $row = $this->Common->one_cond_row('hris_staff', 'IDNumber', $email);
+            if (!empty($row)) {
+                return [$row, 'hris_staff'];
+            }
+        }
+
+        return [null, null];
     }
 
     /**
