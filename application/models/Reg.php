@@ -3782,8 +3782,13 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
       // Existing installations pre-date evaluator remarks. Keep the runtime
       // migration beside the CREATE guard so opening the profile is enough to
       // make the new field available without a manual deployment step.
+      // credited_* hold the evaluator's own figure for this vacancy (e.g. a
+      // 2-year contract with a 6-month layoff credited as 18 months). NULL
+      // means the record's computed hours/duration is credited unchanged.
       $this->Common->ensure_columns('hris_record_relevance', array(
-          'remarks' => 'TEXT NULL',
+          'remarks'         => 'TEXT NULL',
+          'credited_hours'  => 'DECIMAL(10,2) NULL DEFAULT NULL',
+          'credited_months' => 'INT UNSIGNED NULL DEFAULT NULL',
           ));
 
       // A short-lived migration copied the old global stat into every open
@@ -3889,6 +3894,8 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
      * @return array vacancies (see relevance_vacancies()),
      *               map[type][record_id][job_id] = stat,
      *               remarks[type][record_id][job_id] = evaluator note,
+     *               credited[type][record_id][job_id] = evaluator hours/months
+     *               (only where the evaluator overrode the computed value),
      *               open vacancies only
      */
     public function record_relevance_context($applicant_id, $context_job = 0){
@@ -3899,10 +3906,11 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
       $job_ids   = array_map(function ($v) { return (int) $v->jobID; }, $vacancies);
       $map       = array('training' => array(), 'experience' => array());
       $remarks   = array('training' => array(), 'experience' => array());
+      $credited  = array('training' => array(), 'experience' => array());
 
       if (!empty($job_ids)) {
         $rows = $this->db
-            ->select('record_type, record_id, job_id, stat, remarks')
+            ->select('record_type, record_id, job_id, stat, remarks, credited_hours, credited_months')
             ->where('applicant_id', (int) $applicant_id)
             // NULL identifies the temporary legacy copies made before choices
             // were strictly vacancy-specific. Only an evaluator's explicit
@@ -3916,11 +3924,16 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           if (isset($map[$row->record_type])) {
             $map[$row->record_type][(int) $row->record_id][(int) $row->job_id] = (int) $row->stat;
             $remarks[$row->record_type][(int) $row->record_id][(int) $row->job_id] = (string) ($row->remarks ?? '');
+            $value = $row->record_type === 'training' ? $row->credited_hours : $row->credited_months;
+            if ($value !== null) {
+              $credited[$row->record_type][(int) $row->record_id][(int) $row->job_id] = $row->record_type === 'training'
+                  ? (float) $value : (int) $value;
+            }
           }
         }
       }
 
-      return array('vacancies' => $vacancies, 'map' => $map, 'remarks' => $remarks);
+      return array('vacancies' => $vacancies, 'map' => $map, 'remarks' => $remarks, 'credited' => $credited);
     }
 
     /**
@@ -3962,7 +3975,7 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
 
       $summary['trainings'] = $this->db->query(
           "select t.trainingID, t.trainingTitle, t.dateStarted, t.dateFinished,
-                  t.noHours, t.file
+                  t.noHours, t.file, r.credited_hours
              from hris_trainings t
              join hris_record_relevance r
                on r.record_type = 'training'
@@ -3976,12 +3989,14 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           )->result();
 
       foreach ($summary['trainings'] as $training) {
-        $summary['training_hours'] += (float) $training->noHours;
+        $training->credit_hours = $training->credited_hours !== null
+            ? (float) $training->credited_hours : (float) $training->noHours;
+        $summary['training_hours'] += $training->credit_hours;
       }
 
       $summary['experiences'] = $this->db->query(
           "select e.id, e.title, e.position_title, e.date_from, e.date_to,
-                  e.ny, e.nm, e.file
+                  e.ny, e.nm, e.file, r.credited_months
              from hris_experience e
              join hris_record_relevance r
                on r.record_type = 'experience'
@@ -4000,9 +4015,12 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
         $to = !empty($experience->date_to) && $experience->date_to !== '0000-00-00'
             ? $experience->date_to : null;
 
-        $summary['experience_months'] += ($from && $to)
-            ? $this->experience_months($from, $to)
-            : ((int) $experience->ny * 12) + (int) $experience->nm;
+        $experience->credit_months = $experience->credited_months !== null
+            ? (int) $experience->credited_months
+            : (($from && $to)
+                ? $this->experience_months($from, $to)
+                : ((int) $experience->ny * 12) + (int) $experience->nm);
+        $summary['experience_months'] += $experience->credit_months;
       }
 
       return $summary;
@@ -4157,6 +4175,99 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           'new_value'    => $remarks,
           'description'  => ($remarks === '' ? 'Cleared' : 'Updated') . ' evaluator remarks for '
               . $src['noun'] . ' "' . ($record->{$src['title']} ?? '') . '" for '
+              . $vacancy->jobTitle . ' (vacancy #' . (int) $vacancy->jobID . '), saved ' . $now . '.',
+          ));
+
+      return '';
+    }
+
+    /**
+     * Save the evaluator's credited hours (training) or months (experience)
+     * for one record and vacancy. NULL resets it to the computed value.
+     *
+     * @return string '' when saved, otherwise why it was refused
+     */
+    public function set_record_credit($type, $record_id, $job_id, $value){
+
+      $this->ensure_record_relevance_table();
+
+      $src = $this->relevance_source($type);
+      if (!$src || (int) $record_id < 1 || (int) $job_id < 1) {
+        return 'Invalid credit request.';
+      }
+
+      $column = $type === 'training' ? 'credited_hours' : 'credited_months';
+      if ($value !== null) {
+        $value = $type === 'training' ? round((float) $value, 2) : (int) $value;
+        $limit = $type === 'training' ? 99999.99 : 1200;
+        if ($value < 0 || $value > $limit) {
+          return $type === 'training'
+              ? 'Credited hours must be between 0 and 99,999.99.'
+              : 'Credited experience must be between 0 and 100 years.';
+        }
+      }
+
+      $record = $this->Common->one_cond_row($src['table'], $src['pk'], (int) $record_id);
+      if (empty($record)) {
+        return 'That record no longer exists.';
+      }
+
+      $applicant_id = (int) $record->{$src['owner']};
+
+      if (!$this->can_set_relevance($applicant_id, (int) $job_id)) {
+        return 'You are not assigned to evaluate this applicant for that vacancy.';
+      }
+
+      $vacancy = $this->db->query(
+          "select a.appID, j.jobID, j.jobTitle
+             from hris_applications a
+             join hris_jobvacancy j on j.jobID = a.jobID
+            where a.applicant_id = ? and a.jobID = ? and j.jvStatus <> 'Closed'
+            limit 1",
+          array($applicant_id, (int) $job_id)
+          )->row();
+
+      if (empty($vacancy)) {
+        return 'Credit can only be set for an open vacancy the applicant applied for.';
+      }
+
+      $now = $this->record_stamp();
+      $by  = (int) ($this->session->id ?? 0);
+      $before = $this->db
+          ->select($column)
+          ->where('record_type', $type)
+          ->where('record_id', (int) $record_id)
+          ->where('job_id', (int) $job_id)
+          ->get('hris_record_relevance')
+          ->row();
+
+      // As with remarks, a first touch creates the row at No Action and an
+      // existing relevance choice is left untouched.
+      $saved = $this->db->query(
+          "insert into hris_record_relevance
+              (record_type, record_id, applicant_id, job_id, stat, " . $column . ", updated_by, updated_at)
+           values (?, ?, ?, ?, 0, ?, ?, ?)
+           on duplicate key update " . $column . " = values(" . $column . "), updated_by = values(updated_by), updated_at = values(updated_at)",
+          array($type, (int) $record_id, $applicant_id, (int) $job_id, $value, $by > 0 ? $by : null, $now)
+          );
+
+      if (!$saved) {
+        return 'The credited value could not be saved. Please try again.';
+      }
+
+      $unit = $type === 'training' ? ' hours' : ' months';
+      $this->Audit->log('update_' . $type, array(
+          'entity_type'  => $type,
+          'entity_table' => $src['table'],
+          'entity_id'    => (int) $record_id,
+          'app_id'       => (int) ($vacancy->appID ?? 0),
+          'applicant_id' => $applicant_id,
+          'job_id'       => (int) $vacancy->jobID,
+          'field'        => $column,
+          'old_value'    => isset($before->{$column}) ? (string) $before->{$column} : '',
+          'new_value'    => $value === null ? '' : (string) $value,
+          'description'  => ($value === null ? 'Reset credited' . $unit . ' to the computed value' : 'Credited ' . $value . $unit)
+              . ' for ' . $src['noun'] . ' "' . ($record->{$src['title']} ?? '') . '" for '
               . $vacancy->jobTitle . ' (vacancy #' . (int) $vacancy->jobID . '), saved ' . $now . '.',
           ));
 

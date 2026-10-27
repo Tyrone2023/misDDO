@@ -12744,4 +12744,84 @@ class Page extends CI_Controller
 		);
 		redirect($back);
 	}
+
+	/**
+	 * Evaluator-credited hours (training) or duration (work experience) for
+	 * one record in one vacancy. All inputs blank resets to the computed value.
+	 */
+	public function update_record_credit()
+	{
+		$typeInput = $this->input->post('record_type', true);
+		$type = is_scalar($typeInput) ? (string) $typeInput : '';
+		$recordId = (int) $this->input->post('record_id');
+		$jobId = (int) $this->input->post('job_id');
+		$anchor = $type === 'experience' ? '#work' : '#trainings';
+		$back = ($_SERVER['HTTP_REFERER'] ?? base_url()) . $anchor;
+		$isAjax = $this->input->is_ajax_request();
+
+		$fields = $type === 'training' ? array('credit_hours') : array('credit_years', 'credit_months');
+		$raw = array();
+		$error = '';
+		foreach ($fields as $field) {
+			$input = $this->input->post($field);
+			$raw[$field] = is_scalar($input) ? trim((string) $input) : '';
+			if ($raw[$field] !== '' && !is_numeric($raw[$field])) {
+				$error = 'Enter a valid number.';
+			}
+		}
+
+		$value = null;
+		if (implode('', $raw) !== '') {
+			$value = $type === 'training'
+				? (float) $raw['credit_hours']
+				: ((int) $raw['credit_years'] * 12) + (int) $raw['credit_months'];
+		}
+
+		if ($error === '') {
+			$error = $this->Reg->can_set_relevance()
+				? $this->Reg->set_record_credit($type, $recordId, $jobId, $value)
+				: 'You are not allowed to set credited values.';
+		}
+
+		if ($isAjax) {
+			$response = array(
+				'success' => $error === '',
+				'message' => $error === ''
+					? ($value === null ? 'Reset to the computed value.' : 'Credited value saved.')
+					: $error,
+				'record_type' => $type,
+				'credited' => $value,
+			);
+
+			if ($error === '') {
+				$record = $type === 'training'
+					? $this->Common->one_cond_row('hris_trainings', 'trainingID', $recordId)
+					: $this->Common->one_cond_row('hris_experience', 'id', $recordId);
+				$applicantId = $type === 'training'
+					? (int) ($record->IDNumber ?? 0)
+					: (int) ($record->id_number ?? 0);
+				$summary = $this->Reg->vacancy_relevance_summary($applicantId, $jobId);
+
+				if ($type === 'training') {
+					$hours = (float) ($summary['training_hours'] ?? 0);
+					$response['total_value'] = rtrim(rtrim(number_format($hours, 2, '.', ''), '0'), '.')
+						. ' hour' . ($hours === 1.0 ? '' : 's');
+				} else {
+					$months = (int) ($summary['experience_months'] ?? 0);
+					$response['total_value'] = intdiv($months, 12) . ' yr ' . ($months % 12) . ' mo';
+				}
+			}
+
+			$this->output
+				->set_content_type('application/json')
+				->set_output(json_encode($response));
+			return;
+		}
+
+		$this->session->set_flashdata(
+			$error === '' ? 'success' : 'danger',
+			$error === '' ? 'Credited value saved.' : $error
+		);
+		redirect($back);
+	}
 }

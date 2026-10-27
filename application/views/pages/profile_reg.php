@@ -30,6 +30,7 @@
                 $relevanceVacancies = $relevance['vacancies'] ?? array();
                 $relevanceMap       = $relevance['map'] ?? array('training' => array(), 'experience' => array());
                 $relevanceRemarks   = $relevance['remarks'] ?? array('training' => array(), 'experience' => array());
+                $relevanceCredited  = $relevance['credited'] ?? array('training' => array(), 'experience' => array());
                 $selectedVacancy    = null;
                 foreach ($relevanceVacancies as $vacancy) {
                     if (!empty($vacancy->is_context)) {
@@ -88,7 +89,7 @@
 
                 // Evaluator Review cell: status for the URL vacancy, plus the
                 // Review button for whoever may rate it.
-                $review_cell = function ($type, $id, $stat, $remarks, $title) use ($relevance_label, $selectedJobId, $selectedVacancyLabel, $canRateSelectedVacancy) {
+                $review_cell = function ($type, $id, $stat, $remarks, $title, $computed = null, $credited = null) use ($relevance_label, $selectedJobId, $selectedVacancyLabel, $canRateSelectedVacancy) {
                     if ($selectedJobId < 1) return '<span class="badge badge-secondary">No vacancy selected</span>';
                     $status = $relevance_label($stat);
                     $out = '<div class="review-summary" data-review-row="' . $type . ':' . (int) $id . ':' . $selectedJobId . '">'
@@ -101,7 +102,8 @@
                             . ' data-toggle="modal" data-target=".record-review-modal"'
                             . ' data-record-type="' . $type . '" data-record-id="' . (int) $id . '" data-job-id="' . $selectedJobId . '"'
                             . ' data-stat="' . (int) $stat . '" data-remarks="' . html_escape(rawurlencode($remarks)) . '"'
-                            . ' data-title="' . html_escape($title) . '">'
+                            . ' data-title="' . html_escape($title) . '"'
+                            . ' data-computed="' . html_escape((string) $computed) . '" data-credited="' . html_escape((string) $credited) . '">'
                             . '<i class="mdi mdi-tune-variant"></i>Review</button>';
                     }
                     return $out . '</div>';
@@ -120,6 +122,19 @@
                         . '<span class="record-note-vacancy">' . html_escape($selectedVacancyLabel) . '</span>'
                         . '</div><div class="record-note-text">' . html_escape($remarks) . '</div></div>'
                         . '</div></td></tr>';
+                };
+
+                $hours_text = function ($hours) {
+                    return rtrim(rtrim(number_format((float) $hours, 2, '.', ''), '0'), '.');
+                };
+
+                // Evaluator-credited value under the record's own figure; kept in
+                // the markup (hidden) so the review modal can fill it after a save.
+                $credited_line = function ($type, $id, $text) use ($selectedJobId) {
+                    if ($selectedJobId < 1) return '';
+                    return '<div class="record-credited' . ($text === null ? ' d-none' : '') . '" data-credit-display="' . $type . ':' . (int) $id . ':' . $selectedJobId . '"'
+                        . ' title="Credited by the evaluator for this vacancy">'
+                        . '<i class="mdi mdi-account-edit-outline"></i>Credited <span class="record-credited-value">' . html_escape((string) $text) . '</span></div>';
                 };
 
                 // Switching vacancy only changes ?jobID=; appID belongs to one job.
@@ -238,6 +253,7 @@
                 .profile-record-table a.record-editable:hover { color: #3f6ad8; border-bottom-color: #3f6ad8; }
                 .record-dates { color: #405061; font-size: .84rem; line-height: 1.65; }
                 .record-credit { font-size: 1rem; font-weight: 700; color: #2c5cc5; }
+                .record-credited { display: inline-flex; align-items: center; gap: .25rem; margin-top: .25rem; padding: .1rem .5rem; border-radius: 999px; background: #fff4e0; color: #9a5b00; font-size: .72rem; font-weight: 700; }
                 .record-file { margin-top: .45rem; }
                 .record-context-strip {
                     display: flex;
@@ -353,31 +369,97 @@
                 .record-note.tone-2 { border-color: #f3d3d7; border-left-color: #d0505d; background: #fff8f9; }
                 .record-note.tone-2 .record-note-icon { background: #fde6e9; color: #c03946; }
                 .record-note.tone-2 .record-note-status { background: #fde6e9; color: #ad3340; }
-                .record-review-modal .modal-content { overflow: hidden; border: 0; border-radius: 16px; box-shadow: 0 18px 50px rgba(23, 43, 77, .2); }
-                .record-review-modal .modal-header { align-items: flex-start; padding: 1.15rem 1.25rem; border-bottom: 1px solid #e9eef4; background: linear-gradient(135deg, #f4f9ff, #fff); }
-                .review-modal-heading { display: flex; align-items: center; gap: .75rem; }
-                .review-modal-icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 11px; background: #e7f2ff; color: #2875b9; font-size: 1.25rem; }
-                .review-modal-kicker { color: #7a8795; font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-                .review-modal-title { margin: .12rem 0 0; color: #24364b; font-size: 1rem; font-weight: 700; line-height: 1.3; }
-                .review-vacancy-context { display: flex; align-items: flex-start; gap: .5rem; margin-bottom: 1rem; padding: .65rem .75rem; border: 1px solid #dce9f7; border-radius: 9px; background: #f7fbff; color: #45627f; font-size: .78rem; }
-                .review-form-section { padding: .9rem; border: 1px solid #e4eaf1; border-radius: 11px; background: #fbfcfe; }
-                .review-form-section + .review-form-section { margin-top: .8rem; }
-                .review-field-label { display: block; margin-bottom: .4rem; color: #34465a; font-size: .78rem; font-weight: 700; }
-                .review-field-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
-                .review-character-count { color: #8a96a3; font-size: .7rem; }
-                .record-review-modal .relevance-editor { align-items: center; }
-                .record-review-modal .relevance-editor .form-control { flex: 1; min-width: 0; }
-                .record-review-modal .relevance-save-state { display: inline-flex; align-items: center; min-width: 68px; }
+                /* Evaluator review modal */
+                .record-review-modal .modal-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+                .record-review-modal .modal-body .review-form-section + .review-form-section { margin-top: 0; }
+                @media (min-width: 992px) {
+                    /* Large modal: decisions on the left, remarks beside them. */
+                    .record-review-modal .modal-body { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; }
+                    .record-review-modal .record-credit-grid { grid-template-columns: 124px minmax(0, 1fr); }
+                    .record-review-modal .input-group-text { padding: 0 .55rem; }
+                    .record-review-modal .record-remarks-editor { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; align-self: stretch; }
+                    .record-review-modal .record-remarks-editor textarea.form-control { flex: 1; min-height: 220px; }
+                }
+                .record-review-modal.fade .modal-dialog { transform: translateY(14px) scale(.985); transition: transform .22s ease-out; }
+                .record-review-modal.show .modal-dialog { transform: none; }
+                .record-review-modal .modal-content { overflow: hidden; border: 0; border-radius: 18px; background: #f6f8fb; box-shadow: 0 24px 60px rgba(23, 43, 77, .22); }
+                .record-review-modal .modal-header { position: relative; align-items: flex-start; padding: 1.25rem 1.35rem 1.1rem; border-bottom: 1px solid #e7edf4; background: #fff; }
+                .record-review-modal .modal-header::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #348cd4, #45bbe0 55%, #48b88a); }
+                .record-review-modal .modal-header .close { margin: -.35rem -.5rem 0 auto; padding: .35rem .6rem; border-radius: 9px; color: #8a96a3; opacity: 1; text-shadow: none; transition: background .15s, color .15s; }
+                .record-review-modal .modal-header .close:hover { background: #f1f4f8; color: #34465a; }
+                .review-modal-heading { display: flex; align-items: flex-start; gap: .85rem; min-width: 0; }
+                .review-modal-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 44px; border-radius: 13px; background: linear-gradient(135deg, #e6f1fd, #d9ecfb); color: #2470b3; font-size: 1.35rem; box-shadow: inset 0 0 0 1px rgba(52, 140, 212, .12); }
+                .review-modal-heading-text { min-width: 0; }
+                .review-modal-kicker { color: #348cd4; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+                .review-modal-title { margin: .15rem 0 .45rem; color: #1f3147; font-size: 1.05rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+                .review-vacancy-chip { display: inline-flex; align-items: center; gap: .35rem; max-width: 100%; padding: .22rem .65rem .22rem .5rem; border: 1px solid #dce9f7; border-radius: 999px; background: #f5f9fe; color: #3f5f80; font-size: .74rem; font-weight: 600; }
+                .review-vacancy-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .record-review-modal .modal-body { padding: 1rem 1.15rem; }
+                .review-form-section { margin: 0; padding: 1rem 1.05rem; border: 1px solid #e6ebf1; border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(23, 43, 77, .04); transition: border-color .15s, box-shadow .15s; }
+                .review-form-section:focus-within { border-color: #c7dcf1; box-shadow: 0 4px 14px rgba(52, 140, 212, .08); }
+                .review-form-section + .review-form-section { margin-top: .75rem; }
+                .review-section-head { display: flex; align-items: center; gap: .65rem; margin-bottom: .8rem; }
+                .review-section-icon { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: 0 0 30px; border-radius: 9px; background: #eef4fb; color: #3a7cc0; font-size: 1rem; }
+                .review-section-icon.is-amber { background: #fff4e0; color: #b46d00; }
+                .review-section-icon.is-violet { background: #f1edfc; color: #6a4fc4; }
+                .review-section-text { flex: 1; min-width: 0; }
+                .review-field-label { display: block; margin: 0; color: #24364b; font-size: .84rem; font-weight: 700; }
+                .review-section-hint { display: block; color: #8592a0; font-size: .72rem; line-height: 1.35; }
+                .review-character-count { color: #8a96a3; font-size: .7rem; white-space: nowrap; }
+                /* Relevance: segmented control drives the (visually hidden) select */
+                .record-review-modal form { margin: 0; }
+                .record-review-modal .relevance-editor { display: block; }
+                .review-segmented { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem; padding: .3rem; border-radius: 12px; background: #f1f4f8; }
+                .review-segment { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; min-height: 38px; padding: .35rem .5rem; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #5f6b76; font-size: .78rem; font-weight: 600; cursor: pointer; transition: background .15s, color .15s, box-shadow .15s, border-color .15s; }
+                .review-segment i { font-size: 1rem; }
+                .review-segment:hover { background: rgba(255, 255, 255, .7); color: #34465a; }
+                .review-segment:focus { outline: 0; box-shadow: 0 0 0 .15rem rgba(52, 140, 212, .25); }
+                .review-segment.is-active { background: #fff; box-shadow: 0 1px 3px rgba(23, 43, 77, .12); }
+                .review-segment[data-stat="0"].is-active { border-color: #d3dae2; color: #3f4b57; }
+                .review-segment[data-stat="1"].is-active { border-color: #9fdcc0; background: #effaf5; color: #187a55; }
+                .review-segment[data-stat="2"].is-active { border-color: #f0b8be; background: #fff4f5; color: #ad3340; }
+                .relevance-editor.is-saving .review-segment { opacity: .6; cursor: wait; pointer-events: none; }
+                .record-review-modal .relevance-save-state { display: inline-flex; align-items: center; min-height: 1rem; margin-top: .45rem; color: #348cd4; font-size: .72rem; }
+                .record-review-modal .relevance-save-state:empty { display: none; }
                 .record-review-modal .relevance-editor.is-saved .relevance-save-state { color: #18845c; }
                 .record-review-modal .relevance-editor.has-error .relevance-save-state { color: #c03946; }
-                .record-review-modal textarea.form-control { min-height: 124px; resize: vertical; border-color: #d9e2ec; border-radius: 9px; font-size: .84rem; line-height: 1.5; }
-                .record-review-modal textarea.form-control:focus { border-color: #72aee6; box-shadow: 0 0 0 .15rem rgba(52, 140, 212, .12); }
+                /* Credited hours / experience */
+                .record-credit-editor { margin: 0; }
+                .record-credit-grid { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: .65rem; align-items: stretch; }
+                .record-credit-computed { display: flex; flex-direction: column; justify-content: center; padding: .55rem .75rem; border: 1px dashed #d6dee7; border-radius: 11px; background: #f8fafc; }
+                .record-credit-computed small { color: #8592a0; font-size: .66rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+                .record-credit-computed strong { color: #2c5cc5; font-size: 1.02rem; }
+                .record-credit-inputs { display: flex; gap: .5rem; align-items: center; }
+                .record-credit-inputs .input-group { flex: 1; min-width: 0; }
+                .record-review-modal .input-group .form-control { height: 42px; border-color: #d9e2ec; border-radius: 10px 0 0 10px; font-size: .95rem; font-weight: 600; color: #24364b; }
+                .record-review-modal .input-group-text { border-color: #d9e2ec; border-radius: 0 10px 10px 0; background: #f4f7fa; color: #6b7886; font-size: .75rem; font-weight: 600; }
+                .record-review-modal .input-group .form-control:focus { border-color: #72aee6; box-shadow: 0 0 0 .15rem rgba(52, 140, 212, .12); }
+                .record-credit-note { display: flex; gap: .35rem; margin-top: .6rem; color: #7a8795; font-size: .72rem; line-height: 1.45; }
+                .record-credit-note i { color: #b46d00; }
+                .record-credit-editor.is-saving .btn,
+                .record-credit-editor.is-saving input { opacity: .65; cursor: wait; }
+                .record-credit-editor.is-saved .credit-save-state { color: #18845c; }
+                .record-credit-editor.has-error .credit-save-state { color: #c03946; }
+                /* Remarks */
+                .record-review-modal textarea.form-control { min-height: 116px; resize: vertical; border-color: #d9e2ec; border-radius: 11px; background: #fcfdfe; font-size: .85rem; line-height: 1.55; }
+                .record-review-modal textarea.form-control:focus { border-color: #72aee6; background: #fff; box-shadow: 0 0 0 .15rem rgba(52, 140, 212, .12); }
                 .record-remarks-editor { margin: 0; }
-                .record-remarks-actions { display: flex; align-items: center; justify-content: flex-end; gap: .65rem; padding-top: .8rem; }
-                .remarks-save-state { color: #6c757d; font-size: .73rem; line-height: 1.25; }
+                .record-credit-actions,
+                .record-remarks-actions { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; padding-top: .75rem; }
+                .record-review-modal .record-credit-actions .btn,
+                .record-review-modal .record-remarks-actions .btn { border-radius: 9px; font-size: .8rem; font-weight: 600; }
+                .remarks-save-state { color: #6c757d; font-size: .72rem; line-height: 1.25; }
                 .record-remarks-editor.is-saving textarea,
                 .record-remarks-editor.is-saving .btn { opacity: .65; cursor: wait; }
                 .record-remarks-editor.is-saved .remarks-save-state { color: #18845c; }
+                .record-review-modal .modal-footer { padding: .75rem 1.15rem; border-top: 1px solid #e7edf4; background: #fff; }
+                .record-review-modal .modal-footer .btn { border-radius: 9px; font-weight: 600; }
+                @media (max-width: 575.98px) {
+                    .review-segment { flex-direction: column; gap: .1rem; font-size: .72rem; }
+                    .record-credit-grid { grid-template-columns: 1fr; }
+                    .record-credit-actions .credit-save-state { flex-basis: 100%; }
+                    .record-credit-actions { flex-wrap: wrap; }
+                }
                 .record-remarks-editor.has-error .remarks-save-state { color: #c03946; }
                 .profile-record-table .btn-lg { padding: 0; line-height: 1; }
                 @media (max-width: 767.98px) {
@@ -890,8 +972,9 @@
 
                                                                             $trainingStat = (int) ($relevanceMap['training'][$trainingId][$selectedJobId] ?? 0);
                                                                             $trainingRemarks = (string) ($relevanceRemarks['training'][$trainingId][$selectedJobId] ?? '');
+                                                                            $trainingCredited = $relevanceCredited['training'][$trainingId][$selectedJobId] ?? null;
                                                                             if ($selectedJobId > 0 && $trainingStat === 1) {
-                                                                                $trainingTotal += (float) $row->noHours;
+                                                                                $trainingTotal += $trainingCredited !== null ? (float) $trainingCredited : (float) $row->noHours;
                                                                             }
                                                                         ?>
                                                                         <tr class="<?= $trainingRemarks !== '' ? 'has-record-note' : ''; ?>">
@@ -914,6 +997,7 @@
                                                                             </td>
                                                                             <td class="text-center" data-label="Credit &amp; File">
                                                                                 <div class="record-credit"><?= html_escape((string) $row->noHours); ?> hr</div>
+                                                                                <?= $credited_line('training', $trainingId, $trainingCredited !== null ? $hours_text($trainingCredited) . ' hr' : null); ?>
                                                                                 <div class="record-file">
                                                                                     <?php if(!empty($row->file)): ?>
                                                                                         <a href="<?= base_url().'uploads/trainings_staff/'.rawurlencode((string) $row->file); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="fas fa-file-pdf mr-1"></i>Certificate</a>
@@ -923,7 +1007,7 @@
                                                                                 </div>
                                                                             </td>
                                                                             <td class="evaluation-cell" data-label="Evaluator Review">
-                                                                                <?= $review_cell('training', $trainingId, $trainingStat, $trainingRemarks, (string) $row->trainingTitle); ?>
+                                                                                <?= $review_cell('training', $trainingId, $trainingStat, $trainingRemarks, (string) $row->trainingTitle, $hours_text($row->noHours), $trainingCredited !== null ? $hours_text($trainingCredited) : null); ?>
                                                                             </td>
                                                                         </tr>
                                                                         <?= $review_note('training', $trainingId, $trainingStat, $trainingRemarks); ?>
@@ -936,7 +1020,7 @@
                                                             </div>
 
                                                             <div class="vacancy-totals" aria-label="Total relevant training hours for selected vacancy">
-                                                                <?php $hoursText = rtrim(rtrim(number_format($trainingTotal, 2, '.', ''), '0'), '.'); ?>
+                                                                <?php $hoursText = $hours_text($trainingTotal); ?>
                                                                 <div class="vacancy-total-card is-context">
                                                                     <div class="vacancy-total-label"><?= $selectedJobId > 0 ? 'Total relevant hours for ' . html_escape($selectedVacancyLabel) : 'No active vacancy selected'; ?></div>
                                                                     <div class="vacancy-total-value" data-relevance-total="training"><?= $hoursText; ?> hour<?= $trainingTotal === 1.0 ? '' : 's'; ?></div>
@@ -992,8 +1076,9 @@
 
                                                                             $experienceStat = (int) ($relevanceMap['experience'][$experienceId][$selectedJobId] ?? 0);
                                                                             $experienceRemarks = (string) ($relevanceRemarks['experience'][$experienceId][$selectedJobId] ?? '');
+                                                                            $experienceCredited = $relevanceCredited['experience'][$experienceId][$selectedJobId] ?? null;
                                                                             if ($selectedJobId > 0 && $experienceStat === 1) {
-                                                                                $experienceTotal += $xpSpan;
+                                                                                $experienceTotal += $experienceCredited !== null ? (int) $experienceCredited : $xpSpan;
                                                                             }
                                                                         ?>
                                                                         <tr class="<?= $experienceRemarks !== '' ? 'has-record-note' : ''; ?>">
@@ -1017,6 +1102,7 @@
                                                                             </td>
                                                                             <td class="text-center" data-label="Duration &amp; File">
                                                                                 <div class="record-credit" title="<?= $xpFromRange ? 'Calculated from the inclusive dates.' : 'Stored duration; inclusive dates are not yet set.'; ?>"><?= intdiv($xpSpan, 12); ?> yr <?= $xpSpan % 12; ?> mo</div>
+                                                                                <?= $credited_line('experience', $experienceId, $experienceCredited !== null ? intdiv($experienceCredited, 12) . ' yr ' . ($experienceCredited % 12) . ' mo' : null); ?>
                                                                                 <div class="record-file">
                                                                                     <?php if(!empty($row->file)): ?>
                                                                                         <a href="<?= base_url().'uploads/experience/'.rawurlencode((string) $row->file); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="fas fa-file-pdf mr-1"></i>Evidence</a>
@@ -1026,7 +1112,7 @@
                                                                                 </div>
                                                                             </td>
                                                                             <td class="evaluation-cell" data-label="Evaluator Review">
-                                                                                <?= $review_cell('experience', $experienceId, $experienceStat, $experienceRemarks, $xpJobTitle !== '' ? $xpJobTitle : (string) $row->title); ?>
+                                                                                <?= $review_cell('experience', $experienceId, $experienceStat, $experienceRemarks, $xpJobTitle !== '' ? $xpJobTitle : (string) $row->title, $xpSpan, $experienceCredited); ?>
                                                                             </td>
                                                                         </tr>
                                                                         <?= $review_note('experience', $experienceId, $experienceStat, $experienceRemarks); ?>
@@ -1183,52 +1269,107 @@
 
                                         <?php if($canRateSelectedVacancy): ?>
                                         <div class="modal fade record-review-modal" tabindex="-1" role="dialog" aria-labelledby="recordReviewLabel" aria-hidden="true">
-                                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                            <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
                                                         <div class="review-modal-heading">
                                                             <span class="review-modal-icon"><i class="mdi mdi-clipboard-check-outline"></i></span>
-                                                            <div>
+                                                            <div class="review-modal-heading-text">
                                                                 <div class="review-modal-kicker" id="record_review_type">Evaluator Review</div>
                                                                 <h5 class="review-modal-title" id="recordReviewLabel">Review record</h5>
+                                                                <span class="review-vacancy-chip" title="Reviewing for <?= html_escape($selectedVacancyLabel); ?>"><i class="mdi mdi-briefcase-search-outline"></i><span><?= html_escape($selectedVacancyLabel); ?></span></span>
                                                             </div>
                                                         </div>
                                                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                                                     </div>
-                                                    <div class="modal-body p-3 p-md-4">
-                                                        <div class="review-vacancy-context">
-                                                            <i class="mdi mdi-briefcase-search-outline font-18"></i>
-                                                            <div><small class="d-block text-muted">Reviewing for vacancy</small><strong><?= html_escape($selectedVacancyLabel); ?></strong></div>
-                                                        </div>
-
+                                                    <div class="modal-body">
                                                         <div class="review-form-section">
-                                                            <label class="review-field-label" for="record_review_relevance">Relevance</label>
+                                                            <div class="review-section-head">
+                                                                <span class="review-section-icon"><i class="mdi mdi-checkbox-marked-circle-outline"></i></span>
+                                                                <div class="review-section-text">
+                                                                    <span class="review-field-label" id="record_review_relevance_label">Relevance</span>
+                                                                    <span class="review-section-hint">Saves automatically when changed.</span>
+                                                                </div>
+                                                            </div>
                                                             <?= form_open('Page/update_record_relevance', array('class' => 'relevance-editor js-relevance-form')); ?>
-                                                                <select name="relevance" id="record_review_relevance" class="form-control custom-select js-relevance-select relevance-status-0" aria-label="Record relevance for <?= html_escape($selectedVacancyLabel); ?>">
+                                                                <div class="review-segmented" role="group" aria-labelledby="record_review_relevance_label">
+                                                                    <button type="button" class="review-segment" data-stat="0" aria-pressed="false"><i class="mdi mdi-minus-circle-outline"></i>No Action</button>
+                                                                    <button type="button" class="review-segment" data-stat="1" aria-pressed="false"><i class="mdi mdi-check-circle-outline"></i>Relevant</button>
+                                                                    <button type="button" class="review-segment" data-stat="2" aria-pressed="false"><i class="mdi mdi-close-circle-outline"></i>Not Relevant</button>
+                                                                </div>
+                                                                <select name="relevance" id="record_review_relevance" class="sr-only js-relevance-select relevance-status-0" tabindex="-1" aria-hidden="true">
                                                                     <option value="">No Action</option>
                                                                     <option value="">Relevant</option>
                                                                     <option value="">Not Relevant</option>
                                                                 </select>
                                                                 <span class="relevance-save-state" role="status" aria-live="polite"></span>
                                                             </form>
-                                                            <small class="form-text text-muted">Changes to relevance save automatically.</small>
                                                         </div>
+
+                                                        <?= form_open('Page/update_record_credit', array('class' => 'record-credit-editor js-record-credit-form review-form-section')); ?>
+                                                            <input type="hidden" name="record_type" value="">
+                                                            <input type="hidden" name="record_id" value="">
+                                                            <input type="hidden" name="job_id" value="">
+                                                            <div class="review-section-head">
+                                                                <span class="review-section-icon is-amber"><i class="mdi mdi-timer-sand"></i></span>
+                                                                <div class="review-section-text">
+                                                                    <span class="review-field-label" id="record_credit_label">Relevant Hours</span>
+                                                                    <span class="review-section-hint">Credited toward this vacancy's total.</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="record-credit-grid">
+                                                                <div class="record-credit-computed">
+                                                                    <small>Computed</small>
+                                                                    <strong id="record_credit_computed">&mdash;</strong>
+                                                                </div>
+                                                                <div>
+                                                                    <div class="record-credit-inputs" data-credit-for="training">
+                                                                        <div class="input-group">
+                                                                            <input type="number" name="credit_hours" id="record_credit_hours" min="0" max="99999.99" step="0.01" class="form-control" aria-labelledby="record_credit_label">
+                                                                            <div class="input-group-append"><span class="input-group-text">hours</span></div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="record-credit-inputs" data-credit-for="experience">
+                                                                        <div class="input-group">
+                                                                            <input type="number" name="credit_years" id="record_credit_years" min="0" max="100" step="1" class="form-control" aria-label="Credited years">
+                                                                            <div class="input-group-append"><span class="input-group-text">yr</span></div>
+                                                                        </div>
+                                                                        <div class="input-group">
+                                                                            <input type="number" name="credit_months" id="record_credit_months" min="0" max="1200" step="1" class="form-control" aria-label="Credited months">
+                                                                            <div class="input-group-append"><span class="input-group-text">mo</span></div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="record-credit-note"><i class="mdi mdi-information-outline"></i><span>Adjust when the actual relevant service differs from the record (e.g. a layoff within the contract). Counts only when marked Relevant.</span></div>
+                                                            <div class="record-credit-actions">
+                                                                <span class="credit-save-state remarks-save-state mr-auto" role="status" aria-live="polite"></span>
+                                                                <button type="button" class="btn btn-light btn-sm js-credit-reset"><i class="mdi mdi-restore mr-1"></i>Use Computed</button>
+                                                                <button type="submit" class="btn btn-info btn-sm px-3"><i class="mdi mdi-content-save-outline mr-1"></i>Save</button>
+                                                            </div>
+                                                        </form>
 
                                                         <?= form_open('Page/update_record_remarks', array('class' => 'record-remarks-editor js-record-remarks-form review-form-section')); ?>
                                                             <input type="hidden" name="record_type" id="record_review_record_type" value="">
                                                             <input type="hidden" name="record_id" id="record_review_record_id" value="">
                                                             <input type="hidden" name="job_id" id="record_review_job_id" value="">
-                                                            <div class="review-field-header">
-                                                                <label class="review-field-label mb-0" for="record_review_remarks">Evaluator Remarks</label>
+                                                            <div class="review-section-head">
+                                                                <span class="review-section-icon is-violet"><i class="mdi mdi-comment-text-outline"></i></span>
+                                                                <div class="review-section-text">
+                                                                    <label class="review-field-label" for="record_review_remarks">Evaluator Remarks</label>
+                                                                    <span class="review-section-hint">Visible on the record for this vacancy.</span>
+                                                                </div>
                                                                 <span class="review-character-count"><span id="record_review_count">0</span> / 2,000</span>
                                                             </div>
-                                                            <textarea id="record_review_remarks" name="remarks" maxlength="2000" rows="5" class="form-control mt-2" placeholder="Add a concise note about this record..."></textarea>
+                                                            <textarea id="record_review_remarks" name="remarks" maxlength="2000" rows="4" class="form-control" placeholder="Add a concise note about this record..."></textarea>
                                                             <div class="record-remarks-actions">
                                                                 <span class="remarks-save-state mr-auto" role="status" aria-live="polite"></span>
-                                                                <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Close</button>
                                                                 <button type="submit" class="btn btn-info btn-sm px-3"><i class="mdi mdi-content-save-outline mr-1"></i>Save Remarks</button>
                                                             </div>
                                                         </form>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-light btn-sm px-3" data-dismiss="modal">Done</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1656,6 +1797,8 @@
                                                     if (textarea) textarea.value = remarks;
                                                     updateRemarkCount(textarea);
 
+                                                    fillCreditForm(type, recordId, jobId, trigger.getAttribute('data-computed') || '', trigger.getAttribute('data-credited') || '');
+
                                                     if (relevanceForm) {
                                                         relevanceForm.classList.remove('is-saving', 'is-saved', 'has-error');
                                                         var relevanceState = relevanceForm.querySelector('.relevance-save-state');
@@ -1668,6 +1811,121 @@
                                                     }
                                                 });
 
+                                                function monthsText(months) {
+                                                    months = parseInt(months, 10) || 0;
+                                                    return Math.floor(months / 12) + ' yr ' + (months % 12) + ' mo';
+                                                }
+
+                                                function hoursText(hours) {
+                                                    return String(Math.round((parseFloat(hours) || 0) * 100) / 100);
+                                                }
+
+                                                function fillCreditForm(type, recordId, jobId, computed, credited) {
+                                                    var form = document.querySelector('.js-record-credit-form');
+                                                    if (!form) return;
+                                                    var isTraining = type === 'training';
+
+                                                    form.elements.record_type.value = type;
+                                                    form.elements.record_id.value = recordId;
+                                                    form.elements.job_id.value = jobId;
+                                                    form.querySelector('[data-credit-for="training"]').style.display = isTraining ? '' : 'none';
+                                                    form.querySelector('[data-credit-for="experience"]').style.display = isTraining ? 'none' : '';
+                                                    document.getElementById('record_credit_label').textContent = isTraining ? 'Relevant Hours' : 'Relevant Experience';
+                                                    document.getElementById('record_credit_computed').textContent = computed === ''
+                                                        ? '\u2014' : (isTraining ? hoursText(computed) + ' hr' : monthsText(computed));
+
+                                                    // Start from the evaluator's figure, else the computed one.
+                                                    var value = credited !== '' ? credited : computed;
+                                                    document.getElementById('record_credit_hours').value = isTraining && value !== '' ? hoursText(value) : '';
+                                                    document.getElementById('record_credit_years').value = !isTraining && value !== '' ? Math.floor((parseInt(value, 10) || 0) / 12) : '';
+                                                    document.getElementById('record_credit_months').value = !isTraining && value !== '' ? (parseInt(value, 10) || 0) % 12 : '';
+
+                                                    form.classList.remove('is-saving', 'is-saved', 'has-error');
+                                                    var state = form.querySelector('.credit-save-state');
+                                                    if (state) state.textContent = credited !== '' ? 'Evaluator credit applied' : '';
+                                                }
+
+                                                function updateCreditSummary(trigger, type, credited) {
+                                                    if (!trigger) return;
+
+                                                    var hasCredit = credited !== null && credited !== '';
+                                                    trigger.setAttribute('data-credited', hasCredit ? String(credited) : '');
+                                                    var summary = trigger.closest('.review-summary');
+                                                    var key = summary ? summary.getAttribute('data-review-row') : '';
+                                                    var line = key ? document.querySelector('[data-credit-display="' + key + '"]') : null;
+                                                    if (!line) return;
+
+                                                    line.classList.toggle('d-none', !hasCredit);
+                                                    var value = line.querySelector('.record-credited-value');
+                                                    if (value) value.textContent = !hasCredit ? '' : (type === 'training' ? hoursText(credited) + ' hr' : monthsText(credited));
+                                                }
+
+                                                function saveCredit(form, reset) {
+                                                    if (form.classList.contains('is-saving')) return;
+
+                                                    var formData = new FormData(form);
+                                                    if (reset) {
+                                                        formData.set('credit_hours', '');
+                                                        formData.set('credit_years', '');
+                                                        formData.set('credit_months', '');
+                                                    }
+                                                    var state = form.querySelector('.credit-save-state');
+                                                    var buttons = form.querySelectorAll('button');
+                                                    var reviewTrigger = activeReviewTrigger;
+                                                    var type = form.elements.record_type.value;
+
+                                                    form.classList.remove('is-saved', 'has-error');
+                                                    form.classList.add('is-saving');
+                                                    Array.prototype.forEach.call(buttons, function (b) { b.disabled = true; });
+                                                    if (state) state.innerHTML = '<i class="mdi mdi-loading mdi-spin mr-1"></i>Saving...';
+
+                                                    window.fetch(form.action, {
+                                                        method: 'POST',
+                                                        body: formData,
+                                                        credentials: 'same-origin',
+                                                        headers: {
+                                                            'X-Requested-With': 'XMLHttpRequest',
+                                                            'Accept': 'application/json'
+                                                        }
+                                                    }).then(function (response) {
+                                                        return response.json();
+                                                    }).then(function (data) {
+                                                        if (!data || !data.success) {
+                                                            throw new Error(data && data.message ? data.message : 'The credited value could not be saved.');
+                                                        }
+
+                                                        updateCreditSummary(reviewTrigger, type, data.credited);
+                                                        if (reviewTrigger) {
+                                                            fillCreditForm(type, form.elements.record_id.value, form.elements.job_id.value,
+                                                                reviewTrigger.getAttribute('data-computed') || '', reviewTrigger.getAttribute('data-credited') || '');
+                                                        }
+                                                        var total = document.querySelector('[data-relevance-total="' + data.record_type + '"]');
+                                                        if (total && data.total_value) total.textContent = data.total_value;
+                                                        form.classList.add('is-saved');
+                                                        if (state) state.innerHTML = '<i class="mdi mdi-check-circle-outline mr-1"></i>' + safeMarkup(data.message || 'Saved.');
+                                                    }).catch(function (error) {
+                                                        form.classList.add('has-error');
+                                                        if (state) state.textContent = error.message || 'Unable to save. Please try again.';
+                                                    }).then(function () {
+                                                        Array.prototype.forEach.call(buttons, function (b) { b.disabled = false; });
+                                                        form.classList.remove('is-saving');
+                                                    });
+                                                }
+
+                                                document.addEventListener('submit', function (e) {
+                                                    var form = e.target;
+                                                    if (!form || !form.classList || !form.classList.contains('js-record-credit-form')) return;
+                                                    if (!window.fetch) return;
+                                                    e.preventDefault();
+                                                    saveCredit(form, false);
+                                                });
+
+                                                document.addEventListener('click', function (e) {
+                                                    var button = e.target && e.target.closest ? e.target.closest('.js-credit-reset') : null;
+                                                    if (!button || !window.fetch) return;
+                                                    saveCredit(button.closest('.js-record-credit-form'), true);
+                                                });
+
                                                 function relevanceStatus(value) {
                                                     var parts = String(value || '').split(':');
                                                     return parts.length === 4 ? parts[3] : '0';
@@ -1676,7 +1934,29 @@
                                                 function paintRelevance(select, stat) {
                                                     select.classList.remove('relevance-status-0', 'relevance-status-1', 'relevance-status-2');
                                                     select.classList.add('relevance-status-' + stat);
+                                                    var form = select.closest ? select.closest('.js-relevance-form') : null;
+                                                    var segments = form ? form.querySelectorAll('.review-segment') : [];
+                                                    Array.prototype.forEach.call(segments, function (segment) {
+                                                        var active = segment.getAttribute('data-stat') === String(stat);
+                                                        segment.classList.toggle('is-active', active);
+                                                        segment.setAttribute('aria-pressed', active ? 'true' : 'false');
+                                                    });
                                                 }
+
+                                                // The segmented buttons only pick the option; the select's change
+                                                // handler below still does the saving.
+                                                document.addEventListener('click', function (e) {
+                                                    var segment = e.target && e.target.closest ? e.target.closest('.review-segment') : null;
+                                                    if (!segment) return;
+                                                    var form = segment.closest('.js-relevance-form');
+                                                    var select = form ? form.querySelector('.js-relevance-select') : null;
+                                                    var stat = parseInt(segment.getAttribute('data-stat'), 10);
+                                                    if (!select || select.disabled || select.selectedIndex === stat) return;
+                                                    select.selectedIndex = stat;
+                                                    var changed = document.createEvent('HTMLEvents');
+                                                    changed.initEvent('change', true, false);
+                                                    select.dispatchEvent(changed);
+                                                });
 
                                                 function relevancePresentation(stat) {
                                                     if (String(stat) === '1') return { label: 'Relevant', tone: 'success' };

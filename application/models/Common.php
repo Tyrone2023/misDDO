@@ -1626,6 +1626,7 @@ public function no_cond_except($table, $col, $val)
         COALESCE(app.disability, staff.disability) AS disability,
         COALESCE(app.ethnicity, staff.ethnicity) AS ethnicity,
         COALESCE(app.csEligibility, staff.csEligibility) AS csEligibility,
+        app.csEligibilityRating AS csEligibilityRating,
         CASE
             WHEN app.record_no IS NOT NULL THEN 'profile_reg_edit'
             WHEN staff.IDNumber IS NOT NULL THEN 'employee_edit'

@@ -768,7 +768,7 @@
                                                                         <summary><?= count($relevantTrainings); ?> relevant training<?= count($relevantTrainings) === 1 ? '' : 's'; ?></summary>
                                                                         <ul class="mb-0 mt-1 pl-3">
                                                                             <?php foreach($relevantTrainings as $relevantTraining): ?>
-                                                                                <li><?= html_escape($relevantTraining->trainingTitle); ?> &mdash; <?= rtrim(rtrim(number_format((float) $relevantTraining->noHours, 2, '.', ''), '0'), '.'); ?> hr</li>
+                                                                                <li><?= html_escape($relevantTraining->trainingTitle); ?> &mdash; <?= rtrim(rtrim(number_format((float) ($relevantTraining->credit_hours ?? $relevantTraining->noHours), 2, '.', ''), '0'), '.'); ?> hr</li>
                                                                             <?php endforeach; ?>
                                                                         </ul>
                                                                     </details>

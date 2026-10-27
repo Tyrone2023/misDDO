@@ -16544,6 +16544,8 @@ public function request_rating_granted_none()
             show_404();
         }
 
+        $this->ensure_applicant_eligibility_columns();
+
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
         $data['data'] = $this->reselection_filter($this->Common->get_submitted_applicant($this->uri->segment(3)));
@@ -16560,6 +16562,8 @@ public function request_rating_granted_none()
         if (!file_exists(APPPATH . 'views/pages/' . $page . '.php')) {
             show_404();
         }
+
+        $this->ensure_applicant_eligibility_columns();
 
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();

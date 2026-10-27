@@ -153,7 +153,11 @@
                         }
                         ?>
                 </td>
-                <td><?= $row->csEligibility ?? '' ?></td>
+                <td><?php
+                    $eligRating = trim((string) ($row->csEligibilityRating ?? ''));
+                    echo htmlspecialchars((string) ($row->csEligibility ?? ''), ENT_QUOTES, 'UTF-8')
+                        . ($eligRating !== '' ? ' - ' . htmlspecialchars($eligRating, ENT_QUOTES, 'UTF-8') : '');
+                ?></td>
                 <td><?=  $row->dq == 1 ? "Qualified" : ($row->dq == 2 ? "Disqualified" : ""); ?></td>
             </tr>
             <?php } ?>

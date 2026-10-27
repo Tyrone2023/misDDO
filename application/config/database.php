@@ -12,7 +12,7 @@ $db['default'] = array(
 	'password' => 'compu7er',
 	// 'database' => 'depedmis_davor',
 	// 'database' => 'depedmis_mis',
-	'database' => 'depedddomis_db',
+	'database' => 'depedddomis_db1',
 	//'database' => 'hris_demo',
 
 	'dbdriver' => 'mysqli',
