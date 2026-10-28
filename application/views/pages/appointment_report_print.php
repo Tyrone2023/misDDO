@@ -75,6 +75,13 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
     /* Text longer than its column spills over the next cells and is cut at the
        edge of the sheet, exactly as Excel prints it. */
     .rp-fit { transform-origin:top left; visibility:hidden; overflow:hidden; }
+    /* The clip above sits exactly on the sheet's edge, but in a collapsed
+       table the form's outermost cell lines are centred on that edge, so
+       half of each line lands outside it. That half is what the clip (and
+       the holder's clip after scaling) shaved off — the frame's right rule
+       disappeared entirely. A little room inside the clip lets every outer
+       line render in full, while text spilling past a column is still cut. */
+    .rp-fit.rp-sheet { padding:4px; }
     .rp-fitted .rp-fit { visibility:visible; }
     /* Fixed layout keeps the office's column widths, and nowrap keeps text on
        the single line Excel puts it on, so nothing reflows. */
