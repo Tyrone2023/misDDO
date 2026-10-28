@@ -10242,7 +10242,9 @@ public function rqa_municipality_print_shsv2()
         // Consolidate duplicate ratings and auto-mark as Rated when complete
         $appIdForRating = $this->uri->segment(6);
         $data['evaluator_qualification_gate'] = null;
-        $data['can_edit_eligibility'] = $this->can_edit_applicant_eligibility($applicant, $appIdForRating);
+        $canEditApplicant = $this->can_edit_applicant_record($applicant, $appIdForRating);
+        $data['can_edit_eligibility'] = $canEditApplicant;
+        $data['can_edit_education'] = $canEditApplicant;
 
         $sessionPosition = (string)$this->session->userdata('position');
         $fieldEvaluatorOnly = false;
@@ -10401,11 +10403,12 @@ public function rqa_municipality_print_shsv2()
     }
 
     /**
-     * Applicants may edit their own eligibility. Recruitment staff may edit any
-     * applicant they can open, while evaluators remain limited to applications
-     * assigned to them (including their Field Evaluator vacancies).
+     * Applicants may edit their own record fields. Recruitment staff may edit
+     * any applicant they can open, while evaluators remain limited to
+     * applications assigned to them (including their Field Evaluator
+     * vacancies).
      */
-    private function can_edit_applicant_eligibility($applicant, $appId = null)
+    private function can_edit_applicant_record($applicant, $appId = null)
     {
         if (empty($applicant) || empty($applicant->id)) {
             return false;
@@ -10473,30 +10476,13 @@ public function rqa_municipality_print_shsv2()
         // URL (for example Pages/ma/14933/73/202401), so segment 6 and the
         // submitted appID are empty. Resolve that legacy URL to its application
         // instead of rejecting the save with a 404.
-        $application = $appId > 0
-            ? $this->Common->one_cond_row('hris_applications', 'appID', $appId)
-            : null;
-
-        if (empty($application) && $appId <= 0 && $jobId > 0 && $schoolId !== '') {
-            $applicationQuery = $this->db
-                ->from('hris_applications')
-                ->where('jobID', $jobId)
-                ->where('pre_school', $schoolId)
-                ->group_start()
-                    ->where('applicant_id', $applicantId);
-
-            $applicantEmail = trim((string) ($applicant->empEmail ?? ''));
-            if ($applicantEmail !== '') {
-                $applicationQuery->or_where('empEmail', $applicantEmail);
-            }
-
-            $application = $applicationQuery
-                ->group_end()
-                ->order_by('appID', 'DESC')
-                ->limit(1)
-                ->get()
-                ->row();
-        }
+        $application = $this->rating_page_application(
+            $applicantId,
+            (string) ($applicant->empEmail ?? ''),
+            $appId,
+            $jobId,
+            $schoolId
+        );
 
         if (empty($application)) {
             show_404();
@@ -10517,7 +10503,7 @@ public function rqa_municipality_print_shsv2()
             return;
         }
 
-        if (!$this->can_edit_applicant_eligibility($applicant, $appId)) {
+        if (!$this->can_edit_applicant_record($applicant, $appId)) {
             show_error('You are not allowed to edit this applicant\'s eligibility.', 403);
             return;
         }
@@ -10570,6 +10556,41 @@ public function rqa_municipality_print_shsv2()
 
         $this->session->set_flashdata('success', 'Eligibility type and rating updated successfully.');
         $this->redirect_back('#er', $returnUrl);
+    }
+
+    /**
+     * The application a rating-page save belongs to. The posted appID names it
+     * directly; older forms carry only applicant/job/school, so those resolve
+     * to the newest matching application instead of being rejected.
+     */
+    private function rating_page_application($applicantKey, $applicantEmail, $appId, $jobId, $schoolId)
+    {
+        $application = $appId > 0
+            ? $this->Common->one_cond_row('hris_applications', 'appID', $appId)
+            : null;
+
+        if (empty($application) && $appId <= 0 && $jobId > 0 && $schoolId !== '') {
+            $applicationQuery = $this->db
+                ->from('hris_applications')
+                ->where('jobID', $jobId)
+                ->where('pre_school', $schoolId)
+                ->group_start()
+                    ->where('applicant_id', $applicantKey);
+
+            $applicantEmail = trim($applicantEmail);
+            if ($applicantEmail !== '') {
+                $applicationQuery->or_where('empEmail', $applicantEmail);
+            }
+
+            $application = $applicationQuery
+                ->group_end()
+                ->order_by('appID', 'DESC')
+                ->limit(1)
+                ->get()
+                ->row();
+        }
+
+        return $application;
     }
 
     /**
@@ -10838,6 +10859,10 @@ public function rqa_municipality_print_shsv2()
                 && $this->secretariat
                     ->field_evaluator_can_view_application($evaluatorId, $appIdForRating);
         }
+
+        // Same rule as pages/ma: staff and assigned evaluators may correct the
+        // education details; everyone else sees the record read-only.
+        $data['can_edit_education'] = $this->can_edit_applicant_record((object) ['id' => $staff->IDNumber], $appIdForRating);
 
         $ratingLocked = isset($jobvacancy->jvStatus) && strcasecmp(trim((string) $jobvacancy->jvStatus), 'Closed') === 0;
         $data['rating_request_allowed'] = isset($jobvacancy->jvStatus)
@@ -11187,6 +11212,26 @@ public function rqa_municipality_print_shsv2()
 
     public function update_educ()
     {
+        $applicantId = (int) $this->input->post('id');
+        $applicant = $this->Common->one_cond_row('hris_applicant', 'id', $applicantId);
+        if (empty($applicant)) {
+            show_404();
+            return;
+        }
+
+        $application = $this->rating_page_application(
+            $applicantId,
+            (string) ($applicant->empEmail ?? ''),
+            (int) $this->input->post('appID'),
+            (int) $this->input->post('jobID'),
+            trim((string) $this->input->post('school_id'))
+        );
+
+        if (!$this->can_edit_applicant_record($applicant, !empty($application) ? (int) $application->appID : 0)) {
+            show_error('You are not allowed to edit this applicant\'s education.', 403);
+            return;
+        }
+
         $this->Reg->educ_update();
         $this->session->set_flashdata('success', 'Successfuly Saved');
         if ($this->rating_page_asds_equivalent()) {
@@ -11198,6 +11243,30 @@ public function rqa_municipality_print_shsv2()
 
     public function update_educ_staff()
     {
+        // The staff pages key the record off IDNumber; the promotion pages of
+        // an applicant key it off record_no, which points at the same row.
+        $staffKey = trim((string) $this->input->post('id'));
+        $staffRow = $this->Common->one_cond_row('hris_staff', 'IDNumber', $staffKey);
+        $applicant = $this->Common->one_cond_row('hris_applicant', 'record_no', $staffKey);
+        if (empty($staffRow) && empty($applicant)) {
+            show_404();
+            return;
+        }
+
+        $subject = !empty($applicant) ? $applicant : (object) ['id' => $staffKey];
+        $application = $this->rating_page_application(
+            !empty($applicant) ? (int) $applicant->id : $staffKey,
+            (string) ($applicant->empEmail ?? $staffRow->empEmail ?? ''),
+            (int) $this->input->post('appID'),
+            (int) $this->input->post('jobID'),
+            trim((string) $this->input->post('school_id'))
+        );
+
+        if (!$this->can_edit_applicant_record($subject, !empty($application) ? (int) $application->appID : 0)) {
+            show_error('You are not allowed to edit this employee\'s education.', 403);
+            return;
+        }
+
         $this->Reg->educ_update_staff();
         $this->session->set_flashdata('success', 'Successfuly Saved');
         if ($this->rating_page_asds_equivalent()) {

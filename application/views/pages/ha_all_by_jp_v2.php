@@ -37,6 +37,22 @@
             3 => '- Junior High School',
             4 => '- Senior High School'
         ];
+
+        // "Jan 5, 2025 - Jan 9, 2025"; whichever side of the range exists.
+        $ier_date_range = function ($from, $to) {
+            $fmt = function ($v) {
+                if (empty($v) || substr((string) $v, 0, 10) === '0000-00-00') { return ''; }
+                $ts = strtotime((string) $v);
+                return $ts ? date('M d, Y', $ts) : '';
+            };
+            $a = $fmt($from); $b = $fmt($to);
+            if ($a !== '' && $b !== '') { return $a === $b ? $a : $a . ' - ' . $b; }
+            return $a !== '' ? $a : $b;
+        };
+
+        // Relevance rows are created lazily on the profile; make sure the
+        // table exists before the IER joins it.
+        $this->Reg->ensure_record_relevance_table();
     ?>
     <div class="hwrap">
     <img class="logo" src="<?= base_url(); ?>assets/images/ke.png" alt="">
@@ -107,44 +123,92 @@
             </tr>
             <tr>
                
-                <th>Title</th>
+                <th>Details</th>
                 <th>Hours</th>
                 <th>Details</th>
                 <th>Years</th>
                 <th>Eligibility</th>
             </tr>
-            <?php $c=1; foreach($data as $row){ $ier = $this->Common->two_cond_row('ier_info','jobID',$row->jobID,'code',$row->code); 
-                $xp = $this->Common->two_cond('hris_experience','id_number',$row->id,'stat',1); 
-                $tr = $this->Common->two_cond('hris_trainings','IDNumber',$row->id,'stat',1); 
+            <?php $c=1; foreach($data as $row){ $ier = $this->Common->two_cond_row('ier_info','jobID',$row->jobID,'code',$row->code);
+                // Only the credentials an evaluator marked relevant to this
+                // vacancy count on the IER - the relevance table keeps that
+                // judgement per job, together with any credited figure the
+                // evaluator set over the record's own hours/duration.
+                $tr = $this->db->query(
+                    "select t.trainingTitle, t.sponsor, t.dateStarted, t.dateFinished,
+                            t.noHours, r.credited_hours
+                       from hris_trainings t
+                       join hris_record_relevance r
+                         on r.record_type = 'training' and r.record_id = t.trainingID
+                        and r.job_id = ? and r.stat = 1 and r.updated_by is not null
+                      where t.IDNumber = ?
+                      order by t.dateStarted desc, t.trainingID desc",
+                    array($row->jobID, $row->id))->result();
+                $xp = $this->db->query(
+                    "select e.title, e.position_title, e.date_from, e.date_to, e.ny, e.nm,
+                            r.credited_months
+                       from hris_experience e
+                       join hris_record_relevance r
+                         on r.record_type = 'experience' and r.record_id = e.id
+                        and r.job_id = ? and r.stat = 1 and r.updated_by is not null
+                      where e.id_number = ?
+                      order by e.date_from desc, e.id desc",
+                    array($row->jobID, $row->id))->result();
 
-                $training_sum = $this->Reg->gettotaltraining_staff('hris_trainings','noHours',$row->id);
-                $ex_year_sum = $this->Reg->gettotaltraining('hris_experience','ny',$row->id);
-                $ex_month_sum = $this->Reg->gettotaltraining('hris_experience','nm',$row->id);
+                $training_sum = 0;
+                foreach ($tr as $trow) {
+                    $trow->credit_hours = $trow->credited_hours !== null ? (float) $trow->credited_hours : (float) $trow->noHours;
+                    $training_sum += $trow->credit_hours;
+                }
+
+                $ex_months = 0;
+                foreach ($xp as $xrow) {
+                    $xfrom = !empty($xrow->date_from) && $xrow->date_from !== '0000-00-00' ? $xrow->date_from : null;
+                    $xto   = !empty($xrow->date_to) && $xrow->date_to !== '0000-00-00' ? $xrow->date_to : null;
+                    $ex_months += $xrow->credited_months !== null
+                        ? (int) $xrow->credited_months
+                        : (($xfrom && $xto) ? $this->Reg->experience_months($xfrom, $xto) : ((int) $xrow->ny * 12) + (int) $xrow->nm);
+                }
 
             ?>
             <tr>
                 <td><?= $c++; ?></td>
                 <td><?= $row->code; ?></td>
-                
+
                 <td><?= $row->bachelor; ?></td>
-                <td>
-                    <?php foreach($tr as $trrow){ ?>
-                              <span class="xp"><?= $trrow->trainingTitle ?? ''; ?></span>
+                <td style="text-align:left">
+                    <?php foreach($tr as $trrow){
+                        // Training Title - Conducted By - Inclusive Date - Hours
+                        $trParts = array(
+                            trim((string) ($trrow->trainingTitle ?? '')),
+                            trim((string) ($trrow->sponsor ?? '')),
+                            $ier_date_range($trrow->dateStarted ?? null, $trrow->dateFinished ?? null),
+                        );
+                        $trParts = array_filter($trParts, function ($p) { return $p !== ''; });
+                        $trHours = $trrow->credit_hours == (int) $trrow->credit_hours ? (int) $trrow->credit_hours : $trrow->credit_hours;
+                        $trParts[] = $trHours . ' hrs';
+                    ?>
+                              <span class="xp"><?= implode(' - ', array_map(function ($p) { return htmlspecialchars($p, ENT_QUOTES, 'UTF-8'); }, $trParts)); ?></span>
                         <?php } ?>
                 </td>
-                <td><?= $training_sum ?? 0; ?></td>
+                <td><?= $training_sum == (int) $training_sum ? (int) $training_sum : $training_sum; ?></td>
                 <td style="text-align:left; padding:0 !important">
-                        <?php foreach($xp as $xprow){ ?>
-                              <span class="xp"><?= $xprow->title ?? ''; ?></span>
+                        <?php foreach($xp as $xprow){
+                            // Company / Office - Job Title / Position - Inclusive Date
+                            $xpParts = array(
+                                trim((string) ($xprow->title ?? '')),
+                                trim((string) ($xprow->position_title ?? '')),
+                                $ier_date_range($xprow->date_from ?? null, $xprow->date_to ?? null),
+                            );
+                            $xpParts = array_filter($xpParts, function ($p) { return $p !== ''; });
+                        ?>
+                              <span class="xp"><?= implode(' - ', array_map(function ($p) { return htmlspecialchars($p, ENT_QUOTES, 'UTF-8'); }, $xpParts)); ?></span>
                         <?php } ?>
-                    
+
                 </td>
                 <td><?php
-                        $ex_year_sum  = (int) ($ex_year_sum  ?? 0);
-                        $ex_month_sum = (int) ($ex_month_sum ?? 0);
-
-                        $totalYears  = $ex_year_sum + intdiv($ex_month_sum, 12);
-                        $remainingMo = $ex_month_sum % 12;
+                        $totalYears  = intdiv($ex_months, 12);
+                        $remainingMo = $ex_months % 12;
 
                         if ($totalYears === 0 && $remainingMo === 0) {
                             echo '0';

@@ -451,7 +451,7 @@
 
 
                                                     <tr class="bg-warning text-white">
-                                                        <th colspan="2" class="text-center" id="efile">EDUCATION (10)<?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } } ?> <?php if($this->session->position == 'asds'){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"><?php } ?></th>
+                                                        <th colspan="2" class="text-center" id="efile">EDUCATION (10)<?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } } ?> <?php if($this->session->position == 'asds' || !empty($can_edit_education)){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } ?></th>
                                                     </tr>
 
                                                     <tr id="tsc">
@@ -992,6 +992,7 @@
                                                                     <input type="hidden" name="jobID" value="<?= $this->uri->segment(4); ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
                                                                     <input type="hidden" name="page" value="<?= $this->uri->segment(2); ?>">
+                                                                    <input type="hidden" name="appID" value="<?= $this->uri->segment(6); ?>">
                                                                         
                                                                     <div class="row">
                                                                         <div class="col-lg-8">

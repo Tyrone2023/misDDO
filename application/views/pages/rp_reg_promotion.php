@@ -366,7 +366,7 @@
 
 
                                                     <tr class="bg-warning text-white">
-                                                        <th colspan="2" class="text-center" id="efile">EDUCATION (<?= $ptp->educ; ?>)</th>
+                                                        <th colspan="2" class="text-center" id="efile">EDUCATION (<?= $ptp->educ; ?>) <?php if($asds_equivalent_access || !empty($can_edit_education)){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } ?></th>
                                                     </tr>
 
                                                     
@@ -803,6 +803,7 @@
                                                                     <input type="hidden" name="empEmail" value="<?= $staff->empEmail; ?>">
                                                                     <input type="hidden" name="jobID" value="<?= $this->uri->segment(4); ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
+                                                                    <input type="hidden" name="appID" value="<?= $this->uri->segment(6); ?>">
                                                                         
                                                                     <div class="row">
                                                                         <div class="col-lg-8">

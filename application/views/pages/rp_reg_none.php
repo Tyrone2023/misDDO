@@ -595,7 +595,7 @@
                                                     <?php $this->load->view('pages/partials/applicant_supporting_document_row', array_merge($supportingDocuments['wes'], $supportingDocumentContext)); ?>
                                                     
                                                     <tr class="bg-warning text-white">
-                                                        <th colspan="2" class="text-center" id="efile">EDUCATION (<?= $ptp->educ; ?>)<?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } } ?> <?php if($asds_equivalent_access){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"><?php } ?></th>
+                                                        <th colspan="2" class="text-center" id="efile">EDUCATION (<?= $ptp->educ; ?>)<?php if($canUploadDocuments){if($this->session->c_id == $user->user_id){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } } ?> <?php if($asds_equivalent_access || !empty($can_edit_education)){?><a href="#" data-toggle="modal" data-target=".educ"><i class="fas fa-marker btn btn-sm tooltips" data-placement="top" data-toggle="tooltip" data-original-title="Edit"></i></a><?php } ?></th>
                                                     </tr>
 
                                                     <tr id="tsc">
@@ -1350,6 +1350,7 @@
                                                                     <input type="hidden" name="empEmail" value="<?= $data->empEmail; ?>">
                                                                     <input type="hidden" name="jobID" value="<?= $this->uri->segment(4); ?>">
                                                                     <input type="hidden" name="school_id" value="<?= $this->uri->segment(5); ?>">
+                                                                    <input type="hidden" name="appID" value="<?= $this->uri->segment(6); ?>">
                                                                         
                                                                     <div class="row">
                                                                         <div class="col-lg-8">

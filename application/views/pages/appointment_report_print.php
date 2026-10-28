@@ -12,10 +12,13 @@ $margin = '6mm';
 $availableWidth = 746;   // (210mm - 2 x 6mm) at 96dpi, less a safety pixel or two
 $availableHeight = 1074; // (297mm - 2 x 6mm) at 96dpi, less a safety pixel or two
 if ($kind === 'spreadsheet') {
-    // CS Form 33-B page setup: top .75in, right .2in, bottom .5in, left .5in.
-    $margin = '0.75in 0.2in 0.5in 0.5in';
-    $availableWidth = 725;   // (8.27in - 0.7in) at 96dpi, less a safety pixel or two
-    $availableHeight = 1000; // (11.69in - 1.25in) at 96dpi, less a safety pixel or two
+    // Top .5in, right .5in, bottom .6in, left .5in. The workbook's own setup
+    // (.75/.2/.5/.5) puts the frame's right edge inside the printer's
+    // unprintable zone, so the right and bottom borders were clipped off the
+    // paper; a little more room on those sides keeps all four borders.
+    $margin = '0.5in 0.5in 0.6in 0.5in';
+    $availableWidth = 695;   // (8.27in - 1.0in) at 96dpi, less a safety pixel or two
+    $availableHeight = 1014; // (11.69in - 1.1in) at 96dpi, less a safety pixel or two
 } elseif ($kind === 'docx') {
     // A Word page already carries its own margins (and a letterhead that runs
     // to the paper edge), so it is laid on the A4 sheet without a border.
@@ -59,8 +62,14 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
     .rp-page-no { position:absolute; top:-18px; right:2px; font-size:.62rem; font-weight:800; letter-spacing:.4px; color:var(--rp-muted); text-transform:uppercase; }
     /* The scaled sheet keeps its full-size layout box, so the box is clipped to
        the space the scaled form actually takes; without this the leftover box
-       spills onto an extra printed page. */
-    .rp-fit-box { margin:0 auto; overflow:hidden; }
+       spills onto an extra printed page. The translate is the print nudge: it
+       moves the finished sheet on the paper (preview and printout alike) to
+       cancel out the offset a feed or driver adds, never the form inside it. */
+    .rp-fit-box { margin:0 auto; overflow:hidden; transform:translate(var(--rp-shift-x,0in),var(--rp-shift-y,0in)); }
+    /* Print position nudge controls. */
+    .rp-nudge { display:inline-flex; align-items:center; gap:5px; font-size:.72rem; font-weight:700; color:var(--rp-muted); }
+    .rp-nudge label { display:inline-flex; align-items:center; gap:3px; font-weight:800; color:#41556c; }
+    .rp-nudge input { width:58px; padding:.26rem .3rem; border:1px solid var(--rp-border); border-radius:6px; font:inherit; color:#41556c; text-align:right; }
     /* max-content keeps the form at its designed width: the A4 sheet must not
        squeeze the columns, the whole block is scaled to fit instead. */
     /* Text longer than its column spills over the next cells and is cut at the
@@ -137,6 +146,12 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
             <button type="button" class="rp-btn" id="rpReset" title="Discard the saved edits and regenerate the form from the template and current data."><i class="mdi mdi-restore"></i>Reset</button>
             <?php endif; ?>
             <button type="button" class="rp-btn rp-btn-edit" id="rpEdit" title="<?= $canSave ? 'Edit the text before printing. Changes are saved when you click Done.' : 'Edit the text before printing. Changes are not saved.'; ?>"><i class="mdi mdi-pencil-outline"></i><span>Edit</span></button>
+            <span class="rp-nudge" title="If the printout lands off the paper, nudge the sheet until it lines up: ↕ negative moves up, ↔ negative moves left (inches). Kept on this computer for every print.">
+                <i class="mdi mdi-printer-outline"></i>
+                <label>↕<input type="number" id="rpNudgeY" step="0.05" min="-1.5" max="1.5" value="0"></label>
+                <label>↔<input type="number" id="rpNudgeX" step="0.05" min="-1.5" max="1.5" value="0"></label>in
+                <button type="button" class="rp-btn" id="rpNudgeReset" title="Back to the form's own margins"><i class="mdi mdi-restore"></i></button>
+            </span>
             <?php endif; ?>
             <button type="button" class="rp-btn rp-btn-print" onclick="window.print();"><i class="mdi mdi-printer"></i>Print</button>
         </div>
@@ -577,6 +592,46 @@ $docPageWidth = (float) ($pages[0]['width'] ?? 0);
                 if (CAN_SAVE) { saveEdits(); }
             }
         });
+    }
+
+    // The preview and the printer do not always agree on where the sheet
+    // lands: a feed or driver offset moves the whole printout on the paper.
+    // The nudge shifts the printed sheet and is remembered on this computer,
+    // so it only has to be dialled in once per printer.
+    var NUDGE_KEY = 'rpPrintNudge';
+    var nudgeY = document.getElementById('rpNudgeY');
+    var nudgeX = document.getElementById('rpNudgeX');
+
+    function applyNudge(save) {
+        if (!nudgeY || !nudgeX) { return; }
+        var y = Math.max(-1.5, Math.min(1.5, parseFloat(nudgeY.value) || 0));
+        var x = Math.max(-1.5, Math.min(1.5, parseFloat(nudgeX.value) || 0));
+        document.documentElement.style.setProperty('--rp-shift-y', y + 'in');
+        document.documentElement.style.setProperty('--rp-shift-x', x + 'in');
+        if (save) {
+            try { localStorage.setItem(NUDGE_KEY, JSON.stringify({ y: y, x: x })); } catch (e) {}
+        }
+    }
+
+    if (nudgeY && nudgeX) {
+        try {
+            var kept = JSON.parse(localStorage.getItem(NUDGE_KEY) || 'null');
+            if (kept) {
+                nudgeY.value = kept.y || 0;
+                nudgeX.value = kept.x || 0;
+            }
+        } catch (e) {}
+        applyNudge(false);
+        nudgeY.addEventListener('input', function () { applyNudge(true); });
+        nudgeX.addEventListener('input', function () { applyNudge(true); });
+        var nudgeReset = document.getElementById('rpNudgeReset');
+        if (nudgeReset) {
+            nudgeReset.addEventListener('click', function () {
+                nudgeY.value = 0;
+                nudgeX.value = 0;
+                applyNudge(true);
+            });
+        }
     }
 
     sealFills();
