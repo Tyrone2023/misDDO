@@ -966,6 +966,7 @@
                                                                             $endValue = !empty($row->dateFinished) && substr($row->dateFinished, 0, 10) !== '0000-00-00' ? date('Y-m-d\TH:i', strtotime($row->dateFinished)) : '';
                                                                             $trainingAttrs = 'data-id="' . $trainingId . '"'
                                                                                 . ' data-title="' . html_escape((string) $row->trainingTitle) . '"'
+                                                                                . ' data-sponsor="' . html_escape((string) ($row->sponsor ?? '')) . '"'
                                                                                 . ' data-from="' . html_escape($startValue) . '"'
                                                                                 . ' data-to="' . html_escape($endValue) . '"'
                                                                                 . ' data-hours="' . html_escape((string) $row->noHours) . '"';
@@ -980,6 +981,7 @@
                                                                         <tr class="<?= $trainingRemarks !== '' ? 'has-record-note' : ''; ?>">
                                                                             <td class="record-primary" data-label="Training">
                                                                                 <div class="record-title"><?= html_escape($row->trainingTitle); ?></div>
+                                                                                <div class="text-muted mt-1"><strong>Conducted By:</strong> <?= trim((string) ($row->sponsor ?? '')) !== '' ? html_escape($row->sponsor) : '<span class="text-warning">Not specified</span>'; ?></div>
                                                                                 <div class="record-meta">Saved <?= $saved_stamp($row->created_at ?? null, $row->updated_at ?? null); ?></div>
                                                                                 <div class="record-actions mt-2">
                                                                                     <?php if($detailsEditable): ?>
@@ -1581,10 +1583,17 @@
                                                                 </div>
                                                             </div>
                                                             <div class="text-danger small mb-2 js-range-warning" data-for="edittraining" style="display:none;"></div>
-                                                            <div class="form-group mb-0">
-                                                                <label class="font-weight-semibold">Total Relevant Hours <span class="text-danger">*</span></label>
-                                                                <input name="nh" type="number" id="training_edit_hours" min="0" step="0.01" class="form-control js-hours-total" data-for="edittraining" required>
-                                                                <small class="form-text text-muted">Recalculated when the date range changes; you may correct the credited total before saving.</small>
+                                                            <div class="form-row">
+                                                                <div class="form-group col-md-8 mb-0">
+                                                                    <label class="font-weight-semibold" for="training_edit_sponsor">Conducted By</label>
+                                                                    <input name="sponsor" type="text" id="training_edit_sponsor" class="form-control" placeholder="Sponsoring office or organization">
+                                                                    <small class="form-text text-muted">Helps identify the organization that conducted the training.</small>
+                                                                </div>
+                                                                <div class="form-group col-md-4 mb-0">
+                                                                    <label class="font-weight-semibold">Total Relevant Hours <span class="text-danger">*</span></label>
+                                                                    <input name="nh" type="number" id="training_edit_hours" min="0" step="0.01" class="form-control js-hours-total" data-for="edittraining" required>
+                                                                    <small class="form-text text-muted">Recalculated from the date range; you may correct it before saving.</small>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         <div class="modal-footer">
@@ -1751,6 +1760,7 @@
 
                                                     document.getElementById('training_edit_id').value = trigger.getAttribute('data-id') || '';
                                                     document.getElementById('training_edit_title').value = trigger.getAttribute('data-title') || '';
+                                                    document.getElementById('training_edit_sponsor').value = trigger.getAttribute('data-sponsor') || '';
                                                     document.getElementById('training_edit_from').value = trigger.getAttribute('data-from') || '';
                                                     document.getElementById('training_edit_to').value = trigger.getAttribute('data-to') || '';
                                                     refreshRange('edittraining');

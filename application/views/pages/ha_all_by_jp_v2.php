@@ -14,9 +14,38 @@
     <title><?= $title; ?></title>
     <style>
         @media print {
-            #btnExport {
+            #btnExport, .ier-filter {
                 display: none !important;
             }
+        }
+
+        .ier-filter {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: -6px 0 18px;
+        }
+        .ier-filter a {
+            display: inline-block;
+            padding: 7px 13px;
+            border: 1px solid #697785;
+            border-radius: 4px;
+            color: #263746;
+            background: #fff;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .ier-filter a.is-active {
+            border-color: #245b88;
+            color: #fff;
+            background: #245b88;
+        }
+        .ier-record-state {
+            display: block;
+            padding: 8px 10px;
+            color: #555;
+            font-style: italic;
+            text-align: center;
         }
 
         .xp{
@@ -50,6 +79,41 @@
             return $a !== '' ? $a : $b;
         };
 
+        $ier_duration = function ($months) {
+            $months = max(0, (int) $months);
+            $years = intdiv($months, 12);
+            $remaining = $months % 12;
+            $parts = array();
+
+            if ($years > 0) {
+                $parts[] = $years . ' year' . ($years === 1 ? '' : 's');
+            }
+            if ($remaining > 0) {
+                $parts[] = $remaining . ' month' . ($remaining === 1 ? '' : 's');
+            }
+
+            return empty($parts) ? '0 months' : implode(' and ', $parts);
+        };
+
+        $display_filter = isset($display_filter) ? $display_filter : 'all';
+        $applicant_counts = isset($applicant_counts) ? $applicant_counts : array(
+            'all' => count((array) $data),
+            'qualified' => 0,
+            'disqualified' => 0,
+        );
+        $ier_filter_url = function ($filter) {
+            $query = $this->input->get();
+            $query = is_array($query) ? $query : array();
+
+            if ($filter === 'all') {
+                unset($query['display']);
+            } else {
+                $query['display'] = $filter;
+            }
+
+            return current_url() . (!empty($query) ? '?' . http_build_query($query) : '');
+        };
+
         // Relevance rows are created lazily on the profile; make sure the
         // table exists before the IER joins it.
         $this->Reg->ensure_record_relevance_table();
@@ -71,7 +135,15 @@
         <h5 style="font-style:italic;">Annex D</h5>
         <h1 style="font-size:20px"><?= $title; ?></h1>
 
-        
+        <nav class="ier-filter" aria-label="Filter applicants by qualification status">
+            <?php foreach (array('all' => 'All Applicants', 'qualified' => 'Qualified', 'disqualified' => 'Disqualified') as $filterKey => $filterLabel): ?>
+                <a href="<?= htmlspecialchars($ier_filter_url($filterKey), ENT_QUOTES, 'UTF-8'); ?>"
+                   class="<?= $display_filter === $filterKey ? 'is-active' : ''; ?>"
+                   aria-current="<?= $display_filter === $filterKey ? 'page' : 'false'; ?>">
+                    <?= $filterLabel; ?> (<?= (int) ($applicant_counts[$filterKey] ?? 0); ?>)
+                </a>
+            <?php endforeach; ?>
+        </nav>
 
         <table class="data" id="myTable" style="border:0">
             <tr>
@@ -130,30 +202,61 @@
                 <th>Eligibility</th>
             </tr>
             <?php $c=1; foreach($data as $row){ $ier = $this->Common->two_cond_row('ier_info','jobID',$row->jobID,'code',$row->code);
-                // Only the credentials an evaluator marked relevant to this
-                // vacancy count on the IER - the relevance table keeps that
-                // judgement per job, together with any credited figure the
-                // evaluator set over the record's own hours/duration.
-                $tr = $this->db->query(
+                // Read every credential so the IER can tell the difference
+                // between an applicant with no records, records still waiting
+                // for review, and records all marked Not Relevant.
+                $all_trainings = $this->db->query(
                     "select t.trainingTitle, t.sponsor, t.dateStarted, t.dateFinished,
-                            t.noHours, r.credited_hours
+                            t.noHours, r.stat as relevance_stat, r.updated_by,
+                            r.credited_hours
                        from hris_trainings t
-                       join hris_record_relevance r
+                       left join hris_record_relevance r
                          on r.record_type = 'training' and r.record_id = t.trainingID
-                        and r.job_id = ? and r.stat = 1 and r.updated_by is not null
+                        and r.job_id = ?
                       where t.IDNumber = ?
                       order by t.dateStarted desc, t.trainingID desc",
                     array($row->jobID, $row->id))->result();
-                $xp = $this->db->query(
+                $all_experiences = $this->db->query(
                     "select e.title, e.position_title, e.date_from, e.date_to, e.ny, e.nm,
+                            r.stat as relevance_stat, r.updated_by,
                             r.credited_months
                        from hris_experience e
-                       join hris_record_relevance r
+                       left join hris_record_relevance r
                          on r.record_type = 'experience' and r.record_id = e.id
-                        and r.job_id = ? and r.stat = 1 and r.updated_by is not null
+                        and r.job_id = ?
                       where e.id_number = ?
                       order by e.date_from desc, e.id desc",
                     array($row->jobID, $row->id))->result();
+
+                $tr = array();
+                $training_has_no_action = false;
+                foreach ($all_trainings as $training) {
+                    $was_reviewed = $training->updated_by !== null;
+                    $stat = (int) ($training->relevance_stat ?? 0);
+                    if ($was_reviewed && $stat === 1) {
+                        $tr[] = $training;
+                    } elseif (!$was_reviewed || $stat === 0) {
+                        $training_has_no_action = true;
+                    }
+                }
+                $training_state = !empty($tr)
+                    ? 'relevant'
+                    : (!empty($all_trainings) && $training_has_no_action ? 'no_action' : 'none');
+
+                $xp = array();
+                $experience_has_no_action = false;
+                foreach ($all_experiences as $experience) {
+                    $was_reviewed = $experience->updated_by !== null;
+                    $stat = (int) ($experience->relevance_stat ?? 0);
+                    if ($was_reviewed && $stat === 1) {
+                        $xp[] = $experience;
+                    } elseif (!$was_reviewed || $stat === 0) {
+                        $experience_has_no_action = true;
+                    }
+                }
+                $experience_state = !empty($xp)
+                    ? 'relevant'
+                    : (!empty($all_experiences) && $experience_has_no_action ? 'no_action' : 'none');
 
                 $training_sum = 0;
                 foreach ($tr as $trow) {
@@ -165,9 +268,10 @@
                 foreach ($xp as $xrow) {
                     $xfrom = !empty($xrow->date_from) && $xrow->date_from !== '0000-00-00' ? $xrow->date_from : null;
                     $xto   = !empty($xrow->date_to) && $xrow->date_to !== '0000-00-00' ? $xrow->date_to : null;
-                    $ex_months += $xrow->credited_months !== null
+                    $xrow->credit_months = $xrow->credited_months !== null
                         ? (int) $xrow->credited_months
                         : (($xfrom && $xto) ? $this->Reg->experience_months($xfrom, $xto) : ((int) $xrow->ny * 12) + (int) $xrow->nm);
+                    $ex_months += $xrow->credit_months;
                 }
 
             ?>
@@ -177,7 +281,7 @@
 
                 <td><?= $row->bachelor; ?></td>
                 <td style="text-align:left">
-                    <?php foreach($tr as $trrow){
+                    <?php if ($training_state === 'relevant'): foreach($tr as $trrow){
                         // Training Title - Conducted By - Inclusive Date - Hours
                         $trParts = array(
                             trim((string) ($trrow->trainingTitle ?? '')),
@@ -189,32 +293,37 @@
                         $trParts[] = $trHours . ' hrs';
                     ?>
                               <span class="xp"><?= implode(' - ', array_map(function ($p) { return htmlspecialchars($p, ENT_QUOTES, 'UTF-8'); }, $trParts)); ?></span>
-                        <?php } ?>
+                        <?php } elseif ($training_state === 'no_action'): ?>
+                            <span class="ier-record-state">No action yet</span>
+                        <?php else: ?>
+                            <span class="ier-record-state">No relevant training</span>
+                        <?php endif; ?>
                 </td>
-                <td><?= $training_sum == (int) $training_sum ? (int) $training_sum : $training_sum; ?></td>
+                <td><?= $training_state === 'no_action' ? '&mdash;' : ($training_sum == (int) $training_sum ? (int) $training_sum : $training_sum); ?></td>
                 <td style="text-align:left; padding:0 !important">
-                        <?php foreach($xp as $xprow){
-                            // Company / Office - Job Title / Position - Inclusive Date
+                        <?php if ($experience_state === 'relevant'): foreach($xp as $xprow){
+                            // Company / Office - Job Title / Position - Inclusive
+                            // Date - duration credited for this relevant record.
                             $xpParts = array(
                                 trim((string) ($xprow->title ?? '')),
                                 trim((string) ($xprow->position_title ?? '')),
                                 $ier_date_range($xprow->date_from ?? null, $xprow->date_to ?? null),
+                                'Duration: ' . $ier_duration($xprow->credit_months),
                             );
                             $xpParts = array_filter($xpParts, function ($p) { return $p !== ''; });
                         ?>
                               <span class="xp"><?= implode(' - ', array_map(function ($p) { return htmlspecialchars($p, ENT_QUOTES, 'UTF-8'); }, $xpParts)); ?></span>
-                        <?php } ?>
+                        <?php } elseif ($experience_state === 'no_action'): ?>
+                            <span class="ier-record-state">No action yet</span>
+                        <?php else: ?>
+                            <span class="ier-record-state">No relevant experience</span>
+                        <?php endif; ?>
 
                 </td>
                 <td><?php
-                        $totalYears  = intdiv($ex_months, 12);
-                        $remainingMo = $ex_months % 12;
-
-                        if ($totalYears === 0 && $remainingMo === 0) {
-                            echo '0';
-                        } else {
-                            echo $totalYears . ' years and ' . $remainingMo . ' months';
-                        }
+                        echo $experience_state === 'no_action'
+                            ? '&mdash;'
+                            : htmlspecialchars($ier_duration($ex_months), ENT_QUOTES, 'UTF-8');
                         ?>
                 </td>
                 <td><?php
@@ -225,6 +334,9 @@
                 <td><?=  $row->dq == 1 ? "Qualified" : ($row->dq == 2 ? "Disqualified" : ""); ?></td>
             </tr>
             <?php } ?>
+            <?php if (empty($data)): ?>
+                <tr><td colspan="9" style="padding:20px; color:#555;">No <?= $display_filter === 'all' ? '' : htmlspecialchars($display_filter, ENT_QUOTES, 'UTF-8') . ' '; ?>applicants found.</td></tr>
+            <?php endif; ?>
         </table>
 
         

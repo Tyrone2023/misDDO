@@ -4605,6 +4605,13 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
         $data['trainingTitle'] = $title;
       }
 
+      // Older callers of this method only submit the credited hours. Update
+      // the conducting organization only when the consolidated editor sends
+      // the field, so those legacy forms cannot erase it accidentally.
+      if ($this->input->post('sponsor') !== null) {
+        $data['sponsor'] = trim((string) $this->input->post('sponsor'));
+      }
+
       $started  = $this->Page_model->training_stamp($this->input->post('dateStarted'));
       $finished = $this->Page_model->training_stamp($this->input->post('dateFinished'));
       if ($started && $finished) {
@@ -4625,6 +4632,7 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
             'label'        => 'training #' . $id,
             'fields'       => array(
                 'trainingTitle' => 'Training Title',
+                'sponsor'       => 'Conducted By',
                 'dateStarted'   => 'From',
                 'dateFinished'  => 'To',
                 'noHours'       => 'No. of Hours',

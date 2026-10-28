@@ -81,6 +81,50 @@ class Pages extends CI_Controller
         return $out;
     }
 
+    /**
+     * Prepare the IER applicant list for the qualification buttons.
+     *
+     * The counts always describe the complete reselection/batch result, while
+     * the returned rows contain only the status requested with ?display=.
+     */
+    private function ier_qualification_filter($rows)
+    {
+        $rows = is_array($rows) ? array_values($rows) : array();
+        $display = strtolower(trim((string) $this->input->get('display')));
+
+        if (!in_array($display, array('qualified', 'disqualified'), true)) {
+            $display = 'all';
+        }
+
+        $counts = array(
+            'all'          => count($rows),
+            'qualified'    => 0,
+            'disqualified' => 0,
+        );
+
+        foreach ($rows as $row) {
+            $status = (int) ($row->dq ?? 0);
+            if ($status === 1) {
+                $counts['qualified']++;
+            } elseif ($status === 2) {
+                $counts['disqualified']++;
+            }
+        }
+
+        if ($display !== 'all') {
+            $wanted = $display === 'qualified' ? 1 : 2;
+            $rows = array_values(array_filter($rows, function ($row) use ($wanted) {
+                return (int) ($row->dq ?? 0) === $wanted;
+            }));
+        }
+
+        return array(
+            'rows'   => $rows,
+            'filter' => $display,
+            'counts' => $counts,
+        );
+    }
+
     private function get_rqa_sign($job, $stat = null, $useJobSign = true)
     {
         $sign = null;
@@ -16636,7 +16680,11 @@ public function request_rating_granted_none()
 
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
-        $data['data'] = $this->reselection_filter($this->Common->get_submitted_applicant($this->uri->segment(3)));
+        $applicants = $this->reselection_filter($this->Common->get_submitted_applicant($this->uri->segment(3)));
+        $qualification = $this->ier_qualification_filter($applicants);
+        $data['data'] = $qualification['rows'];
+        $data['display_filter'] = $qualification['filter'];
+        $data['applicant_counts'] = $qualification['counts'];
 
         
 
@@ -16654,7 +16702,11 @@ public function request_rating_granted_none()
 
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
-        $data['data'] = $this->reselection_filter($this->Hiring_model->get_submitted_applicant($this->uri->segment(3)));
+        $applicants = $this->reselection_filter($this->Hiring_model->get_submitted_applicant($this->uri->segment(3)));
+        $qualification = $this->ier_qualification_filter($applicants);
+        $data['data'] = $qualification['rows'];
+        $data['display_filter'] = $qualification['filter'];
+        $data['applicant_counts'] = $qualification['counts'];
 
         
 

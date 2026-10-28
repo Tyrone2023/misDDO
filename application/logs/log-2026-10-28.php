@@ -22,3 +22,21 @@ ERROR - 2026-10-28 12:50:21 --> Severity: Warning --> Undefined variable $link /
 ERROR - 2026-10-28 12:50:21 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
 ERROR - 2026-10-28 06:03:00 --> 404 Page Not Found: Uploads/profile
 ERROR - 2026-10-28 06:03:10 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 16:02:46 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-10-28 16:02:46 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-10-28 09:03:22 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 09:03:36 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 09:03:45 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 16:03:59 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-10-28 16:03:59 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-10-28 09:04:10 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 09:04:19 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 09:04:25 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 09:12:56 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 09:12:56 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 16:14:39 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-10-28 16:14:39 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-10-28 09:14:49 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 09:14:54 --> 404 Page Not Found: Uploads/profile
+ERROR - 2026-10-28 16:26:21 --> Severity: Warning --> Undefined variable $link /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
+ERROR - 2026-10-28 16:26:21 --> Severity: Warning --> Undefined variable $pn /Applications/XAMPP/xamppfiles/htdocs/misDDO/application/views/list_reg_applicants.php 18
