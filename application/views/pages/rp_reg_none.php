@@ -672,6 +672,7 @@
                                                                 <strong><?= htmlspecialchars((string)$data->master, ENT_QUOTES, 'UTF-8'); ?></strong>
 
                                                             <?php endif; ?>
+                                                            <?php $this->load->view('pages/partials/ier_inclusion_control', array('ier_item' => 'master', 'ier_has_data' => trim((string) $data->master) !== '')); ?>
 
                                                         </td>
                                                     </tr>
@@ -702,6 +703,7 @@
                                                                 <strong><?= htmlspecialchars((string)$data->doctor, ENT_QUOTES, 'UTF-8'); ?></strong>
 
                                                             <?php endif; ?>
+                                                            <?php $this->load->view('pages/partials/ier_inclusion_control', array('ier_item' => 'doctor', 'ier_has_data' => trim((string) $data->doctor) !== '')); ?>
                                                         </td>
                                                     </tr>
                                                     <?php $this->load->view('pages/partials/applicant_supporting_document_row', array_merge($supportingDocuments['doctor_cav'], $supportingDocumentContext)); ?>
@@ -787,6 +789,7 @@
                                                                     
                                                                 <?php }} ?>
                                                                 <strong><?= htmlspecialchars((string)$data->tc, ENT_QUOTES, 'UTF-8'); ?></strong>
+                                                                <?php $this->load->view('pages/partials/ier_inclusion_control', array('ier_item' => 'tesda', 'ier_has_data' => trim((string) $data->tc) !== '' || trim((string) $data->tscfile) !== '' || trim((string) $data->tcfile) !== '')); ?>
                                                             </td>
                                                         </tr>
                                                     

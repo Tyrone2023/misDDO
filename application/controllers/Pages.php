@@ -125,6 +125,403 @@ class Pages extends CI_Controller
         );
     }
 
+    /**
+     * IER V2 stores only user-entered differences from the generated report.
+     * A single compressed payload per vacancy is substantially smaller than a
+     * row for every editable cell, while appID keys keep applicant edits stable
+     * when the report is filtered or a reselection batch is opened.
+     */
+    private function ensure_ier_report_edit_table()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `hris_ier_report_edits` (
+                `job_id` INT UNSIGNED NOT NULL,
+                `payload` MEDIUMBLOB NOT NULL,
+                `is_compressed` TINYINT(1) NOT NULL DEFAULT 1,
+                `updated_by` VARCHAR(45) NULL DEFAULT NULL,
+                `updated_at` DATETIME NOT NULL,
+                PRIMARY KEY (`job_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
+
+    /** Only HR report owners may change the shared IER document. */
+    private function can_edit_ier_report()
+    {
+        $role = strtolower(trim((string) $this->session->userdata('position')));
+
+        return in_array($role, array(
+            'admin',
+            'super admin',
+            'human resource admin',
+            'hr staff',
+            'secretariat',
+            'field encoder',
+            'asds',
+            'asst_sds',
+            'sds',
+        ), true);
+    }
+
+    /** Read and decode one vacancy's compact IER edit payload. */
+    private function ier_report_edits($jobID)
+    {
+        $this->ensure_ier_report_edit_table();
+        $row = $this->db->where('job_id', (int) $jobID)
+            ->limit(1)
+            ->get('hris_ier_report_edits')
+            ->row();
+
+        if (empty($row)) {
+            return array();
+        }
+
+        $json = (string) $row->payload;
+        if ((int) $row->is_compressed === 1 && function_exists('gzinflate')) {
+            $inflated = @gzinflate($json);
+            if ($inflated === false) {
+                return array();
+            }
+            $json = $inflated;
+        }
+
+        $decoded = json_decode($json, true);
+        return is_array($decoded) ? $decoded : array();
+    }
+
+    /** Plain-text cells are safe to render and remain compact in the payload. */
+    private function clean_ier_report_text($value)
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $value = strip_tags((string) $value);
+        $value = str_replace(array("\r\n", "\r", "\0"), array("\n", "\n", ''), $value);
+        $value = preg_replace("/[ \t]+\n/", "\n", $value);
+        $value = trim($value);
+
+        return mb_substr($value, 0, 5000, 'UTF-8');
+    }
+
+    private function ier_json_response($body, $status = 200)
+    {
+        return $this->output
+            ->set_status_header((int) $status)
+            ->set_content_type('application/json', 'utf-8')
+            ->set_output(json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    /** Save the inline, Word-like IER V2 editor. */
+    public function save_ier_report_edits()
+    {
+        if (strtoupper((string) $this->input->server('REQUEST_METHOD')) !== 'POST') {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'Method not allowed.'), 405);
+        }
+
+        if (!$this->can_edit_ier_report()) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'You are not allowed to edit this IER.'), 403);
+        }
+
+        $jobID = (int) $this->input->post('job_id');
+        if ($jobID <= 0 || !$this->db->where('jobID', $jobID)->count_all_results('hris_jobvacancy')) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'Vacancy not found.'), 404);
+        }
+
+        $raw = (string) $this->input->post('edits', false);
+        if (strlen($raw) > 524288) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'The report edit is too large.'), 413);
+        }
+
+        $submitted = json_decode($raw, true);
+        if (!is_array($submitted)) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'Invalid report data.'), 400);
+        }
+
+        $headerKeys = array_flip(array(
+            'position_label', 'position', 'salary_label', 'salary',
+            'qualification_label', 'qualification', 'education_label', 'education',
+            'training_label', 'training', 'experience_label', 'experience',
+            'eligibility_label', 'eligibility',
+        ));
+        $columnKeys = array_flip(array(
+            'number', 'application', 'education', 'training_group',
+            'training_details', 'training_hours', 'experience_group',
+            'experience_details', 'experience_years', 'eligibility', 'remarks',
+        ));
+        $rowKeys = array_flip(array(
+            'number', 'application', 'education', 'training_details',
+            'training_hours', 'experience_details', 'experience_years',
+            'eligibility', 'remarks',
+        ));
+
+        $clean = array();
+        foreach (array('h' => $headerKeys, 'c' => $columnKeys) as $section => $allowed) {
+            if (empty($submitted[$section]) || !is_array($submitted[$section])) {
+                continue;
+            }
+            foreach ($submitted[$section] as $key => $value) {
+                if (!isset($allowed[$key])) {
+                    continue;
+                }
+                $text = $this->clean_ier_report_text($value);
+                if ($text !== null) {
+                    $clean[$section][$key] = $text;
+                }
+            }
+        }
+
+        // A filtered or reselection report shows only some applicants. Keep
+        // saved overrides for rows that are not visible during this save, and
+        // replace only the visible rows with the submitted delta.
+        $validAppIDs = array();
+        $applicationRows = $this->db->select('appID')
+            ->where('jobID', $jobID)
+            ->get('hris_applications')
+            ->result();
+        foreach ($applicationRows as $applicationRow) {
+            $validAppIDs[(int) $applicationRow->appID] = true;
+        }
+
+        $visible = json_decode((string) $this->input->post('visible_app_ids', false), true);
+        $visibleAppIDs = array();
+        if (is_array($visible)) {
+            foreach ($visible as $visibleAppID) {
+                $visibleAppID = (int) $visibleAppID;
+                if (!empty($validAppIDs[$visibleAppID])) {
+                    $visibleAppIDs[$visibleAppID] = true;
+                }
+            }
+        }
+
+        $existing = $this->ier_report_edits($jobID);
+        if (!empty($existing['r']) && is_array($existing['r'])) {
+            foreach ($existing['r'] as $appID => $fields) {
+                $appID = (int) $appID;
+                if (empty($validAppIDs[$appID]) || !empty($visibleAppIDs[$appID]) || !is_array($fields)) {
+                    continue;
+                }
+                foreach ($fields as $key => $value) {
+                    if (!isset($rowKeys[$key])) {
+                        continue;
+                    }
+                    $text = $this->clean_ier_report_text($value);
+                    if ($text !== null) {
+                        $clean['r'][(string) $appID][$key] = $text;
+                    }
+                }
+            }
+        }
+
+        if (!empty($submitted['r']) && is_array($submitted['r'])) {
+
+            foreach ($submitted['r'] as $appID => $fields) {
+                $appID = (int) $appID;
+                if (empty($validAppIDs[$appID]) || empty($visibleAppIDs[$appID]) || !is_array($fields)) {
+                    continue;
+                }
+                foreach ($fields as $key => $value) {
+                    if (!isset($rowKeys[$key])) {
+                        continue;
+                    }
+                    $text = $this->clean_ier_report_text($value);
+                    if ($text !== null) {
+                        $clean['r'][(string) $appID][$key] = $text;
+                    }
+                }
+            }
+        }
+
+        $this->ensure_ier_report_edit_table();
+        if (empty($clean)) {
+            $this->db->where('job_id', $jobID)->delete('hris_ier_report_edits');
+            return $this->ier_json_response(array('ok' => true, 'message' => 'IER restored to its generated data.'));
+        }
+
+        $json = json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'The report data could not be encoded.'), 400);
+        }
+
+        $payload = $json;
+        $isCompressed = 0;
+        if (function_exists('gzdeflate')) {
+            $compressed = gzdeflate($json, 9);
+            if ($compressed !== false && strlen($compressed) < strlen($json)) {
+                $payload = $compressed;
+                $isCompressed = 1;
+            }
+        }
+
+        $this->db->query(
+            "INSERT INTO `hris_ier_report_edits`
+                (`job_id`, `payload`, `is_compressed`, `updated_by`, `updated_at`)
+             VALUES (?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE
+                `payload` = VALUES(`payload`),
+                `is_compressed` = VALUES(`is_compressed`),
+                `updated_by` = VALUES(`updated_by`),
+                `updated_at` = VALUES(`updated_at`)",
+            array(
+                $jobID,
+                $payload,
+                $isCompressed,
+                (string) ($this->session->userdata('id') ?: $this->session->userdata('user_id')),
+            )
+        );
+
+        return $this->ier_json_response(array(
+            'ok' => true,
+            'message' => 'IER changes saved.',
+            'stored_bytes' => strlen($payload),
+        ));
+    }
+
+    /**
+     * Master's / Doctor's degree and TESDA NC confirmed from the rating page
+     * for one application's IER. Only the decision is stored; the degree and
+     * certificate text are read live from the applicant record.
+     */
+    private function ensure_ier_inclusion_table()
+    {
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS `hris_ier_inclusions` (
+                `app_id` INT UNSIGNED NOT NULL,
+                `item` ENUM('master','doctor','tesda') NOT NULL,
+                `job_id` INT UNSIGNED NOT NULL,
+                `date_from` DATE NULL DEFAULT NULL,
+                `date_to` DATE NULL DEFAULT NULL,
+                `hours` DECIMAL(7,2) UNSIGNED NULL DEFAULT NULL,
+                `included_by` VARCHAR(45) NULL DEFAULT NULL,
+                `included_at` DATETIME NOT NULL,
+                PRIMARY KEY (`app_id`, `item`),
+                KEY `idx_job` (`job_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
+
+    /** Inclusions indexed [appID][item], for a whole vacancy or one application. */
+    private function ier_inclusions($jobID, $appID = null)
+    {
+        $this->ensure_ier_inclusion_table();
+        $this->db->where('job_id', (int) $jobID);
+        if ($appID !== null) {
+            $this->db->where('app_id', (int) $appID);
+        }
+
+        $indexed = array();
+        foreach ($this->db->get('hris_ier_inclusions')->result() as $row) {
+            $indexed[(int) $row->app_id][$row->item] = $row;
+        }
+        return $indexed;
+    }
+
+    /** Recruitment staff and the application's evaluators, never the applicant. */
+    private function can_include_in_ier($applicant, $appID)
+    {
+        $role = strtolower(trim((string) $this->session->userdata('position')));
+        if ($role === '' || in_array($role, array('reg', 'user'), true)) {
+            return false;
+        }
+        return $this->can_edit_applicant_record($applicant, $appID);
+    }
+
+    /** Include or remove a Master's, Doctor's or TESDA NC entry in the IER. */
+    public function save_ier_inclusion()
+    {
+        if (strtoupper((string) $this->input->server('REQUEST_METHOD')) !== 'POST') {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'Method not allowed.'), 405);
+        }
+
+        $appID = (int) $this->input->post('app_id');
+        $item = (string) $this->input->post('item');
+        $action = (string) $this->input->post('action');
+        if (!in_array($item, array('master', 'doctor', 'tesda'), true) || !in_array($action, array('include', 'remove'), true)) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'Invalid request.'), 400);
+        }
+
+        $application = $this->Common->one_cond_row('hris_applications', 'appID', $appID);
+        if (empty($application)) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'Application not found.'), 404);
+        }
+        $applicant = $this->Common->one_cond_row('hris_applicant', 'empEmail', $application->empEmail);
+        if (empty($applicant)) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'Applicant record not found.'), 404);
+        }
+        if (!$this->can_include_in_ier($applicant, $appID)) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'You are not allowed to change this IER.'), 403);
+        }
+
+        $this->ensure_ier_inclusion_table();
+        if ($action === 'remove') {
+            $this->db->where('app_id', $appID)->where('item', $item)->delete('hris_ier_inclusions');
+            return $this->ier_json_response(array('ok' => true, 'message' => 'Removed from the IER.'));
+        }
+
+        $hasData = $item === 'tesda'
+            ? (trim((string) $applicant->tc) !== '' || trim((string) $applicant->tscfile) !== '' || trim((string) $applicant->tcfile) !== '')
+            : trim((string) $applicant->{$item}) !== '';
+        if (!$hasData) {
+            return $this->ier_json_response(array('ok' => false, 'message' => 'There is no data to include.'), 422);
+        }
+
+        $dateFrom = null;
+        $dateTo = null;
+        $hours = null;
+        if ($item === 'tesda') {
+            $dates = array();
+            foreach (array('date_from', 'date_to') as $field) {
+                $value = trim((string) $this->input->post($field));
+                if ($value === '') {
+                    $dates[$field] = null;
+                    continue;
+                }
+                $date = DateTime::createFromFormat('!Y-m-d', $value);
+                if (!$date || $date->format('Y-m-d') !== $value) {
+                    return $this->ier_json_response(array('ok' => false, 'message' => 'Enter a valid date.'), 422);
+                }
+                $dates[$field] = $value;
+            }
+            $dateFrom = $dates['date_from'];
+            $dateTo = $dates['date_to'];
+            if ($dateFrom !== null && $dateTo !== null && $dateFrom > $dateTo) {
+                return $this->ier_json_response(array('ok' => false, 'message' => 'The "From" date must not be after the "To" date.'), 422);
+            }
+
+            $hoursInput = trim((string) $this->input->post('hours'));
+            if ($hoursInput !== '') {
+                if (!is_numeric($hoursInput) || (float) $hoursInput < 0 || (float) $hoursInput > 99999) {
+                    return $this->ier_json_response(array('ok' => false, 'message' => 'Enter valid total hours.'), 422);
+                }
+                $hours = round((float) $hoursInput, 2);
+            }
+        }
+
+        $this->db->query(
+            "INSERT INTO `hris_ier_inclusions`
+                (`app_id`, `item`, `job_id`, `date_from`, `date_to`, `hours`, `included_by`, `included_at`)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE
+                `job_id` = VALUES(`job_id`),
+                `date_from` = VALUES(`date_from`),
+                `date_to` = VALUES(`date_to`),
+                `hours` = VALUES(`hours`),
+                `included_by` = VALUES(`included_by`),
+                `included_at` = VALUES(`included_at`)",
+            array(
+                $appID,
+                $item,
+                (int) $application->jobID,
+                $dateFrom,
+                $dateTo,
+                $hours,
+                (string) ($this->session->userdata('id') ?: $this->session->userdata('user_id')),
+            )
+        );
+
+        return $this->ier_json_response(array('ok' => true, 'message' => 'Included in the IER.'));
+    }
+
     private function get_rqa_sign($job, $stat = null, $useJobSign = true)
     {
         $sign = null;
@@ -10289,6 +10686,10 @@ public function rqa_municipality_print_shsv2()
         $canEditApplicant = $this->can_edit_applicant_record($applicant, $appIdForRating);
         $data['can_edit_eligibility'] = $canEditApplicant;
         $data['can_edit_education'] = $canEditApplicant;
+        $data['ier_can_include'] = (int) $appIdForRating > 0 && $this->can_include_in_ier($applicant, $appIdForRating);
+        $data['ier_inclusions'] = (int) $appIdForRating > 0
+            ? ($this->ier_inclusions((int) $this->uri->segment(4), (int) $appIdForRating)[(int) $appIdForRating] ?? array())
+            : array();
 
         $sessionPosition = (string)$this->session->userdata('position');
         $fieldEvaluatorOnly = false;
@@ -10433,6 +10834,9 @@ public function rqa_municipality_print_shsv2()
         }
         if (!empty($data['can_edit_eligibility'])) {
             $this->load->view('pages/partials/applicant_eligibility_modal', $data);
+        }
+        if (!empty($data['ier_can_include'])) {
+            $this->load->view('pages/partials/ier_inclusion_modal', $data);
         }
         if (!empty($data['evaluator_qualification_gate'])) {
             $this->load->view('pages/_evaluator_qualification_gate', $data);
@@ -16678,13 +17082,84 @@ public function request_rating_granted_none()
 
         $this->ensure_applicant_eligibility_columns();
 
+        $jobID = (int) $this->uri->segment(3);
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
-        $applicants = $this->reselection_filter($this->Common->get_submitted_applicant($this->uri->segment(3)));
+        $data['job'] = $this->Common->one_cond_row('hris_jobvacancy', 'jobID', $jobID);
+        if (empty($data['job'])) {
+            show_404();
+            return;
+        }
+
+        $applicants = $this->reselection_filter($this->Common->get_submitted_applicant($jobID));
         $qualification = $this->ier_qualification_filter($applicants);
         $data['data'] = $qualification['rows'];
         $data['display_filter'] = $qualification['filter'];
         $data['applicant_counts'] = $qualification['counts'];
+        $data['ier_report_edits'] = $this->ier_report_edits($jobID);
+        $data['ier_can_edit'] = $this->can_edit_ier_report();
+
+        // Degrees and TESDA NC confirmed for the IER on the rating page.
+        $data['ier_inclusions'] = $this->ier_inclusions($jobID);
+        $data['ier_degrees'] = array();
+        $degreePersonIDs = array();
+        foreach ($data['data'] as $applicant) {
+            $included = $data['ier_inclusions'][(int) ($applicant->appID ?? 0)] ?? array();
+            if (isset($included['master']) || isset($included['doctor'])) {
+                $degreePersonIDs[] = (string) $applicant->id;
+            }
+        }
+        if (!empty($degreePersonIDs)) {
+            $degreeRows = $this->db
+                ->select('id, master, master_stat, master_units, doctor, doctor_stat, doctor_units')
+                ->where_in('id', $degreePersonIDs)
+                ->get('hris_applicant')
+                ->result();
+            foreach ($degreeRows as $degreeRow) {
+                $data['ier_degrees'][(string) $degreeRow->id] = $degreeRow;
+            }
+        }
+
+        // The old view queried training and experience once per applicant.
+        // Load each record type once, then index it for the report rows.
+        $data['ier_trainings'] = array();
+        $data['ier_experiences'] = array();
+        $personIDs = array();
+        foreach ($data['data'] as $applicant) {
+            $personID = trim((string) ($applicant->id ?? ''));
+            if ($personID !== '') {
+                $personIDs[$personID] = $personID;
+            }
+        }
+
+        if (!empty($personIDs)) {
+            $this->Reg->ensure_record_relevance_table();
+            $trainingRows = $this->db
+                ->select('t.IDNumber, t.trainingTitle, t.sponsor, t.dateStarted, t.dateFinished, t.noHours, r.stat AS relevance_stat, r.updated_by, r.credited_hours')
+                ->from('hris_trainings t')
+                ->join('hris_record_relevance r', "r.record_type = 'training' AND r.record_id = t.trainingID AND r.job_id = " . $jobID, 'left', false)
+                ->where_in('t.IDNumber', array_values($personIDs))
+                ->order_by('t.dateStarted', 'DESC')
+                ->order_by('t.trainingID', 'DESC')
+                ->get()
+                ->result();
+            foreach ($trainingRows as $trainingRow) {
+                $data['ier_trainings'][(string) $trainingRow->IDNumber][] = $trainingRow;
+            }
+
+            $experienceRows = $this->db
+                ->select('e.id_number, e.title, e.position_title, e.date_from, e.date_to, e.ny, e.nm, r.stat AS relevance_stat, r.updated_by, r.credited_months')
+                ->from('hris_experience e')
+                ->join('hris_record_relevance r', "r.record_type = 'experience' AND r.record_id = e.id AND r.job_id = " . $jobID, 'left', false)
+                ->where_in('e.id_number', array_values($personIDs))
+                ->order_by('e.date_from', 'DESC')
+                ->order_by('e.id', 'DESC')
+                ->get()
+                ->result();
+            foreach ($experienceRows as $experienceRow) {
+                $data['ier_experiences'][(string) $experienceRow->id_number][] = $experienceRow;
+            }
+        }
 
         
 

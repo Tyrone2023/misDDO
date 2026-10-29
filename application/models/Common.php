@@ -1627,6 +1627,9 @@ public function no_cond_except($table, $col, $val)
         COALESCE(app.ethnicity, staff.ethnicity) AS ethnicity,
         COALESCE(app.csEligibility, staff.csEligibility) AS csEligibility,
         app.csEligibilityRating AS csEligibilityRating,
+        COALESCE(NULLIF(app.tc, ''), NULLIF(staff.tc, ''), NULLIF(a.tc, '')) AS tesda_certificates,
+        COALESCE(NULLIF(app.tscfile, ''), NULLIF(staff.tscfile, ''), NULLIF(a.tscfile, '')) AS tesda_training_file,
+        COALESCE(NULLIF(app.tcfile, ''), NULLIF(staff.tcfile, ''), NULLIF(a.tcfile, '')) AS tesda_certificate_file,
         CASE
             WHEN app.record_no IS NOT NULL THEN 'profile_reg_edit'
             WHEN staff.IDNumber IS NOT NULL THEN 'employee_edit'
