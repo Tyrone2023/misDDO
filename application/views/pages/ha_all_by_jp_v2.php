@@ -420,10 +420,11 @@
                 $education = implode("\n", array_values(array_filter($educationLines, 'strlen')));
 
                 // Yellow marks TESDA data that is not yet carried into the IER.
+                // Same rule as the rating page row: a real title or the uploaded file.
+                $tesdaTitle = trim((string) ($row->tesda_certificates ?? ''));
                 $hasTesda = !$tesdaIncluded && (
-                    trim((string) ($row->tesda_certificates ?? '')) !== ''
+                    ($tesdaTitle !== '' && !preg_match('/^(n\/?a|none|-+)$/i', $tesdaTitle))
                     || trim((string) ($row->tesda_training_file ?? '')) !== ''
-                    || trim((string) ($row->tesda_certificate_file ?? '')) !== ''
                 );
                 $applicationUrl = base_url()
                     . 'Pages/ma/' . rawurlencode($personID)

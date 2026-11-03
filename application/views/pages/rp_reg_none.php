@@ -789,7 +789,7 @@
                                                                     
                                                                 <?php }} ?>
                                                                 <strong><?= htmlspecialchars((string)$data->tc, ENT_QUOTES, 'UTF-8'); ?></strong>
-                                                                <?php $this->load->view('pages/partials/ier_inclusion_control', array('ier_item' => 'tesda', 'ier_has_data' => trim((string) $data->tc) !== '' || trim((string) $data->tscfile) !== '' || trim((string) $data->tcfile) !== '')); ?>
+                                                                <?php $this->load->view('pages/partials/ier_inclusion_control', array('ier_item' => 'tesda', 'ier_has_data' => (trim((string) $data->tc) !== '' && !preg_match('/^(n\/?a|none|-+)$/i', trim((string) $data->tc))) || trim((string) $data->tscfile) !== '')); ?>
                                                             </td>
                                                         </tr>
                                                     

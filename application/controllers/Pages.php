@@ -459,7 +459,7 @@ class Pages extends CI_Controller
         }
 
         $hasData = $item === 'tesda'
-            ? (trim((string) $applicant->tc) !== '' || trim((string) $applicant->tscfile) !== '' || trim((string) $applicant->tcfile) !== '')
+            ? ((trim((string) $applicant->tc) !== '' && !preg_match('/^(n\/?a|none|-+)$/i', trim((string) $applicant->tc))) || trim((string) $applicant->tscfile) !== '')
             : trim((string) $applicant->{$item}) !== '';
         if (!$hasData) {
             return $this->ier_json_response(array('ok' => false, 'message' => 'There is no data to include.'), 422);
