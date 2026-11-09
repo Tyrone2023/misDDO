@@ -236,7 +236,7 @@
         <h1 style="font-size:20px"><?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?></h1>
 
         <nav class="ier-filter" aria-label="Filter applicants by qualification status">
-            <?php foreach (array('all' => 'All Applicants', 'qualified' => 'Qualified', 'disqualified' => 'Disqualified') as $filterKey => $filterLabel): ?>
+            <?php foreach (array('all' => 'All Applicants', 'qualified' => 'Qualified', 'disqualified' => 'Disqualified', 'pending' => 'Pending') as $filterKey => $filterLabel): ?>
                 <a href="<?= htmlspecialchars($ier_filter_url($filterKey), ENT_QUOTES, 'UTF-8'); ?>"
                    class="<?= $display_filter === $filterKey ? 'is-active' : ''; ?>"
                    aria-current="<?= $display_filter === $filterKey ? 'page' : 'false'; ?>">

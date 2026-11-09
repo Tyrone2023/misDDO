@@ -92,7 +92,7 @@ class Pages extends CI_Controller
         $rows = is_array($rows) ? array_values($rows) : array();
         $display = strtolower(trim((string) $this->input->get('display')));
 
-        if (!in_array($display, array('qualified', 'disqualified'), true)) {
+        if (!in_array($display, array('qualified', 'disqualified', 'pending'), true)) {
             $display = 'all';
         }
 
@@ -100,6 +100,7 @@ class Pages extends CI_Controller
             'all'          => count($rows),
             'qualified'    => 0,
             'disqualified' => 0,
+            'pending'      => 0,
         );
 
         foreach ($rows as $row) {
@@ -108,13 +109,18 @@ class Pages extends CI_Controller
                 $counts['qualified']++;
             } elseif ($status === 2) {
                 $counts['disqualified']++;
+            } else {
+                $counts['pending']++;
             }
         }
 
         if ($display !== 'all') {
-            $wanted = $display === 'qualified' ? 1 : 2;
-            $rows = array_values(array_filter($rows, function ($row) use ($wanted) {
-                return (int) ($row->dq ?? 0) === $wanted;
+            $rows = array_values(array_filter($rows, function ($row) use ($display) {
+                $status = (int) ($row->dq ?? 0);
+                if ($display === 'pending') {
+                    return $status !== 1 && $status !== 2;
+                }
+                return $status === ($display === 'qualified' ? 1 : 2);
             }));
         }
 
@@ -17065,9 +17071,9 @@ public function request_rating_granted_none()
 
         $data['title'] = "Initial Evaluation Result (IER)";
         $data['mis_settings'] = $this->SettingsModel->mis_settings();
-        $data['data'] = $this->reselection_filter($this->Common->get_submitted_applicant($this->uri->segment(3)));
+        $data['data'] = $this->reselection_filter($this->Common->get_submitted_applicant($this->uri->segment(3), (int) $this->input->get('batch') > 0));
 
-        
+
 
         $this->load->view('pages/' . $page, $data);
     }
@@ -17091,7 +17097,7 @@ public function request_rating_granted_none()
             return;
         }
 
-        $applicants = $this->reselection_filter($this->Common->get_submitted_applicant($jobID));
+        $applicants = $this->reselection_filter($this->Common->get_submitted_applicant($jobID, (int) $this->input->get('batch') > 0));
         $qualification = $this->ier_qualification_filter($applicants);
         $data['data'] = $qualification['rows'];
         $data['display_filter'] = $qualification['filter'];

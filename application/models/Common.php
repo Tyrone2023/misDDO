@@ -1600,7 +1600,13 @@ public function no_cond_except($table, $col, $val)
     return $query->result();
     }
 
-    public function get_submitted_applicant($jobID)
+    /**
+     * $include_rating_requested: a reselection batch is the authoritative
+     * pick list, so batch reports pass true to keep picked applications that
+     * already carry an hris_rating_request row; the unbatched report still
+     * hides them.
+     */
+    public function get_submitted_applicant($jobID, $include_rating_requested = false)
     {
         $this->db->select("
         a.*,
@@ -1641,9 +1647,11 @@ public function no_cond_except($table, $col, $val)
     $this->db->join('hris_staff staff', 'app.record_no IS NULL AND a.empEmail = staff.IDNumber', 'left');
     $this->db->join('hris_jobvacancy j', 'a.jobID = j.jobID', 'left');
 
-    $this->db->join('hris_rating_request rr', 'rr.app_id = a.appID', 'left');
-    $this->db->where('rr.app_id IS NULL', null, false);
-    
+    if (!$include_rating_requested) {
+        $this->db->join('hris_rating_request rr', 'rr.app_id = a.appID', 'left');
+        $this->db->where('rr.app_id IS NULL', null, false);
+    }
+
     $this->db->where('a.jobID', $jobID);
 
     $query = $this->db->get();
