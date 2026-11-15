@@ -249,6 +249,8 @@ class Pages extends CI_Controller
             'qualification_label', 'qualification', 'education_label', 'education',
             'training_label', 'training', 'experience_label', 'experience',
             'eligibility_label', 'eligibility',
+            'prepared_label', 'prepared_name', 'prepared_position',
+            'prepared_date_label', 'prepared_date',
         ));
         $columnKeys = array_flip(array(
             'number', 'application', 'education', 'training_group',

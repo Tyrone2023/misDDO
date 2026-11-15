@@ -37,6 +37,16 @@
                 background: transparent !important;
                 box-shadow: none !important;
             }
+            .ier-signatory td, .ier-signatory td * { font-size: 12px; }
+        }
+        .ier-signatory { margin-top: 28px; table-layout: fixed; border: 0; page-break-inside: avoid; break-inside: avoid; }
+        .ier-signatory td { border: 0; padding: 2px 6px; vertical-align: bottom; }
+        .ier-signatory .ier-signatory-inline { display: inline-block; vertical-align: bottom; }
+        .ier-signatory .ier-signatory-date { min-width: 170px; border-bottom: 1px solid #000; text-align: center; }
+        @media screen {
+            .ier-editing [data-ier-key="prepared_name"]:empty::before { content: "Name"; color: #8a97a3; font-weight: normal; }
+            .ier-editing [data-ier-key="prepared_position"]:empty::before { content: "Position"; color: #8a97a3; }
+            .ier-editing [data-ier-key="prepared_date"]:empty::before { content: "Date"; color: #8a97a3; }
         }
         .ier-filter {
             display: flex;
@@ -451,6 +461,32 @@
             <?php if (empty($data)): ?>
                 <tr><td colspan="9" style="padding:20px; color:#555;">No <?= $display_filter === 'all' ? '' : htmlspecialchars($display_filter, ENT_QUOTES, 'UTF-8') . ' '; ?>applicants found.</td></tr>
             <?php endif; ?>
+            </tbody>
+        </table>
+
+        <table class="ier-signatory">
+            <colgroup>
+                <col style="width:4%">
+                <col style="width:9%">
+                <col style="width:13%">
+                <col style="width:22%">
+                <col style="width:5%">
+                <col style="width:22%">
+                <col style="width:8%">
+                <col style="width:9%">
+                <col style="width:8%">
+            </colgroup>
+            <tbody>
+            <tr>
+                <td colspan="5" rowspan="5"></td>
+                <td colspan="4" style="text-align:left"><?= $ierRender('h', 'prepared_label', 'Prepared and certified correct by:'); ?></td>
+            </tr>
+            <tr><td colspan="4" style="height:44px"></td></tr>
+            <tr><td colspan="4" style="text-align:center; font-weight:bold; border-bottom:1px solid #000"><?= $ierRender('h', 'prepared_name', ''); ?></td></tr>
+            <tr><td colspan="4" style="text-align:center"><?= $ierRender('h', 'prepared_position', ''); ?></td></tr>
+            <tr>
+                <td colspan="4" style="text-align:center"><?= $ierRender('h', 'prepared_date_label', 'Date:', null, 'ier-signatory-inline'); ?> <?= $ierRender('h', 'prepared_date', '', null, 'ier-signatory-inline ier-signatory-date'); ?></td>
+            </tr>
             </tbody>
         </table>
         </div>
