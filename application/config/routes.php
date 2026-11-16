@@ -38,7 +38,7 @@ $route['user_add'] = 'pages/user_add';
 $route['user_edit/(:any)'] = 'pages/user_edit/$1';
 $route['user_delete/(:any)'] = 'pages/user_delete/$1';
 
-$route['hrusers'] = 'pages/hrusers';
+$route['hrusers'] = 'hrusers/index';
 $route['eval_user_add'] = 'pages/eval_user_add';
 $route['hruser_edit/(:any)'] = 'pages/user_edit/$1';
 
