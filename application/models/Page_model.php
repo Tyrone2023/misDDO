@@ -858,7 +858,7 @@ public function count_for_approval_leave4($table, $approver_username)
         $date = date('Y-m-d h:i:s a', time());
 
         $data = array(
-            'record_no' => $this->input->post('record_no'),
+            'record_no' => $this->unique_record_no($this->input->post('record_no')),
             'empEmail' => $this->input->post('email'),
             'FirstName' => $this->input->post('fname'),
             'MiddleName' => $this->input->post('mname'),
@@ -1464,7 +1464,9 @@ public function count_for_approval_leave4($table, $approver_username)
         $lname = mb_substr($this->input->post('lname'), 0, 1);
         $con = substr($this->input->post('contact'), -4);
 
-        $rn = $fname . $mname . $lname . $con;
+        // Initials + last 4 digits of the contact collide easily (e.g. two
+        // "JBA1091"s), so pad the digits until the number is unused.
+        $rn = $this->unique_record_no($fname . $mname . $lname . $con);
 
         $p = $this->input->post('prefix');
         // The form now asks for Sex directly; fall back to the prefix for
@@ -1566,6 +1568,153 @@ public function count_for_approval_leave4($table, $approver_username)
             'ethnicity' => $this->input->post('ethnicity')
         );
         return $this->db->insert('hris_applicant', $data);
+    }
+
+    /**
+     * Returns $base if no hris_applicant row uses it, otherwise the first free
+     * variant with zeros inserted before the digits:
+     * JBA1091 -> JBA01091 -> JBA001091 ...
+     * $exclude_id skips that applicant's own row (used when renumbering).
+     */
+    public function unique_record_no($base, $exclude_id = null)
+    {
+        $base = trim((string) $base);
+        preg_match('/^(.*?)(\d*)$/u', $base, $m);
+        $prefix = isset($m[1]) ? $m[1] : $base;
+        $digits = isset($m[2]) ? $m[2] : '';
+
+        for ($pad = 0; $pad < 30; $pad++) {
+            $candidate = $prefix . str_repeat('0', $pad) . $digits;
+            $this->db->where('record_no', $candidate);
+            if ($exclude_id !== null) {
+                $this->db->where('id !=', (int) $exclude_id);
+            }
+            if ($this->db->count_all_results('hris_applicant') == 0) {
+                return $candidate;
+            }
+        }
+
+        // Practically unreachable; still guarantee uniqueness.
+        return $base . '-' . strtoupper(substr(uniqid(), -5));
+    }
+
+    /**
+     * Dashboard self-repair: every hris_applicant.record_no must be unique.
+     * In each duplicate group the earliest-registered applicant (lowest id)
+     * keeps the number; the others get a padded variant (JBA1091 -> JBA01091),
+     * carried into every table that stores a copy of record_no.
+     * Idempotent: does nothing once no duplicates remain.
+     * Returns the number of applicants renumbered.
+     */
+    public function fix_duplicate_record_nos()
+    {
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = false;
+
+        // One-time index so this check stays cheap on every dashboard load.
+        $idx = $this->db->query(
+            "SELECT 1 FROM information_schema.STATISTICS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'hris_applicant'
+                AND INDEX_NAME = 'idx_record_no' LIMIT 1"
+        );
+        if ($idx && $idx->num_rows() == 0) {
+            $this->db->query("ALTER TABLE hris_applicant ADD INDEX idx_record_no (record_no)");
+        }
+
+        $dups = $this->db->query(
+            "SELECT record_no FROM hris_applicant
+              WHERE record_no IS NOT NULL AND record_no <> ''
+              GROUP BY record_no HAVING COUNT(*) > 1"
+        );
+        if (!$dups || $dups->num_rows() == 0) {
+            $this->db->db_debug = $debug;
+            return 0;
+        }
+
+        // One failed renumbering must not mark later transactions failed.
+        $this->db->trans_strict(FALSE);
+
+        $fixed = 0;
+        foreach ($dups->result() as $dup) {
+            $old = $dup->record_no;
+            $rows = $this->db->select('id, empEmail, FirstName, MiddleName, LastName')
+                ->where('record_no', $old)->order_by('id', 'ASC')
+                ->get('hris_applicant')->result();
+            array_shift($rows); // earliest applicant keeps the original number
+
+            foreach ($rows as $a) {
+                $id  = (int) $a->id;
+                $new = $this->unique_record_no($old, $id);
+
+                // Jobs this applicant shares with another holder of $old:
+                // hris_rqa_remarks is keyed by (jobID, record_no) only, so those
+                // rows cannot be attributed and stay with the original holder.
+                $shared = array();
+                $q = $this->db->query(
+                    "SELECT DISTINCT a.jobID FROM hris_applications a
+                       JOIN hris_applicant p ON p.id = a.applicant_id
+                      WHERE p.record_no = ? AND p.id <> ?",
+                    array($old, $id)
+                );
+                if ($q) {
+                    foreach ($q->result() as $r) {
+                        $shared[] = (int) $r->jobID;
+                    }
+                }
+
+                $this->db->trans_start();
+
+                $this->db->where('id', $id)->update('hris_applicant', array('record_no' => $new));
+
+                $byApp = "record_no = ? AND appID IN (SELECT appID FROM hris_applications WHERE applicant_id = ?)";
+                foreach (array('hris_applications_rating', 'hris_rating_none', 'hris_rating_promotion', 'hris_rqa_recommendation') as $t) {
+                    $this->db->query("UPDATE `$t` SET record_no = ? WHERE $byApp", array($new, $old, $id));
+                }
+
+                $sql = "UPDATE hris_rqa_remarks SET record_no = ?
+                         WHERE record_no = ?
+                           AND jobID IN (SELECT jobID FROM hris_applications WHERE applicant_id = ?)";
+                if (!empty($shared)) {
+                    $sql .= " AND jobID NOT IN (" . implode(',', $shared) . ")";
+                }
+                $this->db->query($sql, array($new, $old, $id));
+
+                if (trim((string) $a->empEmail) !== '') {
+                    $this->db->query(
+                        "UPDATE hris_registration SET record_no = ? WHERE record_no = ? AND email = ?",
+                        array($new, $old, $a->empEmail)
+                    );
+                }
+
+                $this->db->trans_complete();
+
+                if ($this->db->trans_status() === FALSE) {
+                    log_message('error', "fix_duplicate_record_nos: failed to renumber applicant $id ($old -> $new)");
+                    continue;
+                }
+                $fixed++;
+
+                // Logged after commit: Audit's ensure_schema() may run DDL,
+                // which would implicitly commit an open transaction.
+                $CI =& get_instance();
+                if (isset($CI->Audit)) {
+                    $CI->Audit->log('update', array(
+                        'entity_type'  => 'applicant',
+                        'entity_table' => 'hris_applicant',
+                        'entity_id'    => $id,
+                        'applicant_id' => $id,
+                        'field'        => 'record_no',
+                        'description'  => 'Duplicate applicant no. ' . $old . ' auto-renumbered to ' . $new . ' for "'
+                            . trim($a->FirstName . ' ' . $a->MiddleName . ' ' . $a->LastName) . '".',
+                        'old_value'    => $old,
+                        'new_value'    => $new,
+                    ));
+                }
+            }
+        }
+
+        $this->db->db_debug = $debug;
+        return $fixed;
     }
 
     public function check_exist($table, $fname, $lname, $mname)

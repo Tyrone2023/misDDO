@@ -760,7 +760,13 @@ class Pages extends CI_Controller
 
     public function view()
     {
-
+        // Self-repair on dashboard load: give every applicant a unique
+        // record_no (JBA1091 / JBA01091). No-op once no duplicates remain.
+        try {
+            $this->Page_model->fix_duplicate_record_nos();
+        } catch (Throwable $e) {
+            log_message('error', 'fix_duplicate_record_nos: ' . $e->getMessage());
+        }
 
         if ($this->session->position == 'smme') {
 
@@ -3711,6 +3717,9 @@ class Pages extends CI_Controller
                 } else {
                     $this->Page_model->insert_application();
                     $id = $this->db->insert_id();
+                    // record_no is generated (and de-duplicated) in the model;
+                    // log the number actually assigned.
+                    $r_no = $this->db->select('record_no')->where('id', $id)->get('hris_applicant')->row('record_no');
                     $this->Page_model->update_app_count();
                     $this->Page_model->insert_reg_user($id);
 
