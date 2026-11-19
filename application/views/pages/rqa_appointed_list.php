@@ -103,14 +103,16 @@ if (!function_exists('h')) {
                         <h5 class="rqa-section-title"><i class="mdi mdi-filter-variant"></i> Filters</h5>
                     </div>
                     <div class="form-row rqa-filter-grid">
-                        <div class="form-group col-xl-6 col-lg-6 col-md-6">
+                        <div class="form-group <?= !empty($isSchoolAccount) ? 'col-12' : 'col-xl-6 col-lg-6 col-md-6'; ?>">
                             <label for="position-filter">Position</label>
                             <select id="position-filter" class="form-control"><option value="">All Positions</option></select>
                         </div>
+                        <?php if (empty($isSchoolAccount)) : ?>
                         <div class="form-group col-xl-6 col-lg-6 col-md-6">
                             <label for="school-filter">School Assigned</label>
                             <select id="school-filter" class="form-control"><option value="">All Schools</option></select>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -146,7 +148,7 @@ if (!function_exists('h')) {
                                     <th>School Assigned</th>
                                     <th>Date Hired</th>
                                     <th>Appointment Issued</th>
-                                    <th>Reports</th>
+                                    <?php if (empty($isSchoolAccount)) : ?><th>Reports</th><?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -163,6 +165,7 @@ if (!function_exists('h')) {
 document.addEventListener('DOMContentLoaded', function () {
     var appointedDataUrl = '<?= base_url('Pages/rqa_appointed_list_data'); ?>';
     var appointedRows = [];
+    var isSchoolAccount = <?= !empty($isSchoolAccount) ? 'true' : 'false'; ?>;
 
     var $pos = $('#position-filter');
     var $school = $('#school-filter');
@@ -233,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
         html += '<td>' + (r.school ? '<span class="rqa-school-tag">' + escHtml(r.school) + '</span>' : '<span class="text-muted">-</span>') + '</td>';
         html += '<td>' + dateTag(r.dateHired) + '</td>';
         html += '<td>' + appointmentTag(r.appointmentIssuedAt) + '</td>';
-        html += '<td><a class="rqa-report-link" href="<?= base_url('Pages/appointment_reports'); ?>?applicant=' + encodeURIComponent(r.recId) + '"><i class="mdi mdi-file-document-multiple-outline"></i>View Reports</a>'
+        if (!isSchoolAccount) html += '<td><a class="rqa-report-link" href="<?= base_url('Pages/appointment_reports'); ?>?applicant=' + encodeURIComponent(r.recId) + '"><i class="mdi mdi-file-document-multiple-outline"></i>View Reports</a>'
             + (r.natureOfAppointment ? '<div class="rqa-contact-line muted mt-1">' + escHtml(r.natureOfAppointment) + '</div>' : '') + '</td>';
         html += '</tr>';
         return html;

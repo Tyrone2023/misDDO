@@ -1772,6 +1772,7 @@
                                         <li><a href="<?= base_url(); ?>Page/jobVacancy">Job Vacancies</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/applicant_list">List of Applicants</a></li>
                                         <li><a href="<?= base_url(); ?>Pages/validated_applicant">Validated Applicants</a></li>
+                                        <li><a href="<?= base_url(); ?>Pages/rqa_appointed_list">Appointed List</a></li>
                                     </ul>
                                 </li>
                                 <!-- <li>

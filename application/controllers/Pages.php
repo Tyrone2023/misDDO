@@ -7214,12 +7214,27 @@ public function car_rqa_promotion()
         $data = [
             'title' => 'Appointed List',
             'settings' => $this->SettingsModel->get_mis_settings(),
+            'isSchoolAccount' => $this->rqa_school_account_rec_id() !== null,
         ];
 
         $this->load->view('templates/head');
         $this->load->view('templates/header');
         $this->load->view('pages/' . $page, $data);
         $this->load->view('templates/footer');
+    }
+
+    /**
+     * School accounts log in with username = schools.schoolID, while
+     * recommendation rows store schools.recID. Returns null for non-school
+     * accounts, or the school's recID (0 when unmatched, so nothing shows).
+     */
+    private function rqa_school_account_rec_id()
+    {
+        if ($this->session->position !== 'School') {
+            return null;
+        }
+        $school = $this->db->select('recID')->where('schoolID', (string) $this->session->username)->get('schools')->row();
+        return $school ? (int) $school->recID : 0;
     }
 
     /**
@@ -7237,12 +7252,17 @@ public function car_rqa_promotion()
         $this->ensure_rqa_recommendation_table();
 
         $suffixes = $this->rqa_recommendation_job_suffixes();
+        $schoolRecId = $this->rqa_school_account_rec_id();
         $rows = [];
 
         // Newest appointment first (ordered by appointment_issued_at)
         foreach ($this->Page_model->recommended_for_approval('appointed', null, true) as $row) {
             // A view-only position sees only its one allowed job title.
             if (!$this->rqa_job_title_allowed($row->jobTitle ?? '')) {
+                continue;
+            }
+            // School accounts see only appointees assigned to their school.
+            if ($schoolRecId !== null && (int) ($row->school_id ?? 0) !== $schoolRecId) {
                 continue;
             }
 
