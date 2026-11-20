@@ -57,6 +57,7 @@ $route['secretariat/disqualified'] = 'SecretariatQualification/disqualified';
 $route['secretariat/assessment'] = 'SecretariatQualification/assessment';
 $route['secretariat/assessment/save'] = 'SecretariatQualification/assessment_save';
 $route['secretariat/assessment/release'] = 'SecretariatQualification/assessment_release';
+$route['secretariat/letter-memo/save'] = 'SecretariatQualification/letter_memo_save';
 // Printable applicant document, opened by the Secretariat and, once released, by the applicant.
 $route['application-document/(:num)/(:any)'] = 'SecretariatQualification/document/$1/$2';
 $route['secretariat/scores'] = 'SecretariatScores/index';

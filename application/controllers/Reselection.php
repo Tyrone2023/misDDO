@@ -126,7 +126,47 @@ class Reselection extends CI_Controller
             );
         }
 
-        return array('ier' => $ier, 'rqa' => $rqa);
+        $shortlist = array(
+            array('label' => 'Shortlist', 'url' => base_url() . 'Reselection/shortlist/' . (int) $batch_id),
+            array('label' => 'Shortlist with Contact', 'url' => base_url() . 'Reselection/shortlist_contact/' . (int) $batch_id)
+        );
+
+        return array('ier' => $ier, 'rqa' => $rqa, 'shortlist' => $shortlist);
+    }
+
+    /**
+     * Shortlist of one batch - the same sheet as
+     * secretariat/reports/shortlist, limited to the batch's Qualified
+     * (dq = 1) applicants.
+     */
+    public function shortlist($id = null)
+    {
+        $this->render_shortlist($id, false);
+    }
+
+    public function shortlist_contact($id = null)
+    {
+        $this->render_shortlist($id, true);
+    }
+
+    private function render_shortlist($id, $withContact)
+    {
+        $this->guard();
+
+        $batch = $this->batch_or_redirect($id);
+        $job   = $this->job_or_redirect($batch->jobID);
+
+        $this->load->model('Secretariat_model', 'secretariat');
+        $this->load->model('SettingsModel');
+
+        $this->load->view('pages/secretariat_shortlist', array(
+            'title'        => 'Shortlist - ' . $batch->batch_name,
+            'mis_settings' => $this->SettingsModel->mis_settings(),
+            'job'          => $job,
+            'jobID'        => (int) $job->jobID,
+            'withContact'  => (bool) $withContact,
+            'applicants'   => $this->secretariat->shortlist_for_apps((int) $job->jobID, $this->resel->member_ids($batch->id))
+        ));
     }
 
     /**

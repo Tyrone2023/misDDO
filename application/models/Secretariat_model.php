@@ -3335,6 +3335,58 @@ class Secretariat_model extends CI_Model
     }
 
     /**
+     * Shortlist rows of a Selective IER / RQA batch: only the picked
+     * applications of that vacancy that are Qualified (dq = 1). Same row shape
+     * as shortlist_applicants(), so views/pages/secretariat_shortlist.php
+     * prints it unchanged.
+     */
+    public function shortlist_for_apps(int $jobId, array $appIds): array
+    {
+        $appIds = array_values(array_unique(array_filter(array_map('intval', $appIds))));
+
+        if ($jobId <= 0 || !$appIds) {
+            return [];
+        }
+
+        $applications = $this->db
+            ->select('appID, empEmail, appStatus')
+            ->from('hris_applications')
+            ->where('jobID', $jobId)
+            ->where('dq', 1)
+            ->where_in('appID', $appIds)
+            ->get()
+            ->result();
+
+        if (!$applications) {
+            return [];
+        }
+
+        $people = $this->applicant_details(array_column($applications, 'empEmail'));
+        $rows = [];
+
+        foreach ($applications as $application) {
+            $person = $people[strtolower(trim($application->empEmail))] ?? null;
+
+            if (!$person) {
+                continue;
+            }
+
+            $rows[] = (object) [
+                'appID'      => (int) $application->appID,
+                'appStatus'  => (string) $application->appStatus,
+                'record_no'  => (string) $person->record_no,
+                'FirstName'  => (string) $person->FirstName,
+                'MiddleName' => (string) $person->MiddleName,
+                'LastName'   => (string) $person->LastName,
+                'NameExtn'   => (string) $person->NameExtn,
+                'contact_no' => trim((string) $person->contactNo),
+            ];
+        }
+
+        return $this->sort_by_name($rows);
+    }
+
+    /**
      * Qualified (dq = 1) applicants for one assigned vacancy, shaped for the
      * shared IER sheet at views/pages/ha_all_by_jp_v2.php - that view reads
      * jobID, code, id, bachelor, csEligibility and dq off each row.
@@ -3879,6 +3931,69 @@ class Secretariat_model extends CI_Model
                 KEY idx_assessment_job (job_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
         ");
+
+        // One memorandum reference per vacancy, printed on every letter of
+        // non-compliance of that vacancy.
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS hris_vacancy_letter_memo (
+                job_id INT UNSIGNED NOT NULL PRIMARY KEY,
+                memo VARCHAR(500) NOT NULL DEFAULT '',
+                updated_by INT UNSIGNED NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+        ");
+    }
+
+    /** Memo reference used when a vacancy has none set yet. */
+    const DEFAULT_LETTER_MEMO = 'Division Memorandum No. 814, s. 2026 and Division Memorandum No. 840, s. 2026';
+
+    /** Memorandum reference set for one vacancy, or the default. */
+    public function letter_memo(int $jobId): string
+    {
+        $row = $jobId > 0
+            ? $this->db->select('memo')->where('job_id', $jobId)->limit(1)->get('hris_vacancy_letter_memo')->row()
+            : null;
+
+        $memo = trim((string) ($row->memo ?? ''));
+
+        return $memo !== '' ? $memo : self::DEFAULT_LETTER_MEMO;
+    }
+
+    /** Whether the vacancy has its own memo saved (vs. the default). */
+    public function has_letter_memo(int $jobId): bool
+    {
+        return $jobId > 0 && $this->db->where('job_id', $jobId)->where('memo !=', '')
+            ->count_all_results('hris_vacancy_letter_memo') > 0;
+    }
+
+    public function save_letter_memo(int $jobId, string $memo, int $userId): bool
+    {
+        if ($jobId <= 0) {
+            return false;
+        }
+
+        return (bool) $this->db->query(
+            'INSERT INTO hris_vacancy_letter_memo (job_id, memo, updated_by) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE memo = VALUES(memo), updated_by = VALUES(updated_by)',
+            [$jobId, mb_substr(trim(preg_replace('/\s+/', ' ', $memo)), 0, 500), $userId ?: null]
+        );
+    }
+
+    /**
+     * Puts the vacancy's memo into the letter's body2, between
+     * "(Items 20.a to j)" and "Annex C". A body2 the Secretariat rewrote
+     * without those anchors is left as typed.
+     */
+    private function apply_letter_memo(string $body2, string $memo): string
+    {
+        return (string) preg_replace_callback(
+            '/(\(Items 20\.a to j\))\s*.*?\s*(Annex C)/su',
+            static function ($m) use ($memo) {
+                return $m[1] . ' ' . $memo . ' ' . $m[2];
+            },
+            $body2,
+            1
+        );
     }
 
     /** Documents this module issues, keyed by the doc_type stored on the row. */
@@ -4136,8 +4251,8 @@ class Secretariat_model extends CI_Model
                     . 'Management Office, this is to formally inform you that you have not been included in the pool of '
                     . 'official applicants and cannot proceed to the next stage of the application process due to the '
                     . 'non-compliance with the provision stipulated in DepEd Order No. 007, s. 2023 as regards to the '
-                    . 'Submission and Receipt of Application documents specifically on (Items 20.a to j) Division Memorandum No. 814, s. 
-                    2026 and Division Memorandum No. 840, s. 2026 Annex C: Checklist of Requirements, to wit:',
+                    . 'Submission and Receipt of Application documents specifically on (Items 20.a to j) '
+                    . $this->letter_memo((int) ($ctx->jobID ?? 0)) . ' Annex C: Checklist of Requirements, to wit:',
                 'items'           => $items,
                 'body3'           => 'Further, Section 21 of DepEd Order No. 007, s. 2023 states that individuals who fail '
                     . 'to submit complete mandatory documents (Item 20.a to j) on the set deadline indicated in the '
@@ -4300,6 +4415,12 @@ class Secretariat_model extends CI_Model
 
                 $saved = true;
             }
+        }
+
+        // The memo is a vacancy-wide setting: saved letters follow it too, so
+        // nobody has to edit each letter when it changes.
+        if ($docType === 'letter' && isset($doc['body2'])) {
+            $doc['body2'] = $this->apply_letter_memo((string) $doc['body2'], $this->letter_memo((int) ($ctx->jobID ?? 0)));
         }
 
         return [

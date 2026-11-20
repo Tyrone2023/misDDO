@@ -207,6 +207,13 @@ $scoreText = static function ($value) {
                 </div>
             </div>
 
+            <?php if ($this->session->flashdata('success')) : ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <?= $sq_h($this->session->flashdata('success')); ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+            <?php endif; ?>
+
             <?php if ($this->session->flashdata('danger')) : ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     <?= $sq_h($this->session->flashdata('danger')); ?>
@@ -323,6 +330,36 @@ $scoreText = static function ($value) {
                         </div>
                     </div>
                 </div>
+
+                <?php if (empty($isVerifier)) : ?>
+                    <div class="card sq-card mb-3 sq-print-hide">
+                        <div class="card-body">
+                            <form method="post" action="<?= base_url('secretariat/letter-memo/save'); ?>">
+                                <input type="hidden" name="job_id" value="<?= $selectedJobId; ?>">
+                                <input type="hidden" name="mode" value="<?= $sq_h($mode); ?>">
+                                <label for="sq-letter-memo" class="font-weight-bold mb-1">
+                                    <i class="mdi mdi-file-document-edit-outline mr-1"></i> Memorandum on the letters of non-compliance
+                                </label>
+                                <div class="text-muted small mb-2">
+                                    Printed after "(Items 20.a to j)" on every letter of this vacancy, including letters already saved.
+                                    <?= !empty($letterMemoSet) ? '' : 'Currently using the default.'; ?>
+                                </div>
+                                <div class="form-row">
+                                    <div class="col-lg-10 col-md-9 mb-2 mb-md-0">
+                                        <input type="text" id="sq-letter-memo" name="memo" maxlength="500" class="form-control"
+                                               value="<?= $sq_h($letterMemo ?? ''); ?>"
+                                               placeholder="e.g. Division Memorandum No. 814, s. 2026 and Division Memorandum No. 840, s. 2026">
+                                    </div>
+                                    <div class="col-lg-2 col-md-3">
+                                        <button type="submit" class="btn btn-primary btn-block font-weight-bold">
+                                            <i class="mdi mdi-content-save-outline mr-1"></i> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
                 <div class="card sq-card">
                     <div class="sq-table-head">

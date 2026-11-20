@@ -183,6 +183,14 @@ $pickedCount = count($picked);
                                 <?php endforeach; ?>
                             </div>
                         </div>
+                        <div class="dropdown">
+                            <a class="rs-btn dropdown-toggle rs-report" href="#" data-toggle="dropdown" aria-expanded="false" title="Qualified applicants of this round only"><i class="mdi mdi-format-list-checks"></i> Shortlist</a>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <?php foreach ($links['shortlist'] as $link) : ?>
+                                    <a class="dropdown-item rs-report-link" target="_blank" href="<?= $link['url']; ?>"><?= $link['label']; ?></a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

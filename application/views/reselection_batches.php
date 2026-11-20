@@ -185,6 +185,16 @@ foreach ($batches as $b) {
                                             <?php endforeach; ?>
                                         </div>
                                     </div>
+                                    <div class="dropdown">
+                                        <a class="rs-btn dropdown-toggle" href="#" data-toggle="dropdown" aria-expanded="false" title="Qualified applicants of this round only">
+                                            <i class="mdi mdi-format-list-checks"></i> Shortlist
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-right">
+                                            <?php foreach ($links[$bid]['shortlist'] as $link) : ?>
+                                                <a class="dropdown-item" target="_blank" href="<?= $link['url']; ?>"><?= $link['label']; ?></a>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
                                 <?php endif; ?>
 
                                 <a class="rs-btn rs-btn-quiet" title="Remove this round"

@@ -108,6 +108,8 @@ class SecretariatQualification extends CI_Controller
             'jobTypeLabels' => $this->secretariat->job_types_map(),
             'applicants' => $applicants,
             'isVerifier' => $verifier,
+            'letterMemo' => $selectedVacancy ? $this->secretariat->letter_memo($jobId) : '',
+            'letterMemoSet' => $selectedVacancy ? $this->secretariat->has_letter_memo($jobId) : false,
             // One query for the whole list, so each row knows whether its
             // documents were already issued and released.
             'issuedDocs' => $this->secretariat->issued_documents(
@@ -119,6 +121,41 @@ class SecretariatQualification extends CI_Controller
         $this->load->view('templates/header');
         $this->load->view('pages/secretariat_qualification', $data);
         $this->load->view('templates/footer');
+    }
+
+    /**
+     * Saves the vacancy's memorandum reference printed on every letter of
+     * non-compliance, so the letters need not be edited one by one.
+     */
+    public function letter_memo_save(): void
+    {
+        $this->guard();
+
+        $jobId = (int) $this->input->post('job_id');
+        $mode = $this->input->post('mode') === 'disqualified' ? 'disqualified' : 'qualified';
+        $back = base_url('secretariat/' . $mode . '?job_id=' . $jobId);
+
+        if (strtoupper((string) $this->input->method()) !== 'POST') {
+            redirect($back);
+            return;
+        }
+
+        if ($this->is_verifier() || !$this->secretariat->secretariat_has_vacancy($this->user_id(), $jobId)) {
+            show_error('That vacancy is not assigned to your Secretariat account.', 403, 'Forbidden');
+            return;
+        }
+
+        $memo = trim((string) $this->input->post('memo'));
+
+        if ($this->secretariat->save_letter_memo($jobId, $memo, $this->user_id())) {
+            $this->session->set_flashdata('success', $memo === ''
+                ? 'Memorandum reset to the default.'
+                : 'Memorandum saved. Every letter of this vacancy now shows it.');
+        } else {
+            $this->session->set_flashdata('danger', 'The memorandum could not be saved. Please try again.');
+        }
+
+        redirect($back);
     }
 
     /* ------------------------------------------------------------------ *
