@@ -1149,6 +1149,86 @@ class SGODModel extends CI_Model
 		return array('ok' => true, 'existing' => false, 'description' => $desc);
 	}
 
+	// Types the code branches on by name (batch_fund_type, monthly split, report filters).
+	// Renaming or deleting them would silently change report behaviour, so they are locked.
+	public function alloc_type_locked($description)
+	{
+		return in_array(strtoupper(trim($description)), array('MOOE', 'SBFP', 'SNED FUND'), true);
+	}
+
+	// Allocation types with how many allocation rows use each one.
+	public function alloc_types_usage()
+	{
+		// Counted in PHP: sgod_settings_bs is latin1 and a SQL join would hit error 1267.
+		$used = array();
+		foreach ($this->db->query("SELECT TRIM(alloc_type) AS t, COUNT(*) AS n FROM sgod_school_allocation GROUP BY TRIM(alloc_type)")->result() as $r) {
+			$k = strtoupper($r->t);
+			$used[$k] = (isset($used[$k]) ? $used[$k] : 0) + (int) $r->n;
+		}
+
+		$out = array();
+		foreach ($this->db->order_by('description', 'ASC')->get('sgod_settings_bs')->result() as $r) {
+			$k = strtoupper(trim($r->description));
+			$r->alloc_count = isset($used[$k]) ? $used[$k] : 0;
+			$r->locked = $this->alloc_type_locked($r->description);
+			$out[] = $r;
+		}
+		return $out;
+	}
+
+	// Renames a type and carries the new name onto the allocations that use it.
+	public function rename_alloc_type($id, $description)
+	{
+		$row = $this->db->where('id', (int) $id)->get('sgod_settings_bs')->row();
+		$desc = trim(preg_replace('/\s+/', ' ', (string) $description));
+
+		if (!$row) {
+			return 'Allocation type not found.';
+		}
+		if ($this->alloc_type_locked($row->description)) {
+			return '"' . $row->description . '" is a system type and cannot be renamed.';
+		}
+		if ($desc === '' || mb_strlen($desc) > 60) {
+			return 'Enter a type name (max 60 characters).';
+		}
+		if ($this->alloc_type_locked($desc)) {
+			return '"' . $desc . '" is a reserved system type name.';
+		}
+		$dup = $this->db->query(
+			"SELECT id FROM sgod_settings_bs WHERE LOWER(TRIM(description)) = ? AND id <> ? LIMIT 1",
+			array(mb_strtolower($desc), (int) $id)
+		)->row();
+		if ($dup) {
+			return '"' . $desc . '" already exists.';
+		}
+
+		$this->db->trans_start();
+		$this->db->where('id', (int) $id)->update('sgod_settings_bs', array('description' => $desc));
+		$this->db->where('TRIM(alloc_type)', trim($row->description), true)->update('sgod_school_allocation', array('alloc_type' => $desc));
+		$this->db->trans_complete();
+
+		return $this->db->trans_status() ? '' : 'Could not rename the type. Please try again.';
+	}
+
+	// Deletes a type only when no allocation uses it.
+	public function delete_alloc_type($id)
+	{
+		$row = $this->db->where('id', (int) $id)->get('sgod_settings_bs')->row();
+		if (!$row) {
+			return 'Allocation type not found.';
+		}
+		if ($this->alloc_type_locked($row->description)) {
+			return '"' . $row->description . '" is a system type and cannot be deleted.';
+		}
+		$n = $this->db->where('TRIM(alloc_type)', trim($row->description), true)->count_all_results('sgod_school_allocation');
+		if ($n > 0) {
+			return '"' . $row->description . '" is used by ' . number_format($n) . ' allocation(s) and cannot be deleted.';
+		}
+
+		$this->db->where('id', (int) $id)->delete('sgod_settings_bs');
+		return '';
+	}
+
 	public function insert_bs()
 	{
 		$data = array(

@@ -1996,6 +1996,7 @@
                             <?php elseif ($this->session->userdata('position') === 'Accountant') : ?>
                                 <li><a href="<?= base_url(); ?>" class="waves-effect"><i class="mdi mdi-monitor-dashboard"></i><span> Dashboard </span></a></li>
                                 <li><a href="<?= base_url(); ?>Page/school_allocations" class="waves-effect"><i class="mdi mdi-cash-usd "></i><span>School Allocations </span></a></li>
+                                <li><a href="<?= base_url(); ?>Page/alloc_types" class="waves-effect"><i class="mdi mdi-tag-multiple"></i><span>Allocation Types </span></a></li>
                                 <li>
                                     <a href="javascript: void(0);" class="waves-effect">
                                         <i class="fas fa-scroll"></i>

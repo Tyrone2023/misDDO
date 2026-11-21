@@ -357,6 +357,44 @@ class Page extends CI_Controller
 		}
 	}
 
+	// Allocation Types CRUD (sgod_settings_bs), linked from the Accountant sidebar.
+	public function alloc_types()
+	{
+		if (empty($this->session->username) || $this->session->position == 'School') {
+			redirect(base_url());
+		}
+		$result['types'] = $this->SGODModel->alloc_types_usage();
+		$this->load->view('alloc_types', $result);
+	}
+
+	function alloc_type_save()
+	{
+		if (empty($this->session->username) || $this->session->position == 'School' || $this->input->method() !== 'post') {
+			redirect(base_url());
+		}
+		$id = (int) $this->input->post('id');
+		if ($id > 0) {
+			$error = $this->SGODModel->rename_alloc_type($id, $this->input->post('description'));
+			$ok = 'Allocation type updated.';
+		} else {
+			$res = $this->SGODModel->add_alloc_type($this->input->post('description'));
+			$error = $res['ok'] ? (!empty($res['existing']) ? '"' . $res['description'] . '" already exists.' : '') : $res['message'];
+			$ok = 'Allocation type added.';
+		}
+		$this->session->set_flashdata($error === '' ? 'success' : 'danger', $error === '' ? $ok : $error);
+		redirect(base_url() . 'Page/alloc_types');
+	}
+
+	function alloc_type_delete()
+	{
+		if (empty($this->session->username) || $this->session->position == 'School' || $this->input->method() !== 'post') {
+			redirect(base_url());
+		}
+		$error = $this->SGODModel->delete_alloc_type((int) $this->input->post('id'));
+		$this->session->set_flashdata($error === '' ? 'success' : 'danger', $error === '' ? 'Allocation type deleted.' : $error);
+		redirect(base_url() . 'Page/alloc_types');
+	}
+
 	// AJAX: add a new allocation type (Budget Source) from the School Allocations page.
 	function alloc_type_add()
 	{
