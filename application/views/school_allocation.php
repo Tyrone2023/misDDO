@@ -187,13 +187,22 @@
                                                 </select>
                                             </div>
                                             <div class="form-group col-sm-6">
-                                                <label>Allocation Type <span class="sa-req">*</span></label>
+                                                <label class="d-flex justify-content-between align-items-center">
+                                                    <span>Allocation Type <span class="sa-req">*</span></span>
+                                                    <a href="#" class="sa-link" id="sa_type_new_toggle"><i class="mdi mdi-plus"></i> New type</a>
+                                                </label>
                                                 <select class="form-control" data-toggle="select2" name="type" id="sa_add_type" required style="width:100%" data-placeholder="Select type">
                                                     <option></option>
                                                     <?php foreach ($bs as $row) { ?>
-                                                    <option value="<?= $row->description; ?>"><?= $row->description; ?></option>
+                                                    <option value="<?= html_escape($row->description); ?>"><?= html_escape($row->description); ?></option>
                                                     <?php } ?>
                                                 </select>
+                                                <div class="sa-newtype" id="sa_type_new" style="display:none;">
+                                                    <input type="text" class="form-control" id="sa_type_new_input" maxlength="60" placeholder="e.g. ARAL PROGRAM" autocomplete="off">
+                                                    <button type="button" class="sa-btn sa-btn-primary" id="sa_type_new_save"><i class="mdi mdi-check"></i></button>
+                                                    <button type="button" class="sa-btn sa-btn-ghost" id="sa_type_new_cancel"><i class="mdi mdi-close"></i></button>
+                                                </div>
+                                                <div class="sa-newtype-msg" id="sa_type_new_msg"></div>
                                             </div>
                                         </div>
                                         <div class="form-group">
@@ -277,6 +286,15 @@
                                     </div>
                                 </div>
                                 <input type="hidden" name="id" id="id" value="">
+
+                                <div class="form-group">
+                                    <label>Allocation Type <span class="sa-req">*</span></label>
+                                    <select class="form-control" name="type" id="sa_edit_type">
+                                        <?php foreach ($bs as $row) { ?>
+                                        <option value="<?= html_escape($row->description); ?>"><?= html_escape($row->description); ?></option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
 
                                 <div class="sa-sp-label">Monthly distribution</div>
                                 <div class="sa-months" id="sa_edit_months"></div>
@@ -413,6 +431,15 @@
             .sa-modal .form-control { height: 42px; border-radius: 10px; border-color: #e1e6ed; font-size: .88rem; }
             .sa-modal .form-control:focus { border-color: #9dbbe3; box-shadow: 0 0 0 3px rgba(44, 82, 130, .12); }
             .sa-req { color: #c53030; }
+            .sa-link { font-size: .74rem; font-weight: 600; color: var(--sa-primary); text-transform: none; letter-spacing: 0; }
+            .sa-link:hover { color: var(--sa-primary-dark); text-decoration: none; }
+            .sa-newtype { display: flex; gap: .4rem; margin-top: .5rem; animation: saFadeIn .18s ease-out; }
+            .sa-newtype .form-control { flex: 1; }
+            .sa-newtype .sa-btn { height: 42px; padding: 0 .8rem; }
+            .sa-newtype-msg { font-size: .74rem; margin-top: .3rem; min-height: 1em; }
+            .sa-newtype-msg.ok { color: #1e7d44; }
+            .sa-newtype-msg.err { color: #b42323; }
+            @keyframes saFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
             .sa-step { display: flex; align-items: center; gap: .5rem; font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--sa-primary); margin: .2rem 0 .8rem; }
             .sa-step span { width: 20px; height: 20px; border-radius: 50%; background: var(--sa-primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .68rem; }
             .sa-step:not(:first-child) { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px dashed var(--sa-line); }
@@ -649,9 +676,60 @@
                     $('#add').on('show.bs.modal', refreshAdd);
                     $('#add').on('shown.bs.modal', function() { $('#alloc_amount').trigger('focus'); });
 
+                    // ---------- Allocation types (sgod_settings_bs) ----------
+                    function ensureTypeOption($sel, value) {
+                        var found = false;
+                        $sel.find('option').each(function() { if (this.value === value) { found = true; return false; } });
+                        if (!found) { $sel.append($('<option>').val(value).text(value)); }
+                    }
+                    function typeMsg(text, cls) { $('#sa_type_new_msg').removeClass('ok err').addClass(cls || '').text(text || ''); }
+                    function closeNewType() { $('#sa_type_new').hide(); $('#sa_type_new_input').val(''); }
+
+                    $('#sa_type_new_toggle').on('click', function(e) {
+                        e.preventDefault();
+                        typeMsg('');
+                        $('#sa_type_new').toggle();
+                        if ($('#sa_type_new').is(':visible')) { $('#sa_type_new_input').trigger('focus'); }
+                    });
+                    $('#sa_type_new_cancel').on('click', function() { closeNewType(); typeMsg(''); });
+                    $('#sa_type_new_input').on('keydown', function(e) {
+                        if (e.key === 'Enter') { e.preventDefault(); $('#sa_type_new_save').trigger('click'); }
+                        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeNewType(); }
+                    });
+                    $('#sa_type_new_save').on('click', function() {
+                        var $btn = $(this), val = $.trim($('#sa_type_new_input').val());
+                        if (!val) { typeMsg('Enter a type name.', 'err'); return; }
+                        $btn.prop('disabled', true);
+                        $.post(BASE + 'Page/alloc_type_add', { description: val }, null, 'json')
+                            .done(function(res) {
+                                if (!res || !res.ok) { typeMsg((res && res.message) || 'Could not add the type.', 'err'); return; }
+                                ensureTypeOption($('#sa_add_type'), res.description);
+                                ensureTypeOption($('#sa_edit_type'), res.description);
+                                $('#sa_add_type').val(res.description).trigger('change');
+                                closeNewType();
+                                typeMsg(res.existing ? '"' + res.description + '" already exists — selected.' : '"' + res.description + '" added.', 'ok');
+                            })
+                            .fail(function() { typeMsg('Could not add the type. Please try again.', 'err'); })
+                            .always(function() { $btn.prop('disabled', false); });
+                    });
+                    $('#add').on('hidden.bs.modal', function() { closeNewType(); typeMsg(''); });
+
+                    $('#sa_edit_type').on('change', function() {
+                        editIsMooe = isMooe(this.value);
+                        refreshEdit();
+                    });
+
                     $(document).on('click', 'a[href="#alloc"]', function() {
                         var $a = $(this);
-                        editIsMooe = isMooe($a.data('type'));
+                        var curType = String($a.attr('data-type') || '');
+                        // Legacy rows with no type keep it blank unless a type is picked.
+                        if (curType === '') {
+                            if (!$('#sa_edit_type option[value=""]').length) { $('#sa_edit_type').prepend('<option value="">(not set)</option>'); }
+                        } else {
+                            ensureTypeOption($('#sa_edit_type'), curType);
+                        }
+                        $('#sa_edit_type').val(curType);
+                        editIsMooe = isMooe($('#sa_edit_type').val());
                         editOld = Number($a.data('item')) || 0;
                         $('#sa_edit_school').text($a.data('school'));
                         $('#sa_edit_avatar').text(String($a.data('school') || 'S').trim().charAt(0).toUpperCase());

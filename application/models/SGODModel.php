@@ -1118,6 +1118,37 @@ class SGODModel extends CI_Model
 		return $this->db->update('sgod_app_percentage', $data);
 	}
 
+	// Allocation types are the Budget Source list (sgod_settings_bs.description).
+	public function alloc_types()
+	{
+		$out = array();
+		foreach ($this->db->select('description')->order_by('id', 'ASC')->get('sgod_settings_bs')->result() as $r) {
+			$out[] = $r->description;
+		}
+		return $out;
+	}
+
+	// Adds an allocation type from the allocation page. Case/space-insensitive duplicates
+	// return the existing description instead of inserting a second row.
+	public function add_alloc_type($description)
+	{
+		$desc = trim(preg_replace('/\s+/', ' ', (string) $description));
+		if ($desc === '' || mb_strlen($desc) > 60) {
+			return array('ok' => false, 'message' => 'Enter a type name (max 60 characters).');
+		}
+
+		$found = $this->db->query(
+			"SELECT description FROM sgod_settings_bs WHERE LOWER(TRIM(description)) = ? LIMIT 1",
+			array(mb_strtolower($desc))
+		)->row();
+		if ($found) {
+			return array('ok' => true, 'existing' => true, 'description' => $found->description);
+		}
+
+		$this->db->insert('sgod_settings_bs', array('description' => $desc));
+		return array('ok' => true, 'existing' => false, 'description' => $desc);
+	}
+
 	public function insert_bs()
 	{
 		$data = array(
@@ -1892,10 +1923,17 @@ class SGODModel extends CI_Model
 		$id = $this->input->post('id');
 		$fund = $this->parse_amount($this->input->post('alloc_amount'));
 		$row = $this->db->select('alloc_type')->where('id', $id)->get('sgod_school_allocation')->row();
+		$type = $row ? $row->alloc_type : '';
+
+		// The edit modal may switch the type; accept only a listed type (or the current one).
+		$posted = trim((string) $this->input->post('type'));
+		if ($posted !== '' && ($posted === $type || in_array($posted, $this->alloc_types(), true))) {
+			$type = $posted;
+		}
 
 		// Same rule as insert_fund_allocation(): only MOOE is distributed monthly.
-		$data = array('alloc_amount' => number_format($fund, 2, '.', ''))
-			+ ($row && strtoupper(trim($row->alloc_type)) === 'MOOE' ? $this->monthly_split($fund) : array_fill_keys(array_keys($this->monthly_split(0)), 0));
+		$data = array('alloc_amount' => number_format($fund, 2, '.', ''), 'alloc_type' => $type)
+			+ (strtoupper(trim($type)) === 'MOOE' ? $this->monthly_split($fund) : array_fill_keys(array_keys($this->monthly_split(0)), 0));
 
 		// The quick-edit modal posts only the amount; keep the program unless the edit page sent one.
 		$program = $this->input->post('program');

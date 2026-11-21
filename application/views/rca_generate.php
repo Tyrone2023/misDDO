@@ -5,16 +5,10 @@
 // Create a function for converting the amount in words
 function AmountInWords(float $amount): string
 {
-    $amount = round($amount, 2);
-
-    $num   = (int) floor($amount);
-    $cents = (int) round(($amount - $num) * 100);
-
-    // Handle cases like 10.995 becoming 10 pesos and 100 cents
-    if ($cents === 100) {
-        $num++;
-        $cents = 0;
-    }
+    // Work in whole centavos so float noise never shifts the peso/centavo split.
+    $total = (int) round($amount * 100);
+    $num   = intdiv($total, 100);
+    $cents = $total % 100;
 
     $ones = [
         0 => '', 1 => 'One', 2 => 'Two', 3 => 'Three', 4 => 'Four', 5 => 'Five',
@@ -73,11 +67,11 @@ function AmountInWords(float $amount): string
         $words = array_reverse($words);
     }
 
-    $pesosWords = trim(implode(' ', $words)) . ' Pesos';
+    $pesosWords = trim(implode(' ', $words)) . ($num === 1 ? ' Peso' : ' Pesos');
 
     $centWords = '';
     if ($cents > 0) {
-        $centWords = ' And ' . $twoDigits($cents) . ' Centavos';
+        $centWords = ' And ' . $twoDigits($cents) . ($cents === 1 ? ' Centavo' : ' Centavos');
     }
 
     return $pesosWords . $centWords;
@@ -265,6 +259,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                         $mq = $row->qdec;
                         $m = $row->ddec;
                     }
+                    // Zero-quantity lines cost nothing; skip them so the RCA lists only what is requested.
+                    if ((float)$mq == 0) { continue; }
                     
                     ?>
 
@@ -274,7 +270,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     <td><?= $row->materials; ?></td>
                     <td></td>
                     <td><?= number_format($m, 2); ?></td>
-                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
+                    <td><?php $mb_ups = round(round((float)$m, 2) * (float)$mq, 2); echo  number_format($mb_ups, 2); ?></td>
                     
                 </tr>
 
@@ -332,6 +328,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                         $mq = $row->qdec;
                         $m = $row->ddec;
                     }
+                    // Zero-quantity lines cost nothing; skip them so the RCA lists only what is requested.
+                    if ((float)$mq == 0) { continue; }
 
                     
                     ?>
@@ -341,7 +339,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     <td><?= $row->materials; ?></td>
                     <td></td>
                     <td><?= number_format($m, 2); ?></td>
-                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
+                    <td><?php $mb_ups = round(round((float)$m, 2) * (float)$mq, 2); echo  number_format($mb_ups, 2); ?></td>
                     
                 </tr>
 
@@ -398,6 +396,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                         $mq = $row->qdec;
                         $m = $row->ddec;
                     }
+                    // Zero-quantity lines cost nothing; skip them so the RCA lists only what is requested.
+                    if ((float)$mq == 0) { continue; }
                     
                     ?>
                 <tr>
@@ -406,7 +406,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     <td><?= $row->materials; ?></td>
                     <td></td>
                     <td><?= number_format($m, 2); ?></td>
-                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
+                    <td><?php $mb_ups = round(round((float)$m, 2) * (float)$mq, 2); echo  number_format($mb_ups, 2); ?></td>
                     
                 </tr>
                 <?php $ttli+=$mb_ups;?>
@@ -461,6 +461,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                         $mq = $row->qdec;
                         $m = $row->ddec;
                     }
+                    // Zero-quantity lines cost nothing; skip them so the RCA lists only what is requested.
+                    if ((float)$mq == 0) { continue; }
                     
                     ?>
                 <tr>
@@ -469,7 +471,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     <td><?= $row->materials; ?></td>
                     <td></td>
                     <td><?= number_format($m, 2); ?></td>
-                    <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
+                    <td><?php $mb_ups = round(round((float)$m, 2) * (float)$mq, 2); echo  number_format($mb_ups, 2); ?></td>
                     
                 </tr>
                 <?php $ttst+=$mb_ups;?>
@@ -479,7 +481,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
 
             <tr>
                 <td colspan="5" class="alignLeft">TOTAL</td>
-                <td><?php $omtt = (double)($tmb+$tmr+$ttli+$ttst);   ?></td>
+                <td><?php $omtt = round($tmb+$tmr+$ttli+$ttst, 2);   ?></td>
             </tr>
         </table>
 
@@ -602,6 +604,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     $mq = $row->qdec;
                     $m = $row->ddec;
                 }
+                // Zero-quantity lines cost nothing; skip them so the RCA lists only what is requested.
+                if ((float)$mq == 0) { continue; }
                 
                 ?>
 
@@ -611,7 +615,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <td><?= $row->materials; ?></td>
                 <td></td>
                 <td><?= number_format($m, 2); ?></td>
-                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
+                <td><?php $mb_ups = round(round((float)$m, 2) * (float)$mq, 2); echo  number_format($mb_ups, 2); ?></td>
                 
             </tr>
 
@@ -669,6 +673,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     $mq = $row->qdec;
                     $m = $row->ddec;
                 }
+                // Zero-quantity lines cost nothing; skip them so the RCA lists only what is requested.
+                if ((float)$mq == 0) { continue; }
 
                 
                 ?>
@@ -678,7 +684,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <td><?= $row->materials; ?></td>
                 <td></td>
                 <td><?= number_format($m, 2); ?></td>
-                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
+                <td><?php $mb_ups = round(round((float)$m, 2) * (float)$mq, 2); echo  number_format($mb_ups, 2); ?></td>
                 
             </tr>
 
@@ -735,6 +741,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     $mq = $row->qdec;
                     $m = $row->ddec;
                 }
+                // Zero-quantity lines cost nothing; skip them so the RCA lists only what is requested.
+                if ((float)$mq == 0) { continue; }
                 
                 ?>
             <tr>
@@ -743,7 +751,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <td><?= $row->materials; ?></td>
                 <td></td>
                 <td><?= number_format($m, 2); ?></td>
-                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
+                <td><?php $mb_ups = round(round((float)$m, 2) * (float)$mq, 2); echo  number_format($mb_ups, 2); ?></td>
                 
             </tr>
             <?php $ttli+=$mb_ups;?>
@@ -798,6 +806,8 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                     $mq = $row->qdec;
                     $m = $row->ddec;
                 }
+                // Zero-quantity lines cost nothing; skip them so the RCA lists only what is requested.
+                if ((float)$mq == 0) { continue; }
                 
                 ?>
             <tr>
@@ -806,7 +816,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
                 <td><?= $row->materials; ?></td>
                 <td></td>
                 <td><?= number_format($m, 2); ?></td>
-                <td><?php $mb_ups = (double)$m*(double)$mq; echo  number_format($mb_ups, 2); ?></td>
+                <td><?php $mb_ups = round(round((float)$m, 2) * (float)$mq, 2); echo  number_format($mb_ups, 2); ?></td>
                 
             </tr>
             <?php $ttst+=$mb_ups;?>
@@ -816,7 +826,7 @@ $validated = $this->Common->one_cond_row('aip_sign_settings','action',1);
 
         <tr>
             <td colspan="5" class="alignLeft">TOTAL</td>
-            <td><?php $omt = $tmb+$tmr+$ttli+$ttst;  echo number_format($omt, 2); ?></td>
+            <td><?php $omt = round($tmb+$tmr+$ttli+$ttst, 2);  echo number_format($omt, 2); ?></td>
             <?php $_SESSION['omt'] = $omt; ?>
         </tr>
     </table>

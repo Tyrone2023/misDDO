@@ -357,6 +357,17 @@ class Page extends CI_Controller
 		}
 	}
 
+	// AJAX: add a new allocation type (Budget Source) from the School Allocations page.
+	function alloc_type_add()
+	{
+		if (empty($this->session->username) || $this->session->position == 'School' || $this->input->method() !== 'post') {
+			$res = array('ok' => false, 'message' => 'Not allowed.');
+		} else {
+			$res = $this->SGODModel->add_alloc_type($this->input->post('description'));
+		}
+		$this->output->set_content_type('application/json')->set_output(json_encode($res));
+	}
+
 	function systemHelp()
 	{
 		$this->load->view('system_help');

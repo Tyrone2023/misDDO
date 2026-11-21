@@ -1133,6 +1133,14 @@
                                         <span>Appointed List</span>
                                     </a>
                                 </li>
+                                <?php if (in_array($this->session->position, array('sds', 'asst_sds'), true)) : ?>
+                                <li>
+                                    <a href="<?= base_url('RaiReport'); ?>" class="waves-effect">
+                                        <i class="mdi mdi-file-chart-outline"></i>
+                                        <span>RAI Reports</span>
+                                    </a>
+                                </li>
+                                <?php endif; ?>
                                 <?php $this->load->view('templates/appointment_documents_menu'); ?>
 
                                 <li class="menu-title">Administration</li>
