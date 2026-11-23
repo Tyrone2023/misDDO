@@ -3750,7 +3750,23 @@ public function get_grouped_applicants_by_mun_ierv2($jobID)
           ->where('job_id', (int) $job_id)
           ->where_in('applicant_id', array_values(array_unique($applicant_keys)));
 
-      return $this->db->count_all_results() > 0;
+      if ($this->db->count_all_results() > 0) {
+        return true;
+      }
+
+      // A Field Evaluator tagged by the Secretariat on this vacancy may also
+      // review every applicant of it (relevance, credit and remarks).
+      if (!$this->db->table_exists('hris_field_evaluator_access')) {
+        return false;
+      }
+
+      return $this->db
+          ->from('hris_field_evaluator_access fe')
+          ->join('hris_jobvacancy j', 'j.jobID = fe.job_id')
+          ->where('fe.evaluator_user_id', (int) ($this->session->id ?? 0))
+          ->where('fe.job_id', (int) $job_id)
+          ->where('j.jvStatus !=', 'Closed')
+          ->count_all_results() > 0;
     }
 
     /**
